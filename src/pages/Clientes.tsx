@@ -19,6 +19,30 @@ import {
   margemLucroDbParaCampo,
   parseMargemLucroPercentual,
 } from "../lib/clienteMargemLucro";
+import { ClienteContratoCadastroSecoes } from "../components/clientes/ClienteContratoCadastroSecoes";
+import {
+  descricaoVeiculoLegadoDeItens,
+  equipamentoContratoInicial,
+  equipamentosContratoParaJsonb,
+  equipamentosTextoLegadoDeItens,
+  isMissingClienteContratoColumnsError,
+  parseEquipamentosContratoJsonb,
+  asTextoFormulario,
+  normalizarListasContratoForm,
+  parseResiduosContratoJsonb,
+  parseVeiculosContratoJsonb,
+  residuoContratoInicial,
+  residuosContratoParaJsonb,
+  rotuloEquipamentosContratoResumo,
+  rotuloVeiculosContratoResumo,
+  serializarResiduosLegadoPipe,
+  veiculoContratoInicial,
+  veiculosContratoParaJsonb,
+  type EquipamentoContratoItem,
+  type ResiduoContratoItem,
+  type VeiculoContratoItem,
+} from "../lib/clienteContratoCadastro";
+import { fetchResiduosCatalogo, type ResiduoCatalogo } from "../lib/residuosCatalogo";
 
 type Cliente = {
   id: string;
@@ -79,6 +103,9 @@ type Cliente = {
   representante_rg_id?: string | null;
   caminhao_id?: string | null;
   equipamentos?: string | null;
+  veiculos_contrato?: unknown;
+  equipamentos_contrato?: unknown;
+  residuos_contrato?: unknown;
 };
 
 /** Área rolável do `MainLayout`; `window.scrollTo` não afeta quando `body` está com overflow oculto. */
@@ -91,12 +118,7 @@ function scrollRgMainContentToTop(behavior: ScrollBehavior = "smooth") {
   }
 }
 
-type ResiduoForm = {
-  tipo_residuo: string;
-  classificacao: string;
-  unidade_medida: string;
-  frequencia_coleta: string;
-};
+type ResiduoForm = ResiduoContratoItem;
 
 type FormCliente = {
   nome: string;
@@ -151,15 +173,12 @@ type FormCliente = {
   caminhao_id: string;
   equipamentos: string;
 
+  veiculos_contrato: VeiculoContratoItem[];
+  equipamentos_contrato: EquipamentoContratoItem[];
   residuos: ResiduoForm[];
 };
 
-const residuoInicial: ResiduoForm = {
-  tipo_residuo: "",
-  classificacao: "",
-  unidade_medida: "",
-  frequencia_coleta: "",
-};
+const residuoInicial: ResiduoForm = { ...residuoContratoInicial() };
 
 const formInicial: FormCliente = {
   nome: "",
@@ -214,6 +233,8 @@ const formInicial: FormCliente = {
   caminhao_id: "",
   equipamentos: "",
 
+  veiculos_contrato: [veiculoContratoInicial()],
+  equipamentos_contrato: [equipamentoContratoInicial()],
   residuos: [{ ...residuoInicial }],
 };
 
@@ -222,9 +243,10 @@ function limparOuNull(valor: string) {
   return texto === "" ? null : texto;
 }
 
-function formatarData(data?: string | null) {
-  if (!data) return "-";
-  const limpa = data.includes("T") ? data.split("T")[0] : data;
+function formatarData(data?: string | null | unknown) {
+  const s = asTextoFormulario(data).trim();
+  if (!s) return "-";
+  const limpa = s.includes("T") ? s.split("T")[0] : s;
   const partes = limpa.split("-");
   if (partes.length !== 3) return data;
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
@@ -569,42 +591,17 @@ function consolidarLinhasImportacao(rows: ImportRow[]): ImportRow[] {
   return Array.from(map.values());
 }
 
-function serializarResiduos(residuos: ResiduoForm[]) {
-  return {
-    tipo_residuo: residuos
-      .map((item) => item.tipo_residuo.trim())
-      .filter(Boolean)
-      .join(" | "),
-    classificacao: residuos
-      .map((item) => item.classificacao.trim())
-      .filter(Boolean)
-      .join(" | "),
-    unidade_medida: residuos
-      .map((item) => item.unidade_medida.trim())
-      .filter(Boolean)
-      .join(" | "),
-    frequencia_coleta: residuos
-      .map((item) => item.frequencia_coleta.trim())
-      .filter(Boolean)
-      .join(" | "),
-  };
-}
-
 function montarResiduosDoCliente(cliente: Cliente): ResiduoForm[] {
-  const tipos = dividirLista(cliente.tipo_residuo);
-  const classes = dividirLista(cliente.classificacao);
-  const unidades = dividirLista(cliente.unidade_medida);
-  const frequencias = dividirLista(cliente.frequencia_coleta);
-
-  const total = Math.max(tipos.length, classes.length, unidades.length, frequencias.length, 1);
-
-  return Array.from({ length: total }).map((_, index) => ({
-    tipo_residuo: tipos[index] || "",
-    classificacao: classes[index] || "",
-    unidade_medida: unidades[index] || "",
-    frequencia_coleta: frequencias[index] || "",
-  }));
+  return parseResiduosContratoJsonb(cliente.residuos_contrato, {
+    tipo_residuo: cliente.tipo_residuo,
+    classificacao: cliente.classificacao,
+    unidade_medida: cliente.unidade_medida,
+    frequencia_coleta: cliente.frequencia_coleta,
+  });
 }
+
+const CLIENTES_SELECT_CONTRATO_JSON =
+  ", veiculos_contrato, equipamentos_contrato, residuos_contrato";
 
 const CLIENTES_SELECT_CORE =
   "id, nome, razao_social, cnpj, status, cep, rua, numero, complemento, bairro, cidade, estado";
@@ -617,11 +614,13 @@ const CLIENTES_SELECT_TAIL_BASE =
 
 function montarClientesSelectPrincipalLegacy(
   incluirFatEstruturado: boolean,
-  incluirMargemLucro: boolean
+  incluirMargemLucro: boolean,
+  incluirContratoJson = true
 ): string {
-  const tail = incluirMargemLucro
+  let tail = incluirMargemLucro
     ? `${CLIENTES_SELECT_TAIL_BASE}, margem_lucro_percentual`
     : CLIENTES_SELECT_TAIL_BASE;
+  if (incluirContratoJson) tail += CLIENTES_SELECT_CONTRATO_JSON;
   return incluirFatEstruturado
     ? `${CLIENTES_SELECT_CORE}, ${CLIENTES_SELECT_FAT_ENDERECO}, ${tail}`
     : `${CLIENTES_SELECT_CORE}, ${tail}`;
@@ -827,6 +826,7 @@ export default function Clientes() {
   const [form, setForm] = useState<FormCliente>(formInicial);
   const faturamentoEstruturadoColDisponivelRef = useRef(true);
   const margemLucroColDisponivelRef = useRef(true);
+  const clienteContratoColDisponivelRef = useRef(true);
 
   const [modoTabela, setModoTabela] = useState<ModoTabelaClientes>(() => lerModoTabelaPersistido());
   const [filtroVencCadri, setFiltroVencCadri] = useSessionPersistedState<FiltroVencCadri>(
@@ -840,9 +840,9 @@ export default function Clientes() {
 
   type RepresentanteRgOpcao = { id: string; nome: string };
   const [representantesRg, setRepresentantesRg] = useState<RepresentanteRgOpcao[]>([]);
+  const [residuosCatalogo, setResiduosCatalogo] = useState<ResiduoCatalogo[]>([]);
+  const [residuosCatalogoCarregando, setResiduosCatalogoCarregando] = useState(true);
 
-  type VeiculoCaminhaoOpcao = { id: string; placa: string; modelo: string | null };
-  const [veiculosCaminhoes, setVeiculosCaminhoes] = useState<VeiculoCaminhaoOpcao[]>([]);
 
   const rotuloRepresentanteRgCliente = useCallback(
     (c: Cliente) => {
@@ -858,17 +858,8 @@ export default function Clientes() {
   );
 
   const rotuloVeiculoCliente = useCallback(
-    (c: Cliente) => {
-      const vid = c.caminhao_id;
-      if (!vid) return "—";
-      const hit = veiculosCaminhoes.find((v) => v.id === vid);
-      if (hit) {
-        const m = hit.modelo?.trim();
-        return m ? `${hit.placa} — ${m}` : hit.placa;
-      }
-      return "Veículo (indisponível na lista)";
-    },
-    [veiculosCaminhoes]
+    (c: Cliente) => rotuloVeiculosContratoResumo(c.veiculos_contrato, c.descricao_veiculo),
+    []
   );
 
   useEffect(() => {
@@ -900,23 +891,15 @@ export default function Clientes() {
   }, []);
 
   useEffect(() => {
-    void (async () => {
-      const { data, error } = await supabase
-        .from("caminhoes")
-        .select("id, placa, modelo")
-        .order("placa", { ascending: true });
-      if (error) {
-        console.warn("Erro ao listar veículos (frota):", error);
-        return;
-      }
-      setVeiculosCaminhoes(
-        ((data as Array<{ id: string; placa: string; modelo: string | null }> | null) ?? []).map((v) => ({
-          id: v.id,
-          placa: v.placa,
-          modelo: v.modelo ?? null,
-        }))
-      );
-    })();
+    let cancel = false;
+    void fetchResiduosCatalogo().then((data) => {
+      if (cancel) return;
+      setResiduosCatalogo(data);
+      setResiduosCatalogoCarregando(false);
+    });
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -947,7 +930,7 @@ export default function Clientes() {
     open: mostrarCadastro,
     data: cadastroDraftData,
     onRestore: (d) => {
-      setForm({ ...formInicial, ...d.form });
+      setForm(normalizarListasContratoForm({ ...formInicial, ...d.form }));
       setEditingId(d.editingId);
       setMostrarCadastro(true);
     },
@@ -983,9 +966,10 @@ export default function Clientes() {
 
     let fat = faturamentoEstruturadoColDisponivelRef.current;
     let ml = margemLucroColDisponivelRef.current;
+    let contrato = clienteContratoColDisponivelRef.current;
 
     const executarFetch = () => {
-      const listStr = montarClientesSelectPrincipalLegacy(fat, ml);
+      const listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
       return montarQueries(listStr, fat);
     };
 
@@ -1010,6 +994,16 @@ export default function Clientes() {
       if (ml && isMissingMargemLucroPercentualColumnError(error)) {
         margemLucroColDisponivelRef.current = false;
         ml = false;
+        ({ countQ, dataQ } = executarFetch());
+        [{ count, error: errCount }, { data, error }] = await Promise.all([
+          countQ,
+          dataQ.range(from, to),
+        ]);
+        continue;
+      }
+      if (contrato && isMissingClienteContratoColumnsError(error)) {
+        clienteContratoColDisponivelRef.current = false;
+        contrato = false;
         ({ countQ, dataQ } = executarFetch());
         [{ count, error: errCount }, { data, error }] = await Promise.all([
           countQ,
@@ -1074,18 +1068,19 @@ export default function Clientes() {
 
     let fat = faturamentoEstruturadoColDisponivelRef.current;
     let ml = margemLucroColDisponivelRef.current;
+    let contrato = clienteContratoColDisponivelRef.current;
 
     const out: Cliente[] = [];
     for (let from = 0; ; from += PAGE) {
       const to = from + PAGE - 1;
-      let listStr = montarClientesSelectPrincipalLegacy(fat, ml);
+      let listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
       let dataQ = montarDataQ(listStr, fat);
       let { data, error } = await dataQ.range(from, to);
       while (error) {
         if (fat && isMissingFaturamentoEstruturadoColumnsError(error)) {
           faturamentoEstruturadoColDisponivelRef.current = false;
           fat = false;
-          listStr = montarClientesSelectPrincipalLegacy(fat, ml);
+          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
           dataQ = montarDataQ(listStr, fat);
           ({ data, error } = await dataQ.range(from, to));
           continue;
@@ -1093,7 +1088,15 @@ export default function Clientes() {
         if (ml && isMissingMargemLucroPercentualColumnError(error)) {
           margemLucroColDisponivelRef.current = false;
           ml = false;
-          listStr = montarClientesSelectPrincipalLegacy(fat, ml);
+          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
+          dataQ = montarDataQ(listStr, fat);
+          ({ data, error } = await dataQ.range(from, to));
+          continue;
+        }
+        if (contrato && isMissingClienteContratoColumnsError(error)) {
+          clienteContratoColDisponivelRef.current = false;
+          contrato = false;
+          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
           dataQ = montarDataQ(listStr, fat);
           ({ data, error } = await dataQ.range(from, to));
           continue;
@@ -1744,6 +1747,72 @@ export default function Clientes() {
     });
   }
 
+  function handleVeiculoContratoChange(
+    index: number,
+    campo: keyof VeiculoContratoItem,
+    valor: string | boolean
+  ) {
+    setForm((prev) => {
+      const lista = [...prev.veiculos_contrato];
+      const atual = { ...lista[index], [campo]: valor };
+      if (campo === "sem_custo" && valor === true) atual.valor = "";
+      lista[index] = atual;
+      return { ...prev, veiculos_contrato: lista };
+    });
+  }
+
+  function adicionarVeiculoContrato() {
+    setForm((prev) => ({
+      ...prev,
+      veiculos_contrato: [...prev.veiculos_contrato, veiculoContratoInicial()],
+    }));
+  }
+
+  function removerVeiculoContrato(index: number) {
+    setForm((prev) => {
+      if (prev.veiculos_contrato.length === 1) {
+        return { ...prev, veiculos_contrato: [veiculoContratoInicial()] };
+      }
+      return {
+        ...prev,
+        veiculos_contrato: prev.veiculos_contrato.filter((_, i) => i !== index),
+      };
+    });
+  }
+
+  function handleEquipamentoContratoChange(
+    index: number,
+    campo: keyof EquipamentoContratoItem,
+    valor: string | boolean
+  ) {
+    setForm((prev) => {
+      const lista = [...prev.equipamentos_contrato];
+      const atual = { ...lista[index], [campo]: valor };
+      if (campo === "com_custo" && valor === false) atual.valor = "";
+      lista[index] = atual;
+      return { ...prev, equipamentos_contrato: lista };
+    });
+  }
+
+  function adicionarEquipamentoContrato() {
+    setForm((prev) => ({
+      ...prev,
+      equipamentos_contrato: [...prev.equipamentos_contrato, equipamentoContratoInicial()],
+    }));
+  }
+
+  function removerEquipamentoContrato(index: number) {
+    setForm((prev) => {
+      if (prev.equipamentos_contrato.length === 1) {
+        return { ...prev, equipamentos_contrato: [equipamentoContratoInicial()] };
+      }
+      return {
+        ...prev,
+        equipamentos_contrato: prev.equipamentos_contrato.filter((_, i) => i !== index),
+      };
+    });
+  }
+
   function limparFormulario() {
     limparSessionDraftKey(CLIENTES_CADASTRO_DRAFT_KEY);
     setForm(formInicial);
@@ -1764,7 +1833,8 @@ export default function Clientes() {
     scrollRgMainContentToTop("smooth");
 
     const hydrate = (row: Cliente) => {
-      setForm({
+      setForm(
+        normalizarListasContratoForm({
         nome: row.nome || "",
         razao_social: row.razao_social || "",
         cnpj: row.cnpj || "",
@@ -1799,7 +1869,7 @@ export default function Clientes() {
         email: row.email || "",
 
         representante_rg_id: row.representante_rg_id ?? "",
-        caminhao_id: row.caminhao_id ?? "",
+        caminhao_id: "",
         equipamentos: row.equipamentos ?? "",
 
         licenca_numero: row.licenca_numero || "",
@@ -1822,8 +1892,14 @@ export default function Clientes() {
         status_ativo_desde: row.status_ativo_desde ?? "",
         status_inativo_desde: row.status_inativo_desde ?? "",
 
+        veiculos_contrato: parseVeiculosContratoJsonb(row.veiculos_contrato, row.descricao_veiculo),
+        equipamentos_contrato: parseEquipamentosContratoJsonb(
+          row.equipamentos_contrato,
+          row.equipamentos
+        ),
         residuos: montarResiduosDoCliente(row),
-      });
+      })
+      );
     };
 
     hydrate(cliente);
@@ -1831,7 +1907,8 @@ export default function Clientes() {
     try {
       let fat = faturamentoEstruturadoColDisponivelRef.current;
       let ml = margemLucroColDisponivelRef.current;
-      const lista = () => montarClientesSelectPrincipalLegacy(fat, ml);
+      let contrato = clienteContratoColDisponivelRef.current;
+      const lista = () => montarClientesSelectPrincipalLegacy(fat, ml, contrato);
       const completa = () => `${lista()}, status_ativo_desde, status_inativo_desde`;
 
       let fullRes = await supabase
@@ -1913,7 +1990,7 @@ export default function Clientes() {
 
     setSalvando(true);
 
-    const residuosSerializados = serializarResiduos(residuosValidos);
+    const residuosSerializados = serializarResiduosLegadoPipe(residuosValidos);
     const enderecoColetaEstruturado = montarEnderecoTextoLivreDosCamposEstruturados({
       cep: form.cep,
       rua: form.rua,
@@ -1965,7 +2042,7 @@ export default function Clientes() {
       licenca_numero: limparOuNull(form.licenca_numero),
       validade: limparOuNull(form.validade),
       codigo_ibama: limparOuNull(form.codigo_ibama),
-      descricao_veiculo: limparOuNull(form.descricao_veiculo),
+      descricao_veiculo: descricaoVeiculoLegadoDeItens(form.veiculos_contrato),
       mtr_coleta: limparOuNull(form.mtr_coleta),
       destino: limparOuNull(form.destino),
       mtr_destino: limparOuNull(form.mtr_destino),
@@ -1979,14 +2056,15 @@ export default function Clientes() {
       cnpj_raiz: limparOuNull(derivarDadosUnidadeDocumento(form.cnpj).cnpj_raiz),
       tipo_unidade_cliente: limparOuNull(derivarDadosUnidadeDocumento(form.cnpj).tipo_unidade_cliente),
       representante_rg_id: form.representante_rg_id.trim() || null,
-      caminhao_id: form.caminhao_id.trim() || null,
-      equipamentos: limparOuNull(form.equipamentos),
+      caminhao_id: null,
+      equipamentos: equipamentosTextoLegadoDeItens(form.equipamentos_contrato),
       status: form.status?.trim() || "Ativo",
     };
 
     let usarMargemLucro =
       margemLucroColDisponivelRef.current || form.margem_lucro_percentual.trim() !== "";
     let usarStatusDatas = true;
+    let usarContratoJson = clienteContratoColDisponivelRef.current;
 
     const montarPayloadSalvar = (): Record<string, unknown> => {
       const corpo: Record<string, unknown> = { ...payloadBase };
@@ -1996,6 +2074,11 @@ export default function Clientes() {
       }
       if (usarMargemLucro) {
         corpo.margem_lucro_percentual = margemParsed.value;
+      }
+      if (usarContratoJson) {
+        corpo.veiculos_contrato = veiculosContratoParaJsonb(form.veiculos_contrato);
+        corpo.equipamentos_contrato = equipamentosContratoParaJsonb(form.equipamentos_contrato);
+        corpo.residuos_contrato = residuosContratoParaJsonb(residuosValidos);
       }
       return corpo;
     };
@@ -2016,6 +2099,14 @@ export default function Clientes() {
     if (response.error && usarMargemLucro && isMissingMargemLucroPercentualColumnError(response.error)) {
       margemLucroColDisponivelRef.current = false;
       usarMargemLucro = false;
+      response = editingId
+        ? await supabase.from("clientes").update(montarPayloadSalvar()).eq("id", editingId)
+        : await supabase.from("clientes").insert([montarPayloadSalvar()]);
+    }
+
+    if (response.error && usarContratoJson && isMissingClienteContratoColumnsError(response.error)) {
+      clienteContratoColDisponivelRef.current = false;
+      usarContratoJson = false;
       response = editingId
         ? await supabase.from("clientes").update(montarPayloadSalvar()).eq("id", editingId)
         : await supabase.from("clientes").insert([montarPayloadSalvar()]);
@@ -2868,246 +2959,23 @@ export default function Clientes() {
                   copiado para o campo "Responsável" automaticamente.
                 </p>
 
-                <div style={{ marginTop: "22px" }}>
-                  <div
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: 800,
-                      color: "#334155",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Veículo preferencial
-                  </div>
-                  <label
-                    htmlFor="cliente-veiculo-select"
-                    style={{
-                      display: "block",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#475569",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Selecionar veículo
-                  </label>
-                  <select
-                    id="cliente-veiculo-select"
-                    name="caminhao_id"
-                    value={form.caminhao_id}
-                    onChange={handleInputChange}
-                    aria-label="Veículo da frota (tabela caminhoes)"
-                    style={inputStyle}
-                  >
-                    <option value="">Selecione o veículo</option>
-                    {veiculosCaminhoes.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.modelo?.trim() ? `${v.placa} — ${v.modelo.trim()}` : v.placa}
-                      </option>
-                    ))}
-                  </select>
-                  <p
-                    style={{
-                      margin: "8px 0 0",
-                      fontSize: "12px",
-                      color: "#64748b",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    Lista ligada ao cadastro em <strong>Cadastros → Veículos</strong>. Para incluir
-                    ou editar veículos, use essa página.
-                  </p>
-                </div>
-
-                <div style={{ marginTop: "22px" }}>
-                  <div
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: 800,
-                      color: "#334155",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Equipamentos
-                  </div>
-                  <label
-                    htmlFor="cliente-equipamentos"
-                    style={{
-                      display: "block",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#475569",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Lista de equipamentos desejados
-                  </label>
-                  <textarea
-                    id="cliente-equipamentos"
-                    name="equipamentos"
-                    value={form.equipamentos}
-                    onChange={handleInputChange}
-                    placeholder="Ex.: caçamba 3 m³, lona, EPIs..."
-                    rows={4}
-                    style={{
-                      ...inputStyle,
-                      width: "100%",
-                      height: "auto",
-                      minHeight: "96px",
-                      paddingTop: "10px",
-                      resize: "vertical",
-                      fontFamily: "inherit",
-                      lineHeight: 1.45,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "12px",
-                    marginBottom: "12px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: 800,
-                        color: "#334155",
-                      }}
-                    >
-                      Resíduos e operação <span style={{ color: "#64748b", fontWeight: 500 }}>(opcional)</span>
-                    </div>
-                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
-                      Pode deixar em branco e completar depois — os resíduos não travam o cadastro.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={adicionarResiduo}
-                    style={{
-                      background: "#0f172a",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "10px",
-                      height: "40px",
-                      padding: "0 16px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    + Adicionar resíduo
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {form.residuos.map((residuo, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "14px",
-                        padding: "14px",
-                        background: "#f8fafc",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: "12px",
-                          gap: "12px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: 800,
-                            color: "#0f172a",
-                          }}
-                        >
-                          Resíduo {index + 1}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removerResiduo(index)}
-                          style={{
-                            background: "#ef4444",
-                            color: "#ffffff",
-                            border: "none",
-                            borderRadius: "8px",
-                            padding: "7px 12px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Remover
-                        </button>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                          gap: "12px",
-                        }}
-                      >
-                        <input
-                          value={residuo.tipo_residuo}
-                          onChange={(e) =>
-                            handleResiduoChange(index, "tipo_residuo", e.target.value)
-                          }
-                          placeholder="Tipo de resíduo"
-                          style={inputStyle}
-                        />
-
-                        <select
-                          value={residuo.classificacao}
-                          onChange={(e) =>
-                            handleResiduoChange(index, "classificacao", e.target.value)
-                          }
-                          style={inputStyle}
-                        >
-                          <option value="">Classe do resíduo</option>
-                          <option value="Classe I">Classe I</option>
-                          <option value="Classe II">Classe II</option>
-                        </select>
-
-                        <select
-                          value={residuo.unidade_medida}
-                          onChange={(e) =>
-                            handleResiduoChange(index, "unidade_medida", e.target.value)
-                          }
-                          style={inputStyle}
-                        >
-                          <option value="">Unidade de medida</option>
-                          <option value="kg">kg</option>
-                          <option value="ton">ton</option>
-                          <option value="m3">m³</option>
-                          <option value="litros">litros</option>
-                        </select>
-
-                        <input
-                          value={residuo.frequencia_coleta}
-                          onChange={(e) =>
-                            handleResiduoChange(index, "frequencia_coleta", e.target.value)
-                          }
-                          placeholder="Frequência de coleta"
-                          style={inputStyle}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ClienteContratoCadastroSecoes
+                  inputStyle={inputStyle}
+                  residuosCatalogo={residuosCatalogo}
+                  residuosCatalogoCarregando={residuosCatalogoCarregando}
+                  veiculos={form.veiculos_contrato}
+                  equipamentos={form.equipamentos_contrato}
+                  residuos={form.residuos}
+                  onVeiculoChange={handleVeiculoContratoChange}
+                  onAdicionarVeiculo={adicionarVeiculoContrato}
+                  onRemoverVeiculo={removerVeiculoContrato}
+                  onEquipamentoChange={handleEquipamentoContratoChange}
+                  onAdicionarEquipamento={adicionarEquipamentoContrato}
+                  onRemoverEquipamento={removerEquipamentoContrato}
+                  onResiduoChange={handleResiduoChange}
+                  onAdicionarResiduo={adicionarResiduo}
+                  onRemoverResiduo={removerResiduo}
+                />
               </div>
 
               <div
@@ -3623,21 +3491,25 @@ export default function Clientes() {
                               <td style={{ ...tdStyle, ...tdNowrap }} title="Margem de lucro (%)">
                                 {margemLucroClienteRotuloLista(cliente.margem_lucro_percentual)}
                               </td>
-                              <td style={tdStyle}>{cliente.tipo_residuo || "-"}</td>
+                              <td style={tdStyle}>{asTextoFormulario(cliente.tipo_residuo) || "-"}</td>
                               <td
                                 style={tdStyle}
                                 title={[
-                                  cliente.descricao_veiculo,
-                                  cliente.destino,
-                                  cliente.mtr_coleta,
-                                  cliente.observacoes_operacionais,
-                                  cliente.observacoes_gerais,
-                                  cliente.link_google_maps,
+                                  asTextoFormulario(cliente.descricao_veiculo),
+                                  asTextoFormulario(cliente.destino),
+                                  asTextoFormulario(cliente.mtr_coleta),
+                                  asTextoFormulario(cliente.observacoes_operacionais),
+                                  asTextoFormulario(cliente.observacoes_gerais),
+                                  asTextoFormulario(cliente.link_google_maps),
                                 ]
                                   .filter(Boolean)
                                   .join(" | ")}
                               >
-                                {[cliente.descricao_veiculo, cliente.destino, cliente.mtr_coleta]
+                                {[
+                                  asTextoFormulario(cliente.descricao_veiculo),
+                                  asTextoFormulario(cliente.destino),
+                                  asTextoFormulario(cliente.mtr_coleta),
+                                ]
                                   .filter(Boolean)
                                   .join(" · ") || "-"}
                               </td>
@@ -3736,7 +3608,7 @@ export default function Clientes() {
                               </td>
                               <td style={tdStyle}>{cliente.codigo_ibama || "-"}</td>
                               <td style={tdStyle}>{cliente.descricao_veiculo || "-"}</td>
-                              <td style={tdStyle}>{cliente.tipo_residuo || "-"}</td>
+                              <td style={tdStyle}>{asTextoFormulario(cliente.tipo_residuo) || "-"}</td>
                               <td style={tdStyle}>{cliente.mtr_coleta || "-"}</td>
                               <td style={tdStyle}>{cliente.destino || "-"}</td>
                               <td style={tdStyle}>{cliente.mtr_destino || "-"}</td>
@@ -4444,7 +4316,6 @@ function ClienteDetalheModal({
               )}
             </div>
             <DetalheCampo rotulo="Código IBAMA" valor={cliente.codigo_ibama} />
-            <DetalheCampo rotulo="Descrição do veículo" valor={cliente.descricao_veiculo} />
             <DetalheCampo rotulo="Resíduo (resumo)" valor={cliente.tipo_residuo} />
             <DetalheCampo rotulo="Classe" valor={cliente.classificacao} />
             <DetalheCampo rotulo="MTR de coleta" valor={cliente.mtr_coleta} colunas={2} />
@@ -4462,24 +4333,36 @@ function ClienteDetalheModal({
 
           <DetalheSecao titulo="Vínculos & Equipamentos">
             <DetalheCampo rotulo="Representante RG" valor={representanteRotulo} />
-            <DetalheCampo rotulo="Veículo preferencial" valor={veiculoRotulo} />
+            <DetalheCampo rotulo="Veículos Contrato" valor={veiculoRotulo} colunas={2} />
             <DetalheCampo rotulo="Margem de lucro" valor={margemRotulo} />
             <DetalheCampo
-              rotulo="Equipamentos desejados"
-              valor={cliente.equipamentos}
-              colunas={3}
+              rotulo="Equipamentos"
+              valor={rotuloEquipamentosContratoResumo(
+                cliente.equipamentos_contrato,
+                cliente.equipamentos
+              )}
+              colunas={2}
               quebrarLinha
             />
           </DetalheSecao>
 
-          {residuos.length > 0 && residuos.some((r) => r.tipo_residuo || r.classificacao || r.unidade_medida || r.frequencia_coleta) ? (
+          {residuos.length > 0 &&
+          residuos.some(
+            (r) =>
+              r.tipo_residuo ||
+              r.classificacao ||
+              r.unidade_medida ||
+              r.frequencia_coleta ||
+              r.valor ||
+              r.faturamento_minimo
+          ) ? (
             <DetalheSecao titulo="Resíduos cadastrados">
               <div style={{ gridColumn: "1 / -1" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                       <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
-                        Tipo de resíduo
+                        Tipo
                       </th>
                       <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
                         Classe
@@ -4488,7 +4371,13 @@ function ClienteDetalheModal({
                         Unidade
                       </th>
                       <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                        Valor
+                      </th>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
                         Frequência
+                      </th>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                        Fat. mínimo
                       </th>
                     </tr>
                   </thead>
@@ -4498,7 +4387,11 @@ function ClienteDetalheModal({
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.tipo_residuo || "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.classificacao || "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.unidade_medida || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.valor ? `R$ ${r.valor}` : "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.frequencia_coleta || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>
+                          {r.faturamento_minimo ? `R$ ${r.faturamento_minimo}` : "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

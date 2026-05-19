@@ -41,6 +41,28 @@ function mensagemCorrecaoViewFaturamento(): string {
   )
 }
 
+const SEL_VW_FATURAMENTO_BASE =
+  'coleta_id, numero, numero_coleta, cliente_id, cliente_nome, cliente_razao_social, cliente_margem_lucro_percentual, data_agendada, data_programacao, data_execucao, programacao_id, programacao_numero, programacao_observacoes, mtr_id, mtr_numero, mtr_observacoes, ticket_comprovante, peso_tara, peso_bruto, peso_liquido, motorista, placa, valor_coleta, status_pagamento, data_vencimento, referencia_nf, numero_nf_coleta, faturamento_referencia_nf, faturamento_registro_status, faturamento_registro_valor, confirmacao_recebimento, fluxo_status, etapa_operacional, status_processo, liberado_financeiro, coleta_observacoes, tipo_residuo, cidade, created_at, ultima_aprovacao_decisao, ultima_aprovacao_obs, ultima_aprovacao_em, conferencia_documentos_ok, conferencia_operacional_obs, conferencia_em, status_conferencia, pendencias_resumo, faturamento_sla_vencido, status_faturamento, conta_receber_nf_enviada_em, conta_receber_nf_envio_obs, conta_receber_valor_pago, conta_receber_valor_travado'
+
+const SEL_VW_FATURAMENTO_TICKET_APROVACAO =
+  ', ticket_impresso_em, faturamento_ticket_aprovado_em, faturamento_ticket_aprovacao_obs'
+
+function isTicketAprovacaoColumnMissingError(err: { message?: string }): boolean {
+  const msg = String(err.message ?? '').toLowerCase()
+  return (
+    msg.includes('ticket_impresso_em') ||
+    msg.includes('faturamento_ticket_aprovado') ||
+    (msg.includes('column') && msg.includes('vw_faturamento_resumo'))
+  )
+}
+
+export type FetchVwFaturamentoResumoResult = {
+  data: FaturamentoResumoViewRow[]
+  error: Error | null
+  /** View com colunas de impressão/aprovação do ticket (migração 20260518130000). */
+  ticketAprovacaoAtivo: boolean
+}
+
 /**
  * Carrega linhas da view `vw_faturamento_resumo` com paginação, para não ficar preso ao primeiro lote
  * quando há muitas coletas já finalizadas (ex.: seeds de histórico).
@@ -48,20 +70,19 @@ function mensagemCorrecaoViewFaturamento(): string {
 export async function fetchVwFaturamentoResumoPaginated(
   supabase: SupabaseClient,
   opts?: FetchVwFaturamentoResumoPaginatedOpts
-): Promise<{ data: FaturamentoResumoViewRow[]; error: Error | null }> {
+): Promise<FetchVwFaturamentoResumoResult> {
   const byId = new Map<string, FaturamentoResumoViewRow>()
   const createdMin = createdAtMinIsoOptIn()
   const orFilter = (opts?.orFilter ?? '').trim()
   let exitDueToMaxPages = false
+  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}`
+  let ticketAprovacaoAtivo = true
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const from = page * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const SEL =
-      'coleta_id, numero, numero_coleta, cliente_id, cliente_nome, cliente_razao_social, cliente_margem_lucro_percentual, data_agendada, data_programacao, data_execucao, programacao_id, programacao_numero, programacao_observacoes, mtr_id, mtr_numero, mtr_observacoes, ticket_comprovante, peso_tara, peso_bruto, peso_liquido, motorista, placa, valor_coleta, status_pagamento, data_vencimento, referencia_nf, numero_nf_coleta, faturamento_referencia_nf, faturamento_registro_status, faturamento_registro_valor, confirmacao_recebimento, fluxo_status, etapa_operacional, status_processo, liberado_financeiro, coleta_observacoes, tipo_residuo, cidade, created_at, ultima_aprovacao_decisao, ultima_aprovacao_obs, ultima_aprovacao_em, conferencia_documentos_ok, conferencia_operacional_obs, conferencia_em, status_conferencia, pendencias_resumo, faturamento_sla_vencido, status_faturamento, conta_receber_nf_enviada_em, conta_receber_nf_envio_obs, conta_receber_valor_pago, conta_receber_valor_travado'
-
-    let qb = supabase.from('vw_faturamento_resumo').select(SEL)
+    let qb = supabase.from('vw_faturamento_resumo').select(sel)
     if (createdMin) qb = qb.gte('created_at', createdMin)
     if (orFilter) qb = qb.or(orFilter)
     const { data, error } = await qb
@@ -70,9 +91,16 @@ export async function fetchVwFaturamentoResumoPaginated(
       .range(from, to)
 
     if (error) {
+      if (page === 0 && ticketAprovacaoAtivo && isTicketAprovacaoColumnMissingError(error)) {
+        ticketAprovacaoAtivo = false
+        sel = SEL_VW_FATURAMENTO_BASE
+        page = -1
+        byId.clear()
+        continue
+      }
       const base = error.message || 'Erro ao ler vw_faturamento_resumo.'
       const msg = isVwFaturamentoResumoMissingError(error) ? base + mensagemCorrecaoViewFaturamento() : base
-      return { data: [], error: new Error(msg) }
+      return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false }
     }
 
     const chunk = (data as FaturamentoResumoViewRow[]) || []
@@ -100,5 +128,5 @@ export async function fetchVwFaturamentoResumoPaginated(
     return a.coleta_id < b.coleta_id ? 1 : a.coleta_id > b.coleta_id ? -1 : 0
   })
 
-  return { data: merged, error: null }
+  return { data: merged, error: null, ticketAprovacaoAtivo }
 }

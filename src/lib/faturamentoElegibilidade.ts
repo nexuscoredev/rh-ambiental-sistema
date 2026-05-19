@@ -5,6 +5,8 @@ export type MotivoInelegivelFaturamento =
   | 'peso_liquido_invalido'
   | 'cliente_obrigatorio'
   | 'conferencia_pendente'
+  | 'ticket_nao_impresso'
+  | 'ticket_aguardando_aprovacao'
   | 'ja_emitido'
   | 'ja_no_financeiro'
 
@@ -35,6 +37,17 @@ export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): Result
   const sc = (row.status_conferencia ?? '').trim()
   if (sc !== 'PRONTO_PARA_FATURAR') motivos.push('conferencia_pendente')
 
+  if (sc === 'PRONTO_PARA_FATURAR') {
+    const pend = (row.pendencias_resumo ?? '').toLowerCase()
+    if (/ticket.n.o impresso|ticket nao impresso/.test(pend)) {
+      motivos.push('ticket_nao_impresso')
+    } else if (/aguardando aprova/.test(pend)) {
+      motivos.push('ticket_aguardando_aprovacao')
+    } else if (row.ticket_impresso_em && !row.faturamento_ticket_aprovado_em) {
+      motivos.push('ticket_aguardando_aprovacao')
+    }
+  }
+
   if (row.faturamento_registro_status === 'emitido') motivos.push('ja_emitido')
 
   if (indiceEtapaFluxo(etapa) >= indiceEtapaFluxo('ENVIADO_FINANCEIRO')) motivos.push('ja_no_financeiro')
@@ -49,7 +62,11 @@ export function rotuloMotivoInelegivel(m: MotivoInelegivelFaturamento): string {
     case 'cliente_obrigatorio':
       return 'Cliente obrigatório.'
     case 'conferencia_pendente':
-      return 'Requisitos de conferência pendentes (MTR, peso, ticket, aprovação ou outro — veja pendências na lista).'
+      return 'Requisitos de conferência pendentes (MTR, peso, ticket ou outro — veja pendências na lista).'
+    case 'ticket_nao_impresso':
+      return 'Salve a pesagem e o ticket no Controle de Massa (passo 4) antes de faturar.'
+    case 'ticket_aguardando_aprovacao':
+      return 'Aguardando validação do ticket pelo Faturamento (fila de aprovação).'
     case 'ja_emitido':
       return 'Faturamento já emitido.'
     case 'ja_no_financeiro':

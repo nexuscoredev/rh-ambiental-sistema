@@ -9,11 +9,15 @@ import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { fetchVwFaturamentoResumoPaginated } from '../lib/faturamentoResumoFetch'
 import {
   coletaConferenciaPendente,
-  coletaConferenciaProntaParaFaturar,
+  coletaProntaNaVistaExcluindoFluxoTicket,
+  coletaAguardandoImpressaoTicketFaturamento,
   coletaHistoricoFaturamentoEmitido,
   coletaNaFilaFaturamento,
+  coletaNaFilaAprovacaoTicketFaturamento,
 } from '../lib/faturamentoOperacionalFila'
 import { FaturamentoResumoCards } from '../components/faturamento/FaturamentoResumoCards'
+import { FaturamentoFilaAguardandoImpressao } from '../components/faturamento/FaturamentoFilaAguardandoImpressao'
+import { FaturamentoFilaAprovacaoTicket } from '../components/faturamento/FaturamentoFilaAprovacaoTicket'
 import { FaturamentoFilaColetas } from '../components/faturamento/FaturamentoFilaColetas'
 import { FaturamentoHistoricoColetas } from '../components/faturamento/FaturamentoHistoricoColetas'
 import { FaturamentoRelatoriosPanel } from '../components/faturamento/FaturamentoRelatoriosPanel'
@@ -76,6 +80,7 @@ export default function FaturamentoOperacional() {
   const [linhasView, setLinhasView] = useState<FaturamentoResumoViewRow[]>([])
   const [carregandoVista, setCarregandoVista] = useState(true)
   const [erroVista, setErroVista] = useState('')
+  const [ticketAprovacaoAtivo, setTicketAprovacaoAtivo] = useState(true)
   const [cargo, setCargo] = useState<string | null>(null)
 
   const [modalAberto, setModalAberto] = useState(false)
@@ -86,7 +91,7 @@ export default function FaturamentoOperacional() {
   const carregarVista = useCallback(async () => {
     setCarregandoVista(true)
     setErroVista('')
-    const { data, error } = await fetchVwFaturamentoResumoPaginated(supabase)
+    const { data, error, ticketAprovacaoAtivo: ticketCols } = await fetchVwFaturamentoResumoPaginated(supabase)
 
     if (error) {
       console.error(error)
@@ -94,10 +99,12 @@ export default function FaturamentoOperacional() {
         'Não foi possível carregar a consolidação de faturamento. Verifique se a view vw_faturamento_resumo existe e está publicada no Supabase.'
       )
       setLinhasView([])
+      setTicketAprovacaoAtivo(false)
       setCarregandoVista(false)
       return
     }
 
+    setTicketAprovacaoAtivo(ticketCols)
     setLinhasView(data)
     setCarregandoVista(false)
   }, [])
@@ -130,6 +137,20 @@ export default function FaturamentoOperacional() {
     [coletasResumo, idsCtx]
   )
 
+  const filaAprovacao = useMemo(() => {
+    const f = linhasView.filter((r) => coletaNaFilaAprovacaoTicketFaturamento(r))
+    return f.sort((a, b) => {
+      const ta = new Date(a.ticket_impresso_em ?? a.created_at).getTime()
+      const tb = new Date(b.ticket_impresso_em ?? b.created_at).getTime()
+      return tb - ta
+    })
+  }, [linhasView])
+
+  const filaAguardandoImpressao = useMemo(
+    () => linhasView.filter((r) => coletaAguardandoImpressaoTicketFaturamento(r)),
+    [linhasView]
+  )
+
   const fila = useMemo(() => {
     const f = linhasView.filter((r) => coletaNaFilaFaturamento(r))
     return f.sort((a, b) => {
@@ -145,7 +166,7 @@ export default function FaturamentoOperacional() {
   )
 
   const qtdProntoConferencia = useMemo(
-    () => linhasView.filter((r) => coletaConferenciaProntaParaFaturar(r)).length,
+    () => linhasView.filter((r) => coletaProntaNaVistaExcluindoFluxoTicket(r)).length,
     [linhasView]
   )
 
@@ -157,7 +178,7 @@ export default function FaturamentoOperacional() {
   const valorSomaProntoConferencia = useMemo(() => {
     let s = 0
     for (const r of linhasView) {
-      if (!coletaConferenciaProntaParaFaturar(r)) continue
+      if (!coletaProntaNaVistaExcluindoFluxoTicket(r)) continue
       const v = r.valor_coleta
       if (v != null && Number.isFinite(Number(v))) s += Number(v)
     }
@@ -216,8 +237,9 @@ export default function FaturamentoOperacional() {
           Consolidação e emissão por coleta
         </h1>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
-          Consolidação de coletas já pesadas. <strong>Não cria</strong> dados operacionais: você registra valores e, ao emitir,
-          a coleta segue para o <Link to="/financeiro">Financeiro</Link> para cobrança.
+          Após <strong>salvar</strong> pesagem e ticket no Controle de Massa, a coleta entra na <strong>fila de conferência do ticket</strong>.
+          Valide na tabela abaixo; depois use a fila <strong>Faturar</strong> para registar valores e enviar ao{' '}
+          <Link to="/financeiro">Financeiro</Link>.
         </p>
 
         {erroVista ? (
@@ -251,6 +273,25 @@ export default function FaturamentoOperacional() {
           </div>
         ) : null}
 
+        {!carregandoVista && !erroVista && !ticketAprovacaoAtivo ? (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              color: '#92400e',
+              fontSize: '13px',
+              lineHeight: 1.5,
+            }}
+          >
+            <strong>Fila de aprovação do ticket ainda não está ativa neste Supabase.</strong> Execute no SQL
+            Editor a migração{' '}
+            <code style={{ fontSize: '12px' }}>20260518130000_coletas_ticket_aprovacao_faturamento.sql</code>.
+          </div>
+        ) : null}
+
         <div style={{ marginTop: '22px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
@@ -270,12 +311,13 @@ export default function FaturamentoOperacional() {
           </button>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
             Perfil: <strong style={{ color: '#0f172a' }}>{cargo ?? '—'}</strong>
-            {!podeMutar ? ' · somente leitura' : ' · pode emitir ao Financeiro'}
+            {!podeMutar ? ' · somente leitura' : ' · pode aprovar tickets e emitir ao Financeiro'}
           </span>
         </div>
 
         <div style={{ marginTop: '22px' }}>
           <FaturamentoResumoCards
+            qtdAguardandoAprovacaoTicket={filaAprovacao.length}
             qtdProntoConferencia={qtdProntoConferencia}
             valorSomaProntoConferencia={valorSomaProntoConferencia}
             qtdPodeEmitir={fila.length}
@@ -290,7 +332,22 @@ export default function FaturamentoOperacional() {
           />
         </div>
 
-        <FaturamentoFilaColetas linhas={fila} carregando={carregandoVista} onFaturar={abrirModalFaturar} />
+        <FaturamentoFilaAguardandoImpressao linhas={filaAguardandoImpressao} carregando={carregandoVista} />
+
+        <FaturamentoFilaAprovacaoTicket
+          linhas={filaAprovacao}
+          carregando={carregandoVista}
+          podeAprovar={podeMutar}
+          onAprovado={() => void carregarVista()}
+        />
+
+        <FaturamentoFilaColetas
+          linhas={fila}
+          carregando={carregandoVista}
+          onFaturar={abrirModalFaturar}
+          onDevolvidoConferencia={() => void carregarVista()}
+          podeDevolverConferencia={podeMutar && ticketAprovacaoAtivo}
+        />
 
         {coletaAtiva ? (
           <div style={cardStyle}>

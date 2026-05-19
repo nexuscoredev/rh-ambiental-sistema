@@ -6,6 +6,18 @@ import {
 
 export type StatusPagamentoFinanceiro = 'Pendente' | 'Parcial' | 'Pago'
 
+/** Parâmetros de URL para abrir programação / MTR / controle de massa no contexto da coleta. */
+export function montarParamsFluxoColeta(
+  row: Pick<FaturamentoResumoViewRow, 'coleta_id' | 'mtr_id' | 'programacao_id' | 'cliente_id'>
+): URLSearchParams {
+  const p = new URLSearchParams()
+  p.set('coleta', row.coleta_id)
+  if (row.mtr_id) p.set('mtr', row.mtr_id)
+  if (row.programacao_id) p.set('programacao', row.programacao_id)
+  if (row.cliente_id) p.set('cliente', row.cliente_id)
+  return p
+}
+
 /** Linha de `vw_faturamento_resumo` (Supabase). */
 export type FaturamentoResumoViewRow = {
   coleta_id: string
@@ -48,6 +60,9 @@ export type FaturamentoResumoViewRow = {
   tipo_residuo: string
   cidade: string
   created_at: string
+  ticket_impresso_em?: string | null
+  faturamento_ticket_aprovado_em?: string | null
+  faturamento_ticket_aprovacao_obs?: string | null
   ultima_aprovacao_decisao: string | null
   ultima_aprovacao_obs: string | null
   ultima_aprovacao_em: string | null

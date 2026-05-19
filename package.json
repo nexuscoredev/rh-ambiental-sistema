@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.5",
+  "version": "1.2.6",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -32,6 +32,9 @@
     "db:apply:clientes-etapa1": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260413120000_clientes_enderecos_email_nf.sql",
     "db:apply:clientes-status-datas": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260427140000_clientes_status_datas.sql",
     "db:apply:faturamento-view": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_vw_faturamento_resumo.sql",
+    "db:apply:ticket-aprovacao": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260518130000_coletas_ticket_aprovacao_faturamento.sql",
+    "db:apply:clientes-contrato": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql",
+    "db:apply:excluir-mtr-cascata": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260520140000_excluir_mtr_coleta_cascata.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
     "functions:deploy:admin-delete": "supabase functions deploy admin-delete-user",

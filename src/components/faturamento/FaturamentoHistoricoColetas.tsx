@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { coletaHistoricoFaturamentoEmitido } from '../../lib/faturamentoOperacionalFila'
+import { FaturamentoColetaResumoModal } from './FaturamentoColetaResumoModal'
 
 const wrap: CSSProperties = {
   background: '#fff',
@@ -28,6 +29,18 @@ const td: CSSProperties = {
   fontSize: '12px',
   color: '#334155',
   borderBottom: '1px solid #f1f5f9',
+}
+
+const btnResumo: CSSProperties = {
+  background: '#f1f5f9',
+  color: '#0f172a',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '6px 10px',
+  fontSize: '12px',
+  fontWeight: 700,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 }
 
 function fmtData(iso: string | null | undefined) {
@@ -65,6 +78,7 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
   const [busca, setBusca] = useState('')
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
+  const [resumoRow, setResumoRow] = useState<FaturamentoResumoViewRow | null>(null)
 
   const historicoBase = useMemo(
     () => todasLinhas.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
@@ -150,12 +164,13 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
               <th style={th}>Situação</th>
               <th style={th}>Valor</th>
               <th style={th}>Ref. NF</th>
+              <th style={{ ...th, width: '108px' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtradas.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                <td colSpan={11} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
                   Nenhum registro neste filtro.
                 </td>
               </tr>
@@ -190,6 +205,11 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
                   </td>
                   <td style={{ ...td, fontWeight: 700 }}>{fmtValor(r.faturamento_registro_valor ?? r.valor_coleta)}</td>
                   <td style={td}>{r.faturamento_referencia_nf || r.referencia_nf || '—'}</td>
+                  <td style={td}>
+                    <button type="button" style={btnResumo} onClick={() => setResumoRow(r)}>
+                      Ver resumo
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -199,6 +219,11 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
       <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#94a3b8' }}>
         {filtradas.length} registro(s) no filtro.
       </p>
+      <FaturamentoColetaResumoModal
+        open={resumoRow != null}
+        row={resumoRow}
+        onClose={() => setResumoRow(null)}
+      />
     </div>
   )
 }

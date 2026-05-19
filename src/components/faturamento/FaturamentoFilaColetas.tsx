@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
+import { devolverTicketParaFilaConferenciaColeta } from '../../lib/faturamentoTicketFluxo'
 import {
   coletaFaturamentoSlaVencido,
   rotuloConferenciaResumo,
@@ -39,6 +41,9 @@ type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
   onFaturar: (coletaId: string) => void
+  /** Após devolver à fila de conferência/aprovação do ticket. */
+  onDevolvidoConferencia?: () => void
+  podeDevolverConferencia?: boolean
   titulo?: string
   subtitulo?: string
   mensagemVazia?: string
@@ -72,11 +77,35 @@ export function FaturamentoFilaColetas({
   linhas,
   carregando,
   onFaturar,
-  titulo = 'Fila para emissão ao Financeiro',
-  subtitulo = 'Critérios: peso líquido registado, etapa após o controle de massa, aprovação e ainda sem faturamento emitido ao Financeiro. Coletas com mais de 3 dias nessa situação aparecem com indicador vermelho intermitente na coluna Faturamento.',
-  mensagemVazia = 'Nenhuma coleta pronta para faturamento.',
+  onDevolvidoConferencia,
+  podeDevolverConferencia = false,
+  titulo = 'Fila para faturar (emitir ao Financeiro)',
+  subtitulo = 'Critérios: ticket impresso e aprovado pelo Faturamento, peso líquido e MTR na vista, ainda sem emissão ao Financeiro. Coletas com mais de 3 dias nessa situação aparecem com indicador vermelho intermitente na coluna Faturamento.',
+  mensagemVazia = 'Nenhuma coleta aprovada aguardando faturamento.',
   rotuloBotao = 'Faturar',
 }: Props) {
+  const [devolvendoId, setDevolvendoId] = useState<string | null>(null)
+
+  async function handleDevolver(row: FaturamentoResumoViewRow) {
+    if (!podeDevolverConferencia) return
+    const n = row.numero_coleta ?? row.numero
+    const ok = window.confirm(
+      `Devolver a coleta ${n} à fila de conferência do ticket?\n\nA aprovação do Faturamento será anulada e a coleta voltará a aguardar validação antes de faturar.`
+    )
+    if (!ok) return
+
+    const motivo = window.prompt('Motivo da devolução (opcional):', '') ?? ''
+    setDevolvendoId(row.coleta_id)
+    const res = await devolverTicketParaFilaConferenciaColeta(row.coleta_id, motivo)
+    setDevolvendoId(null)
+
+    if (!res.ok) {
+      window.alert(res.message)
+      return
+    }
+    onDevolvidoConferencia?.()
+  }
+
   return (
     <div style={{ ...wrap, borderTop: '4px solid #0d9488' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
@@ -168,23 +197,57 @@ export function FaturamentoFilaColetas({
                     {textoPendencias(r.pendencias_resumo)}
                   </td>
                   <td style={{ ...td, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => onFaturar(r.coleta_id)}
+                    <div
                       style={{
-                        padding: '8px 16px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: '#0d9488',
-                        color: '#fff',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '6px',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
-                      {rotuloBotao}
-                    </button>
+                      {onDevolvidoConferencia ? (
+                        <button
+                          type="button"
+                          disabled={!podeDevolverConferencia || devolvendoId === r.coleta_id}
+                          onClick={() => void handleDevolver(r)}
+                          title="Anula a aprovação e devolve à fila de conferência do ticket"
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            border: '1px solid #cbd5e1',
+                            background: podeDevolverConferencia ? '#fff' : '#f1f5f9',
+                            color: podeDevolverConferencia ? '#475569' : '#94a3b8',
+                            fontWeight: 700,
+                            fontSize: '11px',
+                            cursor:
+                              podeDevolverConferencia && devolvendoId !== r.coleta_id
+                                ? 'pointer'
+                                : 'not-allowed',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {devolvendoId === r.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => onFaturar(r.coleta_id)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: '#0d9488',
+                          color: '#fff',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {rotuloBotao}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

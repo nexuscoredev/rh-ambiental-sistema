@@ -7,6 +7,8 @@ import { cargoPodeEmitirFaturamento } from '../lib/workflowPermissions'
 import type { RegraPrecoRow } from '../services/pricing'
 import { sanitizeIlikePattern } from '../lib/sanitizeIlike'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
+import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
+import { TIPO_RESIDUO_REGRA_QUALQUER } from '../lib/residuosCatalogo'
 
 type ClienteOpt = { id: string; nome: string; razao_social: string | null }
 
@@ -25,7 +27,7 @@ type FormState = {
 
 const formInicial: FormState = {
   cliente_id: '',
-  tipo_residuo: '',
+  tipo_residuo: TIPO_RESIDUO_REGRA_QUALQUER,
   tipo_servico: 'COLETA',
   valor_por_kg: '',
   valor_minimo: '0',
@@ -237,7 +239,7 @@ export default function FaturamentoRegrasPreco() {
 
     const tipoRes = form.tipo_residuo.trim()
     if (!tipoRes) {
-      setErro('Preencha o tipo de resíduo (use * para regra geral).')
+      setErro('Selecione o tipo de resíduo ou «Qualquer resíduo (*)».')
       return
     }
 
@@ -493,11 +495,11 @@ export default function FaturamentoRegrasPreco() {
 
               <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
                 Tipo de resíduo
-                <input
+                <SelectTipoResiduoCatalogo
                   value={form.tipo_residuo}
-                  onChange={(e) => setForm((f) => ({ ...f, tipo_residuo: e.target.value }))}
+                  onChange={(tipo_residuo) => setForm((f) => ({ ...f, tipo_residuo }))}
                   disabled={!podeMutar}
-                  placeholder="Ex.: Lodo · use * para qualquer resíduo"
+                  permitirQualquer
                   style={{
                     marginTop: '6px',
                     width: '100%',
@@ -506,6 +508,7 @@ export default function FaturamentoRegrasPreco() {
                     border: '1px solid #cbd5e1',
                     padding: '0 12px',
                     fontSize: '14px',
+                    boxSizing: 'border-box',
                   }}
                 />
               </label>

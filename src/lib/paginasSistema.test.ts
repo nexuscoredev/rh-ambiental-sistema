@@ -110,6 +110,33 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/faturamento')).toBe(true)
   })
 
+  it('Usuários: só Desenvolvedor (Administrador, Financeiro e Diretoria não)', () => {
+    expect(cargoPodeAcessarRotaMenu('Administrador', '/usuarios')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Financeiro', '/usuarios')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/usuarios')).toBe(false)
+  })
+
+  it('usuarioPodeAcessarRota: /usuarios só com cargo Desenvolvedor (sem bypass)', () => {
+    expect(
+      usuarioPodeAcessarRota(
+        { email: 'cavalcantersc07@gmail.com', cargo: 'Administrador', paginas_permitidas: null },
+        '/usuarios'
+      )
+    ).toBe(false)
+    expect(
+      usuarioPodeAcessarRota(
+        { email: 'dev@test.com', cargo: 'Desenvolvedor', paginas_permitidas: null },
+        '/usuarios'
+      )
+    ).toBe(true)
+    expect(
+      usuarioPodeAcessarRota(
+        { email: 'u@test.com', cargo: 'Visualizador', paginas_permitidas: ['/usuarios'] },
+        '/usuarios'
+      )
+    ).toBe(false)
+  })
+
   it('cargoPodeAcessarRotaMenu: Financeiro e Diretoria acedem a rotas financeiras', () => {
     expect(cargoPodeAcessarRotaMenu('Financeiro', '/financeiro')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/financeiro/contas-pagar')).toBe(true)

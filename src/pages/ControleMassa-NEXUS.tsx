@@ -17,8 +17,10 @@ import {
 } from "../lib/coletasSelectSeguimento";
 import { fetchResiduosCatalogo, mapResiduosPorId, type ResiduoCatalogo } from "../lib/residuosCatalogo";
 import { supabase } from "../lib/supabase";
+import { registrarTicketImpressoColeta } from "../lib/faturamentoTicketFluxo";
 import MainLayout from "../layouts/MainLayout";
 import { cargoPodeLancarPesagem, cargoPodeExcluirMtr } from "../lib/workflowPermissions";
+import { excluirColetaPorId } from "../lib/excluirOperacionalCascata";
 import {
   type EtapaFluxo,
   formatarEtapaParaUI,
@@ -854,7 +856,7 @@ export default function ControleMassa() {
     return map;
   }, [todasColetas]);
 
-  /** Todas as MTRs não canceladas aparecem na lista (ordenação por coleta disponível). */
+  /** MTRs sem coleta vinculada — elegíveis para lançar nova pesagem (passo 1). */
   const opcoesMtrParaPesagem = useMemo(() => {
     const resolved = resolverColetaContexto(todasColetas, {
       coleta: urlColetaId,
@@ -867,21 +869,20 @@ export default function ControleMassa() {
 
     for (const m of mtrsLista) {
       if (m.status === "Cancelado") continue;
-      const coleta = coletaPorMtrId.get(m.id) ?? null;
-      linhas.push({ mtr: m, coleta });
+      if (coletaPorMtrId.has(m.id)) continue;
+      linhas.push({ mtr: m, coleta: null });
     }
 
-    linhas.sort((a, b) => {
-      const prioridade = (c: ColetaOpcao | null) => (c ? 0 : 1);
-      return prioridade(a.coleta) - prioridade(b.coleta);
-    });
+    linhas.sort((a, b) =>
+      b.mtr.numero.localeCompare(a.mtr.numero, "pt-BR", { numeric: true })
+    );
 
-    if (resolved?.mtr_id) {
+    if (resolved?.mtr_id && !coletaPorMtrId.has(resolved.mtr_id)) {
       const ja = linhas.some((l) => l.mtr.id === resolved.mtr_id);
       if (!ja) {
         const m = mtrsLista.find((x) => x.id === resolved.mtr_id);
-        if (m) {
-          linhas.unshift({ mtr: m, coleta: resolved });
+        if (m && m.status !== "Cancelado") {
+          linhas.unshift({ mtr: m, coleta: null });
         }
       }
     }
@@ -1147,25 +1148,9 @@ export default function ControleMassa() {
     setSucesso("");
 
     try {
-      try {
-        await supabase.from("programacoes").update({ coleta_id: null }).eq("coleta_id", c.id);
-      } catch {
-        /* ignore */
-      }
-      try {
-        await supabase.from("controle_massa").update({ coleta_id: null }).eq("coleta_id", c.id);
-      } catch {
-        /* ignore */
-      }
-
-      const { error } = await supabase.from("coletas").delete().eq("id", c.id);
-      if (error) {
-        console.error(error);
-        setErroTela(
-          `Não foi possível excluir a coleta: ${error.message}${
-            error.details ? ` (${error.details})` : ""
-          }`
-        );
+      const res = await excluirColetaPorId(c.id);
+      if (!res.ok) {
+        setErroTela(res.message);
         return;
       }
 
@@ -1521,6 +1506,16 @@ export default function ControleMassa() {
       setErroTela("");
     }
 
+    let filaConferenciaOk = false;
+    if (!errorColeta && ticketAuto.ok) {
+      const resFila = await registrarTicketImpressoColeta(coletaId);
+      if (!resFila.ok) {
+        setErroTela((prev) => prev || resFila.message);
+      } else {
+        filaConferenciaOk = true;
+      }
+    }
+
     setMtrSemColetaSelecionado(null);
     await fetchMtrsEColetas({ extraColetaIds: [coletaId] });
     setForm({
@@ -1541,7 +1536,9 @@ export default function ControleMassa() {
         ? "Pesagem registrada; verifique o aviso em vermelho sobre a etapa da coleta."
         : !ticketAuto.ok
           ? "Pesagem registrada. Abra «Mais opções do ticket» em baixo para gravar o ticket manualmente."
-          : "Pesagem e ticket guardados. Use «Imprimir ticket» no passo 4."
+          : filaConferenciaOk
+            ? "Pesagem e ticket guardados. A coleta entrou na fila de conferência do Faturamento."
+            : "Pesagem e ticket guardados. Verifique o aviso em vermelho sobre a fila do Faturamento."
     );
     setTimeout(() => {
       setSucesso("");
@@ -1704,7 +1701,8 @@ export default function ControleMassa() {
             </h1>
             <p className="page-header__lead" style={{ margin: "6px 0 0", maxWidth: "720px" }}>
               <strong>Resumo:</strong> escolha a coleta → preencha a pesagem → defina o ticket (tipo e número) →{' '}
-              <strong>Salvar</strong> → <strong>Imprimir ticket</strong>. Opções de correção e aprovação ficam em «Mais
+              <strong>Salvar pesagem e ticket</strong> envia ao Faturamento; <strong>Imprimir ticket</strong> é opcional (papel).
+              Opções de correção e aprovação ficam em «Mais
               opções», abaixo do formulário.
             </p>
             {usuarioCargo ? (
@@ -2362,7 +2360,7 @@ export default function ControleMassa() {
               </div>
               <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#64748b", lineHeight: 1.45 }}>
                 {secaoPesagemAberta
-                  ? "Preencha os passos 1–4 e salve. Depois use Imprimir ticket (passo 4) quando o ticket estiver gerado."
+                  ? "Preencha os passos 1–4 e use «Salvar pesagem e ticket» — a coleta segue para o Faturamento."
                   : "Abra para lançar pesagem e ticket. Pode fechar para ver mais da lista em Auditoria."}
               </p>
             </div>
@@ -2870,7 +2868,7 @@ export default function ControleMassa() {
                   <div style={{ fontWeight: 900, color: "#065f46" }}>4. Guardar e imprimir</div>
                   <div style={{ marginTop: 4, fontSize: "12px", color: "#047857", fontWeight: 700 }}>
                     {form.coleta_id.trim()
-                      ? "Primeiro «Salvar». Quando o passo Ticket estiver concluído no fluxo, use «Imprimir ticket»."
+                      ? "Use «Salvar pesagem e ticket» para enviar ao Faturamento. «Imprimir ticket» só abre a impressão em papel."
                       : "Selecione uma MTR ou coleta no passo 1 antes de salvar."}
                   </div>
                 </div>
@@ -2897,12 +2895,35 @@ export default function ControleMassa() {
 
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    disabled={!podeImprimirTicket}
+                    onClick={() => {
+                      const cid = form.coleta_id.trim();
+                      if (!cid) return;
+                      if (!podeMutarMassa) {
+                        setErroTela(
+                          "Seu perfil não pode registar impressão do ticket. Apenas balanceiro ou administrador."
+                        );
+                        return;
+                      }
+                      void (async () => {
+                        const res = await registrarTicketImpressoColeta(cid);
+                        if (!res.ok) {
+                          setErroTela(res.message);
+                          setSucesso("");
+                          return;
+                        }
+                        setErroTela("");
+                        setSucesso("Ticket enviado para impressão.");
+                        setTimeout(() => setSucesso(""), 5000);
+                        window.print();
+                      })();
+                    }}
+                    disabled={!podeImprimirTicket || !podeMutarMassa}
                     title={
-                      podeImprimirTicket
-                        ? "Abre a janela de impressão com o layout do ticket (papel térmico / A4)."
-                        : "Guarde primeiro com «Salvar». O botão ativa quando o ticket estiver gerado no fluxo."
+                      !podeMutarMassa
+                        ? "Sem permissão para registar impressão do ticket."
+                        : podeImprimirTicket
+                          ? "Abre a janela de impressão do ticket (papel térmico / A4). A fila do Faturamento é atualizada ao salvar."
+                          : "Guarde primeiro com «Salvar». O botão ativa quando o ticket estiver gerado no fluxo."
                     }
                     style={{
                       height: "44px",

@@ -1,7 +1,8 @@
 /**
  * Cargos permitidos por rota — fonte única para `App-NEXUS.tsx` e `paginasSistema.ts` (menu).
  * Regras de negócio (resumo):
- * - Desenvolvedor / Administrador / Financeiro: acesso total às rotas de negócio.
+ * - Desenvolvedor / Administrador / Financeiro: acesso total às rotas de negócio (exceto Usuários).
+ * - Usuários (`/usuarios`): apenas Desenvolvedor.
  * - Operacional: sem Faturamento, Financeiro, Pós-venda, Usuários.
  * - Logística: apenas o fluxo operacional do menu (sem Cadastros, Dashboard, checklist, ticket, aprovação, etc.).
  * - Comercial: apenas Cadastros + Pós-venda.
@@ -94,7 +95,7 @@ const FINANCEIRO = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador]
 
 const ENVIO_NF = [...ACESSO_TOTAL, C.faturamento, C.visualizador] as const
 
-const USUARIOS = [...ACESSO_TOTAL, C.diretoria] as const
+const USUARIOS = [C.desenvolvedor] as const
 
 export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/dashboard': [...DASHBOARD_E_CHAT],

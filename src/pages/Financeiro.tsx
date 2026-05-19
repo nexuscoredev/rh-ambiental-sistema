@@ -261,6 +261,7 @@ export default function Financeiro() {
 
   const [linhasVistaFat, setLinhasVistaFat] = useState<FaturamentoResumoViewRow[]>([])
   const [erroVistaFat, setErroVistaFat] = useState('')
+  const [ticketAprovacaoAtivo, setTicketAprovacaoAtivo] = useState(true)
   const [fatModalAberto, setFatModalAberto] = useSessionPersistedState('fat-modal-aberto', false)
   const [fatModalColetaId, setFatModalColetaId] = useSessionPersistedState<string | null>(
     'fat-modal-coleta',
@@ -396,15 +397,17 @@ export default function Financeiro() {
 
   const carregarVistaFaturamento = useCallback(async () => {
     setErroVistaFat('')
-    const { data, error } = await fetchVwFaturamentoResumoPaginated(supabase)
+    const { data, error, ticketAprovacaoAtivo: ticketCols } = await fetchVwFaturamentoResumoPaginated(supabase)
     if (error) {
       setErroVistaFat(
         error.message ||
           'Não foi possível carregar a consolidação para faturamento. Verifique a view vw_faturamento_resumo no Supabase.'
       )
       setLinhasVistaFat([])
+      setTicketAprovacaoAtivo(false)
       return
     }
+    setTicketAprovacaoAtivo(ticketCols)
     setLinhasVistaFat(data)
   }, [])
 
@@ -1004,6 +1007,8 @@ export default function Financeiro() {
           linhas={filaFaturamento}
           carregando={loading}
           onFaturar={abrirModalFaturamento}
+          onDevolvidoConferencia={() => void carregarVistaFaturamento()}
+          podeDevolverConferencia={podeMutarFaturamento && ticketAprovacaoAtivo}
           titulo="Coletas prontas para faturamento"
           subtitulo="Só aparecem coletas com peso líquido, etapa válida após a pesagem, aprovação e ainda sem emissão ao Financeiro. Use «Faturar» para preencher o valor e confirmar."
           mensagemVazia="Nenhuma coleta pronta para faturamento."

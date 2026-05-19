@@ -39,6 +39,7 @@ const hint: CSSProperties = {
 }
 
 type Props = {
+  qtdAguardandoAprovacaoTicket: number
   qtdProntoConferencia: number
   valorSomaProntoConferencia: string
   qtdPodeEmitir: number
@@ -49,6 +50,7 @@ type Props = {
 }
 
 export function FaturamentoResumoCards({
+  qtdAguardandoAprovacaoTicket,
   qtdProntoConferencia,
   valorSomaProntoConferencia,
   qtdPodeEmitir,
@@ -59,34 +61,37 @@ export function FaturamentoResumoCards({
 }: Props) {
   return (
     <div style={grid}>
+      <div style={{ ...card, borderTop: '3px solid #f59e0b' }}>
+                <div style={label}>Aguardando conferência do ticket</div>
+        <div style={value}>{qtdAguardandoAprovacaoTicket}</div>
+                <div style={hint}>
+          Pesagem salva no Controle de Massa; validar na fila abaixo antes de faturar.
+        </div>
+      </div>
       <div style={{ ...card, borderTop: '3px solid #0d9488' }}>
         <div style={label}>Pronto para faturar (vista)</div>
         <div style={value}>{qtdProntoConferencia}</div>
         <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorSomaProntoConferencia}</div>
-        <div style={hint}>
-          Mesma regra do filtro «Pronto para faturar» no Financeiro (conferência concluída na vista consolidada).
-        </div>
+        <div style={hint}>Ticket já validado; elegível para a fila «Faturar» (sem contar quem ainda está em conferência).</div>
       </div>
       <div style={{ ...card, borderTop: '3px solid #14b8a6' }}>
-        <div style={label}>Pode emitir agora</div>
+        <div style={label}>Pode faturar agora</div>
         <div style={value}>{qtdPodeEmitir}</div>
         <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorEstimadoEmitir}</div>
         <div style={hint}>
-          Fila operacional: pesagem com peso líquido, etapa após controle de massa, aprovação e ainda sem emissão ao Financeiro.
+          Ticket aprovado pelo Faturamento; ainda sem emissão ao Financeiro.
         </div>
       </div>
       <div style={{ ...card, borderTop: '3px solid #0ea5e9' }}>
         <div style={label}>Já no Financeiro</div>
         <div style={value}>{qtdEmitidasFinanceiro}</div>
         <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorEmitidas}</div>
-        <div style={hint}>Coletas com registro emitido ou etapa já enviada ao Financeiro (histórico abaixo).</div>
+        <div style={hint}>Coletas com registro emitido ou etapa já enviada ao Financeiro.</div>
       </div>
       <div style={{ ...card, borderTop: '3px solid #94a3b8' }}>
         <div style={label}>Conferência pendente (vista)</div>
         <div style={value}>{qtdPendenteConferencia}</div>
-        <div style={hint}>
-          Conferência ainda incompleta na mesma vista; o resumo do que falta aparece na coluna Pendências da tabela e no Financeiro.
-        </div>
+                <div style={hint}>Conferência ainda incompleta na vista consolidada.</div>
       </div>
     </div>
   )

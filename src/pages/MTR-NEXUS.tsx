@@ -10,7 +10,13 @@ import {
 } from '../lib/fluxoEtapas'
 import { isBenignSupabaseFetchError } from '../lib/supabaseErrors'
 import { cargoPodeEditarMtr } from '../lib/workflowPermissions'
+import {
+  excluirColetaPorId,
+  excluirMtrPorId,
+  listarColetaIdsPorMtr,
+} from '../lib/excluirOperacionalCascata'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
 
 type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado'
 
@@ -1001,35 +1007,21 @@ export default function MTR() {
       return
     }
 
-    const coletaIds = coletas.filter((c) => c.mtr_id === item.id).map((c) => c.id)
-    const temColeta = coletaIds.length > 0
+    const coletaIdsMemoria = coletas.filter((c) => c.mtr_id === item.id).map((c) => c.id)
+    const coletaIdsDb = await listarColetaIdsPorMtr(supabase, item.id)
+    const qtdColetas = Math.max(coletaIdsMemoria.length, coletaIdsDb.length)
+    const temColeta = qtdColetas > 0
 
     const msgConfirm = temColeta
-      ? `Remover a MTR ${item.numero} e ${coletaIds.length} coleta(s) vinculada(s)?\n\nIsso apaga checklist, ticket, aprovação, faturamento e desvincula programação e controle de massa quando aplicável.`
+      ? `Remover a MTR ${item.numero} e ${qtdColetas} coleta(s) vinculada(s)?\n\nIsso apaga checklist, ticket, aprovação, faturamento e desvincula programação e controle de massa quando aplicável.`
       : `Deseja realmente remover a MTR ${item.numero}?`
 
     if (!window.confirm(msgConfirm)) return
 
-    if (temColeta) {
-      const excluiu = await handleDeleteColetasDaMtr(item.id, {
-        skipConfirm: true,
-        suppressSuccessAlert: true,
-      })
-      if (!excluiu) return
-    }
-
-    const { error } = await supabase.from('mtrs').delete().eq('id', item.id)
-
-    if (error) {
-      alert(`Erro ao remover MTR:\n${buildSupabaseErrorMessage(error)}`)
+    const res = await excluirMtrPorId(item.id)
+    if (!res.ok) {
+      alert(`Erro ao remover MTR:\n${res.message}`)
       return
-    }
-
-    if (item.programacao_id) {
-      await supabase
-        .from('programacoes')
-        .update({ status_programacao: 'PENDENTE' })
-        .eq('id', item.programacao_id)
     }
 
     if (selectedMTR?.id === item.id) {
@@ -1053,7 +1045,10 @@ export default function MTR() {
       return false
     }
 
-    const ids = coletas.filter((c) => c.mtr_id === mtrId).map((c) => c.id)
+    const idsMemoria = coletas.filter((c) => c.mtr_id === mtrId).map((c) => c.id)
+    const idsDb = await listarColetaIdsPorMtr(supabase, mtrId)
+    const ids = [...new Set([...idsMemoria, ...idsDb])]
+
     if (ids.length === 0) {
       await loadData()
       return true
@@ -1067,21 +1062,9 @@ export default function MTR() {
     }
 
     for (const coletaId of ids) {
-      // Desvincular vínculos mais comuns (best-effort).
-      try {
-        await supabase.from('programacoes').update({ coleta_id: null }).eq('coleta_id', coletaId)
-      } catch {
-        /* ignore */
-      }
-      try {
-        await supabase.from('controle_massa').update({ coleta_id: null }).eq('coleta_id', coletaId)
-      } catch {
-        /* ignore */
-      }
-
-      const { error } = await supabase.from('coletas').delete().eq('id', coletaId)
-      if (error) {
-        alert(`Erro ao excluir coleta:\n${buildSupabaseErrorMessage(error)}`)
+      const res = await excluirColetaPorId(coletaId)
+      if (!res.ok) {
+        alert(`Erro ao excluir coleta:\n${res.message}`)
         await loadData()
         return false
       }
@@ -1760,6 +1743,25 @@ export default function MTR() {
 
         .mtr-excel__mtrno-label {
           font-weight: 800;
+          font-size: 11px;
+          color: #334155;
+          margin-bottom: 2px;
+        }
+
+        .mtr-excel__mtrno-value {
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1.2;
+          letter-spacing: 0.02em;
+          color: #0f172a;
+          border: 1px solid #0f172a;
+          border-radius: 6px;
+          padding: 3px 8px;
+          display: inline-block;
+          max-width: 100%;
+          text-align: center;
+          box-sizing: border-box;
+          word-break: break-all;
         }
 
         .mtr-excel__table {
@@ -2235,6 +2237,20 @@ export default function MTR() {
 
           .mtr-excel__mtrno-label {
             font-weight: 800 !important;
+            font-size: 9px !important;
+          }
+
+          .mtr-excel__mtrno-value {
+            font-size: 10pt !important;
+            font-weight: 800 !important;
+            line-height: 1.15 !important;
+            border: 1px solid #000 !important;
+            border-radius: 4px !important;
+            padding: 2px 6px !important;
+            display: inline-block !important;
+            max-width: 100% !important;
+            text-align: center !important;
+            word-break: break-all !important;
           }
 
           .mtr-excel__table {
@@ -3065,10 +3081,26 @@ export default function MTR() {
 
                     <div className="field">
                       <label>Tipo de resíduo / serviço</label>
-                      <input
+                      <SelectTipoResiduoCatalogo
                         value={form.tipo_residuo}
-                        onChange={(e) => setForm((prev) => ({ ...prev, tipo_residuo: e.target.value }))}
-                        placeholder="Tipo de resíduo"
+                        onChange={(tipo_residuo) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            tipo_residuo,
+                            detalhes: prev.detalhes
+                              ? {
+                                  ...prev.detalhes,
+                                  residuo: {
+                                    ...(prev.detalhes.residuo ?? detalhesVazios().residuo),
+                                    caracterizacao:
+                                      (prev.detalhes.residuo?.caracterizacao ?? '').trim() ||
+                                      tipo_residuo,
+                                  },
+                                }
+                              : prev.detalhes,
+                          }))
+                        }
+                        disabled={!podeMutarMtr}
                       />
                     </div>
 

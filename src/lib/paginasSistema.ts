@@ -1,4 +1,5 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
+import { cargoEhDesenvolvedor } from './workflowPermissions'
 
 /**
  * Página inicial de boas-vindas — sempre acessível (fora da lista `paginas_permitidas`).
@@ -168,10 +169,16 @@ export function rotasPermitidasPorCargoParaChecklist(cargo: string | null | unde
  *   validado nas rotas em `App.tsx` e no menu com `cargoPodeAcessarRotaMenu`).
  *   Lista preenchida = só os prefixos listados.
  */
+function rotaUsuarios(path: string): boolean {
+  return path === '/usuarios' || path.startsWith('/usuarios/')
+}
+
 export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: string): boolean {
   const path = normalizarPath(pathname)
   const bem = normalizarPath(ROTA_BEM_VINDO)
   if (path === bem || path.startsWith(`${bem}/`)) return true
+
+  if (rotaUsuarios(path)) return cargoEhDesenvolvedor(usuario.cargo)
 
   const em = (usuario.email || '').trim().toLowerCase()
   if (EMAILS_BYPASS_PAGINAS.has(em)) return true

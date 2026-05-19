@@ -1,6 +1,12 @@
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { indiceEtapaFluxo, normalizarEtapaColeta, type EtapaFluxo } from './fluxoEtapas'
 import { coletaElegivelParaFaturar } from './faturamentoElegibilidade'
+import {
+  coletaAguardandoImpressaoTicketFaturamento,
+  coletaNaFilaAprovacaoTicketFaturamento,
+} from './faturamentoTicketFluxo'
+
+export { coletaAguardandoImpressaoTicketFaturamento, coletaNaFilaAprovacaoTicketFaturamento }
 
 function etapaDaLinha(row: FaturamentoResumoViewRow): EtapaFluxo {
   return normalizarEtapaColeta({
@@ -56,9 +62,27 @@ export function coletaConferenciaPendente(row: FaturamentoResumoViewRow): boolea
   return row.status_conferencia === 'PENDENTE'
 }
 
+/**
+ * MTR/peso/ticket na vista, excluindo quem ainda aguarda salvar no Controle de Massa
+ * ou validação do ticket nesta página (evita contagem duplicada nos cartões).
+ */
+export function coletaProntaNaVistaExcluindoFluxoTicket(row: FaturamentoResumoViewRow): boolean {
+  if (!coletaConferenciaProntaParaFaturar(row)) return false
+  if (coletaAguardandoImpressaoTicketFaturamento(row)) return false
+  if (coletaNaFilaAprovacaoTicketFaturamento(row)) return false
+  return true
+}
+
 /** Rótulo alinhado ao Financeiro (coluna / filtro de conferência). */
 export function rotuloConferenciaResumo(row: FaturamentoResumoViewRow): string {
   if (row.status_conferencia === 'PRONTO_PARA_FATURAR') return 'Pronto para faturar'
   if (row.status_conferencia === 'PENDENTE') return 'Pendente'
   return row.status_conferencia?.trim() ? row.status_conferencia : '—'
+}
+
+/** Estado na fila de conferência/validação do ticket (não confundir com «pronto para faturar»). */
+export function rotuloConferenciaNaFilaTicket(row: FaturamentoResumoViewRow): string {
+  if (coletaNaFilaAprovacaoTicketFaturamento(row)) return 'Aguardando validação'
+  if (coletaAguardandoImpressaoTicketFaturamento(row)) return 'Aguardando Controle de Massa'
+  return rotuloConferenciaResumo(row)
 }

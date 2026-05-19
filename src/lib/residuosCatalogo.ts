@@ -25,3 +25,14 @@ export async function fetchResiduosCatalogo(): Promise<ResiduoCatalogo[]> {
 export function mapResiduosPorId(rows: ResiduoCatalogo[]): Map<string, ResiduoCatalogo> {
   return new Map(rows.map((r) => [r.id, r]))
 }
+
+/** Texto padrão gravado em coletas / regras / contrato (código — nome). */
+export function rotuloResiduoCatalogo(r: Pick<ResiduoCatalogo, 'codigo' | 'nome'>): string {
+  const codigo = (r.codigo ?? '').trim()
+  const nome = (r.nome ?? '').trim()
+  if (codigo && nome) return `${codigo} — ${nome}`
+  return codigo || nome || '—'
+}
+
+/** Valor sentinela em regras de preço = qualquer resíduo. */
+export const TIPO_RESIDUO_REGRA_QUALQUER = '*'

@@ -11,6 +11,13 @@ import {
   rotuloOrigemPreco,
   type RegraPrecoRow,
 } from '../../services/pricing'
+import { isMissingClienteContratoColumnsError } from '../../lib/clienteContratoCadastro'
+import {
+  calcularPrecoContratoCliente,
+  rotuloOrigemContrato,
+  rotuloUnidadeMedida,
+  type ResultadoPrecoContrato,
+} from '../../lib/faturamentoPrecoContrato'
 
 function parseValor(s: string): number | null {
   const t = s.replace(/\s/g, '').replace(',', '.').trim()
@@ -76,6 +83,14 @@ export function FaturamentoModalRegisto({
   const [tinhaRegistoPersistido, setTinhaRegistoPersistido] = useState(false)
   const [manualValor, setManualValor] = useState(false)
   const [dataVencimentoIso, setDataVencimentoIso] = useState('')
+  const [contratoCliente, setContratoCliente] = useState<{
+    residuos_contrato: unknown
+    tipo_residuo_legado: string | null
+  } | null>(null)
+  const [carregandoContrato, setCarregandoContrato] = useState(false)
+  const [quantidadeFaturamentoStr, setQuantidadeFaturamentoStr] = useState('')
+
+  const pesoColetaKg = row?.peso_liquido != null ? Number(row.peso_liquido) : null
 
   const totalNumero = useMemo(() => {
     const s = parseValor(valorServicoStr) ?? 0
@@ -91,28 +106,73 @@ export function FaturamentoModalRegisto({
     [totalNumero]
   )
 
-  const sugestaoPreco = useMemo(() => {
+  const sugestaoRegras = useMemo(() => {
     if (!row) return null
+    const qtd = parseValor(quantidadeFaturamentoStr)
+    const pesoParaRegra =
+      qtd != null && qtd > 0
+        ? qtd
+        : pesoColetaKg
     return resolverPrecoSugerido(
       regrasPreco,
       row.cliente_id,
       row.tipo_residuo,
-      row.peso_liquido,
+      pesoParaRegra,
       'COLETA'
     )
-  }, [regrasPreco, row])
+  }, [regrasPreco, row, quantidadeFaturamentoStr, pesoColetaKg])
+
+  const sugestaoContrato: ResultadoPrecoContrato | null = useMemo(() => {
+    if (!row || !contratoCliente) return null
+    const qtd = parseValor(quantidadeFaturamentoStr)
+    return calcularPrecoContratoCliente({
+      residuosContratoRaw: contratoCliente.residuos_contrato,
+      legadoTipoResiduo: contratoCliente.tipo_residuo_legado,
+      tipoResiduoColeta: row.tipo_residuo,
+      pesoLiquidoKg: pesoColetaKg,
+      quantidadeFaturada: qtd,
+    })
+  }, [row, contratoCliente, quantidadeFaturamentoStr, pesoColetaKg])
+
+  const sugestaoAtiva = useMemo(() => {
+    if (sugestaoContrato && sugestaoContrato.total > 0) {
+      return {
+        total: sugestaoContrato.total,
+        linhas: sugestaoContrato.linhas,
+        origemLabel: rotuloOrigemContrato(sugestaoContrato.origem),
+        fonte: 'contrato' as const,
+      }
+    }
+    if (sugestaoRegras && sugestaoRegras.total > 0) {
+      return {
+        total: sugestaoRegras.total,
+        linhas: sugestaoRegras.linhas,
+        origemLabel: rotuloOrigemPreco(sugestaoRegras.origem),
+        fonte: 'regras' as const,
+      }
+    }
+    return null
+  }, [sugestaoContrato, sugestaoRegras])
 
   const sugestaoFmt = useMemo(() => {
-    if (!sugestaoPreco || sugestaoPreco.total <= 0) return '—'
-    return sugestaoPreco.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }, [sugestaoPreco])
+    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return '—'
+    return sugestaoAtiva.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }, [sugestaoAtiva])
+
+  const unidadeFaturamento = sugestaoContrato?.unidadeMedida ?? 'kg'
 
   const valorAlinhaSugestao = useMemo(() => {
-    if (!sugestaoPreco || sugestaoPreco.total <= 0) return false
+    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return false
     const v = parseValor(valorServicoStr) ?? 0
     const a = parseValor(valorAdicionaisStr) ?? 0
-    return Math.abs(v + a - sugestaoPreco.total) < 0.02
-  }, [sugestaoPreco, valorServicoStr, valorAdicionaisStr])
+    return Math.abs(v + a - sugestaoAtiva.total) < 0.02
+  }, [sugestaoAtiva, valorServicoStr, valorAdicionaisStr])
+
+  const diferencaConta = useMemo(() => {
+    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return null
+    const informado = totalNumero
+    return Math.round((informado - sugestaoAtiva.total) * 100) / 100
+  }, [sugestaoAtiva, totalNumero])
 
   const carregarRegisto = useCallback(async (coletaId: string) => {
     setCarregando(true)
@@ -226,10 +286,68 @@ export function FaturamentoModalRegisto({
   }, [open, row])
 
   useEffect(() => {
-    if (!open || !row || carregando || carregandoRegras) return
+    if (!open || !row?.cliente_id) {
+      queueMicrotask(() => {
+        setContratoCliente(null)
+        setCarregandoContrato(false)
+      })
+      return
+    }
+    let cancel = false
+    queueMicrotask(() => setCarregandoContrato(true))
+    void (async () => {
+      const selComContrato =
+        'id, residuos_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta'
+      let res = await supabase.from('clientes').select(selComContrato).eq('id', row.cliente_id).maybeSingle()
+      if (cancel) return
+      if (res.error && isMissingClienteContratoColumnsError(res.error)) {
+        res = await supabase
+          .from('clientes')
+          .select('id, tipo_residuo, classificacao, unidade_medida, frequencia_coleta')
+          .eq('id', row.cliente_id)
+          .maybeSingle()
+      }
+      if (cancel) return
+      if (res.error || !res.data) {
+        setContratoCliente(null)
+      } else {
+        const d = res.data as Record<string, unknown>
+        setContratoCliente({
+          residuos_contrato: d.residuos_contrato ?? null,
+          tipo_residuo_legado: typeof d.tipo_residuo === 'string' ? d.tipo_residuo : null,
+        })
+      }
+      setCarregandoContrato(false)
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [open, row?.cliente_id])
+
+  useEffect(() => {
+    if (!open || !row) {
+      queueMicrotask(() => setQuantidadeFaturamentoStr(''))
+      return
+    }
+  }, [open, row?.coleta_id])
+
+  useEffect(() => {
+    if (!open || !row || carregandoContrato) return
+    if (quantidadeFaturamentoStr.trim()) return
+    const u = rotuloUnidadeMedida(unidadeFaturamento).toLowerCase()
+    let def = ''
+    if (pesoColetaKg != null && Number.isFinite(pesoColetaKg)) {
+      if (u === 'ton') def = String(pesoColetaKg / 1000)
+      else if (u === 'kg') def = String(pesoColetaKg)
+    }
+    queueMicrotask(() => setQuantidadeFaturamentoStr(def))
+  }, [open, row?.coleta_id, pesoColetaKg, unidadeFaturamento, carregandoContrato, quantidadeFaturamentoStr])
+
+  useEffect(() => {
+    if (!open || !row || carregando || carregandoRegras || carregandoContrato) return
     if (tinhaRegistoPersistido) return
     if (manualValor) return
-    const s = sugestaoPreco
+    const s = sugestaoAtiva
     if (s && s.total > 0) {
       queueMicrotask(() => {
         setValorServicoStr(String(s.total))
@@ -246,9 +364,10 @@ export function FaturamentoModalRegisto({
     row,
     carregando,
     carregandoRegras,
+    carregandoContrato,
     tinhaRegistoPersistido,
     manualValor,
-    sugestaoPreco,
+    sugestaoAtiva,
   ])
 
   async function handleSubmit(e: FormEvent) {
@@ -387,7 +506,7 @@ export function FaturamentoModalRegisto({
       <div
         style={{
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '620px',
           maxHeight: 'min(92vh, 720px)',
           overflow: 'auto',
           background: '#fff',
@@ -417,17 +536,80 @@ export function FaturamentoModalRegisto({
               <strong>Resíduo:</strong> {row.tipo_residuo || '—'}
             </div>
             <div>
-              <strong>Peso líquido:</strong>{' '}
-              {row.peso_liquido != null
-                ? `${Number(row.peso_liquido).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg`
+              <strong>Peso líquido (pesagem):</strong>{' '}
+              {pesoColetaKg != null
+                ? `${pesoColetaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg`
                 : '—'}
             </div>
+            {sugestaoContrato?.residuoContrato ? (
+              <div style={{ fontSize: '12px', color: '#0f766e', lineHeight: 1.45 }}>
+                <strong>Contrato cliente:</strong> {sugestaoContrato.residuoContrato.tipo_residuo.trim()}
+                {sugestaoContrato.valorUnitario > 0 ? (
+                  <>
+                    {' '}
+                    · R${' '}
+                    {sugestaoContrato.valorUnitario.toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                    /{unidadeFaturamento}
+                  </>
+                ) : null}
+                {sugestaoContrato.faturamentoMinimo > 0 ? (
+                  <>
+                    {' '}
+                    · mín. R${' '}
+                    {sugestaoContrato.faturamentoMinimo.toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </>
+                ) : null}
+              </div>
+            ) : carregandoContrato ? (
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>A carregar contrato do cliente…</div>
+            ) : row.cliente_id ? (
+              <div style={{ fontSize: '12px', color: '#b45309' }}>
+                Resíduo sem preço no cadastro do cliente — confira em Clientes ou use regra de preço / valor manual.
+              </div>
+            ) : null}
           </div>
 
           {carregando ? (
             <p style={{ color: '#64748b' }}>Carregando…</p>
           ) : (
             <>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
+                Peso / quantidade real para faturamento ({unidadeFaturamento})
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={quantidadeFaturamentoStr}
+                onChange={(e) => {
+                  setManualValor(false)
+                  setQuantidadeFaturamentoStr(e.target.value)
+                }}
+                disabled={!podeMutar}
+                placeholder={unidadeFaturamento === 'ton' ? 'Ex.: 0,8' : 'Ex.: 800'}
+                style={{
+                  width: '100%',
+                  marginBottom: '6px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <p style={{ margin: '0 0 14px', fontSize: '11px', color: '#94a3b8', lineHeight: 1.45 }}>
+                {unidadeFaturamento === 'ton'
+                  ? 'Toneladas: quantidade em ton (pesagem em kg ÷ 1000).'
+                  : unidadeFaturamento === 'kg'
+                    ? 'Por defeito usa o peso líquido da pesagem.'
+                    : 'Quantidade na unidade do contrato (m³ ou litros).'}
+              </p>
+
               <div
                 style={{
                   marginBottom: '14px',
@@ -440,23 +622,23 @@ export function FaturamentoModalRegisto({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '0.06em' }}>
-                      VALOR SUGERIDO
+                      VALOR CALCULADO (CADASTRO / REGRA)
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{sugestaoFmt}</div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                      {carregandoRegras
-                        ? 'A carregar regras de preço…'
-                        : sugestaoPreco && sugestaoPreco.total > 0
-                          ? `${rotuloOrigemPreco(sugestaoPreco.origem)} · pode editar os campos abaixo`
-                          : 'Sem regra de preço — use valor manual.'}
+                      {carregandoRegras || carregandoContrato
+                        ? 'A carregar preços…'
+                        : sugestaoAtiva && sugestaoAtiva.total > 0
+                          ? `${sugestaoAtiva.origemLabel} · pode editar os campos abaixo`
+                          : 'Sem preço no contrato do cliente nem regra — use valor manual.'}
                     </div>
                   </div>
-                  {sugestaoPreco && sugestaoPreco.total > 0 && podeMutar ? (
+                  {sugestaoAtiva && sugestaoAtiva.total > 0 && podeMutar ? (
                     <button
                       type="button"
                       onClick={() => {
                         setManualValor(false)
-                        setValorServicoStr(String(sugestaoPreco.total))
+                        setValorServicoStr(String(sugestaoAtiva.total))
                         setValorAdicionaisStr('')
                       }}
                       style={{
@@ -474,13 +656,13 @@ export function FaturamentoModalRegisto({
                     </button>
                   ) : null}
                 </div>
-                {sugestaoPreco && sugestaoPreco.linhas.length > 0 ? (
+                {sugestaoAtiva && sugestaoAtiva.linhas.length > 0 ? (
                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
                     <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', marginBottom: '6px' }}>
                       Composição (referência)
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155' }}>
-                      {sugestaoPreco.linhas.map((ln) => (
+                      {sugestaoAtiva.linhas.map((ln) => (
                         <li key={ln.chave}>
                           {ln.rotulo}:{' '}
                           {ln.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -493,7 +675,7 @@ export function FaturamentoModalRegisto({
 
               <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
                 Valor do serviço (R$){' '}
-                {valorAlinhaSugestao && !manualValor && sugestaoPreco && sugestaoPreco.total > 0 ? (
+                {valorAlinhaSugestao && !manualValor && sugestaoAtiva && sugestaoAtiva.total > 0 ? (
                   <span style={{ color: '#0d9488', fontWeight: 800 }}>· automático</span>
                 ) : (
                   <span style={{ color: '#64748b', fontWeight: 600 }}>· manual</span>
@@ -515,7 +697,7 @@ export function FaturamentoModalRegisto({
                   padding: '10px 12px',
                   borderRadius: '10px',
                   border:
-                    !manualValor && valorAlinhaSugestao && sugestaoPreco && sugestaoPreco.total > 0
+                    !manualValor && valorAlinhaSugestao && sugestaoAtiva && sugestaoAtiva.total > 0
                       ? '2px solid #0d9488'
                       : '1px solid #cbd5e1',
                   fontSize: '14px',
@@ -559,8 +741,49 @@ export function FaturamentoModalRegisto({
                   color: '#065f46',
                 }}
               >
-                Total: {totalFmt}
+                Total a faturar: {totalFmt}
               </div>
+
+              {sugestaoAtiva && sugestaoAtiva.total > 0 ? (
+                <div
+                  style={{
+                    marginBottom: '12px',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: diferencaConta != null && Math.abs(diferencaConta) < 0.02 ? '#ecfdf5' : '#fffbeb',
+                    border:
+                      diferencaConta != null && Math.abs(diferencaConta) < 0.02
+                        ? '1px solid #6ee7b7'
+                        : '1px solid #fcd34d',
+                    fontSize: '13px',
+                    color: '#334155',
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>Conferência da conta</div>
+                  <div>
+                    Calculado ({sugestaoAtiva.origemLabel}):{' '}
+                    <strong>
+                      {sugestaoAtiva.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </strong>
+                  </div>
+                  <div style={{ marginTop: '4px' }}>
+                    Informado (serviço + adicionais): <strong>{totalFmt}</strong>
+                  </div>
+                  {diferencaConta != null ? (
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        fontWeight: 800,
+                        color: Math.abs(diferencaConta) < 0.02 ? '#047857' : '#b45309',
+                      }}
+                    >
+                      {Math.abs(diferencaConta) < 0.02
+                        ? 'A conta confere com o cadastro/regra.'
+                        : `Diferença: ${diferencaConta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {status === 'emitido' ? (
                 <>
