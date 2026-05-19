@@ -63,7 +63,21 @@ function tituloItemCalendario(item: ProgramacaoCalendarioItemPreview): string {
   if (sec) parts.push(sec)
   if (veic) parts.push(veic)
   parts.push(STATUS_LABELS[item.statusProgramacao])
-  return parts.join(' Â· ')
+  return parts.join(' \u00B7 ')
+}
+
+function CalendarioNavSeta({ direction }: { direction: 'prev' | 'next' }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d={direction === 'prev' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 function CalendarioStatusDensityBar({ items }: { items: ProgramacaoCalendarioItemPreview[] }) {
@@ -143,12 +157,12 @@ export default function ProgramacaoCalendarioMes({
         >
           <button
             type="button"
-            aria-label="MÃªs anterior"
-            title="MÃªs anterior"
+            aria-label={'M\u00eas anterior'}
+            title={'M\u00eas anterior'}
             onClick={() => onMesChange(addMonthsYyyyMm(mesSelecionado, -1))}
             style={navBtnStyle}
           >
-            â€¹
+            <CalendarioNavSeta direction="prev" />
           </button>
           <div
             style={{
@@ -165,12 +179,12 @@ export default function ProgramacaoCalendarioMes({
           </div>
           <button
             type="button"
-            aria-label="PrÃ³ximo mÃªs"
-            title="PrÃ³ximo mÃªs"
+            aria-label={'Pr\u00f3ximo m\u00eas'}
+            title={'Pr\u00f3ximo m\u00eas'}
             onClick={() => onMesChange(addMonthsYyyyMm(mesSelecionado, 1))}
             style={navBtnStyle}
           >
-            â€º
+            <CalendarioNavSeta direction="next" />
           </button>
         </div>
       ) : null}
@@ -209,7 +223,7 @@ export default function ProgramacaoCalendarioMes({
       </div>
 
       <div style={weekHeaderStyle}>
-        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b', 'Dom'].map((day, idx) => (
+        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S\u00e1b', 'Dom'].map((day, idx) => (
           <div
             key={day}
             style={{
@@ -271,7 +285,7 @@ export default function ProgramacaoCalendarioMes({
               }}
               aria-label={
                 podeAbrirPainelDia && cell.dayNumber
-                  ? `Dia ${cell.dayNumber}, ${cell.items.length} programaÃ§Ã£o(Ãµes). Clique para detalhes.`
+                  ? `Dia ${cell.dayNumber}, ${cell.items.length} programa\u00e7\u00e3o(\u00f5es). Clique para detalhes.`
                   : undefined
               }
             >
