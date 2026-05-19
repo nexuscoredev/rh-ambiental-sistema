@@ -78,6 +78,8 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     VitePWA({
+      /** Evita registo automático duplicado — o aviso usa só `useRegisterSW` em PwaPremiumShell. */
+      injectRegister: null,
       registerType: 'prompt',
       includeAssets: [
         'assets/logo/favicon.svg',

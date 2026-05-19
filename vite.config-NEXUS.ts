@@ -61,6 +61,7 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     VitePWA({
+      injectRegister: null,
       registerType: 'prompt',
       includeAssets: [
         'assets/logo/favicon.svg',

@@ -5,6 +5,7 @@ import {
   emitVersaoRgDisplayChanged,
   incrementarVersaoPorBalaoAtualizacao,
 } from '../../lib/appDisplayVersion'
+import { PwaUpdateNotification } from './PwaUpdateNotification'
 
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
@@ -57,7 +58,7 @@ export function PwaPremiumShell() {
   }, [mostrarAvisoAtualizacao])
 
   useEffect(() => {
-    if (!import.meta.env.PROD) return
+    if (!import.meta.env.PROD || needRefreshFlag) return
 
     let cancelado = false
 
@@ -104,7 +105,7 @@ export function PwaPremiumShell() {
       window.clearInterval(intervalo)
       document.removeEventListener('visibilitychange', aoVisibilidade)
     }
-  }, [])
+  }, [needRefreshFlag])
 
   const aplicarAtualizacao = useCallback(async () => {
     if (needRefreshFlag) {
@@ -154,14 +155,10 @@ export function PwaPremiumShell() {
 
   return (
     <>
-      {mostrarAvisoAtualizacao ? (
-        <div className="pwa-update-bar" role="alert" aria-live="polite">
-          <p className="pwa-update-bar__intro">Olá! Temos uma nova atualização para você!</p>
-          <button type="button" className="pwa-update-bar__cta" onClick={() => void aplicarAtualizacao()}>
-            Clique aqui e atualize agora!
-          </button>
-        </div>
-      ) : null}
+      <PwaUpdateNotification
+        visible={mostrarAvisoAtualizacao}
+        onApply={() => void aplicarAtualizacao()}
+      />
 
       {showInstallEntry ? (
         <button
