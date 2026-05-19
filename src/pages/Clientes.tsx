@@ -42,7 +42,7 @@ import {
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
-import { fetchResiduosCatalogo, type ResiduoCatalogo } from "../lib/residuosCatalogo";
+import { useResiduosCatalogo } from "../lib/residuosCatalogo";
 
 type Cliente = {
   id: string;
@@ -840,9 +840,14 @@ export default function Clientes() {
 
   type RepresentanteRgOpcao = { id: string; nome: string };
   const [representantesRg, setRepresentantesRg] = useState<RepresentanteRgOpcao[]>([]);
-  const [residuosCatalogo, setResiduosCatalogo] = useState<ResiduoCatalogo[]>([]);
-  const [residuosCatalogoCarregando, setResiduosCatalogoCarregando] = useState(true);
-
+  const {
+    catalogo: residuosCatalogo,
+    carregando: residuosCatalogoCarregando,
+    erro: residuosCatalogoErro,
+    semSessao: residuosCatalogoSemSessao,
+    recarregar: recarregarResiduosCatalogo,
+    ativos: residuosCatalogoAtivos,
+  } = useResiduosCatalogo();
 
   const rotuloRepresentanteRgCliente = useCallback(
     (c: Cliente) => {
@@ -888,18 +893,6 @@ export default function Clientes() {
         }))
       );
     })();
-  }, []);
-
-  useEffect(() => {
-    let cancel = false;
-    void fetchResiduosCatalogo().then((data) => {
-      if (cancel) return;
-      setResiduosCatalogo(data);
-      setResiduosCatalogoCarregando(false);
-    });
-    return () => {
-      cancel = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -2963,6 +2956,10 @@ export default function Clientes() {
                   inputStyle={inputStyle}
                   residuosCatalogo={residuosCatalogo}
                   residuosCatalogoCarregando={residuosCatalogoCarregando}
+                  residuosCatalogoErro={residuosCatalogoErro}
+                  residuosCatalogoSemSessao={residuosCatalogoSemSessao}
+                  residuosCatalogoAtivosCount={residuosCatalogoAtivos.length}
+                  onRecarregarResiduosCatalogo={recarregarResiduosCatalogo}
                   veiculos={form.veiculos_contrato}
                   equipamentos={form.equipamentos_contrato}
                   residuos={form.residuos}

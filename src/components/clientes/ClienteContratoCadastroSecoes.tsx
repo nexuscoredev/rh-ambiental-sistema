@@ -51,6 +51,10 @@ type Props = {
   inputStyle: CSSProperties
   residuosCatalogo: ResiduoCatalogo[]
   residuosCatalogoCarregando: boolean
+  residuosCatalogoErro?: string | null
+  residuosCatalogoSemSessao?: boolean
+  residuosCatalogoAtivosCount?: number
+  onRecarregarResiduosCatalogo?: () => void
   veiculos: VeiculoContratoItem[]
   equipamentos: EquipamentoContratoItem[]
   residuos: ResiduoContratoItem[]
@@ -69,6 +73,10 @@ export function ClienteContratoCadastroSecoes({
   inputStyle,
   residuosCatalogo,
   residuosCatalogoCarregando,
+  residuosCatalogoErro = null,
+  residuosCatalogoSemSessao = false,
+  residuosCatalogoAtivosCount,
+  onRecarregarResiduosCatalogo,
   veiculos,
   equipamentos,
   residuos,
@@ -276,9 +284,37 @@ export function ClienteContratoCadastroSecoes({
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
               Tipo (catálogo de resíduos), classe, unidade, valor, frequência e faturamento mínimo por linha.
             </p>
-            {!residuosCatalogoCarregando && residuosCatalogo.filter((r) => r.ativo).length === 0 ? (
+            {!residuosCatalogoCarregando &&
+            (residuosCatalogoAtivosCount ?? residuosCatalogo.filter((r) => r.ativo).length) === 0 ? (
               <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#b45309', lineHeight: 1.45 }}>
-                Catálogo vazio ou indisponível — confirme a migração <strong>residuos</strong> no Supabase.
+                {residuosCatalogoErro ? (
+                  <>
+                    {residuosCatalogoSemSessao
+                      ? 'Catálogo ainda não carregou (sessão em sincronização). '
+                      : `Não foi possível carregar o catálogo: ${residuosCatalogoErro}. `}
+                    {onRecarregarResiduosCatalogo ? (
+                      <button
+                        type="button"
+                        onClick={onRecarregarResiduosCatalogo}
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          padding: 0,
+                          color: '#0f766e',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Tentar novamente
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    Catálogo vazio — confirme a migração <strong>residuos</strong> no Supabase (SQL Editor).
+                  </>
+                )}
               </p>
             ) : null}
           </div>

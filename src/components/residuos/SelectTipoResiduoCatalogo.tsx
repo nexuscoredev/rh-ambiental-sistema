@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { asTextoFormulario } from '../../lib/clienteContratoCadastro'
 import {
-  fetchResiduosCatalogo,
+  fetchResiduosCatalogoDetalhado,
   rotuloResiduoCatalogo,
   TIPO_RESIDUO_REGRA_QUALQUER,
   type ResiduoCatalogo,
@@ -48,9 +48,9 @@ export function SelectTipoResiduoCatalogo({
     }
     let cancel = false
     queueMicrotask(() => setCarregandoInterno(true))
-    void fetchResiduosCatalogo().then((data) => {
+    void fetchResiduosCatalogoDetalhado().then((r) => {
       if (cancel) return
-      setRows(data)
+      setRows(r.data)
       setCarregandoInterno(false)
     })
     return () => {
