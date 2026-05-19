@@ -103,7 +103,7 @@ export async function fetchVwFaturamentoResumoPaginated(
       return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false }
     }
 
-    const chunk = (data as FaturamentoResumoViewRow[]) || []
+    const chunk = ((data ?? []) as unknown as FaturamentoResumoViewRow[]) || []
     if (chunk.length === 0) break
 
     for (const row of chunk) {

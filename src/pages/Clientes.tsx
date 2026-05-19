@@ -248,7 +248,7 @@ function formatarData(data?: string | null | unknown) {
   if (!s) return "-";
   const limpa = s.includes("T") ? s.split("T")[0] : s;
   const partes = limpa.split("-");
-  if (partes.length !== 3) return data;
+  if (partes.length !== 3) return limpa;
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
@@ -1173,11 +1173,11 @@ export default function Clientes() {
           c.email?.trim() || "-",
           c.email_nf?.trim() || "-",
           margemLucroClienteRotuloLista(c.margem_lucro_percentual),
-          c.tipo_residuo ?? "-",
-          c.classificacao ?? "-",
+          asTextoFormulario(c.tipo_residuo) || "-",
+          asTextoFormulario(c.classificacao) || "-",
           formatarData(c.validade),
           c.status ?? "Ativo",
-        ]),
+        ] satisfies (string | number)[]),
         styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak" },
         headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 7 },
         margin: { left: 40, right: 40 },
@@ -3705,7 +3705,7 @@ export default function Clientes() {
                                   },
                                   { rotulo: "Código IBAMA", valor: cliente.codigo_ibama },
                                   { rotulo: "Veículo", valor: cliente.descricao_veiculo },
-                                  { rotulo: "Resíduo", valor: cliente.tipo_residuo },
+                                  { rotulo: "Resíduo", valor: asTextoFormulario(cliente.tipo_residuo) || null },
                                   { rotulo: "Classe", valor: cliente.classificacao },
                                   { rotulo: "MTR de coleta", valor: cliente.mtr_coleta },
                                   { rotulo: "Destino", valor: cliente.destino },
@@ -4316,7 +4316,7 @@ function ClienteDetalheModal({
               )}
             </div>
             <DetalheCampo rotulo="Código IBAMA" valor={cliente.codigo_ibama} />
-            <DetalheCampo rotulo="Resíduo (resumo)" valor={cliente.tipo_residuo} />
+            <DetalheCampo rotulo="Resíduo (resumo)" valor={asTextoFormulario(cliente.tipo_residuo) || null} />
             <DetalheCampo rotulo="Classe" valor={cliente.classificacao} />
             <DetalheCampo rotulo="MTR de coleta" valor={cliente.mtr_coleta} colunas={2} />
             <DetalheCampo rotulo="Destino" valor={cliente.destino} />
