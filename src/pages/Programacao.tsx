@@ -11,6 +11,13 @@ import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
+import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
+import {
+  STATUS_LABELS,
+  getStatusStyle,
+  programacaoStatusTagStyle,
+  type ProgramacaoStatus,
+} from '../lib/programacaoStatusVisual'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
 
 type ClienteOption = {
@@ -22,13 +29,6 @@ type CaminhaoOption = {
   id: string
   placa: string
 }
-
-type ProgramacaoStatus =
-  | 'PENDENTE'
-  | 'QUADRO_ATUALIZADO'
-  | 'EM_COLETA'
-  | 'CONCLUIDA'
-  | 'CANCELADA'
 
 type ProgramacaoRow = {
   id: string
@@ -97,14 +97,6 @@ type CalendarCell = {
   items: ProgramacaoItem[]
   isCurrentMonth: boolean
   isToday: boolean
-}
-
-const STATUS_LABELS: Record<ProgramacaoStatus, string> = {
-  PENDENTE: 'Pendente',
-  QUADRO_ATUALIZADO: 'Quadro atualizado',
-  EM_COLETA: 'Em coleta',
-  CONCLUIDA: 'Concluída',
-  CANCELADA: 'Cancelada',
 }
 
 const initialFormState: FormState = {
@@ -377,9 +369,6 @@ function ProgramacaoRelatorioPrintRoot(p: ProgramacaoRelatorioPrintProps) {
   )
 }
 
-/** Linhas preview no calendário; contador no topo = total do dia (sem duplicar “+N mais”). */
-const CALENDAR_PREVIEW_MAX = 4
-
 /** Na agenda detalhada: cartões visíveis por dia antes de “Mostrar todas” (menos DOM = página mais leve). */
 const AGENDA_DETALHADA_MAX_VISIVEL_POR_DIA = 6
 
@@ -417,84 +406,6 @@ function resumoVeiculoPainelDia(item: ProgramacaoItem): {
     texto: 'Sem tipo / veículo',
     backgroundColor: '#f1f5f9',
     color: '#64748b',
-  }
-}
-
-type ProgramacaoStatusVisual = {
-  backgroundColor: string
-  color: string
-  /** Borda suave em volta da etiqueta */
-  border: string
-  /** Faixa à esquerda do cartão / pré-visualização */
-  stripeColor: string
-  /** Ponto na etiqueta de status */
-  dotColor: string
-}
-
-const programacaoStatusTagStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '7px',
-  padding: '6px 11px',
-  borderRadius: '8px',
-  fontSize: '12px',
-  fontWeight: 700,
-  whiteSpace: 'nowrap',
-  letterSpacing: '-0.01em',
-  lineHeight: 1,
-  flexShrink: 0,
-}
-
-function getStatusStyle(status: ProgramacaoStatus): ProgramacaoStatusVisual {
-  switch (status) {
-    case 'PENDENTE':
-      return {
-        backgroundColor: '#fffbeb',
-        color: '#78350f',
-        border: '1px solid rgba(245, 158, 11, 0.42)',
-        stripeColor: '#f59e0b',
-        dotColor: '#d97706',
-      }
-    case 'QUADRO_ATUALIZADO':
-      return {
-        backgroundColor: '#eff6ff',
-        color: '#1e3a8a',
-        border: '1px solid rgba(59, 130, 246, 0.38)',
-        stripeColor: '#3b82f6',
-        dotColor: '#2563eb',
-      }
-    case 'EM_COLETA':
-      return {
-        backgroundColor: '#f5f3ff',
-        color: '#5b21b6',
-        border: '1px solid rgba(139, 92, 246, 0.38)',
-        stripeColor: '#8b5cf6',
-        dotColor: '#7c3aed',
-      }
-    case 'CONCLUIDA':
-      return {
-        backgroundColor: '#f0fdf4',
-        color: '#14532d',
-        border: '1px solid rgba(34, 197, 94, 0.35)',
-        stripeColor: '#22c55e',
-        dotColor: '#16a34a',
-      }
-    case 'CANCELADA':
-      return {
-        backgroundColor: '#fef2f2',
-        color: '#991b1b',
-        border: '1px solid rgba(239, 68, 68, 0.35)',
-        stripeColor: '#ef4444',
-        dotColor: '#dc2626',
-      }
-    default:
-      return {
-        backgroundColor: '#f9fafb',
-        color: '#374151',
-        border: '1px solid #e5e7eb',
-        stripeColor: '#9ca3af',
-        dotColor: '#6b7280',
-      }
   }
 }
 
@@ -2082,290 +1993,21 @@ export default function Programacao() {
           <div style={cardPrincipalStyle}>
             <h2 style={cardTituloStyle}>Calendário do mês</h2>
             <p style={cardDescricaoStyle}>
-              Cores por status; número no canto = total do dia. Dias acinzentados são do mês anterior ou
-              seguinte — ao clicar, o mês acima acompanha. Clique para abrir a lista e atalhos.
+              Clique no dia para ver todas as programações e agendar nesta data. Use «Nova programação»
+              no topo da página ou no painel do dia. Dias fora do mês aparecem mais claros.
             </p>
 
-            <div
-              style={{
-                textAlign: 'center',
-                marginBottom: '16px',
-                padding: '14px 18px',
-                borderRadius: '16px',
-                background: 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%)',
-                border: '1px solid #6ee7b7',
+            <ProgramacaoCalendarioMes
+              mesSelecionado={mesSelecionado}
+              monthTitle={formatMonthLabelTitulo(mesSelecionado)}
+              cells={calendarCells}
+              contextoDestaqueId={contextoDestaqueId}
+              onMesChange={setMesSelecionado}
+              onAbrirDia={(date, mesDoDia) => {
+                if (mesDoDia !== mesSelecionado) setMesSelecionado(mesDoDia)
+                setDiaPainelCalendario(date)
               }}
-            >
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  color: '#047857',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                Calendário de Programações
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  marginTop: '6px',
-                  lineHeight: 1.15,
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label="Mês anterior"
-                  title="Mês anterior"
-                  onClick={() =>
-                    setMesSelecionado((prev) => addMonthsYyyyMm(prev, -1))
-                  }
-                  style={{
-                    flexShrink: 0,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    border: '1px solid #6ee7b7',
-                    background: 'rgba(255,255,255,0.65)',
-                    color: '#064e3b',
-                    fontSize: 22,
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  ‹
-                </button>
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    textAlign: 'center',
-                    fontSize: 'clamp(20px, 2.8vw, 26px)',
-                    fontWeight: 900,
-                    color: '#064e3b',
-                  }}
-                >
-                  {formatMonthLabelTitulo(mesSelecionado)}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Próximo mês"
-                  title="Próximo mês"
-                  onClick={() =>
-                    setMesSelecionado((prev) => addMonthsYyyyMm(prev, 1))
-                  }
-                  style={{
-                    flexShrink: 0,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    border: '1px solid #6ee7b7',
-                    background: 'rgba(255,255,255,0.65)',
-                    color: '#064e3b',
-                    fontSize: 22,
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-
-            <div style={calendarWeekHeaderStyle}>
-              {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
-                <div key={day} style={calendarWeekDayStyle}>
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div style={calendarGridStyle}>
-              {calendarCells.map((cell) => {
-                const destaqueContexto =
-                  !!contextoDestaqueId &&
-                  cell.items.some((i) => i.id === contextoDestaqueId)
-
-                const podeAbrirPainelDia = Boolean(cell.date)
-
-                const abrirPainelDia = () => {
-                  if (!cell.date) return
-                  const mesDoDia = cell.date.slice(0, 7)
-                  if (mesDoDia !== mesSelecionado) {
-                    setMesSelecionado(mesDoDia)
-                  }
-                  setDiaPainelCalendario(cell.date)
-                }
-
-                return (
-                <div
-                  key={cell.key}
-                  role={podeAbrirPainelDia ? 'button' : undefined}
-                  tabIndex={podeAbrirPainelDia ? 0 : undefined}
-                  onClick={abrirPainelDia}
-                  onKeyDown={(e) => {
-                    if (!podeAbrirPainelDia || !cell.date) return
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      abrirPainelDia()
-                    }
-                  }}
-                  style={{
-                    ...calendarCellStyle,
-                    opacity: cell.isCurrentMonth ? 1 : 0.4,
-                    borderColor: destaqueContexto
-                      ? '#22c55e'
-                      : cell.isToday
-                        ? '#22c55e'
-                        : '#e2e8f0',
-                    boxShadow: destaqueContexto
-                      ? '0 0 0 2px rgba(34,197,94,0.35)'
-                      : cell.isToday
-                        ? '0 0 0 2px rgba(34,197,94,0.15)'
-                        : 'none',
-                    cursor: podeAbrirPainelDia ? 'pointer' : 'default',
-                  }}
-                  aria-label={
-                    podeAbrirPainelDia && cell.dayNumber
-                      ? `Dia ${cell.dayNumber}, ${cell.items.length} programação(ões). Clique para detalhes.`
-                      : undefined
-                  }
-                >
-                  {cell.dayNumber ? (
-                    <>
-                      <div style={calendarCellTopStyle}>
-                        <span
-                          style={{
-                            ...calendarDayNumberStyle,
-                            background: cell.isToday ? '#dcfce7' : 'transparent',
-                            color: cell.isToday ? '#15803d' : '#0f172a',
-                          }}
-                        >
-                          {cell.dayNumber}
-                        </span>
-
-                        {cell.items.length > 0 && (
-                          <span style={calendarCountStyle}>{cell.items.length}</span>
-                        )}
-                      </div>
-
-                      <div style={calendarItemsListStyle}>
-                        {cell.items.slice(0, CALENDAR_PREVIEW_MAX).map((item) => {
-                          const statusStyle = getStatusStyle(item.statusProgramacao)
-                          const sec = textoServicoCalendario(item)
-                          return (
-                            <div
-                              key={item.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                minWidth: 0,
-                                padding: '4px 6px',
-                                borderRadius: '8px',
-                                background: '#ffffff',
-                                border: '1px solid #e8ecf1',
-                                borderLeft: `3px solid ${statusStyle.stripeColor}`,
-                              }}
-                              title={`${item.clienteNome}${
-                                sec ? ` · ${sec}` : ''
-                              }${
-                                item.caminhaoPlaca
-                                  ? ` · ${item.caminhaoPlaca}`
-                                  : (item.tipoCaminhao || '').trim()
-                                    ? ` · ${(item.tipoCaminhao || '').trim()}`
-                                    : ''
-                              } · ${STATUS_LABELS[item.statusProgramacao]}`}
-                            >
-                              <div
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  color: '#0f172a',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                              >
-                                {item.clienteNome}
-                                {sec ? (
-                                  <span style={{ fontWeight: 600, color: '#64748b' }}> · {sec}</span>
-                                ) : null}
-                              </div>
-                              {item.coletaFixa ? (
-                                <span
-                                  style={{
-                                    flexShrink: 0,
-                                    fontSize: '9px',
-                                    fontWeight: 800,
-                                    color: '#c2410c',
-                                  }}
-                                  title="Coleta fixa"
-                                >
-                                  F
-                                </span>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-
-                        {cell.items.length > CALENDAR_PREVIEW_MAX && (
-                          <div style={calendarOverflowHintStyle}>
-                            +{cell.items.length - CALENDAR_PREVIEW_MAX} · clique para ver todas
-                          </div>
-                        )}
-                      </div>
-
-                      {cell.date ? (
-                        <div style={{ marginTop: 'auto', paddingTop: '4px' }}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              iniciarNovaProgramacaoNoDia(cell.date!)
-                            }}
-                            disabled={!podeMutarProgramacao}
-                            title={
-                              podeMutarProgramacao
-                                ? 'Preencher o formulário «Nova programação» com esta data'
-                                : 'Apenas operacional ou administrador pode criar programações.'
-                            }
-                            style={{
-                              width: '100%',
-                              fontSize: '10px',
-                              fontWeight: 800,
-                              padding: '6px 4px',
-                              borderRadius: '8px',
-                              border: '1px dashed #0f766e',
-                              background: '#ffffff',
-                              color: '#0f766e',
-                              cursor: podeMutarProgramacao ? 'pointer' : 'not-allowed',
-                              opacity: podeMutarProgramacao ? 1 : 0.5,
-                            }}
-                          >
-                            + Nova programação
-                          </button>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-                )
-              })}
-            </div>
+            />
           </div>
 
           <div style={cardPrincipalStyle}>
@@ -3505,87 +3147,6 @@ const checkboxLabelStyle: CSSProperties = {
   color: '#0f172a',
   fontWeight: 600,
   fontSize: '14px',
-}
-
-const calendarWeekHeaderStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  gap: '10px',
-  marginBottom: '10px',
-}
-
-const calendarWeekDayStyle: CSSProperties = {
-  textAlign: 'center',
-  fontSize: '12px',
-  fontWeight: 800,
-  color: '#64748b',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-}
-
-const calendarGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  gap: '10px',
-}
-
-const calendarCellStyle: CSSProperties = {
-  minHeight: '128px',
-  border: '1px solid #e2e8f0',
-  borderRadius: '16px',
-  background: '#f8fafc',
-  padding: '8px',
-  boxSizing: 'border-box',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-}
-
-const calendarCellTopStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-}
-
-const calendarDayNumberStyle: CSSProperties = {
-  width: '28px',
-  height: '28px',
-  borderRadius: '999px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '13px',
-  fontWeight: 800,
-}
-
-const calendarCountStyle: CSSProperties = {
-  minWidth: '22px',
-  height: '22px',
-  borderRadius: '999px',
-  padding: '0 6px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#16a34a',
-  color: '#ffffff',
-  fontSize: '11px',
-  fontWeight: 800,
-}
-
-const calendarItemsListStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4px',
-  flex: 1,
-  minHeight: 0,
-}
-
-const calendarOverflowHintStyle: CSSProperties = {
-  fontSize: '10px',
-  color: '#64748b',
-  fontWeight: 700,
-  paddingLeft: '2px',
-  marginTop: '2px',
 }
 
 const calendarPainelOverlayStyle: CSSProperties = {

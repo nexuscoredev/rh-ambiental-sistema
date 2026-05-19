@@ -9,18 +9,17 @@ import { cargoPodeEditarProgramacao } from '../lib/workflowPermissions'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
+import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
+import {
+  STATUS_LABELS,
+  getStatusStyle,
+  type ProgramacaoStatus,
+} from '../lib/programacaoStatusVisual'
 
 type ClienteOption = {
   id: string
   nome: string
 }
-
-type ProgramacaoStatus =
-  | 'PENDENTE'
-  | 'QUADRO_ATUALIZADO'
-  | 'EM_COLETA'
-  | 'CONCLUIDA'
-  | 'CANCELADA'
 
 type ProgramacaoRow = {
   id: string
@@ -73,14 +72,6 @@ type CalendarCell = {
   items: ProgramacaoItem[]
   isCurrentMonth: boolean
   isToday: boolean
-}
-
-const STATUS_LABELS: Record<ProgramacaoStatus, string> = {
-  PENDENTE: 'Pendente',
-  QUADRO_ATUALIZADO: 'Quadro atualizado',
-  EM_COLETA: 'Em coleta',
-  CONCLUIDA: 'Concluída',
-  CANCELADA: 'Cancelada',
 }
 
 const initialFormState: FormState = {
@@ -136,6 +127,12 @@ function formatMonthLabel(value: string) {
     month: 'long',
     year: 'numeric',
   }).format(date)
+}
+
+function formatMonthLabelTitulo(value: string) {
+  const s = formatMonthLabel(value)
+  if (!s || s === '-') return s
+  return s.charAt(0).toLocaleUpperCase('pt-BR') + s.slice(1)
 }
 
 function iniciaisNomeCliente(nome: string) {
@@ -292,31 +289,11 @@ function ProgramacaoRelatorioPrintRoot(p: ProgramacaoRelatorioPrintProps) {
   )
 }
 
-/** Linhas preview no calendário; contador no topo = total do dia (sem duplicar “+N mais”). */
-const CALENDAR_PREVIEW_MAX = 4
-
 function textoServicoCalendario(item: ProgramacaoItem): string | null {
   const t = (item.tipoServico || '').trim()
   if (!t) return null
   if (t.toLowerCase() === 'coleta') return null
   return t
-}
-
-function getStatusStyle(status: ProgramacaoStatus) {
-  switch (status) {
-    case 'PENDENTE':
-      return { backgroundColor: '#fef3c7', color: '#b45309' }
-    case 'QUADRO_ATUALIZADO':
-      return { backgroundColor: '#dbeafe', color: '#1d4ed8' }
-    case 'EM_COLETA':
-      return { backgroundColor: '#ede9fe', color: '#6d28d9' }
-    case 'CONCLUIDA':
-      return { backgroundColor: '#dcfce7', color: '#15803d' }
-    case 'CANCELADA':
-      return { backgroundColor: '#fee2e2', color: '#dc2626' }
-    default:
-      return { backgroundColor: '#e5e7eb', color: '#374151' }
-  }
 }
 
 function gerarNumeroProgramacao(totalAtual: number) {
@@ -1482,155 +1459,21 @@ export default function Programacao() {
           <div style={cardPrincipalStyle}>
             <h2 style={cardTituloStyle}>Calendário do mês</h2>
             <p style={cardDescricaoStyle}>
-              Cores por status; número no canto = total do dia. Dias acinzentados são do mês anterior ou
-              seguinte — ao clicar, o mês acima acompanha. Clique para abrir a lista e atalhos.
+              Clique no dia para ver todas as programações. O seletor de mês fica acima da página.
             </p>
 
-            <div style={calendarWeekHeaderStyle}>
-              {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
-                <div key={day} style={calendarWeekDayStyle}>
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div style={calendarGridStyle}>
-              {calendarCells.map((cell) => {
-                const destaqueContexto =
-                  !!contextoDestaqueId &&
-                  cell.items.some((i) => i.id === contextoDestaqueId)
-
-                const podeAbrirPainelDia = Boolean(cell.date)
-
-                const abrirPainelDia = () => {
-                  if (!cell.date) return
-                  const mesDoDia = cell.date.slice(0, 7)
-                  if (mesDoDia !== mesSelecionado) {
-                    setMesSelecionado(mesDoDia)
-                  }
-                  setDiaPainelCalendario(cell.date)
-                }
-
-                return (
-                <div
-                  key={cell.key}
-                  role={podeAbrirPainelDia ? 'button' : undefined}
-                  tabIndex={podeAbrirPainelDia ? 0 : undefined}
-                  onClick={abrirPainelDia}
-                  onKeyDown={(e) => {
-                    if (!podeAbrirPainelDia || !cell.date) return
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      abrirPainelDia()
-                    }
-                  }}
-                  style={{
-                    ...calendarCellStyle,
-                    opacity: cell.isCurrentMonth ? 1 : 0.4,
-                    borderColor: destaqueContexto
-                      ? '#22c55e'
-                      : cell.isToday
-                        ? '#22c55e'
-                        : '#e2e8f0',
-                    boxShadow: destaqueContexto
-                      ? '0 0 0 2px rgba(34,197,94,0.35)'
-                      : cell.isToday
-                        ? '0 0 0 2px rgba(34,197,94,0.15)'
-                        : 'none',
-                    cursor: podeAbrirPainelDia ? 'pointer' : 'default',
-                  }}
-                  aria-label={
-                    podeAbrirPainelDia && cell.dayNumber
-                      ? `Dia ${cell.dayNumber}, ${cell.items.length} programação(ões). Clique para detalhes.`
-                      : undefined
-                  }
-                >
-                  {cell.dayNumber ? (
-                    <>
-                      <div style={calendarCellTopStyle}>
-                        <span
-                          style={{
-                            ...calendarDayNumberStyle,
-                            background: cell.isToday ? '#dcfce7' : 'transparent',
-                            color: cell.isToday ? '#15803d' : '#0f172a',
-                          }}
-                        >
-                          {cell.dayNumber}
-                        </span>
-
-                        {cell.items.length > 0 && (
-                          <span style={calendarCountStyle}>{cell.items.length}</span>
-                        )}
-                      </div>
-
-                      <div style={calendarItemsListStyle}>
-                        {cell.items.slice(0, CALENDAR_PREVIEW_MAX).map((item) => {
-                          const statusStyle = getStatusStyle(item.statusProgramacao)
-                          const sec = textoServicoCalendario(item)
-                          return (
-                            <div
-                              key={item.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                minWidth: 0,
-                                padding: '4px 6px',
-                                borderRadius: '8px',
-                                background: '#ffffff',
-                                border: '1px solid #e8ecf1',
-                                borderLeft: `3px solid ${statusStyle.color}`,
-                              }}
-                              title={`${item.clienteNome}${
-                                sec ? ` · ${sec}` : ''
-                              } · ${STATUS_LABELS[item.statusProgramacao]}`}
-                            >
-                              <div
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  color: '#0f172a',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                              >
-                                {item.clienteNome}
-                                {sec ? (
-                                  <span style={{ fontWeight: 600, color: '#64748b' }}> · {sec}</span>
-                                ) : null}
-                              </div>
-                              {item.coletaFixa ? (
-                                <span
-                                  style={{
-                                    flexShrink: 0,
-                                    fontSize: '9px',
-                                    fontWeight: 800,
-                                    color: '#c2410c',
-                                  }}
-                                  title="Coleta fixa"
-                                >
-                                  F
-                                </span>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-
-                        {cell.items.length > CALENDAR_PREVIEW_MAX && (
-                          <div style={calendarOverflowHintStyle}>
-                            +{cell.items.length - CALENDAR_PREVIEW_MAX} · clique para ver todas
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-                )
-              })}
-            </div>
+            <ProgramacaoCalendarioMes
+              mesSelecionado={mesSelecionado}
+              monthTitle={formatMonthLabelTitulo(mesSelecionado)}
+              cells={calendarCells}
+              contextoDestaqueId={contextoDestaqueId}
+              onMesChange={setMesSelecionado}
+              onAbrirDia={(date, mesDoDia) => {
+                if (mesDoDia !== mesSelecionado) setMesSelecionado(mesDoDia)
+                setDiaPainelCalendario(date)
+              }}
+              showMonthNav
+            />
           </div>
 
           <div style={cardPrincipalStyle}>
@@ -1666,7 +1509,7 @@ export default function Programacao() {
                             id={`prog-agenda-${item.id}`}
                             style={{
                               ...itemAgendaStyle,
-                              borderLeft: `3px solid ${statusStyle.color}`,
+                              borderLeft: `3px solid ${statusStyle.stripeColor}`,
                               ...(emDestaqueContexto
                                 ? {
                                     boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.35)',
@@ -1917,7 +1760,7 @@ export default function Programacao() {
                         borderRadius: '14px',
                         padding: '14px 16px',
                         background: '#ffffff',
-                        borderLeft: `4px solid ${statusStyle.color}`,
+                        borderLeft: `4px solid ${statusStyle.stripeColor}`,
                       }}
                     >
                       <div
@@ -2210,7 +2053,7 @@ export default function Programacao() {
                             key={item.id}
                             style={{
                               ...itemAgendaStyle,
-                              borderLeft: `3px solid ${statusStyle.color}`,
+                              borderLeft: `3px solid ${statusStyle.stripeColor}`,
                             }}
                           >
                             <div style={itemAgendaMainRowStyle}>
@@ -2524,87 +2367,6 @@ const checkboxLabelStyle: CSSProperties = {
   color: '#0f172a',
   fontWeight: 600,
   fontSize: '14px',
-}
-
-const calendarWeekHeaderStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  gap: '10px',
-  marginBottom: '10px',
-}
-
-const calendarWeekDayStyle: CSSProperties = {
-  textAlign: 'center',
-  fontSize: '12px',
-  fontWeight: 800,
-  color: '#64748b',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-}
-
-const calendarGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  gap: '10px',
-}
-
-const calendarCellStyle: CSSProperties = {
-  minHeight: '108px',
-  border: '1px solid #e2e8f0',
-  borderRadius: '16px',
-  background: '#f8fafc',
-  padding: '8px',
-  boxSizing: 'border-box',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-}
-
-const calendarCellTopStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-}
-
-const calendarDayNumberStyle: CSSProperties = {
-  width: '28px',
-  height: '28px',
-  borderRadius: '999px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '13px',
-  fontWeight: 800,
-}
-
-const calendarCountStyle: CSSProperties = {
-  minWidth: '22px',
-  height: '22px',
-  borderRadius: '999px',
-  padding: '0 6px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#16a34a',
-  color: '#ffffff',
-  fontSize: '11px',
-  fontWeight: 800,
-}
-
-const calendarItemsListStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4px',
-  flex: 1,
-  minHeight: 0,
-}
-
-const calendarOverflowHintStyle: CSSProperties = {
-  fontSize: '10px',
-  color: '#64748b',
-  fontWeight: 700,
-  paddingLeft: '2px',
-  marginTop: '2px',
 }
 
 const calendarPainelOverlayStyle: CSSProperties = {
