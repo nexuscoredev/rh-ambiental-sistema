@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import {
+  emailSuporteTecnicoConfig,
+  resolverIdContactoSuporteTecnico,
+} from './suporteTecnico'
 import type { ChatConversaLista, ChatMensagem, ChatUsuarioLista } from '../types/chat'
 import type { PostgrestError } from '@supabase/supabase-js'
 
@@ -536,36 +540,11 @@ export function formatarHoraCurta(iso: string | null): string {
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-const UUID_SUPORTE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/**
- * UUID do utilizador de suporte (Vite). Se definido, tem prioridade sobre `VITE_SUPORTE_EMAIL`.
- * Copiar de Supabase → Authentication → Users ou da tabela `usuarios`.
- */
-export function idSuporteTecnicoConfig(): string | null {
-  const raw = import.meta.env.VITE_SUPORTE_USER_ID
-  if (typeof raw !== 'string') return null
-  const s = raw.trim().toLowerCase()
-  if (!s || !UUID_SUPORTE_RE.test(s)) return null
-  return s
-}
-
-/** E-mail do perfil de suporte quando `VITE_SUPORTE_USER_ID` não está definido (Vite). */
-export function emailSuporteTecnicoConfig(): string {
-  const raw = import.meta.env.VITE_SUPORTE_EMAIL
-  const s = typeof raw === 'string' && raw.trim() ? raw.trim() : 'cavalcantersc07@gmail.com'
-  return s.toLowerCase()
-}
-
-/** True se esta sessão é a conta configurada como suporte (mesmo UUID ou e-mail). */
-export function deveOcultarBalaoSuporteTecnico(userId: string, email: string | null | undefined): boolean {
-  const byId = idSuporteTecnicoConfig()
-  if (byId && userId.toLowerCase() === byId) return true
-  if (byId) return false
-  const em = email?.toLowerCase()
-  if (!em) return false
-  return em === emailSuporteTecnicoConfig()
-}
+export {
+  deveOcultarBalaoSuporteTecnico,
+  emailSuporteTecnicoConfig,
+  idSuporteTecnicoConfig,
+} from './suporteTecnico'
 
 /**
  * Abre (ou reutiliza) a conversa directa com o suporte e envia o texto.
@@ -584,47 +563,12 @@ export async function chatEnviarPedidoSuporteTecnico(texto: string): Promise<{
   } = await supabase.auth.getUser()
   if (!user?.id) throw new Error('Sessão inválida.')
 
-  const configuradoPorId = idSuporteTecnicoConfig()
-  let suporteUserId: string | undefined
-
-  if (configuradoPorId) {
-    if (user.id.toLowerCase() === configuradoPorId) {
-      throw new Error('Esta conta é o contacto de suporte; use o Chat Interno para responder aos colegas.')
-    }
-    const { data: peer, error: peerErr } = await supabase
-      .from('usuarios')
-      .select('id')
-      .eq('id', configuradoPorId)
-      .eq('status', 'ativo')
-      .maybeSingle()
-    if (peerErr) throw peerErr
-    suporteUserId = peer?.id
-    if (!suporteUserId) {
-      throw new Error(
-        'Utilizador de suporte (VITE_SUPORTE_USER_ID) não encontrado ou inactivo. Confirme o UUID no Supabase e em Usuários.'
-      )
-    }
-  } else {
-    const emailDestino = emailSuporteTecnicoConfig()
-    if (user.email && user.email.toLowerCase() === emailDestino) {
-      throw new Error('Esta conta é o contacto de suporte; use o Chat Interno para responder aos colegas.')
-    }
-
-    const { data: rows, error: qErr } = await supabase
-      .from('usuarios')
-      .select('id')
-      .eq('status', 'ativo')
-      .ilike('email', emailDestino)
-      .limit(1)
-
-    if (qErr) throw qErr
-    suporteUserId = rows?.[0]?.id as string | undefined
-    if (!suporteUserId) {
-      throw new Error(
-        'Contacto de suporte não encontrado entre utilizadores activos. Defina VITE_SUPORTE_USER_ID ou confirme o e-mail em Usuários.'
-      )
-    }
+  const emailCfg = emailSuporteTecnicoConfig()
+  if (emailCfg && user.email?.toLowerCase() === emailCfg) {
+    throw new Error('Esta conta é o contacto de suporte; use o Chat Interno para responder aos colegas.')
   }
+
+  const suporteUserId = await resolverIdContactoSuporteTecnico(user.id)
 
   const conversaId = await chatGetOrCreateDirect(suporteUserId)
 
