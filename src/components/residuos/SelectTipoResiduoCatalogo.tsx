@@ -1,31 +1,19 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { asTextoFormulario } from '../../lib/clienteContratoCadastro'
-import {
-  fetchResiduosCatalogoDetalhado,
-  rotuloResiduoCatalogo,
-  TIPO_RESIDUO_REGRA_QUALQUER,
-  type ResiduoCatalogo,
-} from '../../lib/residuosCatalogo'
-
-const selectBaseStyle: CSSProperties = {
-  cursor: 'pointer',
-  appearance: 'auto',
-  WebkitAppearance: 'menulist',
-}
+import { TIPO_RESIDUO_REGRA_QUALQUER } from '../../lib/residuosCatalogo'
 
 type Props = {
   value: string | unknown
   onChange: (value: string) => void
   disabled?: boolean
   style?: CSSProperties
-  /** Regras de preço: inclui opção «qualquer resíduo» (*). */
+  /** Regras de preço: placeholder indica uso de * para qualquer resíduo. */
   permitirQualquer?: boolean
   id?: string
-  /** Catálogo já carregado pelo pai (evita N pedidos em listas repetidas). */
-  catalogo?: ResiduoCatalogo[]
-  carregando?: boolean
+  placeholder?: string
 }
 
+/** Campo de texto livre para tipo de resíduo (sem catálogo / lista). */
 export function SelectTipoResiduoCatalogo({
   value,
   onChange,
@@ -33,75 +21,39 @@ export function SelectTipoResiduoCatalogo({
   style,
   permitirQualquer = false,
   id,
-  catalogo,
-  carregando: carregandoProp,
+  placeholder,
 }: Props) {
-  const [rows, setRows] = useState<ResiduoCatalogo[]>(catalogo ?? [])
-  const [carregandoInterno, setCarregandoInterno] = useState(catalogo == null)
-
-  const carregando = carregandoProp ?? carregandoInterno
-
-  useEffect(() => {
-    if (catalogo != null) {
-      setRows(catalogo)
-      return
-    }
-    let cancel = false
-    queueMicrotask(() => setCarregandoInterno(true))
-    void fetchResiduosCatalogoDetalhado().then((r) => {
-      if (cancel) return
-      setRows(r.data)
-      setCarregandoInterno(false)
-    })
-    return () => {
-      cancel = true
-    }
-  }, [catalogo])
-
-  const ativos = useMemo(() => rows.filter((r) => r.ativo), [rows])
-
   const valueStr = useMemo(() => asTextoFormulario(value), [value])
 
-  const valorLegado = useMemo(() => {
-    const v = valueStr.trim()
-    if (!v || v === TIPO_RESIDUO_REGRA_QUALQUER) return null
-    const labels = new Set(ativos.map(rotuloResiduoCatalogo))
-    return labels.has(v) ? null : v
-  }, [valueStr, ativos])
-
-  const valorSelect = useMemo(() => {
-    const v = valueStr.trim()
-    if (permitirQualquer && (!v || v === TIPO_RESIDUO_REGRA_QUALQUER)) return TIPO_RESIDUO_REGRA_QUALQUER
-    if (!v) return ''
-    return v
-  }, [valueStr, permitirQualquer])
+  const placeholderFinal =
+    placeholder ??
+    (permitirQualquer
+      ? 'Ex.: Mix contaminado ou * para qualquer resíduo'
+      : 'Descreva o tipo de resíduo')
 
   return (
-    <select
+    <input
       id={id}
-      value={valorSelect}
+      type="text"
+      value={valueStr}
       onChange={(e) => onChange(e.target.value)}
-      disabled={disabled || carregando}
-      style={{ ...selectBaseStyle, ...style }}
-    >
-      {permitirQualquer ? (
-        <option value={TIPO_RESIDUO_REGRA_QUALQUER}>Qualquer resíduo (*)</option>
-      ) : (
-        <option value="">Selecione o resíduo</option>
-      )}
-      {carregando ? (
-        <option value="" disabled>
-          A carregar catálogo…
-        </option>
-      ) : null}
-      {ativos.map((r) => (
-        <option key={r.id} value={rotuloResiduoCatalogo(r)}>
-          {rotuloResiduoCatalogo(r)}
-        </option>
-      ))}
-      {valorLegado ? (
-        <option value={valorLegado}>{valorLegado} (cadastro anterior)</option>
-      ) : null}
-    </select>
+      disabled={disabled}
+      placeholder={placeholderFinal}
+      title={
+        permitirQualquer
+          ? `Use ${TIPO_RESIDUO_REGRA_QUALQUER} na regra para aplicar a qualquer resíduo`
+          : undefined
+      }
+      style={{
+        width: '100%',
+        boxSizing: 'border-box',
+        borderRadius: '10px',
+        border: '1px solid #cbd5e1',
+        padding: '0 12px',
+        fontSize: '14px',
+        height: '42px',
+        ...style,
+      }}
+    />
   )
 }

@@ -41,7 +41,6 @@ const ROTAS_VALIDAS = new Set([
   "/ticket-operacional",
   "/aprovacao",
   "/faturamento",
-  "/faturamento/regras-preco",
   "/envio-nf",
   "/financeiro",
   "/financeiro/contas-receber",

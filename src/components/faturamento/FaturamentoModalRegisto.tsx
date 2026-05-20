@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
@@ -13,29 +13,40 @@ import {
 } from '../../services/pricing'
 import { isMissingClienteContratoColumnsError } from '../../lib/clienteContratoCadastro'
 import {
-  calcularPrecoContratoCliente,
+  calcularPrecoContratoColetaMtr,
   rotuloOrigemContrato,
-  rotuloUnidadeMedida,
   type ResultadoPrecoContrato,
 } from '../../lib/faturamentoPrecoContrato'
+import {
+  aplicarSugestaoContratoNoResumoMtr,
+  criarResumoFinanceiroDoOperacional,
+  marcarTicketEncerradoDefinitivoResumo,
+  parseNumeroCampo,
+  parseResumoFinanceiroJson,
+  resumoFinanceiroParaJsonb,
+  totalResumoFinanceiro,
+  type ResumoFinanceiroDesvinculado,
+} from '../../lib/faturamentoDesvinculacao'
+import {
+  calcularPrecoContratoMtrConsolidado,
+  criarResumoFinanceiroConsolidado,
+  emitirFaturamentoConsolidadoMtr,
+} from '../../lib/faturamentoConsolidacaoMtr'
+import {
+  faturamentoRegistrosErroColunasOpcionais,
+  faturamentoRegistrosErroResumoFinanceiro,
+  montarPayloadsFaturamentoRegistro,
+  persistirFaturamentoRegistro,
+} from '../../lib/faturamentoRegistrosPersist'
+import { encerrarTicketDefinitivoFaturamento } from '../../lib/faturamentoTicketFluxo'
+import { FaturamentoResumoDesvinculado } from './FaturamentoResumoDesvinculado'
+import { FaturamentoMtrRateioPanel } from './FaturamentoMtrRateioPanel'
 
 function parseValor(s: string): number | null {
   const t = s.replace(/\s/g, '').replace(',', '.').trim()
   if (!t) return null
   const n = Number(t)
   return Number.isFinite(n) ? n : null
-}
-
-/** Projeto remoto sem migração `valor_adicionais` / `observacoes` → PostgREST 400 (PGRST204). */
-function faturamentoRegistrosErroColunasOpcionais(err: PostgrestError | null): boolean {
-  if (!err) return false
-  if (err.code === 'PGRST204') return true
-  const t = `${err.message || ''} ${err.details || ''}`.toLowerCase()
-  return (
-    t.includes('valor_adicionais') ||
-    t.includes('observacoes') ||
-    t.includes('schema cache')
-  )
 }
 
 function montarParamsColeta(row: FaturamentoResumoViewRow) {
@@ -52,7 +63,17 @@ type StatusFat = 'pendente' | 'emitido' | 'cancelado'
 type Props = {
   open: boolean
   row: FaturamentoResumoViewRow | null
-  podeMutar: boolean
+  /** Coletas da mesma MTR faturadas num único registro (2+ tickets). */
+  coletasConsolidadas?: FaturamentoResumoViewRow[]
+  /** Confirmar emissão / salvar registro (Faturamento, Financeiro, Operacional (Time T), etc.). */
+  podeConfirmarEmissao: boolean
+  /** Resumos ticket/MTR editáveis — exclusivo Operacional (Time T) (+ admin). */
+  podeEditarResumosFinanceiros?: boolean
+  /** Encerramento definitivo do ticket nesta tela — exclusivo Operacional (Time T) (+ admin). */
+  podeEncerrarTicketDefinitivo?: boolean
+  /** @deprecated Use `podeConfirmarEmissao`. */
+  podeMutar?: boolean
+  usuarioCargo?: string | null
   onClose: () => void
   onGravado: () => void
   /** Se false, após emitir mantém-se na página atual (ex.: Financeiro unificado). Padrão: navega para Financeiro com contexto da coleta. */
@@ -62,57 +83,74 @@ type Props = {
 export function FaturamentoModalRegisto({
   open,
   row,
+  coletasConsolidadas,
+  podeConfirmarEmissao: podeConfirmarEmissaoProp,
+  podeEditarResumosFinanceiros = false,
+  podeEncerrarTicketDefinitivo = false,
   podeMutar,
+  usuarioCargo = null,
   onClose,
   onGravado,
   navegarAposEmitir = true,
 }: Props) {
+  const podeConfirmarEmissao = podeConfirmarEmissaoProp ?? podeMutar ?? false
   const navigate = useNavigate()
   const [registroId, setRegistroId] = useState<string | null>(null)
-  const [valorServicoStr, setValorServicoStr] = useState('')
-  const [valorAdicionaisStr, setValorAdicionaisStr] = useState('')
-  const [referenciaNf, setReferenciaNf] = useState('')
+  const [resumoFinanceiro, setResumoFinanceiro] = useState<ResumoFinanceiroDesvinculado | null>(null)
   const [observacoes, setObservacoes] = useState('')
   const [status, setStatus] = useState<StatusFat>('emitido')
   const [carregando, setCarregando] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [encerrandoTicket, setEncerrandoTicket] = useState(false)
   const [erro, setErro] = useState('')
   const [okMsg, setOkMsg] = useState('')
   const [regrasPreco, setRegrasPreco] = useState<RegraPrecoRow[]>([])
   const [carregandoRegras, setCarregandoRegras] = useState(false)
-  const [tinhaRegistoPersistido, setTinhaRegistoPersistido] = useState(false)
-  const [manualValor, setManualValor] = useState(false)
   const [dataVencimentoIso, setDataVencimentoIso] = useState('')
   const [contratoCliente, setContratoCliente] = useState<{
     residuos_contrato: unknown
+    veiculos_contrato: unknown
+    equipamentos_contrato: unknown
     tipo_residuo_legado: string | null
+    descricao_veiculo_legado: string | null
+    equipamentos_texto_legado: string | null
+  } | null>(null)
+  const [contextoMtr, setContextoMtr] = useState<{
+    tipoCaminhao: string | null
+    acondicionamento: string | null
   } | null>(null)
   const [carregandoContrato, setCarregandoContrato] = useState(false)
-  const [quantidadeFaturamentoStr, setQuantidadeFaturamentoStr] = useState('')
+  /** Evita reinicializar o resumo a cada tecla (loop que congelava o formulário MTR). */
+  const resumoInicializadoColetaRef = useRef<string | null>(null)
+  const carregarRegistoGenRef = useRef(0)
+
+  const coletaIdModal = row?.coleta_id ?? null
+
+  const grupoConsolidado = useMemo(() => {
+    if (!coletasConsolidadas || coletasConsolidadas.length <= 1) return null
+    return coletasConsolidadas
+  }, [coletasConsolidadas])
 
   const pesoColetaKg = row?.peso_liquido != null ? Number(row.peso_liquido) : null
+  const mtrPesoLiquidoStr = resumoFinanceiro?.mtr.peso_liquido_kg ?? ''
+  const mtrQtdStr = resumoFinanceiro?.mtr.residuo_quantidade ?? ''
+  const pesoFaturamentoMtrKg = useMemo(() => {
+    const s = mtrPesoLiquidoStr.trim() || mtrQtdStr.trim()
+    if (s) {
+      const n = parseValor(s)
+      if (n != null && n > 0) return n
+    }
+    return pesoColetaKg
+  }, [mtrPesoLiquidoStr, mtrQtdStr, pesoColetaKg])
 
-  const totalNumero = useMemo(() => {
-    const s = parseValor(valorServicoStr) ?? 0
-    const a = parseValor(valorAdicionaisStr) ?? 0
-    return s + a
-  }, [valorServicoStr, valorAdicionaisStr])
-
-  const totalFmt = useMemo(
-    () =>
-      totalNumero > 0
-        ? totalNumero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-        : '—',
-    [totalNumero]
+  const totalNumero = useMemo(
+    () => (resumoFinanceiro ? totalResumoFinanceiro(resumoFinanceiro) : 0),
+    [resumoFinanceiro]
   )
 
   const sugestaoRegras = useMemo(() => {
     if (!row) return null
-    const qtd = parseValor(quantidadeFaturamentoStr)
-    const pesoParaRegra =
-      qtd != null && qtd > 0
-        ? qtd
-        : pesoColetaKg
+    const pesoParaRegra = pesoFaturamentoMtrKg
     return resolverPrecoSugerido(
       regrasPreco,
       row.cliente_id,
@@ -120,19 +158,37 @@ export function FaturamentoModalRegisto({
       pesoParaRegra,
       'COLETA'
     )
-  }, [regrasPreco, row, quantidadeFaturamentoStr, pesoColetaKg])
+  }, [regrasPreco, row, pesoFaturamentoMtrKg])
 
+  /** Sugestão de contrato: usa peso da coleta (não recalcula a cada tecla nos campos MTR). */
   const sugestaoContrato: ResultadoPrecoContrato | null = useMemo(() => {
     if (!row || !contratoCliente) return null
-    const qtd = parseValor(quantidadeFaturamentoStr)
-    return calcularPrecoContratoCliente({
+    const inputBase = {
+      veiculosContratoRaw: contratoCliente.veiculos_contrato,
+      equipamentosContratoRaw: contratoCliente.equipamentos_contrato,
       residuosContratoRaw: contratoCliente.residuos_contrato,
       legadoTipoResiduo: contratoCliente.tipo_residuo_legado,
+      descricaoVeiculoLegado: contratoCliente.descricao_veiculo_legado,
+      equipamentosTextoLegado: contratoCliente.equipamentos_texto_legado,
+      tipoCaminhaoMtr: contextoMtr?.tipoCaminhao ?? null,
+      acondicionamentoMtr: contextoMtr?.acondicionamento ?? null,
+      tipoResiduoColeta: row.tipo_residuo,
+      pesoLiquidoKg: pesoColetaKg,
+    }
+    if (grupoConsolidado && grupoConsolidado.length > 1) {
+      return calcularPrecoContratoMtrConsolidado(inputBase, grupoConsolidado)
+    }
+    const qtd =
+      pesoColetaKg != null && pesoColetaKg > 0
+        ? pesoColetaKg
+        : parseValor(mtrQtdStr) ?? parseValor(mtrPesoLiquidoStr)
+    return calcularPrecoContratoColetaMtr({
+      ...inputBase,
       tipoResiduoColeta: row.tipo_residuo,
       pesoLiquidoKg: pesoColetaKg,
       quantidadeFaturada: qtd,
     })
-  }, [row, contratoCliente, quantidadeFaturamentoStr, pesoColetaKg])
+  }, [row, contratoCliente, contextoMtr, pesoColetaKg, mtrQtdStr, mtrPesoLiquidoStr, grupoConsolidado])
 
   const sugestaoAtiva = useMemo(() => {
     if (sugestaoContrato && sugestaoContrato.total > 0) {
@@ -154,20 +210,6 @@ export function FaturamentoModalRegisto({
     return null
   }, [sugestaoContrato, sugestaoRegras])
 
-  const sugestaoFmt = useMemo(() => {
-    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return '—'
-    return sugestaoAtiva.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }, [sugestaoAtiva])
-
-  const unidadeFaturamento = sugestaoContrato?.unidadeMedida ?? 'kg'
-
-  const valorAlinhaSugestao = useMemo(() => {
-    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return false
-    const v = parseValor(valorServicoStr) ?? 0
-    const a = parseValor(valorAdicionaisStr) ?? 0
-    return Math.abs(v + a - sugestaoAtiva.total) < 0.02
-  }, [sugestaoAtiva, valorServicoStr, valorAdicionaisStr])
-
   const diferencaConta = useMemo(() => {
     if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return null
     const informado = totalNumero
@@ -175,12 +217,15 @@ export function FaturamentoModalRegisto({
   }, [sugestaoAtiva, totalNumero])
 
   const carregarRegisto = useCallback(async (coletaId: string) => {
+    const gen = ++carregarRegistoGenRef.current
     setCarregando(true)
     setErro('')
     setOkMsg('')
     const selectCandidates = [
-      'id, valor, valor_adicionais, referencia_nf, status, observacoes, updated_at',
-      'id, valor, referencia_nf, status, updated_at',
+      'id, valor, valor_adicionais, resumo_financeiro, status, observacoes, updated_at',
+      'id, valor, resumo_financeiro, status, observacoes, updated_at',
+      'id, valor, valor_adicionais, status, observacoes, updated_at',
+      'id, valor, status, updated_at',
     ] as const
 
     let data: unknown = null
@@ -196,19 +241,24 @@ export function FaturamentoModalRegisto({
       data = res.data
       error = res.error
       if (!error) break
-      if (!faturamentoRegistrosErroColunasOpcionais(error)) break
+      if (
+        !faturamentoRegistrosErroColunasOpcionais(error) &&
+        !faturamentoRegistrosErroResumoFinanceiro(error)
+      ) {
+        break
+      }
     }
+
+    if (gen !== carregarRegistoGenRef.current) return
 
     if (error) {
       console.error(error)
       setErro('Não foi possível carregar o registro de faturamento.')
       setRegistroId(null)
-      setTinhaRegistoPersistido(false)
-      setValorServicoStr('')
-      setValorAdicionaisStr('')
-      setReferenciaNf('')
+      setResumoFinanceiro(null)
       setObservacoes('')
       setStatus('emitido')
+      resumoInicializadoColetaRef.current = null
       setCarregando(false)
       return
     }
@@ -218,39 +268,42 @@ export function FaturamentoModalRegisto({
         id: string
         valor: number | null
         valor_adicionais?: number | null
-        referencia_nf: string | null
+        resumo_financeiro?: unknown
         status: string
         observacoes?: string | null
       }
-      setTinhaRegistoPersistido(true)
       setRegistroId(rec.id)
-      const adic = rec.valor_adicionais != null ? Number(rec.valor_adicionais) : 0
-      const tot = rec.valor != null ? Number(rec.valor) : 0
-      const base = tot > 0 && adic > 0 ? tot - adic : tot
-      setValorServicoStr(base > 0 ? String(base) : tot > 0 ? String(tot) : '')
-      setValorAdicionaisStr(adic > 0 ? String(adic) : '')
-      setReferenciaNf(rec.referencia_nf ?? '')
+      const parsed = parseResumoFinanceiroJson(rec.resumo_financeiro)
+      if (parsed) {
+        setResumoFinanceiro(parsed)
+        resumoInicializadoColetaRef.current = coletaId
+      } else {
+        setResumoFinanceiro(null)
+        resumoInicializadoColetaRef.current = null
+      }
       setObservacoes(rec.observacoes ?? '')
       const st = rec.status === 'emitido' || rec.status === 'cancelado' ? rec.status : 'pendente'
       setStatus(st)
     } else {
-      setTinhaRegistoPersistido(false)
       setRegistroId(null)
-      setValorServicoStr('')
-      setValorAdicionaisStr('')
-      setReferenciaNf('')
+      setResumoFinanceiro(null)
       setObservacoes('')
       setStatus('emitido')
+      resumoInicializadoColetaRef.current = null
     }
-    setCarregando(false)
+    if (gen === carregarRegistoGenRef.current) setCarregando(false)
   }, [])
 
   useEffect(() => {
-    if (!open || !row) return
-    queueMicrotask(() => {
-      void carregarRegisto(row.coleta_id)
-    })
-  }, [open, row, carregarRegisto])
+    if (!open) {
+      resumoInicializadoColetaRef.current = null
+      carregarRegistoGenRef.current += 1
+      return
+    }
+    if (!coletaIdModal) return
+    resumoInicializadoColetaRef.current = null
+    void carregarRegisto(coletaIdModal)
+  }, [open, coletaIdModal, carregarRegisto])
 
   useEffect(() => {
     if (!open) return
@@ -280,10 +333,47 @@ export function FaturamentoModalRegisto({
   useEffect(() => {
     if (!open || !row) return
     queueMicrotask(() => {
-      setManualValor(false)
       setDataVencimentoIso(sugerirDataVencimentoIso(7))
     })
   }, [open, row])
+
+  const montarResumoOperacional = useCallback((): ResumoFinanceiroDesvinculado | null => {
+    if (!row) return null
+    if (grupoConsolidado && grupoConsolidado.length > 1) {
+      return criarResumoFinanceiroConsolidado(row, grupoConsolidado, sugestaoContrato, {
+        tipoCaminhao: contextoMtr?.tipoCaminhao,
+        acondicionamento: contextoMtr?.acondicionamento,
+      })
+    }
+    return criarResumoFinanceiroDoOperacional(row, sugestaoContrato, {
+      tipoCaminhao: contextoMtr?.tipoCaminhao,
+      acondicionamento: contextoMtr?.acondicionamento,
+    })
+  }, [row, sugestaoContrato, contextoMtr, grupoConsolidado])
+
+  const garantirResumoMontado = useCallback(() => {
+    if (!row) return
+    const base =
+      montarResumoOperacional() ??
+      criarResumoFinanceiroDoOperacional(row, null, {
+        tipoCaminhao: contextoMtr?.tipoCaminhao ?? null,
+        acondicionamento: contextoMtr?.acondicionamento ?? null,
+      })
+    if (base) {
+      setResumoFinanceiro(base)
+      resumoInicializadoColetaRef.current = row.coleta_id
+    }
+  }, [row, montarResumoOperacional, contextoMtr])
+
+  useEffect(() => {
+    if (!open || !coletaIdModal || carregando) return
+    if (resumoInicializadoColetaRef.current === coletaIdModal) return
+    garantirResumoMontado()
+  }, [open, coletaIdModal, carregando, garantirResumoMontado])
+
+  const onResumoFinanceiroChange = useCallback((next: ResumoFinanceiroDesvinculado) => {
+    setResumoFinanceiro(next)
+  }, [])
 
   useEffect(() => {
     if (!open || !row?.cliente_id) {
@@ -297,7 +387,7 @@ export function FaturamentoModalRegisto({
     queueMicrotask(() => setCarregandoContrato(true))
     void (async () => {
       const selComContrato =
-        'id, residuos_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta'
+        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
       let res = await supabase.from('clientes').select(selComContrato).eq('id', row.cliente_id).maybeSingle()
       if (cancel) return
       if (res.error && isMissingClienteContratoColumnsError(res.error)) {
@@ -314,7 +404,12 @@ export function FaturamentoModalRegisto({
         const d = res.data as Record<string, unknown>
         setContratoCliente({
           residuos_contrato: d.residuos_contrato ?? null,
+          veiculos_contrato: d.veiculos_contrato ?? null,
+          equipamentos_contrato: d.equipamentos_contrato ?? null,
           tipo_residuo_legado: typeof d.tipo_residuo === 'string' ? d.tipo_residuo : null,
+          descricao_veiculo_legado:
+            typeof d.descricao_veiculo === 'string' ? d.descricao_veiculo : null,
+          equipamentos_texto_legado: typeof d.equipamentos === 'string' ? d.equipamentos : null,
         })
       }
       setCarregandoContrato(false)
@@ -326,65 +421,101 @@ export function FaturamentoModalRegisto({
 
   useEffect(() => {
     if (!open || !row) {
-      queueMicrotask(() => setQuantidadeFaturamentoStr(''))
+      queueMicrotask(() => setContextoMtr(null))
       return
     }
-  }, [open, row?.coleta_id])
+    let cancel = false
+    void (async () => {
+      let tipoCaminhao: string | null = null
+      let acondicionamento: string | null = null
 
-  useEffect(() => {
-    if (!open || !row || carregandoContrato) return
-    if (quantidadeFaturamentoStr.trim()) return
-    const u = rotuloUnidadeMedida(unidadeFaturamento).toLowerCase()
-    let def = ''
-    if (pesoColetaKg != null && Number.isFinite(pesoColetaKg)) {
-      if (u === 'ton') def = String(pesoColetaKg / 1000)
-      else if (u === 'kg') def = String(pesoColetaKg)
+      if (row.programacao_id) {
+        const { data } = await supabase
+          .from('programacoes')
+          .select('tipo_caminhao')
+          .eq('id', row.programacao_id)
+          .maybeSingle()
+        if (!cancel && data && typeof data === 'object') {
+          const tc = (data as { tipo_caminhao?: string | null }).tipo_caminhao
+          tipoCaminhao = typeof tc === 'string' && tc.trim() ? tc.trim() : null
+        }
+      }
+
+      if (row.mtr_id) {
+        const { data } = await supabase.from('mtrs').select('detalhes').eq('id', row.mtr_id).maybeSingle()
+        if (!cancel && data && typeof data === 'object') {
+          const det = (data as { detalhes?: unknown }).detalhes
+          if (det && typeof det === 'object') {
+            const res = (det as { residuo?: { acondicionamento?: string } }).residuo
+            const ac = res?.acondicionamento
+            acondicionamento = typeof ac === 'string' && ac.trim() ? ac.trim() : null
+          }
+        }
+      }
+
+      if (!cancel) setContextoMtr({ tipoCaminhao, acondicionamento })
+    })()
+    return () => {
+      cancel = true
     }
-    queueMicrotask(() => setQuantidadeFaturamentoStr(def))
-  }, [open, row?.coleta_id, pesoColetaKg, unidadeFaturamento, carregandoContrato, quantidadeFaturamentoStr])
+  }, [open, row?.programacao_id, row?.mtr_id])
 
-  useEffect(() => {
-    if (!open || !row || carregando || carregandoRegras || carregandoContrato) return
-    if (tinhaRegistoPersistido) return
-    if (manualValor) return
-    const s = sugestaoAtiva
-    if (s && s.total > 0) {
-      queueMicrotask(() => {
-        setValorServicoStr(String(s.total))
-        setValorAdicionaisStr('')
-      })
+  async function handleEncerrarTicketDefinitivo() {
+    if (!row || !podeEncerrarTicketDefinitivo || !resumoFinanceiro) return
+    if (resumoFinanceiro.ticket_encerrado_definitivo) return
+
+    const confirmar = window.confirm(
+      'Encerrar definitivamente o ticket neste faturamento? Os valores do resumo serão gravados e o ticket será aprovado na conferência. A pesagem operacional não é alterada.'
+    )
+    if (!confirmar) return
+
+    setEncerrandoTicket(true)
+    setErro('')
+    setOkMsg('')
+
+    const next = marcarTicketEncerradoDefinitivoResumo(resumoFinanceiro)
+    const res = await encerrarTicketDefinitivoFaturamento(
+      row.coleta_id,
+      resumoFinanceiroParaJsonb(next)
+    )
+
+    setEncerrandoTicket(false)
+
+    if (!res.ok) {
+      setErro(res.message)
       return
     }
-    const v = row.valor_coleta
-    if (v != null && Number(v) > 0) {
-      queueMicrotask(() => setValorServicoStr(String(v)))
-    }
-  }, [
-    open,
-    row,
-    carregando,
-    carregandoRegras,
-    carregandoContrato,
-    tinhaRegistoPersistido,
-    manualValor,
-    sugestaoAtiva,
-  ])
+
+    setResumoFinanceiro(next)
+    setOkMsg('Ticket encerrado definitivamente no faturamento.')
+    onGravado()
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!row || !podeMutar) return
+    if (!row || !podeConfirmarEmissao) return
 
     if (status === 'emitido') {
-      const el = coletaElegivelParaFaturar(row)
-      if (!el.ok) {
-        const msg = el.motivos.map(rotuloMotivoInelegivel).join(' ')
-        setErro(`Não é possível faturar esta coleta ainda. ${msg}`)
-        return
+      const alvo = grupoConsolidado && grupoConsolidado.length > 1 ? grupoConsolidado : [row]
+      for (const c of alvo) {
+        const el = coletaElegivelParaFaturar(c)
+        if (!el.ok) {
+          const msg = el.motivos.map(rotuloMotivoInelegivel).join(' ')
+          setErro(
+            `Não é possível faturar${alvo.length > 1 ? ' este grupo' : ' esta coleta'} ainda. Coleta ${c.numero_coleta ?? c.numero}: ${msg}`
+          )
+          return
+        }
       }
     }
 
+    if (!resumoFinanceiro) {
+      setErro('Aguarde o carregamento dos resumos ou recarregue a página.')
+      return
+    }
+
     if (status === 'emitido' && totalNumero <= 0) {
-      setErro('Preencha o valor antes de continuar.')
+      setErro('Preencha os valores nos resumos (ticket e/ou MTR) antes de continuar.')
       return
     }
 
@@ -394,46 +525,61 @@ export function FaturamentoModalRegisto({
     const coletaAtual = row
     const agora = new Date().toISOString()
     const valorTotal = totalNumero > 0 ? totalNumero : null
-    const adic = parseValor(valorAdicionaisStr)
+    const resumoJson = resumoFinanceiro ? resumoFinanceiroParaJsonb(resumoFinanceiro) : null
+    const acrescimo = resumoFinanceiro
+      ? parseNumeroCampo(resumoFinanceiro.ajustes?.acrescimo ?? '')
+      : 0
+    const valorAdicionais = acrescimo > 0 ? acrescimo : null
 
     try {
-      const payloadExtras: Record<string, unknown> = {
-        valor: valorTotal,
-        valor_adicionais: adic != null && adic > 0 ? adic : null,
-        referencia_nf: referenciaNf.trim() || null,
-        observacoes: observacoes.trim() || null,
-        status,
-        updated_at: agora,
-      }
-      const payloadMinimo: Record<string, unknown> = {
-        valor: valorTotal,
-        referencia_nf: referenciaNf.trim() || null,
-        status,
-        updated_at: agora,
-      }
-
-      async function gravarRegistro(payload: Record<string, unknown>) {
-        if (registroId) {
-          return supabase.from('faturamento_registros').update(payload).eq('id', registroId)
+      if (status === 'emitido' && grupoConsolidado && grupoConsolidado.length > 1) {
+        const resCons = await emitirFaturamentoConsolidadoMtr(supabase, {
+          coletas: grupoConsolidado,
+          valorTotal: valorTotal!,
+          resumoFinanceiro: resumoFinanceiro!,
+          observacoes,
+          dataVencimentoIso,
+          registroIdLider: registroId,
+          valorAdicionais,
+        })
+        if (!resCons.ok) {
+          setErro(resCons.message)
+          setSalvando(false)
+          return
         }
-        return supabase
-          .from('faturamento_registros')
-          .insert({ coleta_id: coletaAtual.coleta_id, ...payload })
-          .select('id')
-          .single()
+        setOkMsg(
+          `Faturamento consolidado (${grupoConsolidado.length} tickets, 1 conta). As coletas seguem para o Financeiro.`
+        )
+        onGravado()
+        if (navegarAposEmitir && row) {
+          navigate(`/financeiro?${montarParamsColeta(row).toString()}`)
+        }
+        onClose()
+        setSalvando(false)
+        return
       }
 
-      let res = await gravarRegistro(payloadExtras)
-      if (res.error && faturamentoRegistrosErroColunasOpcionais(res.error)) {
-        res = await gravarRegistro(payloadMinimo)
-      }
-      if (res.error) throw res.error
+      const payloads = montarPayloadsFaturamentoRegistro({
+        valor: valorTotal,
+        valorAdicionais,
+        resumoFinanceiro: resumoJson,
+        observacoes,
+        status,
+        updatedAt: agora,
+      })
 
-      const idInserido = (res.data as { id?: string } | null | undefined)?.id
-      let idFaturamentoRegistro = registroId
-      if (typeof idInserido === 'string') {
-        idFaturamentoRegistro = idInserido
-        if (!registroId) setRegistroId(idInserido)
+      const resPersist = await persistirFaturamentoRegistro(supabase, {
+        coletaId: coletaAtual.coleta_id,
+        registroId,
+        payloads,
+      })
+      if (!resPersist.ok) {
+        throw new Error(resPersist.message)
+      }
+
+      let idFaturamentoRegistro = resPersist.id ?? registroId
+      if (resPersist.id && !registroId) {
+        setRegistroId(resPersist.id)
       }
 
       if (status === 'emitido') {
@@ -506,7 +652,7 @@ export function FaturamentoModalRegisto({
       <div
         style={{
           width: '100%',
-          maxWidth: '620px',
+          maxWidth: '680px',
           maxHeight: 'min(92vh, 720px)',
           overflow: 'auto',
           background: '#fff',
@@ -518,271 +664,106 @@ export function FaturamentoModalRegisto({
       >
         <div style={{ padding: '22px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
           <h2 id="fat-modal-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
-            Faturamento da coleta
+            {grupoConsolidado && grupoConsolidado.length > 1
+              ? 'Faturamento consolidado (1 por MTR)'
+              : 'Faturamento da coleta'}
           </h2>
-          <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b' }}>
-            <strong>{row.numero_coleta ?? row.numero}</strong> — {row.cliente_nome || 'Cliente'} · MTR{' '}
-            {row.mtr_numero || '—'}
+          <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
+            {grupoConsolidado && grupoConsolidado.length > 1 ? (
+              <>
+                <strong>{grupoConsolidado.length} tickets</strong> na MTR{' '}
+                <strong>{row.mtr_numero || '—'}</strong> — {row.cliente_nome || 'Cliente'}
+                <br />
+                Coleta líder: <strong>{row.numero_coleta ?? row.numero}</strong> · caminhão/equipamento
+                cobrados uma vez; resíduos somados.
+              </>
+            ) : (
+              <>
+                <strong>{row.numero_coleta ?? row.numero}</strong> — {row.cliente_nome || 'Cliente'} · MTR{' '}
+                {row.mtr_numero || '—'}
+              </>
+            )}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px' }}>
-          {!podeMutar ? (
+          {!podeConfirmarEmissao ? (
             <p style={{ color: '#92400e', fontSize: '14px' }}>Seu perfil permite apenas consulta.</p>
           ) : null}
 
-          <div style={{ display: 'grid', gap: '10px', marginBottom: '14px', fontSize: '13px', color: '#475569' }}>
-            <div>
-              <strong>Resíduo:</strong> {row.tipo_residuo || '—'}
-            </div>
-            <div>
-              <strong>Peso líquido (pesagem):</strong>{' '}
-              {pesoColetaKg != null
-                ? `${pesoColetaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg`
-                : '—'}
-            </div>
-            {sugestaoContrato?.residuoContrato ? (
-              <div style={{ fontSize: '12px', color: '#0f766e', lineHeight: 1.45 }}>
-                <strong>Contrato cliente:</strong> {sugestaoContrato.residuoContrato.tipo_residuo.trim()}
-                {sugestaoContrato.valorUnitario > 0 ? (
-                  <>
-                    {' '}
-                    · R${' '}
-                    {sugestaoContrato.valorUnitario.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                    /{unidadeFaturamento}
-                  </>
-                ) : null}
-                {sugestaoContrato.faturamentoMinimo > 0 ? (
-                  <>
-                    {' '}
-                    · mín. R${' '}
-                    {sugestaoContrato.faturamentoMinimo.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </>
-                ) : null}
-              </div>
-            ) : carregandoContrato ? (
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>A carregar contrato do cliente…</div>
-            ) : row.cliente_id ? (
-              <div style={{ fontSize: '12px', color: '#b45309' }}>
-                Resíduo sem preço no cadastro do cliente — confira em Clientes ou use regra de preço / valor manual.
-              </div>
-            ) : null}
-          </div>
-
           {carregando ? (
-            <p style={{ color: '#64748b' }}>Carregando…</p>
+            <p style={{ color: '#64748b', marginBottom: '14px' }}>Carregando resumos…</p>
+          ) : !resumoFinanceiro ? (
+            <div style={{ marginBottom: '14px' }}>
+              <p style={{ color: '#b45309', fontSize: '14px', margin: '0 0 10px' }}>
+                Não foi possível montar o resumo desta coleta (registo antigo sem snapshot ou dados
+                incompletos).
+              </p>
+              <button type="button" className="mini-btn" onClick={() => garantirResumoMontado()}>
+                Montar resumo do operacional
+              </button>
+            </div>
           ) : (
             <>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                Peso / quantidade real para faturamento ({unidadeFaturamento})
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={quantidadeFaturamentoStr}
-                onChange={(e) => {
-                  setManualValor(false)
-                  setQuantidadeFaturamentoStr(e.target.value)
+              <FaturamentoResumoDesvinculado
+                resumo={resumoFinanceiro}
+                onChange={onResumoFinanceiroChange}
+                podeEditarResumos={podeEditarResumosFinanceiros}
+                podeEditarAjustes={podeEditarResumosFinanceiros}
+                carregandoSugestao={carregandoContrato || carregandoRegras}
+                onRecarregarTicket={() => {
+                  const b = montarResumoOperacional()
+                  if (b) setResumoFinanceiro((prev) => (prev ? { ...b, ticket: b.ticket, mtr: prev.mtr } : b))
                 }}
-                disabled={!podeMutar}
-                placeholder={unidadeFaturamento === 'ton' ? 'Ex.: 0,8' : 'Ex.: 800'}
-                style={{
-                  width: '100%',
-                  marginBottom: '6px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
+                onRecarregarMtr={() => {
+                  const b = montarResumoOperacional()
+                  if (b) setResumoFinanceiro((prev) => (prev ? { ...prev, mtr: b.mtr } : b))
                 }}
-              />
-              <p style={{ margin: '0 0 14px', fontSize: '11px', color: '#94a3b8', lineHeight: 1.45 }}>
-                {unidadeFaturamento === 'ton'
-                  ? 'Toneladas: quantidade em ton (pesagem em kg ÷ 1000).'
-                  : unidadeFaturamento === 'kg'
-                    ? 'Por defeito usa o peso líquido da pesagem.'
-                    : 'Quantidade na unidade do contrato (m³ ou litros).'}
-              </p>
-
-              <div
-                style={{
-                  marginBottom: '14px',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                onAplicarContratoMtr={() => {
+                  if (!resumoFinanceiro) return
+                  setResumoFinanceiro(
+                    aplicarSugestaoContratoNoResumoMtr(resumoFinanceiro, sugestaoContrato, {
+                      tipoCaminhao: contextoMtr?.tipoCaminhao,
+                      acondicionamento: contextoMtr?.acondicionamento,
+                    })
+                  )
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '0.06em' }}>
-                      VALOR CALCULADO (CADASTRO / REGRA)
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{sugestaoFmt}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                      {carregandoRegras || carregandoContrato
-                        ? 'A carregar preços…'
-                        : sugestaoAtiva && sugestaoAtiva.total > 0
-                          ? `${sugestaoAtiva.origemLabel} · pode editar os campos abaixo`
-                          : 'Sem preço no contrato do cliente nem regra — use valor manual.'}
-                    </div>
-                  </div>
-                  {sugestaoAtiva && sugestaoAtiva.total > 0 && podeMutar ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setManualValor(false)
-                        setValorServicoStr(String(sugestaoAtiva.total))
-                        setValorAdicionaisStr('')
-                      }}
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: '10px',
-                        border: '1px solid #0d9488',
-                        background: '#fff',
-                        color: '#0f766e',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Aplicar sugerido
-                    </button>
-                  ) : null}
-                </div>
-                {sugestaoAtiva && sugestaoAtiva.linhas.length > 0 ? (
-                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', marginBottom: '6px' }}>
-                      Composição (referência)
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155' }}>
-                      {sugestaoAtiva.linhas.map((ln) => (
-                        <li key={ln.chave}>
-                          {ln.rotulo}:{' '}
-                          {ln.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                Valor do serviço (R$){' '}
-                {valorAlinhaSugestao && !manualValor && sugestaoAtiva && sugestaoAtiva.total > 0 ? (
-                  <span style={{ color: '#0d9488', fontWeight: 800 }}>· automático</span>
-                ) : (
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>· manual</span>
-                )}
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={valorServicoStr}
-                onChange={(e) => {
-                  setManualValor(true)
-                  setValorServicoStr(e.target.value)
-                }}
-                disabled={!podeMutar}
-                placeholder="0,00"
-                style={{
-                  width: '100%',
-                  marginBottom: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border:
-                    !manualValor && valorAlinhaSugestao && sugestaoAtiva && sugestaoAtiva.total > 0
-                      ? '2px solid #0d9488'
-                      : '1px solid #cbd5e1',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
+                referenciaConta={
+                  sugestaoAtiva && sugestaoAtiva.total > 0
+                    ? {
+                        total: sugestaoAtiva.total,
+                        origemLabel: sugestaoAtiva.origemLabel,
+                        linhas: sugestaoAtiva.linhas,
+                      }
+                    : null
+                }
+                diferencaConta={diferencaConta}
               />
 
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                Adicionais (opcional, R$)
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={valorAdicionaisStr}
-                onChange={(e) => {
-                  setManualValor(true)
-                  setValorAdicionaisStr(e.target.value)
-                }}
-                disabled={!podeMutar}
-                placeholder="0,00"
-                style={{
-                  width: '100%',
-                  marginBottom: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
+              <FaturamentoMtrRateioPanel
+                mtrId={row?.mtr_id}
+                mtrBaixaComplexa={row?.mtr_baixa_cenario_complexo}
+                usuarioCargo={usuarioCargo}
               />
 
-              <div
-                style={{
-                  marginBottom: '14px',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  color: '#065f46',
-                }}
-              >
-                Total a faturar: {totalFmt}
-              </div>
+              {row?.mtr_status === 'Cancelado' && row.mtr_cancelamento_cobrar_frete ? (
+                <p style={{ fontSize: '13px', color: '#b45309', margin: '0 0 12px' }}>
+                  MTR cancelada com cobrança de frete
+                  {row.mtr_cancelamento_valor_frete != null
+                    ? `: ${Number(row.mtr_cancelamento_valor_frete).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                    : ''}
+                  . Confira o registo pendente FRETE-MTR-CANCELADA.
+                </p>
+              ) : null}
 
-              {sugestaoAtiva && sugestaoAtiva.total > 0 ? (
-                <div
-                  style={{
-                    marginBottom: '12px',
-                    padding: '12px 14px',
-                    borderRadius: '12px',
-                    background: diferencaConta != null && Math.abs(diferencaConta) < 0.02 ? '#ecfdf5' : '#fffbeb',
-                    border:
-                      diferencaConta != null && Math.abs(diferencaConta) < 0.02
-                        ? '1px solid #6ee7b7'
-                        : '1px solid #fcd34d',
-                    fontSize: '13px',
-                    color: '#334155',
-                  }}
-                >
-                  <div style={{ fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>Conferência da conta</div>
-                  <div>
-                    Calculado ({sugestaoAtiva.origemLabel}):{' '}
-                    <strong>
-                      {sugestaoAtiva.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </strong>
-                  </div>
-                  <div style={{ marginTop: '4px' }}>
-                    Informado (serviço + adicionais): <strong>{totalFmt}</strong>
-                  </div>
-                  {diferencaConta != null ? (
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        fontWeight: 800,
-                        color: Math.abs(diferencaConta) < 0.02 ? '#047857' : '#b45309',
-                      }}
-                    >
-                      {Math.abs(diferencaConta) < 0.02
-                        ? 'A conta confere com o cadastro/regra.'
-                        : `Diferença: ${diferencaConta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
-                    </div>
-                  ) : null}
-                </div>
+              {carregandoContrato ? (
+                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
+                  A carregar contrato do cliente…
+                </p>
+              ) : sugestaoContrato && sugestaoContrato.total <= 0 && row.cliente_id ? (
+                <p style={{ fontSize: '12px', color: '#b45309', margin: '0 0 12px' }}>
+                  Sem preços no contrato para esta coleta — preencha os valores manualmente nos resumos.
+                </p>
               ) : null}
 
               {status === 'emitido' ? (
@@ -796,7 +777,7 @@ export function FaturamentoModalRegisto({
                     type="date"
                     value={dataVencimentoIso}
                     onChange={(e) => setDataVencimentoIso(e.target.value)}
-                    disabled={!podeMutar}
+                    disabled={!podeConfirmarEmissao}
                     style={{
                       width: '100%',
                       marginBottom: '6px',
@@ -813,24 +794,34 @@ export function FaturamentoModalRegisto({
                 </>
               ) : null}
 
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                Referência NF (opcional)
-              </label>
-              <input
-                type="text"
-                value={referenciaNf}
-                onChange={(e) => setReferenciaNf(e.target.value)}
-                disabled={!podeMutar}
-                style={{
-                  width: '100%',
-                  marginBottom: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
-              />
+              {podeEncerrarTicketDefinitivo && !resumoFinanceiro.ticket_encerrado_definitivo ? (
+                <div style={{ marginBottom: '14px' }}>
+                  <button
+                    type="button"
+                    disabled={encerrandoTicket || salvando}
+                    onClick={() => void handleEncerrarTicketDefinitivo()}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #b45309',
+                      background: '#fffbeb',
+                      color: '#92400e',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      cursor: encerrandoTicket || salvando ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {encerrandoTicket
+                      ? 'A encerrar ticket…'
+                      : 'Encerrar ticket definitivamente (Operacional (Time T))'}
+                  </button>
+                  <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                    Grava o resumo financeiro e aprova o ticket na conferência, sem alterar a pesagem
+                    operacional.
+                  </p>
+                </div>
+              ) : null}
 
               <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
                 Observações (opcional)
@@ -838,7 +829,7 @@ export function FaturamentoModalRegisto({
               <textarea
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
-                disabled={!podeMutar}
+                disabled={!podeConfirmarEmissao}
                 rows={3}
                 style={{
                   width: '100%',
@@ -858,7 +849,7 @@ export function FaturamentoModalRegisto({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as StatusFat)}
-                disabled={!podeMutar}
+                disabled={!podeConfirmarEmissao}
                 style={{
                   width: '100%',
                   marginBottom: '14px',
@@ -893,15 +884,15 @@ export function FaturamentoModalRegisto({
                 </button>
                 <button
                   type="submit"
-                  disabled={!podeMutar || salvando}
+                  disabled={!podeConfirmarEmissao || salvando}
                   style={{
                     padding: '10px 20px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: podeMutar ? '#0d9488' : '#94a3b8',
+                    background: podeConfirmarEmissao ? '#0d9488' : '#94a3b8',
                     color: '#fff',
                     fontWeight: 800,
-                    cursor: podeMutar && !salvando ? 'pointer' : 'not-allowed',
+                    cursor: podeConfirmarEmissao && !salvando ? 'pointer' : 'not-allowed',
                   }}
                 >
                   {salvando ? 'Salvando…' : status === 'emitido' ? 'Confirmar faturamento' : 'Salvar registro'}

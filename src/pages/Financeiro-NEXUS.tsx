@@ -6,16 +6,12 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../lib/coletasQueryLimits'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
-import {
-  cargoPodeAlterarValorContaTravada,
-  cargoPodeEditarCobranca,
-  cargoPodeEmitirFaturamento,
-} from '../lib/workflowPermissions'
+import { cargoPodeAlterarValorContaTravada, cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import {
   COLETAS_OR_FINANCEIRO_QUERY,
   coletaVisivelListaFinanceiro,
@@ -24,22 +20,12 @@ import {
 import {
   exportarCsvFinanceiro,
   mapFaturamentoViewRow,
-  type FaturamentoResumoViewRow,
   type FinanceiroListaItem,
 } from '../lib/faturamentoResumo'
 import { registrarBaixaContaReceber, upsertContaReceber } from '../services/financeiroReceber'
 import { FinanceiroConferenciaDetalhe } from '../components/financeiro/FinanceiroConferenciaDetalhe'
-import { FaturamentoFilaColetas } from '../components/faturamento/FaturamentoFilaColetas'
-import { FaturamentoHistoricoColetas } from '../components/faturamento/FaturamentoHistoricoColetas'
-import { FaturamentoRelatoriosPanel } from '../components/faturamento/FaturamentoRelatoriosPanel'
-import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
-import { FinanceiroFaturamentoCards } from '../components/faturamento/FinanceiroFaturamentoCards'
 import { fetchContasReceberByColetaIds } from '../lib/contasReceberFetch'
 import { fetchVwFaturamentoResumoPaginated } from '../lib/faturamentoResumoFetch'
-import {
-  coletaHistoricoFaturamentoEmitido,
-  coletaNaFilaFaturamento,
-} from '../lib/faturamentoOperacionalFila'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
 
 type StatusPagamento = 'Pendente' | 'Parcial' | 'Pago'
@@ -149,26 +135,6 @@ function alertaDocumento30(dataVencimento: string): 'vencido' | 'critico' | null
   return null
 }
 
-function isoPrimeiroDiaMes(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function isoHoje(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function inicioDiaMs(isoDate: string): number {
-  const d = new Date(`${isoDate.slice(0, 10)}T12:00:00`)
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-}
-
-function fimDiaInclusiveMs(isoDate: string): number {
-  const d = new Date(`${isoDate.slice(0, 10)}T12:00:00`)
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime()
-}
-
 function resolverFinanceiroItem(
   itens: FinanceiroListaItem[],
   ids: {
@@ -252,13 +218,6 @@ export default function Financeiro() {
   const [salvandoBaixaId, setSalvandoBaixaId] = useState<string | null>(null)
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null)
 
-  const [linhasVistaFat, setLinhasVistaFat] = useState<FaturamentoResumoViewRow[]>([])
-  const [erroVistaFat, setErroVistaFat] = useState('')
-  const [fatModalAberto, setFatModalAberto] = useState(false)
-  const [fatModalColetaId, setFatModalColetaId] = useState<string | null>(null)
-  const [fatPeriodoDe, setFatPeriodoDe] = useState(isoPrimeiroDiaMes)
-  const [fatPeriodoAte, setFatPeriodoAte] = useState(isoHoje)
-
   const [documentos, setDocumentos] = useState<DocumentoFinRow[]>([])
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [docNome, setDocNome] = useState('')
@@ -267,7 +226,6 @@ export default function Financeiro() {
   const [salvandoDoc, setSalvandoDoc] = useState(false)
 
   const podeMutarFinanceiro = cargoPodeEditarCobranca(usuarioCargo)
-  const podeMutarFaturamento = cargoPodeEmitirFaturamento(usuarioCargo)
   const podeAlterarValorTravado = cargoPodeAlterarValorContaTravada(usuarioCargo)
 
   const temParametrosContexto = !!(
@@ -329,7 +287,7 @@ export default function Financeiro() {
 
     if (error) throw error
 
-    const filtradas = (rowsView as FaturamentoResumoViewRow[]).filter((row) =>
+    const filtradas = rowsView.filter((row) =>
       coletaVisivelListaFinanceiro({
         fluxo_status: row.fluxo_status,
         etapa_operacional: row.etapa_operacional,
@@ -384,20 +342,6 @@ export default function Financeiro() {
     setItens(base)
   }, [])
 
-  const carregarVistaFaturamento = useCallback(async () => {
-    setErroVistaFat('')
-    const { data, error } = await fetchVwFaturamentoResumoPaginated(supabase)
-    if (error) {
-      setErroVistaFat(
-        error.message ||
-          'Não foi possível carregar a consolidação para faturamento. Verifique a view vw_faturamento_resumo no Supabase.'
-      )
-      setLinhasVistaFat([])
-      return
-    }
-    setLinhasVistaFat(data)
-  }, [])
-
   const carregarDocumentos = useCallback(async () => {
     setLoadingDocs(true)
     try {
@@ -419,13 +363,13 @@ export default function Financeiro() {
     try {
       setLoading(true)
       setErro('')
-      await Promise.all([carregarFinanceiro(), carregarDocumentos(), carregarVistaFaturamento()])
+      await Promise.all([carregarFinanceiro(), carregarDocumentos()])
     } catch (error) {
       setErro(mensagemErroSupabase(error, 'Erro ao carregar financeiro.'))
     } finally {
       setLoading(false)
     }
-  }, [carregarFinanceiro, carregarDocumentos, carregarVistaFaturamento])
+  }, [carregarFinanceiro, carregarDocumentos])
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -573,6 +517,11 @@ export default function Financeiro() {
 
   async function registrarBaixaDetalhe(item: FinanceiroListaItem, valorStr: string, obs: string) {
     if (!podeMutarFinanceiro) return
+    const obsTrim = obs.trim()
+    if (!obsTrim) {
+      setErro('Justificativa/observação é obrigatória para registar a baixa.')
+      return
+    }
     const v = Number(String(valorStr).replace(/\s/g, '').replace(',', '.'))
     if (!Number.isFinite(v) || v <= 0) {
       setErro('Informe um valor de baixa válido.')
@@ -588,7 +537,7 @@ export default function Financeiro() {
       const { error } = await registrarBaixaContaReceber(supabase, {
         referencia_coleta_id: item.id,
         valor_baixa: v,
-        observacao: obs.trim() || null,
+        observacao: obsTrim,
         usuario_id: user?.id ?? null,
       })
       if (error) throw error
@@ -808,83 +757,6 @@ export default function Financeiro() {
     return documentos.filter((d) => alertaDocumento30(d.data_vencimento) !== null).length
   }, [documentos])
 
-  const filaFaturamento = useMemo(() => {
-    const f = linhasVistaFat.filter((r) => coletaNaFilaFaturamento(r))
-    return f.sort((a, b) => {
-      const da = new Date(a.data_execucao || a.data_agendada || a.created_at).getTime()
-      const db = new Date(b.data_execucao || b.data_agendada || b.created_at).getTime()
-      if (da !== db) return da - db
-      const na = a.numero_coleta ?? Number.MAX_SAFE_INTEGER
-      const nb = b.numero_coleta ?? Number.MAX_SAFE_INTEGER
-      return na - nb
-    })
-  }, [linhasVistaFat])
-
-  const totalAFaturarNum = useMemo(() => {
-    let s = 0
-    for (const r of filaFaturamento) {
-      const v = r.valor_coleta ?? r.faturamento_registro_valor
-      if (v != null && Number.isFinite(Number(v)) && Number(v) > 0) s += Number(v)
-    }
-    return s
-  }, [filaFaturamento])
-
-  const totalAFaturarFmt =
-    totalAFaturarNum > 0
-      ? totalAFaturarNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      : '—'
-
-  const historicoBaseFat = useMemo(
-    () => linhasVistaFat.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
-    [linhasVistaFat]
-  )
-
-  const historicoPeriodoFat = useMemo(() => {
-    const t0 = fatPeriodoDe ? inicioDiaMs(fatPeriodoDe) : null
-    const t1 = fatPeriodoAte ? fimDiaInclusiveMs(fatPeriodoAte) : null
-    return historicoBaseFat.filter((r) => {
-      const refData = r.data_execucao || r.created_at
-      if (!refData) return t0 == null && t1 == null
-      const ts = new Date(refData).getTime()
-      if (t0 != null && ts < t0) return false
-      if (t1 != null && ts > t1) return false
-      return true
-    })
-  }, [historicoBaseFat, fatPeriodoDe, fatPeriodoAte])
-
-  const totalFaturadoPeriodoNum = useMemo(() => {
-    return historicoPeriodoFat.reduce((acc, r) => {
-      const v = r.faturamento_registro_valor ?? r.valor_coleta
-      if (v == null || !Number.isFinite(Number(v))) return acc
-      return acc + Number(v)
-    }, 0)
-  }, [historicoPeriodoFat])
-
-  const totalFaturadoPeriodoFmt =
-    totalFaturadoPeriodoNum > 0
-      ? totalFaturadoPeriodoNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      : '—'
-
-  const totalPendenteCobrancaFmt = valorSaidasEmAberto.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
-
-  const fatModalRow = useMemo(
-    () => (fatModalColetaId ? linhasVistaFat.find((r) => r.coleta_id === fatModalColetaId) ?? null : null),
-    [linhasVistaFat, fatModalColetaId]
-  )
-
-  function abrirModalFaturamento(coletaId: string) {
-    setFatModalColetaId(coletaId)
-    setFatModalAberto(true)
-  }
-
-  function fecharModalFaturamento() {
-    setFatModalAberto(false)
-    setFatModalColetaId(null)
-  }
-
   const itemDetalhe = useMemo(
     () => (detalheAbertoId ? itens.find((i) => i.id === detalheAbertoId) ?? null : null),
     [itens, detalheAbertoId]
@@ -905,17 +777,19 @@ export default function Financeiro() {
       >
         <div>
           <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
-            Faturamento, cobrança e documentos
+            Financeiro — cobrança e documentos
           </h1>
           <p className="page-header__lead" style={{ margin: '6px 0 0', maxWidth: '920px' }}>
-            Primeiro consolide o <strong>faturamento</strong> (coletas já pesadas no fluxo); em seguida utilize a
-            cobrança para NF, vencimentos e recebimentos. Conferência (MTR, pesos, ticket, aprovação) e documentos com
-            vencimento (alerta aos {DIAS_ALERTA_DOC} dias).
+            Coletas já enviadas pelo Faturamento: NF, vencimentos, recebimentos e documentos com alerta aos{' '}
+            {DIAS_ALERTA_DOC} dias. A emissão operacional (ticket, conferência, fila «Faturar») fica na página{' '}
+            <Link to="/faturamento" style={{ color: '#0d9488', fontWeight: 800 }}>
+              Faturamento
+            </Link>
+            .
           </p>
           {usuarioCargo ? (
             <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
               Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
-              {!podeMutarFaturamento ? ' · faturamento: consulta' : ' · faturamento: pode emitir'}
               {!podeMutarFinanceiro ? ' · cobrança: consulta' : ' · cobrança: editar e salvar'}
             </p>
           ) : null}
@@ -942,67 +816,24 @@ export default function Financeiro() {
         </div>
       </div>
 
-      <section style={{ marginBottom: '28px' }} aria-label="Faturamento">
-        <div style={{ marginBottom: '16px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Faturamento
-          </h2>
-          <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b', maxWidth: '920px', lineHeight: 1.6 }}>
-            Após programação, MTR, coleta e controle de massa, registe aqui o valor e confirme: a coleta passa ao bloco
-            de cobrança abaixo. Não são criados dados operacionais nesta etapa.
-          </p>
-          {erroVistaFat ? (
-            <div
-              style={{
-                marginTop: '12px',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                fontSize: '14px',
-              }}
-            >
-              <span style={{ whiteSpace: 'pre-wrap', display: 'block' }}>{erroVistaFat}</span>
-            </div>
-          ) : null}
-        </div>
-
-        <FinanceiroFaturamentoCards
-          totalAFaturarFmt={totalAFaturarFmt}
-          totalFaturadoPeriodoFmt={totalFaturadoPeriodoFmt}
-          totalPendenteCobrancaFmt={totalPendenteCobrancaFmt}
-          qtdColetasPendentesFila={filaFaturamento.length}
-          periodoDe={fatPeriodoDe}
-          periodoAte={fatPeriodoAte}
-          onPeriodoDeChange={setFatPeriodoDe}
-          onPeriodoAteChange={setFatPeriodoAte}
-        />
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
-          <button
-            type="button"
-            onClick={() => void carregarDados()}
-            disabled={loading}
-            style={{ ...botaoSecundarioStyle, padding: '10px 16px', fontSize: '13px' }}
-          >
-            {loading ? 'A atualizar…' : 'Atualizar dados'}
-          </button>
-        </div>
-
-        <FaturamentoFilaColetas
-          linhas={filaFaturamento}
-          carregando={loading}
-          onFaturar={abrirModalFaturamento}
-          titulo="Coletas prontas para faturamento"
-          subtitulo="Só aparecem coletas com peso líquido, etapa válida após a pesagem, aprovação e ainda sem emissão ao Financeiro. Use «Faturar» para preencher o valor e confirmar."
-          mensagemVazia="Nenhuma coleta pronta para faturamento."
-          rotuloBotao="Faturar"
-        />
-
-        <FaturamentoHistoricoColetas todasLinhas={linhasVistaFat} />
-        <FaturamentoRelatoriosPanel linhas={linhasVistaFat} />
-      </section>
+      <div
+        style={{
+          marginBottom: '22px',
+          padding: '14px 16px',
+          borderRadius: '12px',
+          background: '#f0fdfa',
+          border: '1px solid #99f6e4',
+          fontSize: '14px',
+          color: '#0f766e',
+          lineHeight: 1.55,
+        }}
+      >
+        <strong style={{ color: '#0f172a' }}>Faturamento</strong> (conferência do ticket, fila para faturar, emissão ao
+        Financeiro) →{' '}
+        <Link to="/faturamento" style={{ color: '#0d9488', fontWeight: 800 }}>
+          Abrir página de Faturamento
+        </Link>
+      </div>
 
       <div
         style={{
@@ -1930,14 +1761,6 @@ export default function Financeiro() {
       </div>
       </div>
 
-      <FaturamentoModalRegisto
-        open={fatModalAberto}
-        row={fatModalRow}
-        podeMutar={podeMutarFaturamento}
-        onClose={fecharModalFaturamento}
-        onGravado={() => void carregarDados()}
-        navegarAposEmitir={false}
-      />
     </MainLayout>
   )
 }

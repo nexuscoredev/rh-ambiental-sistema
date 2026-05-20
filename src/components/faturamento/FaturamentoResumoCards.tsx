@@ -72,7 +72,9 @@ export function FaturamentoResumoCards({
         <div style={label}>Pronto para faturar (vista)</div>
         <div style={value}>{qtdProntoConferencia}</div>
         <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorSomaProntoConferencia}</div>
-        <div style={hint}>Ticket já validado; elegível para a fila «Faturar» (sem contar quem ainda está em conferência).</div>
+        <div style={hint}>
+          Requisitos de MTR/peso/ticket ok na vista; exclui conferência do ticket e quem já foi ao Financeiro.
+        </div>
       </div>
       <div style={{ ...card, borderTop: '3px solid #14b8a6' }}>
         <div style={label}>Pode faturar agora</div>

@@ -19,7 +19,13 @@ import {
 import MainLayout from '../../layouts/MainLayout'
 import { RgReportPdfIcon } from '../ui/RgReportPdfIcon'
 import { supabase } from '../../lib/supabase'
-import { coletaVisivelListaFinanceiro, isVencidoFinanceiro } from '../../lib/financeiroColetas'
+import { fetchContasReceberByColetaIds } from '../../lib/contasReceberFetch'
+import {
+  coletaVisivelListaFinanceiro,
+  dadosCobrancaColeta,
+  isVencidoFinanceiro,
+  type ContaReceberResumoColeta,
+} from '../../lib/financeiroColetas'
 import {
   formatarEtapaParaUI,
   formatarFaseFluxoOficialParaUI,
@@ -193,6 +199,9 @@ export function ExecutiveDashboard() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
   const [coletas, setColetas] = useState<ColetaRow[]>([])
+  const [contasReceberPorColeta, setContasReceberPorColeta] = useState<
+    Map<string, ContaReceberResumoColeta>
+  >(() => new Map())
   const [mtrs, setMtrs] = useState<MtrRow[]>([])
   const [tipoCaminhaoPorProg, setTipoCaminhaoPorProg] = useState<Record<string, string>>({})
   const [totalClientesCadastro, setTotalClientesCadastro] = useState(0)
@@ -285,6 +294,26 @@ export function ExecutiveDashboard() {
       setColetas(coletasAcc)
       setMtrs(mtrsAcc)
 
+      const coletaIds = coletasAcc.map((c) => c.id).filter(Boolean)
+      if (coletaIds.length > 0) {
+        try {
+          const crMap = await fetchContasReceberByColetaIds<ContaReceberResumoColeta>(
+            supabase,
+            coletaIds,
+            'referencia_coleta_id, data_vencimento, status_pagamento, valor, valor_pago'
+          )
+          setContasReceberPorColeta(crMap)
+        } catch (crErr) {
+          console.warn(
+            '[ExecutiveDashboard] contas_receber em lote falhou; vencidos usam só dados da coleta.',
+            crErr
+          )
+          setContasReceberPorColeta(new Map())
+        }
+      } else {
+        setContasReceberPorColeta(new Map())
+      }
+
       const progIds = [
         ...new Set(coletasAcc.map((c) => c.programacao_id).filter(Boolean)),
       ] as string[]
@@ -330,6 +359,37 @@ export function ExecutiveDashboard() {
     [preset, customFrom, customTo]
   )
 
+  const passaFiltrosRefino = useCallback(
+    (c: ColetaRow) => {
+      if (filtroClienteId) {
+        const ok =
+          c.cliente_id === filtroClienteId ||
+          (c.cliente || '').trim() === filtroClienteId
+        if (!ok) return false
+      }
+
+      const et = normalizarEtapaColeta({
+        fluxo_status: c.fluxo_status,
+        etapa_operacional: c.etapa_operacional,
+      })
+      if (filtroEtapa && et !== filtroEtapa) return false
+
+      if (filtroTipoResiduo) {
+        const t = (c.tipo_residuo || '').trim()
+        if (t !== filtroTipoResiduo) return false
+      }
+
+      if (filtroTipoCaminhao) {
+        const pid = c.programacao_id
+        const tc = pid ? tipoCaminhaoPorProg[pid] ?? '' : ''
+        if (tc !== filtroTipoCaminhao) return false
+      }
+
+      return true
+    },
+    [filtroClienteId, filtroEtapa, filtroTipoResiduo, filtroTipoCaminhao, tipoCaminhaoPorProg]
+  )
+
   const filtrarColetasNoIntervalo = useCallback(
     (ini: Date, fim: Date) => {
       return coletas.filter((c) => {
@@ -337,32 +397,15 @@ export function ExecutiveDashboard() {
         if (!ref) return false
         const dt = parseDataAsDate(ref)
         if (dt < ini || dt > fim) return false
-
-        if (filtroClienteId) {
-          const ok =
-            c.cliente_id === filtroClienteId ||
-            (c.cliente || '').trim() === filtroClienteId
-          if (!ok) return false
-        }
-
-        const et = normalizarEtapaColeta({ fluxo_status: c.fluxo_status, etapa_operacional: c.etapa_operacional })
-        if (filtroEtapa && et !== filtroEtapa) return false
-
-        if (filtroTipoResiduo) {
-          const t = (c.tipo_residuo || '').trim()
-          if (t !== filtroTipoResiduo) return false
-        }
-
-        if (filtroTipoCaminhao) {
-          const pid = c.programacao_id
-          const tc = pid ? tipoCaminhaoPorProg[pid] ?? '' : ''
-          if (tc !== filtroTipoCaminhao) return false
-        }
-
-        return true
+        return passaFiltrosRefino(c)
       })
     },
-    [coletas, filtroClienteId, filtroEtapa, filtroTipoResiduo, filtroTipoCaminhao, tipoCaminhaoPorProg]
+    [coletas, passaFiltrosRefino]
+  )
+
+  const coletasRefinoSemPeriodo = useMemo(
+    () => coletas.filter(passaFiltrosRefino),
+    [coletas, passaFiltrosRefino]
   )
 
   const coletasFiltradas = useMemo(
@@ -446,8 +489,6 @@ export function ExecutiveDashboard() {
     let peso = 0
     let receita = 0
     let liberadasComValor = 0
-    let vencidosQtd = 0
-    let vencidosValor = 0
     let finalizadas = 0
     let pendentes = 0
     const clientesDist = new Set<string>()
@@ -475,13 +516,27 @@ export function ExecutiveDashboard() {
         }
       }
 
-      if (noFinanceiro && isVencidoFinanceiro(c.data_vencimento, c.status_pagamento)) {
-        vencidosQtd += 1
-        const vv = Number(c.valor_coleta ?? 0)
-        vencidosValor += Number.isNaN(vv) ? 0 : vv
-      }
-
       if (c.cliente?.trim()) clientesDist.add(c.cliente.trim())
+    }
+
+    let vencidosQtd = 0
+    let vencidosValor = 0
+    for (const c of coletasRefinoSemPeriodo) {
+      if (
+        !coletaVisivelListaFinanceiro({
+          fluxo_status: c.fluxo_status,
+          etapa_operacional: c.etapa_operacional,
+          liberado_financeiro: c.liberado_financeiro,
+          observacoes: c.observacoes,
+        })
+      ) {
+        continue
+      }
+      const cob = dadosCobrancaColeta(c, contasReceberPorColeta.get(c.id))
+      if (!isVencidoFinanceiro(cob.dataVencimento, cob.statusPagamento)) continue
+      if (cob.saldoAberto <= 0) continue
+      vencidosQtd += 1
+      vencidosValor += cob.saldoAberto
     }
 
     const ticketMedio = liberadasComValor > 0 ? receita / liberadasComValor : 0
@@ -512,6 +567,8 @@ export function ExecutiveDashboard() {
   }, [
     coletas,
     coletasFiltradas,
+    coletasRefinoSemPeriodo,
+    contasReceberPorColeta,
     hojeIso,
     inicioAno,
     mtrs,

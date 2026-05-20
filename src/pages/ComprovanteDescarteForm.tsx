@@ -36,6 +36,7 @@ import {
   type MtrAutofillComprovante,
   type MtrVinculoResumo,
 } from '../services/comprovantesDescarte'
+import { comprovanteCamposTransportadorRg } from '../lib/rgAmbientalDadosCorporativos'
 
 type FormState = {
   codigo_remessa: string
@@ -85,7 +86,12 @@ type FormState = {
   fotos_extras: ComprovanteFotoExtraItem[]
 }
 
-const formVazio = (): FormState => ({
+function mesclarTransportadorRgForm(f: FormState): FormState {
+  return { ...f, ...comprovanteCamposTransportadorRg() }
+}
+
+const formVazio = (): FormState =>
+  mesclarTransportadorRgForm({
   codigo_remessa: '',
   data_remessa: '',
   cadri: '',
@@ -134,7 +140,7 @@ const formVazio = (): FormState => ({
 })
 
 function rowParaForm(r: ComprovanteDescarteRow): FormState {
-  return {
+  return mesclarTransportadorRgForm({
     codigo_remessa: r.codigo_remessa ?? '',
     data_remessa: dataIsoParaInputDate(r.data_remessa),
     cadri: r.cadri ?? '',
@@ -190,10 +196,11 @@ function rowParaForm(r: ComprovanteDescarteRow): FormState {
     foto_saida_conferida: r.foto_saida_conferida,
     foto_saida_observacao_conferencia: r.foto_saida_observacao_conferencia ?? '',
     fotos_extras: r.fotos_extras ?? [],
-  }
+  })
 }
 
 function formParaPayload(f: FormState): ComprovanteDescartePayload {
+  const comRg = mesclarTransportadorRgForm(f)
   const pe = parsePesoInput(f.peso_entrada)
   const ps = parsePesoInput(f.peso_saida)
   return {
@@ -211,8 +218,8 @@ function formParaPayload(f: FormState): ComprovanteDescartePayload {
     gerador_responsavel: f.gerador_responsavel.trim() || null,
     gerador_telefone: f.gerador_telefone.trim() || null,
     gerador_contrato: f.gerador_contrato.trim() || null,
-    transportador_razao_social: f.transportador_razao_social.trim() || null,
-    transportador_telefone: f.transportador_telefone.trim() || null,
+    transportador_razao_social: comRg.transportador_razao_social.trim() || null,
+    transportador_telefone: comRg.transportador_telefone.trim() || null,
     placa: f.placa.trim() || null,
     motorista_nome: f.motorista_nome.trim() || null,
     motorista_cnh: f.motorista_cnh.trim() || null,
@@ -492,8 +499,7 @@ export default function ComprovanteDescarteForm() {
       gerador_responsavel: prev.gerador_responsavel || m.gerador_responsavel || '',
       gerador_telefone: prev.gerador_telefone || m.gerador_telefone || '',
       cadri: prev.cadri || m.cadri || '',
-      transportador_razao_social: prev.transportador_razao_social || m.transportador,
-      transportador_telefone: prev.transportador_telefone || m.transportador_telefone || '',
+      ...comprovanteCamposTransportadorRg(),
       tipo_efluente: prev.tipo_efluente || m.tipo_residuo,
       destinatario_razao_social: prev.destinatario_razao_social || m.destinatario_razao || '',
       destinatario_endereco: prev.destinatario_endereco || m.destinatario_endereco || '',
@@ -1015,6 +1021,9 @@ export default function ComprovanteDescarteForm() {
 
             <div className="cd-secao">
               <h2 className="cd-secao__titulo">3. Transportador</h2>
+              <p className="cd-secao__hint" style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>
+                Dados corporativos da RG Ambiental — preenchidos automaticamente pelo sistema.
+              </p>
               <div className="cd-grid2">
                 <div>
                   <label className="cd-label cd-label__req" htmlFor="cd-trs">
@@ -1023,11 +1032,11 @@ export default function ComprovanteDescarteForm() {
                   <input
                     id="cd-trs"
                     className={`cd-input ${errosVal.transportador_razao_social ? 'cd-input--erro' : ''}`}
-                    disabled={bloqueado}
+                    readOnly
+                    disabled
                     value={form.transportador_razao_social}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, transportador_razao_social: e.target.value }))
-                    }
+                    title="Dado corporativo RG Ambiental"
+                    style={{ background: '#f8fafc', cursor: 'not-allowed' }}
                   />
                   {errosVal.transportador_razao_social ? (
                     <div className="cd-erro-msg">{errosVal.transportador_razao_social}</div>
@@ -1040,14 +1049,11 @@ export default function ComprovanteDescarteForm() {
                   <input
                     id="cd-ttel"
                     className="cd-input"
-                    disabled={bloqueado}
+                    readOnly
+                    disabled
                     value={form.transportador_telefone}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        transportador_telefone: formatarTelefoneBr(e.target.value),
-                      }))
-                    }
+                    title="Dado corporativo RG Ambiental"
+                    style={{ background: '#f8fafc', cursor: 'not-allowed' }}
                   />
                 </div>
                 <div>

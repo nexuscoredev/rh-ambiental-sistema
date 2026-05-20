@@ -8,10 +8,17 @@ import {
   formatarFaseFluxoOficialParaUI,
   type EtapaFluxo,
 } from '../lib/fluxoEtapas'
-import { cargoPodeEditarTicketOperacional } from '../lib/workflowPermissions'
+import {
+  cargoPerfilSomenteLancamentoTicketPadrao,
+  cargoPodeCustomizarTicketOperacional,
+  cargoPodeEditarTicketOperacional,
+  cargoPodeReeditarTicketOperacionalAposGerado,
+} from '../lib/workflowPermissions'
 import { mensagemErroSupabase as mensagemErroSupabaseBase } from '../lib/supabaseErrors'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { empresaTicketImpressaoRg } from '../lib/rgAmbientalDadosCorporativos'
 import { obterProximoNumeroTicketOperacional } from '../lib/nextTicketOperacionalNumero'
+import { numeroTicketFromMtr } from '../lib/numeroTicketMtr'
 
 export type TicketColetaSnapshot = {
   id: string
@@ -124,7 +131,7 @@ export function TicketOperacionalPanel({
   const [erro, setErro] = useState('')
 
   const [mtrNumeroImpressao, setMtrNumeroImpressao] = useState('')
-  const [empresaTransporteImpressao, setEmpresaTransporteImpressao] = useState('RG AMBIENTAL TRANSPORTES.')
+  const empresaTransporteImpressao = empresaTicketImpressaoRg()
   const [balanceiroImpressao, setBalanceiroImpressao] = useState('—')
   const [horaEntradaImpressao, setHoraEntradaImpressao] = useState('—')
   const [horaSaidaImpressao, setHoraSaidaImpressao] = useState('—')
@@ -132,21 +139,33 @@ export function TicketOperacionalPanel({
   const [carregandoPreReq, setCarregandoPreReq] = useState(false)
   const [ticketDescricao, setTicketDescricao] = useState('')
 
+  const somenteTicketPadrao = cargoPerfilSomenteLancamentoTicketPadrao(cargo)
   const podeMutar = cargoPodeEditarTicketOperacional(cargo)
+  const podeCustomizarTicket = cargoPodeCustomizarTicketOperacional(cargo)
 
   const podeEnviarAprovacao = Boolean(coletaAtiva && ticketId && podeMutar)
 
   const fluxoAlemDoTicket =
     coletaAtiva && etapaTicketJaRegistradoNoFluxo(coletaAtiva.etapaFluxo)
 
-  const reeditarNaEtapaTicketGerado =
-    Boolean(coletaAtiva?.etapaFluxo === 'TICKET_GERADO' && editandoTicketGerado && podeMutar)
+  const reeditarNaEtapaTicketGerado = Boolean(
+    coletaAtiva?.etapaFluxo === 'TICKET_GERADO' &&
+      editandoTicketGerado &&
+      cargoPodeReeditarTicketOperacionalAposGerado(cargo)
+  )
 
-  const podeEditarFormulario = Boolean(coletaAtiva && podeMutar)
+  const podeEditarFormulario = Boolean(coletaAtiva && podeCustomizarTicket)
+  const podeGravarTicket = Boolean(coletaAtiva && podeMutar)
+
+  useEffect(() => {
+    if (!somenteTicketPadrao) return
+    queueMicrotask(() => {
+      setTipoTicket((t) => (t === 'saida' ? t : 'saida'))
+    })
+  }, [somenteTicketPadrao, coletaAtiva?.id])
 
   const carregarDadosImpressao = useCallback(async (coleta: TicketColetaSnapshot) => {
     setMtrNumeroImpressao('')
-    setEmpresaTransporteImpressao('RG AMBIENTAL TRANSPORTES.')
     setBalanceiroImpressao('—')
     setHoraEntradaImpressao('—')
     setHoraSaidaImpressao('—')
@@ -168,10 +187,6 @@ export function TicketOperacionalPanel({
 
     if (reg && typeof reg === 'object') {
       const r = reg as Record<string, unknown>
-      const emp = r.empresa ?? r.cliente
-      if (typeof emp === 'string' && emp.trim()) {
-        setEmpresaTransporteImpressao(emp.trim())
-      }
       const bal = r.balanceiro ?? r.balanceiro_nome ?? r.usuario_balanceiro
       if (typeof bal === 'string' && bal.trim()) setBalanceiroImpressao(bal.trim())
       const he = r.hora_entrada
@@ -229,7 +244,8 @@ export function TicketOperacionalPanel({
     }
   }, [coletaAtiva])
 
-  const carregarTicket = useCallback(async (coletaId: string) => {
+  const carregarTicket = useCallback(async (coleta: TicketColetaSnapshot) => {
+    const coletaId = coleta.id
     setCarregandoTicket(true)
     setErro('')
     setMensagem('')
@@ -289,9 +305,27 @@ export function TicketOperacionalPanel({
 
     if (data) {
       aplicarLinha(data)
+      if (!(data.numero ?? '').trim() && coleta.mtr_id) {
+        const { data: mtrRow } = await supabase
+          .from('mtrs')
+          .select('numero')
+          .eq('id', coleta.mtr_id)
+          .maybeSingle()
+        const auto = numeroTicketFromMtr(String(mtrRow?.numero ?? ''))
+        if (auto) setNumero(auto)
+      }
     } else {
       setTicketId(null)
-      setNumero('')
+      let autoNum = ''
+      if (coleta.mtr_id) {
+        const { data: mtrRow } = await supabase
+          .from('mtrs')
+          .select('numero')
+          .eq('id', coleta.mtr_id)
+          .maybeSingle()
+        autoNum = numeroTicketFromMtr(String(mtrRow?.numero ?? ''))
+      }
+      setNumero(autoNum)
       setTipoTicket('saida')
       setCriadoEm(null)
       setTicketDescricao('')
@@ -306,7 +340,7 @@ export function TicketOperacionalPanel({
   useEffect(() => {
     if (coletaAtiva) {
       queueMicrotask(() => {
-        void carregarTicket(coletaAtiva.id)
+        void carregarTicket(coletaAtiva)
       })
     } else {
       queueMicrotask(() => {
@@ -321,10 +355,24 @@ export function TicketOperacionalPanel({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!coletaAtiva || !podeEditarFormulario) return
+    if (!coletaAtiva || !podeGravarTicket) return
+
+    const tipoGravar: TipoTicketOperacional = somenteTicketPadrao ? 'saida' : tipoTicket
 
     const nTrim = numero.trim()
     let n = nTrim
+    if (!n && coletaAtiva.mtr_id) {
+      const { data: mtrRow } = await supabase
+        .from('mtrs')
+        .select('numero')
+        .eq('id', coletaAtiva.mtr_id)
+        .maybeSingle()
+      const fromMtr = numeroTicketFromMtr(String(mtrRow?.numero ?? ''))
+      if (fromMtr) {
+        n = fromMtr
+        setNumero(n)
+      }
+    }
     if (!n) {
       const gerado = await obterProximoNumeroTicketOperacional(supabase)
       if (!gerado.ok) {
@@ -346,7 +394,7 @@ export function TicketOperacionalPanel({
       } catch (e) {
         console.error(e)
       }
-      await carregarTicket(coletaAtiva.id).catch((e) => console.error(e))
+      await carregarTicket(coletaAtiva).catch((e) => console.error(e))
     }
 
     try {
@@ -368,7 +416,7 @@ export function TicketOperacionalPanel({
 
       const payloadTicket = {
         numero: n || null,
-        tipo_ticket: tipoTicket,
+        tipo_ticket: tipoGravar,
         created_by: user?.id ?? null,
         descricao: ticketDescricao.trim() || null,
       }
@@ -891,6 +939,10 @@ export function TicketOperacionalPanel({
                     <p style={{ color: '#92400e', fontSize: '14px', marginBottom: '12px' }}>
                       O seu perfil só pode consultar.
                     </p>
+                  ) : somenteTicketPadrao ? (
+                    <p style={{ color: '#0f766e', fontSize: '14px', marginBottom: '12px' }}>
+                      Perfil com ticket em formato padrão (saída, número da MTR).
+                    </p>
                   ) : null}
 
                   <div style={{ marginBottom: '12px' }}>
@@ -1000,17 +1052,17 @@ export function TicketOperacionalPanel({
 
                   <button
                     type="submit"
-                    disabled={!podeEditarFormulario || salvando}
+                    disabled={!podeGravarTicket || salvando}
                     style={{
                       marginTop: '18px',
                       padding: '10px 20px',
                       borderRadius: '10px',
                       border: 'none',
-                      background: podeEditarFormulario ? '#2563eb' : '#94a3b8',
+                      background: podeGravarTicket ? '#2563eb' : '#94a3b8',
                       color: '#fff',
                       fontWeight: 800,
                       fontSize: '14px',
-                      cursor: podeEditarFormulario && !salvando ? 'pointer' : 'not-allowed',
+                      cursor: podeGravarTicket && !salvando ? 'pointer' : 'not-allowed',
                     }}
                   >
                     {salvando

@@ -15,10 +15,15 @@ import {
   excluirMtrPorId,
   listarColetaIdsPorMtr,
 } from '../lib/excluirOperacionalCascata'
-import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { MtrCicloVidaAcoes } from '../components/mtr/MtrCicloVidaAcoes'
+import {
+  MtrManifestoPrint,
+  type MtrManifestoPrintDetalhes,
+} from '../components/mtr/MtrManifestoPrint'
+import { MTR_TEXTO_VIDE_FICHA } from '../lib/mtrPrintTexto'
 import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
 
-type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado'
+type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado' | 'Baixada'
 
 type ProgramacaoStatus =
   | 'PENDENTE'
@@ -1083,7 +1088,21 @@ export default function MTR() {
     resetForm()
   }
 
+  function visualizarMtr(item: MTR) {
+    setSelectedMTR(item)
+    requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById('mtr-documento-impressao')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+        window.print()
+      }, 220)
+    })
+  }
+
   function handlePrint() {
+    if (!selectedMTR) return
     window.print()
   }
 
@@ -2653,7 +2672,11 @@ export default function MTR() {
                         </div>
 
                         <div className="table-actions">
-                          <button className="mini-btn" onClick={() => setSelectedMTR(item)}>
+                          <button
+                            className="mini-btn"
+                            onClick={() => visualizarMtr(item)}
+                            title="Abrir manifesto para impressão ou salvar em PDF"
+                          >
                             Visualizar
                           </button>
                           <button
@@ -2672,6 +2695,15 @@ export default function MTR() {
                           >
                             Remover
                           </button>
+                          <MtrCicloVidaAcoes
+                            mtrId={item.id}
+                            mtrNumero={item.numero}
+                            status={item.status}
+                            podeMutar={podeMutarMtr}
+                            usuarioCargo={usuarioCargo}
+                            compact
+                            onConcluido={() => void loadData()}
+                          />
                         </div>
                       </div>
                     )
@@ -2682,9 +2714,21 @@ export default function MTR() {
           </div>
 
           <div className="panel">
-            <div className="panel-header">
-              <h2>Visualização do documento</h2>
-              <p>Visualize e imprima o manifesto selecionado na lista.</p>
+            <div className="panel-header" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <h2>Visualização do documento</h2>
+                <p>Visualize e imprima o manifesto selecionado na lista.</p>
+              </div>
+              {selectedMTR ? (
+                <MtrCicloVidaAcoes
+                  mtrId={selectedMTR.id}
+                  mtrNumero={selectedMTR.numero}
+                  status={selectedMTR.status}
+                  podeMutar={podeMutarMtr}
+                  usuarioCargo={usuarioCargo}
+                  onConcluido={() => void loadData()}
+                />
+              ) : null}
             </div>
 
             <div className="panel-body">
@@ -2714,236 +2758,47 @@ export default function MTR() {
                 </div>
               )}
 
-              <div className="document-wrapper print-area">
+              <div id="mtr-documento-impressao" className="document-wrapper print-area">
                 {selectedMTR ? (
                   <div className="document-shell mtr-modelo-pdf-shell">
-                    <div className="document-green-bar" />
-
                     <div className="document-content mtr-modelo-pdf">
                       {(() => {
-                        const d = selectedMTR.detalhes ? { ...detalhesVazios(), ...selectedMTR.detalhes } : detalhesVazios()
-                        const motoristaDoc = d.transportador.motorista?.trim() || motoristaColeta
-                        const placaDoc = d.transportador.placa?.trim() || placaColeta
-                        const telefonesDoc = d.transportador.telefones_gerais?.trim() || ''
+                        const base = selectedMTR.detalhes
+                          ? { ...detalhesVazios(), ...selectedMTR.detalhes }
+                          : detalhesVazios()
+                        const extra = (selectedMTR.detalhes ?? {}) as Record<string, unknown>
+                        const blocosRaw = extra.blocos as
+                          | { descricoes_adicionais_residuos?: string; instrucoes_manuseio?: string }
+                          | undefined
+                        const confRaw = extra.conformidade as { telefone_discrepancias?: string } | undefined
+                        const d: MtrManifestoPrintDetalhes = {
+                          ...base,
+                          blocos: {
+                            descricoes_adicionais_residuos:
+                              blocosRaw?.descricoes_adicionais_residuos?.trim() ?? '',
+                            instrucoes_manuseio:
+                              blocosRaw?.instrucoes_manuseio?.trim() || MTR_TEXTO_VIDE_FICHA,
+                          },
+                          conformidade: {
+                            telefone_discrepancias: confRaw?.telefone_discrepancias?.trim() ?? '',
+                          },
+                          transportador: {
+                            ...base.transportador,
+                            motorista: base.transportador.motorista?.trim() || motoristaColeta || '',
+                            placa: base.transportador.placa?.trim() || placaColeta || '',
+                          },
+                        }
                         return (
-                          <>
-                            <div className="mtr-excel">
-                              <div className="mtr-excel__header">
-                                <div className="mtr-excel__logo">
-                                  <img src={BRAND_LOGO_MARK} alt="RG Ambiental" />
-                                </div>
-                                <div className="mtr-excel__title">
-                                  <div className="mtr-excel__title-main">MTR - MANIFESTO PARA TRANSPORTE DE RESÍDUOS</div>
-                                </div>
-                                <div className="mtr-excel__mtrno">
-                                  <div className="mtr-excel__mtrno-label">Nº MTR:</div>
-                                  <div className="mtr-excel__mtrno-value">{selectedMTR.numero}</div>
-                                </div>
-                              </div>
-
-                              <table className="mtr-excel__table">
-                                <tbody>
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>1. GERADOR:</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v">{d.gerador.atividade || '—'}</td>
-                                    <td className="mtr-excel__k">Nº CADRI:</td>
-                                    <td className="mtr-excel__v">{d.gerador.cadri || '—'}</td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{d.gerador.cnpj || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{selectedMTR.gerador || '—'}</td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{d.gerador.ie || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço de coleta:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{selectedMTR.endereco || '—'}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{d.gerador.bairro || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">{selectedMTR.cidade || '—'}</td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{d.gerador.cep || '—'}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{d.gerador.estado || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{d.gerador.responsavel || '—'}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{d.gerador.telefone || '—'}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>2. DESCRIÇÃO DOS RESÍDUOS:</td>
-                                  </tr>
-                                  <tr className="mtr-excel__throw">
-                                    <td className="mtr-excel__th">Fonte de Origem</td>
-                                    <td className="mtr-excel__th" colSpan={2}>Caracterização dos resíduos</td>
-                                    <td className="mtr-excel__th">Estado Físico</td>
-                                    <td className="mtr-excel__th">Tipo de Acondicionamento</td>
-                                    <td className="mtr-excel__th">Nº ONU</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v">{d.residuo.fonte_origem || '—'}</td>
-                                    <td className="mtr-excel__v" colSpan={2}>{d.residuo.caracterizacao || selectedMTR.tipo_residuo || '—'}</td>
-                                    <td className="mtr-excel__v">{d.residuo.estado_fisico || '—'}</td>
-                                    <td className="mtr-excel__v">{d.residuo.acondicionamento || '—'}</td>
-                                    <td className="mtr-excel__v">{d.residuo.onu || '—'}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>3. TRANSPORTADOR:</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{d.transportador.atividade || selectedMTR.transportador || '—'}</td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{d.transportador.cnpj || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{selectedMTR.transportador || '—'}</td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{d.transportador.ie || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{d.transportador.endereco || '—'}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{d.transportador.bairro || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">{d.transportador.municipio || '—'}</td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{d.transportador.cep || '—'}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{d.transportador.estado || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v">{d.transportador.responsavel || '—'}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{d.transportador.telefone || '—'}</td>
-                                    <td className="mtr-excel__k">Email:</td>
-                                    <td className="mtr-excel__v">{d.transportador.email || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Motorista:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{motoristaDoc || '—'}</td>
-                                    <td className="mtr-excel__k">Placa do Veículo:</td>
-                                    <td className="mtr-excel__v">{placaDoc || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k" colSpan={1}>Telefones:</td>
-                                    <td className="mtr-excel__v" colSpan={5}>{telefonesDoc || '—'}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>4. STTADE DESTINATÁRIO:</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{d.destinatario.atividade || selectedMTR.destinador || '—'}</td>
-                                    <td className="mtr-excel__k">L.O:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.lo || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{selectedMTR.destinador || '—'}</td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.cnpj || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{d.destinatario.endereco || '—'}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.bairro || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.municipio || '—'}</td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.cep || '—'}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.estado || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.responsavel || '—'}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.telefone || '—'}</td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{d.destinatario.ie || '—'}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>5. CERTIFICAÇÃO DO GERADOR:</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      Eu, por meio deste manifesto, declaro que os resíduos acima listados estão integralmente e corretamente descritos pelo nome, classificados, embalados e rotulados seguindo as normas vigentes e estão sob os aspectos em condições adequadas para transporte de acordo com os regulamentos nacionais e internacionais vigentes.
-                                    </td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>6. RESPONSÁVEIS</td>
-                                  </tr>
-                                  <tr className="mtr-excel__throw">
-                                    <td className="mtr-excel__th" colSpan={2}>Gerador</td>
-                                    <td className="mtr-excel__th" colSpan={2}>Transportador</td>
-                                    <td className="mtr-excel__th" colSpan={2}>Instalação Receptora</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{selectedMTR.gerador || '—'}</td>
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{selectedMTR.transportador || '—'}</td>
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{selectedMTR.destinador || '—'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">{formatDate(selectedMTR.data_emissao)}</td>
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">{formatDate(selectedMTR.data_emissao)}</td>
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">{formatDate(selectedMTR.data_emissao)}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>Certificação de recebimento</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      Certificação de recebimento do material perigoso descrito neste manifesto, exceto quando ocorre o especificado no item 7.
-                                      <div className="mtr-excel__signrow">
-                                        <span>Nome: ___________________________</span>
-                                        <span>Assinatura: ______________________________</span>
-                                        <span>Data: ____/____/_____</span>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </>
+                          <MtrManifestoPrint
+                            numero={selectedMTR.numero}
+                            gerador={selectedMTR.gerador}
+                            endereco={selectedMTR.endereco}
+                            cidade={selectedMTR.cidade}
+                            tipo_residuo={selectedMTR.tipo_residuo}
+                            transportador={selectedMTR.transportador}
+                            destinador={selectedMTR.destinador}
+                            detalhes={d}
+                          />
                         )
                       })()}
                     </div>
@@ -2957,6 +2812,7 @@ export default function MTR() {
             </div>
           </div>
         </div>
+
 
         {showForm && (
           <div className="modal-overlay no-print">

@@ -269,12 +269,54 @@ export async function atualizarComprovanteDescarte(
   return { error: null }
 }
 
+function coletarPathsStorageComprovante(row: ComprovanteDescarteRow): string[] {
+  const paths = new Set<string>()
+  for (const url of [row.foto_entrada_url, row.foto_saida_url]) {
+    if (!url) continue
+    const p = pathFromPublicUrlComprovante(url)
+    if (p) paths.add(p)
+  }
+  for (const ex of row.fotos_extras ?? []) {
+    const p = pathFromPublicUrlComprovante(ex.url)
+    if (p) paths.add(p)
+  }
+  return [...paths]
+}
+
 export async function excluirComprovanteDescarte(
   supabase: SupabaseClient,
   id: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from('comprovantes_descarte').delete().eq('id', id)
+  const rid = id.trim()
+  if (!rid) return { error: new Error('Comprovante inválido.') }
+
+  const { data: row, error: errLeitura } = await obterComprovanteDescartePorId(supabase, rid)
+  if (errLeitura) return { error: errLeitura }
+  if (!row) return { error: new Error('Comprovante não encontrado.') }
+
+  const paths = coletarPathsStorageComprovante(row)
+  if (paths.length > 0) {
+    const { error: errStorage } = await removerObjetoStorage(supabase, paths)
+    if (errStorage) {
+      console.warn('comprovantes-descarte storage:', errStorage.message)
+    }
+  }
+
+  const { data: removido, error } = await supabase
+    .from('comprovantes_descarte')
+    .delete()
+    .eq('id', rid)
+    .select('id')
+    .maybeSingle()
+
   if (error) return { error: new Error(error.message) }
+  if (!removido?.id) {
+    return {
+      error: new Error(
+        'Não foi possível excluir o comprovante. Verifique as permissões do seu perfil no Supabase (política RLS de exclusão) ou se o registo já foi removido.'
+      ),
+    }
+  }
   return { error: null }
 }
 

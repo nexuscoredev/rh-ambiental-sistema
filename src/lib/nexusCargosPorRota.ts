@@ -1,12 +1,15 @@
 /**
  * Cargos permitidos por rota — fonte única para `App-NEXUS.tsx` e `paginasSistema.ts` (menu).
  * Regras de negócio (resumo):
- * - Desenvolvedor / Administrador / Financeiro: acesso total às rotas de negócio (exceto Usuários).
- * - Usuários (`/usuarios`): apenas Desenvolvedor.
- * - Operacional: sem Faturamento, Financeiro, Pós-venda, Usuários.
- * - Logística: apenas o fluxo operacional do menu (sem Cadastros, Dashboard, checklist, ticket, aprovação, etc.).
- * - Comercial: apenas Cadastros + Pós-venda.
+ * - Desenvolvedor: autoridade máxima (todas as rotas, incluindo `/usuarios`; bypass na UI).
+ * - Administrador / Financeiro: acesso total às rotas de negócio (exceto Usuários).
+ * - Operacional (Time T): mesmo acesso de Administrador + faturamento editável (ex-Thais).
+ * - Operacional: fluxo operacional geral (sem Faturamento, Financeiro, Pós-venda).
+ * - Operadores (Time R): Programação, MTR, Pesagem/Ticket e Chat (ex-Rafael).
+ * - Logística / Comercial: conforme perfis restritos abaixo.
  */
+
+import { CARGO_OPERACIONAL_TIME_T, CARGO_OPERADORES_TIME_R } from './workflowPermissions'
 
 export const CARGO_NEXUS = {
   desenvolvedor: 'Desenvolvedor',
@@ -19,11 +22,18 @@ export const CARGO_NEXUS = {
   faturamento: 'Faturamento',
   comercial: 'Comercial',
   visualizador: 'Visualizador',
+  operadoresTimeR: CARGO_OPERADORES_TIME_R,
+  operacionalTimeT: CARGO_OPERACIONAL_TIME_T,
 } as const
 
 const C = CARGO_NEXUS
 
-const ACESSO_TOTAL = [C.desenvolvedor, C.administrador, C.financeiro] as const
+const ACESSO_TOTAL = [
+  C.desenvolvedor,
+  C.administrador,
+  C.financeiro,
+  C.operacionalTimeT,
+] as const
 
 /** Visão geral: sem Comercial nem Logística (fluxo/cadastro fora do perfil). */
 const DASHBOARD_E_CHAT = [
@@ -46,7 +56,7 @@ const CADASTRO = [
   C.comercial,
 ] as const
 
-/** Pós-venda: Operacional não acede. */
+/** Pós-venda: Operacional genérico não acede. */
 const POS_VENDA = [
   ...ACESSO_TOTAL,
   C.balanceiro,
@@ -56,11 +66,18 @@ const POS_VENDA = [
   C.comercial,
 ] as const
 
-const PROGRAMACAO_MTR = [...ACESSO_TOTAL, C.operacional, C.logistica, C.visualizador] as const
+const PROGRAMACAO_MTR = [
+  ...ACESSO_TOTAL,
+  C.operacional,
+  C.operadoresTimeR,
+  C.logistica,
+  C.visualizador,
+] as const
 
 const CONTROLE_MASSA = [
   ...ACESSO_TOTAL,
   C.operacional,
+  C.operadoresTimeR,
   C.logistica,
   C.balanceiro,
   C.diretoria,
@@ -113,11 +130,10 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/ticket-operacional': [...FLUXO_SEM_LOGISTICA],
   '/aprovacao': [...FLUXO_SEM_LOGISTICA],
   '/faturamento': [...FATURAMENTO],
-  '/faturamento/regras-preco': [...FATURAMENTO],
   '/financeiro': [...FINANCEIRO],
   '/financeiro/contas-receber': [...FINANCEIRO],
   '/financeiro/contas-pagar': [...FINANCEIRO],
   '/envio-nf': [...ENVIO_NF],
   '/usuarios': [...USUARIOS],
-  '/chat': [...DASHBOARD_E_CHAT],
+  '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
 }

@@ -1,5 +1,5 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
-import { cargoEhDesenvolvedor } from './workflowPermissions'
+import { cargoEhDesenvolvedor, cargoTemAutoridadeMaximaSistema } from './workflowPermissions'
 
 /**
  * Página inicial de boas-vindas — sempre acessível (fora da lista `paginas_permitidas`).
@@ -25,7 +25,6 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/ticket-operacional', label: 'Ticket operacional' },
   { path: '/aprovacao', label: 'Aprovação' },
   { path: '/faturamento', label: 'Faturamento' },
-  { path: '/faturamento/regras-preco', label: 'Regras de preço' },
   { path: '/envio-nf', label: 'Envio de NF' },
   { path: '/financeiro', label: 'Financeiro' },
   { path: '/financeiro/contas-receber', label: 'Contas a receber' },
@@ -137,6 +136,7 @@ const PREFIXOS_ROTA_PARA_CARGO = Object.keys(CARGOS_POR_PREFIXO_ROTA).sort(
  * Prefixo mais longo ganha (ex.: `/financeiro/contas-receber` antes de `/financeiro`).
  */
 export function cargoPodeAcessarRotaMenu(cargo: string | null | undefined, pathname: string): boolean {
+  if (cargoTemAutoridadeMaximaSistema(cargo)) return true
   const c = String(cargo ?? '').trim()
   if (!c) return false
   const path = normalizarPath(pathname)
@@ -152,6 +152,9 @@ export function cargoPodeAcessarRotaMenu(cargo: string | null | undefined, pathn
 
 /** Rotas da checklist a que o cargo já pode aceder pelo menu (base para pré-marcação ao mudar para «lista»). */
 export function rotasPermitidasPorCargoParaChecklist(cargo: string | null | undefined): Set<string> {
+  if (cargoTemAutoridadeMaximaSistema(cargo)) {
+    return new Set(ROTAS_SISTEMA.map((r) => r.path))
+  }
   const c = String(cargo ?? '').trim()
   const out = new Set<string>()
   for (const { path } of ROTAS_SISTEMA) {
@@ -177,6 +180,8 @@ export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: str
   const path = normalizarPath(pathname)
   const bem = normalizarPath(ROTA_BEM_VINDO)
   if (path === bem || path.startsWith(`${bem}/`)) return true
+
+  if (cargoTemAutoridadeMaximaSistema(usuario.cargo)) return true
 
   if (rotaUsuarios(path)) return cargoEhDesenvolvedor(usuario.cargo)
 

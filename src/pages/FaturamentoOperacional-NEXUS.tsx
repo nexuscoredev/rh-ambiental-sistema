@@ -4,7 +4,12 @@ import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
 import { resolverColetaPorContextoUrl, idsContextoFromSearchParams } from '../lib/coletaContextoUrl'
 import { formatarEtapaParaUI, normalizarEtapaColeta, type EtapaFluxo } from '../lib/fluxoEtapas'
-import { cargoPodeEmitirFaturamento } from '../lib/workflowPermissions'
+import {
+  cargoPodeAprovarTicketConferenciaFaturamento,
+  cargoPodeConfirmarEmissaoFaturamento,
+  cargoPodeEditarResumosFinanceirosFaturamento,
+  cargoPodeEncerrarTicketDefinitivoFaturamento,
+} from '../lib/workflowPermissions'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { fetchVwFaturamentoResumoPaginated } from '../lib/faturamentoResumoFetch'
 import {
@@ -86,7 +91,10 @@ export default function FaturamentoOperacional() {
   const [modalAberto, setModalAberto] = useState(false)
   const [modalColetaId, setModalColetaId] = useState<string | null>(null)
 
-  const podeMutar = cargoPodeEmitirFaturamento(cargo)
+  const podeConfirmarEmissao = cargoPodeConfirmarEmissaoFaturamento(cargo)
+  const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo)
+  const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo)
+  const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo)
 
   const carregarVista = useCallback(async () => {
     setCarregandoVista(true)
@@ -311,7 +319,11 @@ export default function FaturamentoOperacional() {
           </button>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
             Perfil: <strong style={{ color: '#0f172a' }}>{cargo ?? '—'}</strong>
-            {!podeMutar ? ' · somente leitura' : ' · pode aprovar tickets e emitir ao Financeiro'}
+            {!podeConfirmarEmissao
+              ? ' · somente leitura'
+              : podeEditarResumos
+                ? ' · Operacional (Time T): acesso administrador + valores editáveis no faturamento'
+                : ' · pode aprovar tickets e emitir ao Financeiro (resumos somente leitura)'}
           </span>
         </div>
 
@@ -337,7 +349,7 @@ export default function FaturamentoOperacional() {
         <FaturamentoFilaAprovacaoTicket
           linhas={filaAprovacao}
           carregando={carregandoVista}
-          podeAprovar={podeMutar}
+          podeAprovar={podeAprovarTicketFila}
           onAprovado={() => void carregarVista()}
         />
 
@@ -346,7 +358,7 @@ export default function FaturamentoOperacional() {
           carregando={carregandoVista}
           onFaturar={abrirModalFaturar}
           onDevolvidoConferencia={() => void carregarVista()}
-          podeDevolverConferencia={podeMutar && ticketAprovacaoAtivo}
+          podeDevolverConferencia={podeAprovarTicketFila && ticketAprovacaoAtivo}
         />
 
         {coletaAtiva ? (
@@ -396,7 +408,10 @@ export default function FaturamentoOperacional() {
       <FaturamentoModalRegisto
         open={modalAberto}
         row={modalRow}
-        podeMutar={podeMutar}
+        podeConfirmarEmissao={podeConfirmarEmissao}
+        podeEditarResumosFinanceiros={podeEditarResumos}
+        podeEncerrarTicketDefinitivo={podeEncerrarTicket}
+        usuarioCargo={cargo}
         onClose={fecharModal}
         onGravado={() => void carregarVista()}
       />

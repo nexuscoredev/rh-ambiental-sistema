@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ROTAS_SISTEMA,
   cargoPodeAcessarRotaMenu,
   emailPodeDefinirPaginasPorUsuario,
   pathEstaNaListaValida,
@@ -66,7 +67,7 @@ describe('paginasSistema', () => {
   })
 
   it('rotas de UI alinhadas com a lista válida', () => {
-    expect(pathEstaNaListaValida('/faturamento/regras-preco')).toBe(true)
+    expect(pathEstaNaListaValida('/faturamento')).toBe(true)
     expect(pathEstaNaListaValida('/financeiro/contas-receber')).toBe(true)
     expect(pathEstaNaListaValida('/financeiro/contas-pagar')).toBe(true)
   })
@@ -80,6 +81,21 @@ describe('paginasSistema', () => {
     expect(b).toContain('/financeiro/contas-pagar')
     expect(b).not.toContain('/clientes')
   })
+
+  it('Operacional (Time T): acesso amplo como Administrador (exceto Usuários)', () => {
+    expect(cargoPodeAcessarRotaMenu('Operacional (Time T)', '/dashboard')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operacional (Time T)', '/faturamento')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operacional (Time T)', '/usuarios')).toBe(false)
+  })
+
+  it('Operadores (Time R): programação, MTR, pesagem e chat', () => {
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/programacao')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/mtr')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/controle-massa')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/chat')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/faturamento')).toBe(false)
+  })
+
 
   it('Operacional: cadastros e fluxo sim; Faturamento, Financeiro, Pós-venda e Usuários não', () => {
     expect(cargoPodeAcessarRotaMenu('Operacional', '/clientes')).toBe(true)
@@ -105,9 +121,22 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Logística', '/checklist-transporte')).toBe(false)
   })
 
-  it('Desenvolvedor acede a qualquer rota mapeada', () => {
-    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/usuarios')).toBe(true)
-    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/faturamento')).toBe(true)
+  it('Desenvolvedor: acesso pleno a todas as rotas do sistema', () => {
+    for (const { path } of ROTAS_SISTEMA) {
+      expect(cargoPodeAcessarRotaMenu('Desenvolvedor', path)).toBe(true)
+      expect(
+        usuarioPodeAcessarRota({ cargo: 'Desenvolvedor', email: 'dev@rg.test' }, path)
+      ).toBe(true)
+    }
+  })
+
+  it('Desenvolvedor ignora lista paginas_permitidas restritiva', () => {
+    expect(
+      usuarioPodeAcessarRota(
+        { cargo: 'Desenvolvedor', email: 'dev@rg.test', paginas_permitidas: ['/clientes'] },
+        '/financeiro'
+      )
+    ).toBe(true)
   })
 
   it('Usuários: só Desenvolvedor (Administrador, Financeiro e Diretoria não)', () => {
@@ -116,7 +145,7 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/usuarios')).toBe(false)
   })
 
-  it('usuarioPodeAcessarRota: /usuarios só com cargo Desenvolvedor (sem bypass)', () => {
+  it('usuarioPodeAcessarRota: /usuarios só com cargo Desenvolvedor', () => {
     expect(
       usuarioPodeAcessarRota(
         { email: 'cavalcantersc07@gmail.com', cargo: 'Administrador', paginas_permitidas: null },

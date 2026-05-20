@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { BRAND_LOGO_MARK } from './brandLogo'
 import { supabase } from './supabase'
+import { empresaTicketImpressaoRg } from './rgAmbientalDadosCorporativos'
 
 export type TicketPdfRowInput = Pick<
   FaturamentoResumoViewRow,
@@ -112,13 +113,11 @@ async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | nu
   if (!numeroTicket && !ticket && !massa) return null
 
   let balanceiro = '—'
-  let empresaTransporte = 'RG AMBIENTAL TRANSPORTES.'
+  let empresaTransporte = empresaTicketImpressaoRg()
   let horaEntrada = '—'
   let horaSaida = '—'
 
   if (massa) {
-    const emp = massa.empresa ?? massa.cliente
-    if (typeof emp === 'string' && emp.trim()) empresaTransporte = emp.trim()
     const bal = massa.balanceiro ?? massa.balanceiro_nome ?? massa.usuario_balanceiro
     if (typeof bal === 'string' && bal.trim()) balanceiro = bal.trim()
     const he = massa.hora_entrada
@@ -230,7 +229,7 @@ export async function abrirPdfTicketOperacional(
   linha('PLACA', (row.placa ?? '').trim() || '—')
   y += 2
   centerText('EMPRESA', 11)
-  centerText(extras?.empresaTransporte ?? 'RG AMBIENTAL TRANSPORTES.', 10, 'normal')
+  centerText(extras?.empresaTransporte ?? empresaTicketImpressaoRg(), 10, 'normal')
   dashedRule()
 
   linha('OBS', extras?.descricao?.trim() || '—')

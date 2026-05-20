@@ -94,10 +94,7 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
       {
         label: 'Faturamento',
         path: '/faturamento',
-        children: [
-          { label: 'Regras de preço', path: '/faturamento/regras-preco' },
-          { label: 'Envio de NF', path: '/envio-nf' },
-        ],
+        children: [{ label: 'Envio de NF', path: '/envio-nf' }],
       },
     ],
   },

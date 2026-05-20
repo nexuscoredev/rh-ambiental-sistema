@@ -124,11 +124,6 @@ export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
   if (!open || !row) return null
 
   const params = montarParamsFluxoColeta(row)
-  const refNf =
-    (row.faturamento_referencia_nf && String(row.faturamento_referencia_nf).trim()) ||
-    (row.referencia_nf && String(row.referencia_nf).trim()) ||
-    (row.numero_nf_coleta && String(row.numero_nf_coleta).trim()) ||
-    '—'
   const valorFat = row.faturamento_registro_valor ?? row.valor_coleta
 
   async function handleVisualizarTicket() {
@@ -326,7 +321,6 @@ export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
             <div style={gridStyle}>
               <Campo label="Valor faturado">{fmtValor(valorFat)}</Campo>
               <Campo label="Registo faturamento">{row.faturamento_registro_status?.trim() || '—'}</Campo>
-              <Campo label="Referência NF">{refNf}</Campo>
               <Campo label="Liberado financeiro">{row.liberado_financeiro ? 'Sim' : 'Não'}</Campo>
               <Campo label="Pagamento">{row.status_pagamento?.trim() || '—'}</Campo>
               <Campo label="Vencimento">{fmtData(row.data_vencimento)}</Campo>

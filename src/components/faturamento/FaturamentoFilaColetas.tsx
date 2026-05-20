@@ -1,5 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { CSSProperties } from 'react'
+import {
+  agruparFilaFaturamentoPorMtr,
+  resolverGrupoFaturamentoNaFila,
+  type ItemFilaFaturamento,
+} from '../../lib/faturamentoConsolidacaoMtr'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { devolverTicketParaFilaConferenciaColeta } from '../../lib/faturamentoTicketFluxo'
 import {
@@ -8,13 +13,15 @@ import {
   statusFaturamentoUi,
 } from '../../lib/faturamentoOperacionalFila'
 
+const R = { sm: '4px', md: '6px', lg: '8px' } as const
+
 const wrap: CSSProperties = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '16px',
+  borderRadius: R.lg,
   padding: '20px 22px',
   marginBottom: '20px',
-  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
 }
 
 const th: CSSProperties = {
@@ -37,6 +44,189 @@ const td: CSSProperties = {
   verticalAlign: 'middle',
 }
 
+const FAT = {
+  teal: '#0d9488',
+  tealBg: '#f0fdfa',
+  tealBorder: '#99f6e4',
+  violet: '#5b21b6',
+  violetBg: '#ede9fe',
+  violetBorder: '#a78bfa',
+  ink: '#0f172a',
+  inkMuted: '#64748b',
+  surface: '#ffffff',
+  line: '#e2e8f0',
+} as const
+
+const chipBase: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: R.sm,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  boxSizing: 'border-box',
+}
+
+const btnPrimario: CSSProperties = {
+  padding: '8px 14px',
+  borderRadius: R.md,
+  border: '1px solid #0f766e',
+  background: FAT.teal,
+  color: '#fff',
+  fontWeight: 800,
+  fontSize: '12px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  boxShadow: '0 1px 0 rgba(15, 118, 110, 0.35)',
+}
+
+const btnSecundario: CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: R.md,
+  border: `1px solid ${FAT.line}`,
+  background: FAT.surface,
+  color: FAT.inkMuted,
+  fontWeight: 700,
+  fontSize: '11px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
+
+function CelulaColetasConsolidadas({
+  coletas,
+}: {
+  coletas: { coleta_id: string; numero_coleta: number | null; numero: string; tipo_residuo: string }[]
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        minWidth: '128px',
+        maxWidth: '200px',
+      }}
+    >
+      <div
+        style={{
+          ...chipBase,
+          width: '100%',
+          justifyContent: 'flex-start',
+          gap: '8px',
+          padding: '6px 8px',
+          background: FAT.violetBg,
+          border: `1px solid ${FAT.violetBorder}`,
+          color: FAT.violet,
+          fontSize: '10px',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        <span
+          style={{
+            width: '3px',
+            alignSelf: 'stretch',
+            minHeight: '14px',
+            background: FAT.violet,
+            borderRadius: R.sm,
+            flexShrink: 0,
+          }}
+        />
+        <span>
+          {coletas.length} tickets · 1 faturamento
+        </span>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
+          gap: '6px',
+          width: '100%',
+        }}
+      >
+        {coletas.map((c, i) => (
+          <div
+            key={c.coleta_id}
+            title={(c.tipo_residuo || '').trim() || undefined}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '22px 1fr',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 6px',
+              borderRadius: R.md,
+              background: FAT.surface,
+              border: `1px solid ${FAT.line}`,
+              boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04)',
+            }}
+          >
+            <span
+              style={{
+                ...chipBase,
+                width: '22px',
+                height: '22px',
+                padding: 0,
+                background: FAT.violetBg,
+                border: `1px solid ${FAT.violetBorder}`,
+                color: FAT.violet,
+                fontSize: '11px',
+              }}
+            >
+              {i + 1}
+            </span>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 800,
+                color: FAT.ink,
+                fontVariantNumeric: 'tabular-nums',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {c.numero_coleta ?? c.numero}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ChipFaturamento({
+  children,
+  variant,
+}: {
+  children: ReactNode
+  variant: 'consolidado' | 'pendente' | 'faturado' | 'sla'
+}) {
+  const styles: Record<typeof variant, CSSProperties> = {
+    consolidado: {
+      background: '#ecfdf5',
+      color: '#047857',
+      border: '1px solid #6ee7b7',
+    },
+    pendente: { background: '#fffbeb', color: '#b45309', border: '1px solid #fcd34d' },
+    faturado: { background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' },
+    sla: { background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' },
+  }
+  return (
+    <span
+      style={{
+        ...chipBase,
+        padding: '5px 8px',
+        fontSize: '10px',
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        ...styles[variant],
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
 type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
@@ -48,6 +238,8 @@ type Props = {
   subtitulo?: string
   mensagemVazia?: string
   rotuloBotao?: string
+  /** Uma linha por MTR quando há vários tickets (faturamento consolidado). */
+  agruparPorMtr?: boolean
 }
 
 function fmtData(iso: string | null | undefined) {
@@ -83,15 +275,30 @@ export function FaturamentoFilaColetas({
   subtitulo = 'Critérios: ticket impresso e aprovado pelo Faturamento, peso líquido e MTR na vista, ainda sem emissão ao Financeiro. Coletas com mais de 3 dias nessa situação aparecem com indicador vermelho intermitente na coluna Faturamento.',
   mensagemVazia = 'Nenhuma coleta aprovada aguardando faturamento.',
   rotuloBotao = 'Faturar',
+  agruparPorMtr = true,
 }: Props) {
   const [devolvendoId, setDevolvendoId] = useState<string | null>(null)
 
+  const itensFila = useMemo(
+    () => (agruparPorMtr ? agruparFilaFaturamentoPorMtr(linhas) : linhas.map((row) => ({ kind: 'unico' as const, row }))),
+    [linhas, agruparPorMtr]
+  )
+
   async function handleDevolver(row: FaturamentoResumoViewRow) {
     if (!podeDevolverConferencia) return
+    const grupo = resolverGrupoFaturamentoNaFila(row.coleta_id, linhas)
     const n = row.numero_coleta ?? row.numero
-    const ok = window.confirm(
-      `Devolver a coleta ${n} à fila de conferência do ticket?\n\nA aprovação do Faturamento será anulada e a coleta voltará a aguardar validação antes de faturar.`
-    )
+    const mtr = (row.mtr_numero ?? '').trim()
+    const ok =
+      grupo.length > 1
+        ? window.confirm(
+            `Devolver os ${grupo.length} tickets da MTR ${mtr || '—'} à fila de conferência?\n\n` +
+              `Coletas: ${grupo.map((c) => c.numero_coleta ?? c.numero).join(', ')}.\n\n` +
+              'A aprovação do Faturamento será anulada em todas; cada ticket voltará a aguardar validação antes de faturar (consolidam só na fila de faturamento).'
+          )
+        : window.confirm(
+            `Devolver a coleta ${n} à fila de conferência do ticket?\n\nA aprovação do Faturamento será anulada e a coleta voltará a aguardar validação antes de faturar.`
+          )
     if (!ok) return
 
     const motivo = window.prompt('Motivo da devolução (opcional):', '') ?? ''
@@ -102,6 +309,11 @@ export function FaturamentoFilaColetas({
     if (!res.ok) {
       window.alert(res.message)
       return
+    }
+    if (res.coletasAfetadas > 1) {
+      window.alert(
+        `${res.coletasAfetadas} tickets da mesma MTR foram devolvidos à fila de conferência.`
+      )
     }
     onDevolvidoConferencia?.()
   }
@@ -119,12 +331,12 @@ export function FaturamentoFilaColetas({
 
       {carregando ? (
         <p style={{ color: '#64748b', fontSize: '14px' }}>Carregando dados…</p>
-      ) : linhas.length === 0 ? (
+      ) : itensFila.length === 0 ? (
         <div
           style={{
             padding: '28px 20px',
             textAlign: 'center',
-            borderRadius: '12px',
+            borderRadius: R.lg,
             background: '#f8fafc',
             border: '1px dashed #cbd5e1',
             color: '#64748b',
@@ -134,11 +346,11 @@ export function FaturamentoFilaColetas({
           {mensagemVazia}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+        <div style={{ overflowX: 'auto', borderRadius: R.lg, border: '1px solid #e2e8f0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1020px' }}>
             <thead>
               <tr>
-                <th style={th}>Coleta</th>
+                <th style={{ ...th, minWidth: '120px' }}>Coleta</th>
                 <th style={th}>Cliente</th>
                 <th style={th}>MTR</th>
                 <th style={th}>Resíduo</th>
@@ -152,110 +364,257 @@ export function FaturamentoFilaColetas({
               </tr>
             </thead>
             <tbody>
-              {linhas.map((r) => {
-                const fat = statusFaturamentoUi(r)
-                const slaCritico = coletaFaturamentoSlaVencido(r) && fat === 'Pendente'
-                return (
-                <tr
-                  key={r.coleta_id}
-                  style={{
-                    background: '#fafefd',
-                    ...(slaCritico ? { boxShadow: 'inset 4px 0 0 #dc2626' } : {}),
-                  }}
-                >
-                  <td style={{ ...td, fontWeight: 800, color: '#0f766e' }}>{r.numero_coleta ?? r.numero}</td>
-                  <td style={td}>{r.cliente_nome || '—'}</td>
-                  <td style={td}>{r.mtr_numero || '—'}</td>
-                  <td style={{ ...td, maxWidth: '200px' }}>{r.tipo_residuo || '—'}</td>
-                  <td style={td}>{fmtPeso(r.peso_liquido)}</td>
-                  <td style={td}>{fmtData(r.data_execucao || r.data_agendada)}</td>
-                  <td style={td}>{fmtValor(r.valor_coleta ?? r.faturamento_registro_valor)}</td>
-                  <td style={{ ...td, fontWeight: 700, color: r.status_conferencia === 'PRONTO_PARA_FATURAR' ? '#0f766e' : '#b45309' }}>
-                    {rotuloConferenciaResumo(r)}
-                  </td>
-                  <td style={td}>
-                    <span
-                      className={slaCritico ? 'rg-faturamento-sla-critico' : undefined}
-                      style={{
-                        display: 'inline-flex',
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        ...(slaCritico
-                          ? {}
-                          : {
-                              background: fat === 'Faturado' ? '#dcfce7' : '#fef3c7',
-                              color: fat === 'Faturado' ? '#15803d' : '#b45309',
-                            }),
-                      }}
-                    >
-                      {fat}
-                    </span>
-                  </td>
-                  <td style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }} title={r.pendencias_resumo ?? ''}>
-                    {textoPendencias(r.pendencias_resumo)}
-                  </td>
-                  <td style={{ ...td, textAlign: 'center' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '6px',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {onDevolvidoConferencia ? (
-                        <button
-                          type="button"
-                          disabled={!podeDevolverConferencia || devolvendoId === r.coleta_id}
-                          onClick={() => void handleDevolver(r)}
-                          title="Anula a aprovação e devolve à fila de conferência do ticket"
-                          style={{
-                            padding: '8px 10px',
-                            borderRadius: '10px',
-                            border: '1px solid #cbd5e1',
-                            background: podeDevolverConferencia ? '#fff' : '#f1f5f9',
-                            color: podeDevolverConferencia ? '#475569' : '#94a3b8',
-                            fontWeight: 700,
-                            fontSize: '11px',
-                            cursor:
-                              podeDevolverConferencia && devolvendoId !== r.coleta_id
-                                ? 'pointer'
-                                : 'not-allowed',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {devolvendoId === r.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => onFaturar(r.coleta_id)}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '10px',
-                          border: 'none',
-                          background: '#0d9488',
-                          color: '#fff',
-                          fontWeight: 800,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {rotuloBotao}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-              })}
+              {itensFila.map((item) => (
+                <LinhaFilaFaturamento
+                  key={item.kind === 'mtr' ? `mtr-${item.mtr_id}` : item.row.coleta_id}
+                  item={item}
+                  devolvendoId={devolvendoId}
+                  podeDevolverConferencia={podeDevolverConferencia}
+                  onDevolvidoConferencia={onDevolvidoConferencia}
+                  onFaturar={onFaturar}
+                  onDevolver={handleDevolver}
+                  rotuloBotao={rotuloBotao}
+                />
+              ))}
             </tbody>
           </table>
         </div>
       )}
     </div>
+  )
+}
+
+function LinhaFilaFaturamento({
+  item,
+  devolvendoId,
+  podeDevolverConferencia,
+  onDevolvidoConferencia,
+  onFaturar,
+  onDevolver,
+  rotuloBotao,
+}: {
+  item: ItemFilaFaturamento
+  devolvendoId: string | null
+  podeDevolverConferencia: boolean
+  onDevolvidoConferencia?: () => void
+  onFaturar: (coletaId: string) => void
+  onDevolver: (row: FaturamentoResumoViewRow) => void
+  rotuloBotao: string
+}) {
+  if (item.kind === 'unico') {
+    return (
+      <LinhaColetaFaturamento
+        r={item.row}
+        devolvendoId={devolvendoId}
+        podeDevolverConferencia={podeDevolverConferencia}
+        onDevolvidoConferencia={onDevolvidoConferencia}
+        onFaturar={onFaturar}
+        onDevolver={onDevolver}
+        rotuloBotao={rotuloBotao}
+      />
+    )
+  }
+
+  const { coletas, coleta_lider, mtr_numero } = item
+  const pesoTotal = coletas.reduce((s, c) => s + (Number(c.peso_liquido) || 0), 0)
+  const valorRef = coletas.reduce((s, c) => {
+    const v = c.valor_coleta ?? c.faturamento_registro_valor
+    return s + (v != null && Number.isFinite(Number(v)) ? Number(v) : 0)
+  }, 0)
+  const fat = statusFaturamentoUi(coleta_lider)
+  const slaCritico =
+    coletas.some((c) => coletaFaturamentoSlaVencido(c)) && fat === 'Pendente'
+  const residuos = coletas.map((c) => (c.tipo_residuo || '—').trim()).join(' · ')
+
+  return (
+    <>
+      <tr
+        style={{
+          background: FAT.tealBg,
+          ...(slaCritico ? { boxShadow: 'inset 4px 0 0 #dc2626' } : { boxShadow: `inset 4px 0 0 ${FAT.teal}` }),
+        }}
+      >
+        <td style={{ ...td, verticalAlign: 'top', minWidth: '120px' }}>
+          <CelulaColetasConsolidadas coletas={coletas} />
+        </td>
+        <td style={td}>{item.cliente_nome}</td>
+        <td style={{ ...td, fontWeight: 700 }}>{mtr_numero}</td>
+        <td style={{ ...td, maxWidth: '240px', lineHeight: 1.45 }} title={residuos}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {coletas.map((c, i) => (
+              <div key={c.coleta_id} style={{ fontSize: '12px', color: FAT.ink }}>
+                <span style={{ fontWeight: 800, color: FAT.violet, marginRight: '6px' }}>
+                  {i + 1}.
+                </span>
+                {c.tipo_residuo || '—'}
+              </div>
+            ))}
+          </div>
+        </td>
+        <td style={td}>{fmtPeso(pesoTotal > 0 ? pesoTotal : null)}</td>
+        <td style={td}>{fmtData(coleta_lider.data_execucao || coleta_lider.data_agendada)}</td>
+        <td style={td}>{fmtValor(valorRef > 0 ? valorRef : null)}</td>
+        <td style={{ ...td, fontWeight: 700, color: '#0f766e' }}>Consolidado</td>
+        <td style={td}>
+          <ChipFaturamento variant="consolidado">1 faturamento</ChipFaturamento>
+        </td>
+        <td style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }}>
+          Caminhão/equip. uma vez · resíduos somados
+        </td>
+        <td style={{ ...td, textAlign: 'center' }}>
+          <button type="button" onClick={() => onFaturar(coleta_lider.coleta_id)} style={btnPrimario}>
+            {rotuloBotao}
+          </button>
+        </td>
+      </tr>
+      {onDevolvidoConferencia && podeDevolverConferencia
+        ? coletas.map((c, i) => (
+            <tr key={`det-${c.coleta_id}`} style={{ background: '#fafafa' }}>
+              <td style={{ ...td, padding: '8px 12px 8px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    color: FAT.inkMuted,
+                  }}
+                >
+                  <span
+                    style={{
+                      ...chipBase,
+                      width: '18px',
+                      height: '18px',
+                      padding: 0,
+                      background: FAT.violetBg,
+                      border: `1px solid ${FAT.violetBorder}`,
+                      color: FAT.violet,
+                      fontSize: '10px',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  {c.numero_coleta ?? c.numero}
+                </span>
+              </td>
+              <td style={{ ...td, padding: '8px 12px' }} colSpan={9}>
+                <span style={{ fontSize: '12px', color: FAT.inkMuted }}>
+                  {fmtPeso(c.peso_liquido)}
+                  {c.tipo_residuo ? ` · ${c.tipo_residuo}` : ''}
+                </span>
+              </td>
+              <td style={{ ...td, textAlign: 'center', padding: '8px 12px' }}>
+                <button
+                  type="button"
+                  disabled={devolvendoId === c.coleta_id}
+                  onClick={() => void onDevolver(c)}
+                  style={{
+                    ...btnSecundario,
+                    padding: '5px 10px',
+                    cursor: devolvendoId === c.coleta_id ? 'wait' : 'pointer',
+                    opacity: devolvendoId === c.coleta_id ? 0.7 : 1,
+                  }}
+                >
+                  {devolvendoId === c.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
+                </button>
+              </td>
+            </tr>
+          ))
+        : null}
+    </>
+  )
+}
+
+function LinhaColetaFaturamento({
+  r,
+  devolvendoId,
+  podeDevolverConferencia,
+  onDevolvidoConferencia,
+  onFaturar,
+  onDevolver,
+  rotuloBotao,
+}: {
+  r: FaturamentoResumoViewRow
+  devolvendoId: string | null
+  podeDevolverConferencia: boolean
+  onDevolvidoConferencia?: () => void
+  onFaturar: (coletaId: string) => void
+  onDevolver: (row: FaturamentoResumoViewRow) => void
+  rotuloBotao: string
+}) {
+  const fat = statusFaturamentoUi(r)
+  const slaCritico = coletaFaturamentoSlaVencido(r) && fat === 'Pendente'
+
+  return (
+    <tr
+      style={{
+        background: '#fafefd',
+        ...(slaCritico ? { boxShadow: 'inset 4px 0 0 #dc2626' } : {}),
+      }}
+    >
+      <td style={{ ...td, fontWeight: 800, color: FAT.teal }}>{r.numero_coleta ?? r.numero}</td>
+      <td style={td}>{r.cliente_nome || '—'}</td>
+      <td style={td}>{r.mtr_numero || '—'}</td>
+      <td style={{ ...td, maxWidth: '200px' }}>{r.tipo_residuo || '—'}</td>
+      <td style={td}>{fmtPeso(r.peso_liquido)}</td>
+      <td style={td}>{fmtData(r.data_execucao || r.data_agendada)}</td>
+      <td style={td}>{fmtValor(r.valor_coleta ?? r.faturamento_registro_valor)}</td>
+      <td
+        style={{
+          ...td,
+          fontWeight: 700,
+          color: r.status_conferencia === 'PRONTO_PARA_FATURAR' ? '#0f766e' : '#b45309',
+        }}
+      >
+        {rotuloConferenciaResumo(r)}
+      </td>
+      <td style={td}>
+        <span className={slaCritico ? 'rg-faturamento-sla-critico' : undefined}>
+          <ChipFaturamento
+            variant={slaCritico ? 'sla' : fat === 'Faturado' ? 'faturado' : 'pendente'}
+          >
+            {fat}
+          </ChipFaturamento>
+        </span>
+      </td>
+      <td
+        style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }}
+        title={r.pendencias_resumo ?? ''}
+      >
+        {textoPendencias(r.pendencias_resumo)}
+      </td>
+      <td style={{ ...td, textAlign: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {onDevolvidoConferencia ? (
+            <button
+              type="button"
+              disabled={!podeDevolverConferencia || devolvendoId === r.coleta_id}
+              onClick={() => void onDevolver(r)}
+              title="Anula a aprovação e devolve à fila de conferência do ticket"
+              style={{
+                ...btnSecundario,
+                color: podeDevolverConferencia ? FAT.inkMuted : '#94a3b8',
+                background: podeDevolverConferencia ? FAT.surface : '#f1f5f9',
+                cursor:
+                  podeDevolverConferencia && devolvendoId !== r.coleta_id ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {devolvendoId === r.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
+            </button>
+          ) : null}
+          <button type="button" onClick={() => onFaturar(r.coleta_id)} style={btnPrimario}>
+            {rotuloBotao}
+          </button>
+        </div>
+      </td>
+    </tr>
   )
 }

@@ -7,7 +7,6 @@ import {
   type VeiculoContratoItem,
 } from '../../lib/clienteContratoCadastro'
 import { SelectTipoResiduoCatalogo } from '../residuos/SelectTipoResiduoCatalogo'
-import type { ResiduoCatalogo } from '../../lib/residuosCatalogo'
 
 const btnAdicionar: CSSProperties = {
   background: '#0f172a',
@@ -49,12 +48,6 @@ const labelCampo: CSSProperties = {
 
 type Props = {
   inputStyle: CSSProperties
-  residuosCatalogo: ResiduoCatalogo[]
-  residuosCatalogoCarregando: boolean
-  residuosCatalogoErro?: string | null
-  residuosCatalogoSemSessao?: boolean
-  residuosCatalogoAtivosCount?: number
-  onRecarregarResiduosCatalogo?: () => void
   veiculos: VeiculoContratoItem[]
   equipamentos: EquipamentoContratoItem[]
   residuos: ResiduoContratoItem[]
@@ -71,12 +64,6 @@ type Props = {
 
 export function ClienteContratoCadastroSecoes({
   inputStyle,
-  residuosCatalogo,
-  residuosCatalogoCarregando,
-  residuosCatalogoErro = null,
-  residuosCatalogoSemSessao = false,
-  residuosCatalogoAtivosCount,
-  onRecarregarResiduosCatalogo,
   veiculos,
   equipamentos,
   residuos,
@@ -92,7 +79,20 @@ export function ClienteContratoCadastroSecoes({
 }: Props) {
   return (
     <>
-      <div style={{ marginTop: '22px' }}>
+      <div
+        style={{
+          marginTop: '22px',
+          fontSize: '15px',
+          fontWeight: 800,
+          color: '#0f172a',
+          paddingBottom: '4px',
+          borderBottom: '1px solid #e5e7eb',
+        }}
+      >
+        Veículos e Equipamentos
+      </div>
+
+      <div style={{ marginTop: '16px' }}>
         <div
           style={{
             display: 'flex',
@@ -103,7 +103,7 @@ export function ClienteContratoCadastroSecoes({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155' }}>Veículos Contrato:</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Veículos</div>
           <button type="button" onClick={onAdicionarVeiculo} style={btnAdicionar}>
             + Adicionar veículo
           </button>
@@ -190,7 +190,7 @@ export function ClienteContratoCadastroSecoes({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155' }}>Equipamentos</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Equipamentos</div>
           <button type="button" onClick={onAdicionarEquipamento} style={btnAdicionar}>
             + Adicionar equipamento
           </button>
@@ -282,41 +282,8 @@ export function ClienteContratoCadastroSecoes({
               Resíduos <span style={{ color: '#64748b', fontWeight: 500 }}>(opcional)</span>
             </div>
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
-              Tipo (catálogo de resíduos), classe, unidade, valor, frequência e faturamento mínimo por linha.
+              Tipo de resíduo (texto livre), classe, unidade, valor, frequência e peso mínimo (kg) por linha.
             </p>
-            {!residuosCatalogoCarregando &&
-            (residuosCatalogoAtivosCount ?? residuosCatalogo.filter((r) => r.ativo).length) === 0 ? (
-              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#b45309', lineHeight: 1.45 }}>
-                {residuosCatalogoErro ? (
-                  <>
-                    {residuosCatalogoSemSessao
-                      ? 'Catálogo ainda não carregou (sessão em sincronização). '
-                      : `Não foi possível carregar o catálogo: ${residuosCatalogoErro}. `}
-                    {onRecarregarResiduosCatalogo ? (
-                      <button
-                        type="button"
-                        onClick={onRecarregarResiduosCatalogo}
-                        style={{
-                          border: 'none',
-                          background: 'none',
-                          padding: 0,
-                          color: '#0f766e',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                        }}
-                      >
-                        Tentar novamente
-                      </button>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    Catálogo vazio — confirme a migração <strong>residuos</strong> no Supabase (SQL Editor).
-                  </>
-                )}
-              </p>
-            ) : null}
           </div>
           <button type="button" onClick={onAdicionarResiduo} style={{ ...btnAdicionar, height: '40px' }}>
             + Adicionar resíduo
@@ -351,9 +318,8 @@ export function ClienteContratoCadastroSecoes({
                   <SelectTipoResiduoCatalogo
                     value={residuo.tipo_residuo}
                     onChange={(v) => onResiduoChange(index, 'tipo_residuo', v)}
-                    catalogo={residuosCatalogo}
-                    carregando={residuosCatalogoCarregando}
                     style={inputStyle}
+                    placeholder="Ex.: Resíduo comercial classe 1"
                   />
                 </div>
                 <div>
@@ -402,11 +368,12 @@ export function ClienteContratoCadastroSecoes({
                   />
                 </div>
                 <div>
-                  <label style={labelCampo}>Faturamento mínimo (R$)</label>
+                  <label style={labelCampo}>Faturamento mínimo (kg)</label>
                   <input
+                    inputMode="decimal"
                     value={asTextoFormulario(residuo.faturamento_minimo)}
                     onChange={(e) => onResiduoChange(index, 'faturamento_minimo', e.target.value)}
-                    placeholder="0,00"
+                    placeholder="Ex.: 500"
                     style={inputStyle}
                   />
                 </div>

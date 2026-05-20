@@ -279,13 +279,13 @@ export function FinanceiroConferenciaDetalhe({
                   />
                 </div>
                 <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
-                  <span style={{ ...labelStyle, marginBottom: '4px' }}>Observação</span>
+                  <span style={{ ...labelStyle, marginBottom: '4px' }}>Justificativa / observação *</span>
                   <input
                     type="text"
                     value={baixaObs}
                     onChange={(e) => setBaixaObs(e.target.value)}
                     disabled={!podeMutar || registrandoBaixa}
-                    placeholder="opcional"
+                    placeholder="Obrigatório para concluir a baixa"
                     style={{
                       width: '100%',
                       padding: '8px 10px',
@@ -298,7 +298,7 @@ export function FinanceiroConferenciaDetalhe({
                 </div>
                 <button
                   type="button"
-                  disabled={!podeMutar || registrandoBaixa}
+                  disabled={!podeMutar || registrandoBaixa || !baixaObs.trim()}
                   onClick={() => onRegistrarBaixa(baixaValor, baixaObs)}
                   style={{
                     ...btnAcaoStyle,

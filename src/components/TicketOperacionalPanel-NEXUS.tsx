@@ -11,6 +11,7 @@ import {
 import { cargoPodeEditarTicketOperacional } from '../lib/workflowPermissions'
 import { mensagemErroSupabase as mensagemErroSupabaseBase } from '../lib/supabaseErrors'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { empresaTicketImpressaoRg } from '../lib/rgAmbientalDadosCorporativos'
 
 export type TicketColetaSnapshot = {
   id: string
@@ -114,7 +115,7 @@ export function TicketOperacionalPanel({
   const [erro, setErro] = useState('')
 
   const [mtrNumeroImpressao, setMtrNumeroImpressao] = useState('')
-  const [empresaTransporteImpressao, setEmpresaTransporteImpressao] = useState('RG AMBIENTAL TRANSPORTES.')
+  const empresaTransporteImpressao = empresaTicketImpressaoRg()
   const [balanceiroImpressao, setBalanceiroImpressao] = useState('—')
   const [horaEntradaImpressao, setHoraEntradaImpressao] = useState('—')
   const [horaSaidaImpressao, setHoraSaidaImpressao] = useState('—')
@@ -135,7 +136,6 @@ export function TicketOperacionalPanel({
 
   const carregarDadosImpressao = useCallback(async (coleta: TicketColetaSnapshot) => {
     setMtrNumeroImpressao('')
-    setEmpresaTransporteImpressao('RG AMBIENTAL TRANSPORTES.')
     setBalanceiroImpressao('—')
     setHoraEntradaImpressao('—')
     setHoraSaidaImpressao('—')
@@ -157,10 +157,6 @@ export function TicketOperacionalPanel({
 
     if (reg && typeof reg === 'object') {
       const r = reg as Record<string, unknown>
-      const emp = r.empresa ?? r.cliente
-      if (typeof emp === 'string' && emp.trim()) {
-        setEmpresaTransporteImpressao(emp.trim())
-      }
       const bal = r.balanceiro ?? r.balanceiro_nome ?? r.usuario_balanceiro
       if (typeof bal === 'string' && bal.trim()) setBalanceiroImpressao(bal.trim())
       const dh = (r.created_at ?? r.data ?? r.updated_at) as string | undefined

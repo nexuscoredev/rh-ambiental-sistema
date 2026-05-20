@@ -63,11 +63,12 @@ export function coletaConferenciaPendente(row: FaturamentoResumoViewRow): boolea
 }
 
 /**
- * MTR/peso/ticket na vista, excluindo quem ainda aguarda salvar no Controle de Massa
- * ou validação do ticket nesta página (evita contagem duplicada nos cartões).
+ * MTR/peso/ticket ok na vista (`status_conferencia`), excluindo quem ainda está no fluxo do ticket
+ * ou já foi emitido ao Financeiro (a vista mantém «PRONTO» mesmo após faturar).
  */
 export function coletaProntaNaVistaExcluindoFluxoTicket(row: FaturamentoResumoViewRow): boolean {
   if (!coletaConferenciaProntaParaFaturar(row)) return false
+  if (coletaHistoricoFaturamentoEmitido(row)) return false
   if (coletaAguardandoImpressaoTicketFaturamento(row)) return false
   if (coletaNaFilaAprovacaoTicketFaturamento(row)) return false
   return true

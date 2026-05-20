@@ -1,6 +1,11 @@
 import { supabase } from './supabase'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { indiceEtapaFluxo, normalizarEtapaColeta } from './fluxoEtapas'
+import {
+  isErroColunaResiduosItens,
+  parseResiduosFromRow,
+  serializarResiduosItensDb,
+} from './residuosPesagem'
 
 function coletaJaFechadaParaFaturamento(row: FaturamentoResumoViewRow): boolean {
   if (row.faturamento_registro_status === 'emitido') return true
@@ -121,15 +126,104 @@ export async function aprovarTicketFaturamentoColeta(
 }
 
 /**
- * Remove a aprovação do Faturamento e devolve o ticket à fila de conferência/aprovação
+ * Encerramento definitivo do ticket na tela de faturamento (Operacional (Time T)):
+ * persiste `resumo_financeiro` e garante aprovação na fila de conferência.
+ */
+export async function encerrarTicketDefinitivoFaturamento(
+  coletaId: string,
+  resumoJson: Record<string, unknown>
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const id = coletaId.trim()
+  if (!id) return { ok: false, message: 'Coleta inválida.' }
+
+  const agora = new Date().toISOString()
+  const { data: existente } = await supabase
+    .from('faturamento_registros')
+    .select('id')
+    .eq('coleta_id', id)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const payload = { resumo_financeiro: resumoJson, updated_at: agora }
+
+  if (existente?.id) {
+    const { error } = await supabase.from('faturamento_registros').update(payload).eq('id', existente.id)
+    if (error && !erroColunasTicketAprovacaoAusentes(error)) {
+      const msg = (error.message ?? '').toLowerCase()
+      if (!msg.includes('resumo_financeiro')) {
+        return { ok: false, message: error.message || 'Não foi possível gravar o encerramento.' }
+      }
+    }
+  } else {
+    const { error } = await supabase
+      .from('faturamento_registros')
+      .insert({ coleta_id: id, status: 'pendente', ...payload })
+    if (error) {
+      return { ok: false, message: error.message || 'Não foi possível criar o registro de encerramento.' }
+    }
+  }
+
+  const { data: coleta } = await supabase
+    .from('coletas')
+    .select('faturamento_ticket_aprovado_em')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!coleta?.faturamento_ticket_aprovado_em) {
+    const apr = await aprovarTicketFaturamentoColeta(id, 'Encerramento definitivo do ticket (Operacional (Time T)).')
+    if (!apr.ok) return apr
+  }
+
+  return { ok: true }
+}
+
+/** Coletas da mesma MTR com ticket impresso — devolução afeta o grupo inteiro (não só a líder). */
+async function coletasIdsMesmaMtrParaDevolucaoConferencia(
+  coletaId: string
+): Promise<{ ok: true; ids: string[] } | { ok: false; message: string }> {
+  const { data: coleta, error } = await supabase
+    .from('coletas')
+    .select('id, mtr_id')
+    .eq('id', coletaId)
+    .maybeSingle()
+
+  if (error) {
+    return { ok: false, message: error.message || 'Não foi possível localizar a coleta.' }
+  }
+  if (!coleta?.id) return { ok: false, message: 'Coleta não encontrada.' }
+
+  const mid = (coleta.mtr_id ?? '').trim()
+  if (!mid) return { ok: true, ids: [coletaId] }
+
+  const { data: irmas, error: errIrmas } = await supabase
+    .from('coletas')
+    .select('id')
+    .eq('mtr_id', mid)
+    .not('ticket_impresso_em', 'is', null)
+
+  if (errIrmas) {
+    return { ok: false, message: errIrmas.message || 'Não foi possível localizar tickets da MTR.' }
+  }
+
+  const ids = [...new Set((irmas ?? []).map((r) => r.id).filter(Boolean))]
+  return { ok: true, ids: ids.length > 0 ? ids : [coletaId] }
+}
+
+/**
+ * Remove a aprovação do Faturamento e devolve o(s) ticket(s) à fila de conferência/aprovação
  * (mantém `ticket_impresso_em` para revalidação).
+ * Na mesma MTR, todos os tickets impressos voltam juntos — a consolidação é só na fila de faturar.
  */
 export async function devolverTicketParaFilaConferenciaColeta(
   coletaId: string,
   observacao?: string
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true; coletasAfetadas: number } | { ok: false; message: string }> {
   const id = coletaId.trim()
   if (!id) return { ok: false, message: 'Coleta inválida.' }
+
+  const grupo = await coletasIdsMesmaMtrParaDevolucaoConferencia(id)
+  if (!grupo.ok) return grupo
 
   const motivo = (observacao ?? '').trim()
   const obsGravar = motivo
@@ -143,7 +237,7 @@ export async function devolverTicketParaFilaConferenciaColeta(
       faturamento_ticket_aprovado_por_user_id: null,
       faturamento_ticket_aprovacao_obs: obsGravar,
     })
-    .eq('id', id)
+    .in('id', grupo.ids)
 
   if (error) {
     if (erroColunasTicketAprovacaoAusentes(error)) {
@@ -152,7 +246,21 @@ export async function devolverTicketParaFilaConferenciaColeta(
     return { ok: false, message: error.message || 'Não foi possível devolver o ticket à conferência.' }
   }
 
-  return { ok: true }
+  return { ok: true, coletasAfetadas: grupo.ids.length }
+}
+
+function patchResiduosItensPesoLiquido(
+  raw: unknown,
+  pesoLiquido: number
+): ReturnType<typeof serializarResiduosItensDb> | null {
+  const linhas = parseResiduosFromRow({ residuos_itens: raw })
+  const comTexto = linhas.filter((l) => l.texto.trim())
+  if (comTexto.length === 0) return null
+
+  const atualizadas = linhas.map((l, i) =>
+    i === 0 ? { ...l, peso_liquido: String(pesoLiquido) } : l
+  )
+  return serializarResiduosItensDb(atualizadas)
 }
 
 /** Ajuste manual do peso líquido antes da aprovação do ticket (fila de conferência). */
@@ -168,16 +276,67 @@ export async function atualizarPesoLiquidoConferenciaTicket(
     return { ok: false, message: 'Informe um peso líquido maior que zero (kg).' }
   }
 
-  const { error: errColeta } = await supabase.from('coletas').update({ peso_liquido: peso }).eq('id', id)
+  const { data: rowAtual, error: errLeitura } = await supabase
+    .from('coletas')
+    .select('id, residuos_itens')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (errLeitura) {
+    return { ok: false, message: errLeitura.message || 'Não foi possível ler a coleta.' }
+  }
+  if (!rowAtual?.id) {
+    return { ok: false, message: 'Coleta não encontrada.' }
+  }
+
+  const patchColeta: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
+    { peso_liquido: peso }
+  const itens = patchResiduosItensPesoLiquido(rowAtual.residuos_itens, peso)
+  if (itens) patchColeta.residuos_itens = itens
+
+  let { data: atualizada, error: errColeta } = await supabase
+    .from('coletas')
+    .update(patchColeta)
+    .eq('id', id)
+    .select('id')
+    .maybeSingle()
+
+  if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
+    const retry = await supabase
+      .from('coletas')
+      .update({ peso_liquido: peso })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle()
+    atualizada = retry.data
+    errColeta = retry.error
+  }
 
   if (errColeta) {
     return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
   }
+  if (!atualizada?.id) {
+    return {
+      ok: false,
+      message:
+        'Sem permissão para alterar o peso desta coleta (perfil ou política RLS). Peça ao administrador aplicar a migração de permissões ou use um perfil Faturamento.',
+    }
+  }
 
-  const { error: errMassa } = await supabase
+  const patchMassa: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } = {
+    peso_liquido: peso,
+  }
+  if (itens) patchMassa.residuos_itens = itens
+
+  let { error: errMassa } = await supabase
     .from('controle_massa')
-    .update({ peso_liquido: peso })
+    .update(patchMassa)
     .eq('coleta_id', id)
+
+  if (errMassa && itens && isErroColunaResiduosItens(errMassa)) {
+    const retry = await supabase.from('controle_massa').update({ peso_liquido: peso }).eq('coleta_id', id)
+    errMassa = retry.error
+  }
 
   if (errMassa) {
     console.warn('controle_massa.peso_liquido:', errMassa.message)

@@ -37,6 +37,11 @@ export type FaturamentoResumoViewRow = {
   mtr_id: string | null
   mtr_numero: string | null
   mtr_observacoes: string | null
+  mtr_status?: string | null
+  mtr_cancelamento_cobrar_frete?: boolean | null
+  mtr_cancelamento_valor_frete?: number | null
+  mtr_baixa_cenario_complexo?: boolean | null
+  mtr_baixa_justificativa?: string | null
   ticket_comprovante: string | null
   peso_tara: number | null
   peso_bruto: number | null

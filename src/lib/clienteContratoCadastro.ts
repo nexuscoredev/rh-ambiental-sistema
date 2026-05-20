@@ -91,6 +91,26 @@ function formatarMoedaBanco(valor: string): number | null {
   return Math.round(n * 100) / 100
 }
 
+function parseNumeroPeso(valor: string): number | null {
+  const t = valor.trim()
+  if (!t) return null
+  const n = Number(t.replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+function formatarPesoKgBanco(valor: string): number | null {
+  const n = parseNumeroPeso(valor)
+  if (n == null || n < 0) return null
+  return Math.round(n * 1000) / 1000
+}
+
+function pesoParaCampo(v: unknown): string {
+  if (v == null || v === '') return ''
+  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'))
+  if (!Number.isFinite(n)) return ''
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+}
+
 function itemVeiculoValido(item: VeiculoContratoItem): boolean {
   return Boolean(item.tipo_veiculo.trim())
 }
@@ -126,7 +146,7 @@ export function residuosContratoParaJsonb(itens: ResiduoContratoItem[]): unknown
     unidade_medida: item.unidade_medida.trim() || null,
     valor: formatarMoedaBanco(item.valor),
     frequencia_coleta: item.frequencia_coleta.trim() || null,
-    faturamento_minimo: formatarMoedaBanco(item.faturamento_minimo),
+    faturamento_minimo: formatarPesoKgBanco(item.faturamento_minimo),
   }))
 }
 
@@ -207,7 +227,7 @@ export function parseResiduosContratoJsonb(
         unidade_medida: asTextoFormulario(o.unidade_medida).trim(),
         valor: moedaParaCampo(o.valor),
         frequencia_coleta: asTextoFormulario(o.frequencia_coleta).trim(),
-        faturamento_minimo: moedaParaCampo(o.faturamento_minimo),
+        faturamento_minimo: pesoParaCampo(o.faturamento_minimo),
       }
     })
   }

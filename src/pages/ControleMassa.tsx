@@ -12,14 +12,22 @@ import {
   type TicketColetaSnapshot,
 } from "../components/TicketOperacionalPanel";
 import {
+  ControleMassaMtrPicker,
+  type ResumoSelecaoMtr,
+} from "../components/controleMassa/ControleMassaMtrPicker";
+import {
   COLETAS_SELECT_SEGUIMENTO,
   queryColetasListaFluxoControle,
 } from "../lib/coletasSelectSeguimento";
-import { fetchResiduosCatalogo, mapResiduosPorId, type ResiduoCatalogo } from "../lib/residuosCatalogo";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
-import { cargoPodeLancarPesagem, cargoPodeExcluirMtr } from "../lib/workflowPermissions";
+import {
+  cargoEhOperadoresTimeR,
+  cargoPerfilSomenteLancamentoTicketPadrao,
+  cargoPodeLancarPesagem,
+  cargoPodeExcluirMtr,
+} from "../lib/workflowPermissions";
 import { excluirColetaPorId } from "../lib/excluirOperacionalCascata";
 import {
   type EtapaFluxo,
@@ -35,6 +43,7 @@ import {
   aplicarPesosColetaNasLinhas,
   isErroColunaResiduosItens,
   linhaVaziaResiduoPesagem,
+  linhasComConteudo,
   linhasParaFormLegacy,
   normalizarFormResiduosLinhas,
   parseResiduosFromRow,
@@ -43,6 +52,44 @@ import {
   resolverResiduosParaGravacao,
   type ResiduoPesagemItem,
 } from "../lib/residuosPesagem";
+import {
+  aplicarHerancaMtrEmCamposPesagem,
+  buscarMtrHerancaPesagem,
+  linhasResiduoHerancaOuColeta,
+  type MtrHerancaPesagem,
+} from "../lib/mtrHerancaTicketPesagem";
+import {
+  coletaCorrespondeResiduo,
+  deveSegmentarTicketsPorMtr,
+  numeroTicketParaSegmento,
+  segmentosResiduoParaTickets,
+} from "../lib/ticketCardinalidadeResiduo";
+import {
+  numeroTicketFromMtr,
+  podeGerarNumeroTicketFromMtr,
+} from "../lib/numeroTicketMtr";
+
+function preencherNumeroTicketNoForm(
+  prev: FormRegistro,
+  opts: {
+    numeroMtr?: string | null;
+    ticketExistenteColeta?: string | null;
+    totalSegmentos?: number;
+  }
+): FormRegistro {
+  const existente = (opts.ticketExistenteColeta ?? "").trim();
+  if (existente) {
+    return existente === prev.numero_ticket ? prev : { ...prev, numero_ticket: existente };
+  }
+  const mtr = (opts.numeroMtr ?? "").trim();
+  if (!podeGerarNumeroTicketFromMtr(mtr)) return prev;
+  const total =
+    opts.totalSegmentos ??
+    Math.max(1, linhasComConteudo(prev.residuos_linhas).length);
+  const gerado = numeroTicketFromMtr(mtr, 0, total);
+  if (!gerado || gerado === prev.numero_ticket) return prev;
+  return { ...prev, numero_ticket: gerado };
+}
 
 function mergeFormResiduosLinhas(
   prev: FormRegistro,
@@ -72,9 +119,6 @@ type ColetaOpcao = {
   tipo_residuo: string;
   /** FK opcional para `public.residuos` (catálogo com código). */
   residuo_catalogo_id: string | null;
-  /** Preenchido na lista quando há vínculo ao catálogo. */
-  residuo_codigo?: string | null;
-  residuo_nome_lista?: string | null;
   placa: string;
   motorista: string;
   status: string;
@@ -134,6 +178,92 @@ const formInicial: FormRegistro = {
   peso_bruto: "",
   peso_liquido: "",
   status: "Pendente",
+};
+
+const massaAcaoFinalCardStyle: CSSProperties = {
+  border: "1px solid #e5e7eb",
+  background: "#ffffff",
+  borderRadius: "16px",
+  padding: "18px",
+  boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "16px",
+  flexWrap: "wrap",
+};
+
+const massaAcaoFinalTituloStyle: CSSProperties = {
+  margin: 0,
+  fontSize: "15px",
+  fontWeight: 800,
+  color: "#0f172a",
+};
+
+const massaAcaoFinalDescStyle: CSSProperties = {
+  margin: "6px 0 0",
+  fontSize: "13px",
+  color: "#64748b",
+  lineHeight: 1.45,
+  fontWeight: 500,
+};
+
+const massaAcoesBarStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  alignItems: "stretch",
+  minWidth: "min(100%, 320px)",
+};
+
+const massaAcoesLinhaStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "8px",
+  justifyContent: "flex-end",
+  alignItems: "center",
+};
+
+const massaBtnPrimarioStyle: CSSProperties = {
+  height: "40px",
+  padding: "0 16px",
+  borderRadius: "12px",
+  border: "1px solid #0f172a",
+  background: "#0f172a",
+  color: "#ffffff",
+  fontWeight: 700,
+  fontSize: "13px",
+  cursor: "pointer",
+};
+
+const massaBtnSecundarioStyle: CSSProperties = {
+  height: "40px",
+  padding: "0 14px",
+  borderRadius: "12px",
+  border: "1px solid #d1d5db",
+  background: "#ffffff",
+  color: "#0f172a",
+  fontWeight: 700,
+  fontSize: "13px",
+  cursor: "pointer",
+};
+
+const massaImpressaoGrupoStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "8px",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  paddingTop: "10px",
+  borderTop: "1px solid #f1f5f9",
+};
+
+const massaImpressaoLabelStyle: CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 700,
+  letterSpacing: "0.04em",
+  color: "#94a3b8",
+  marginRight: "auto",
 };
 
 function limparOuNull(valor: string) {
@@ -434,6 +564,148 @@ async function garantirTicketAposPesagem(params: {
   return { ok: true };
 }
 
+/** Grava pesagem + ticket para uma coleta com um único resíduo (cardinalidade do ticket). */
+async function persistirPesagemUmSegmento(params: {
+  coletaId: string;
+  numeroTicket: string;
+  tipoTicket: "entrada" | "saida" | "frete";
+  descricaoTicket: string;
+  data: string;
+  empresa: string;
+  placa: string;
+  motorista: string;
+  linhaResiduo: ResiduoPesagemItem;
+  tipoResiduoMtr: string;
+  tipoResiduoColeta: string;
+  status: string;
+}): Promise<{ ok: true; ticketOk: boolean } | { ok: false; message: string }> {
+  const resolvido = resolverResiduosParaGravacao([params.linhaResiduo], {
+    tipoResiduoColeta: params.tipoResiduoColeta,
+    tipoResiduoMtr: params.tipoResiduoMtr,
+  });
+
+  if (resolvido.erro) {
+    return { ok: false, message: resolvido.erro };
+  }
+
+  const agregado = agregarPesosDasLinhas([params.linhaResiduo]);
+  const payloadCampos: Record<string, unknown> = {
+    numero_ticket: params.numeroTicket.trim(),
+    data: params.data,
+    empresa: params.empresa,
+    residuo: resolvido.texto,
+    residuos_itens: resolvido.residuos_itens,
+    placa: limparOuNull(params.placa),
+    motorista: limparOuNull(params.motorista),
+    peso_liquido: agregado.pesoLiquidoNum,
+    status: params.status || "Pendente",
+  };
+  const payloadSemItens = { ...payloadCampos };
+  delete payloadSemItens.residuos_itens;
+
+  const { data: cmExistenteRows, error: errBuscaCm } = await supabase
+    .from("controle_massa")
+    .select("id")
+    .eq("coleta_id", params.coletaId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (errBuscaCm) {
+    return { ok: false, message: errBuscaCm.message };
+  }
+
+  const cmExistenteId = (cmExistenteRows?.[0] as { id?: string } | undefined)?.id;
+  let error: { message: string; details?: string; code?: string } | null = null;
+
+  if (cmExistenteId) {
+    let upErr = (
+      await supabase.from("controle_massa").update(payloadCampos).eq("id", cmExistenteId)
+    ).error;
+    if (isErroColunaResiduosItens(upErr)) {
+      upErr = (
+        await supabase.from("controle_massa").update(payloadSemItens).eq("id", cmExistenteId)
+      ).error;
+    }
+    error = upErr;
+  } else {
+    let insCmErr = (
+      await supabase.from("controle_massa").insert([
+        { coleta_id: limparOuNull(params.coletaId), ...payloadCampos },
+      ])
+    ).error;
+    if (isErroColunaResiduosItens(insCmErr)) {
+      insCmErr = (
+        await supabase.from("controle_massa").insert([
+          { coleta_id: limparOuNull(params.coletaId), ...payloadSemItens },
+        ])
+      ).error;
+    }
+    error = insCmErr;
+  }
+
+  if (error) {
+    const msg = error.message || "";
+    const code = (error as { code?: string }).code;
+    if (
+      code === "23505" ||
+      msg.includes("controle_massa_numero_ticket") ||
+      (msg.toLowerCase().includes("duplicate") && msg.toLowerCase().includes("numero_ticket"))
+    ) {
+      return {
+        ok: false,
+        message:
+          "Este número de ticket já está em uso. Use outro número ou atualize a pesagem na coleta correspondente.",
+      };
+    }
+    return { ok: false, message: msg };
+  }
+
+  const ticketAuto = await garantirTicketAposPesagem({
+    coletaId: params.coletaId,
+    numeroTicket: params.numeroTicket,
+    tipoTicket: params.tipoTicket,
+    descricaoExtra: params.descricaoTicket,
+  });
+
+  const fluxoPosPesagem = ticketAuto.ok ? "TICKET_GERADO" : "CONTROLE_PESAGEM_LANCADO";
+
+  const coletaUpdate: Record<string, unknown> = {
+    peso_tara: agregado.pesoTaraNum,
+    peso_bruto: agregado.pesoBrutoNum,
+    peso_liquido: agregado.pesoLiquidoNum,
+    tipo_residuo: resolvido.texto,
+    residuo_catalogo_id: resolvido.catalogo_id,
+    residuos_itens: resolvido.residuos_itens,
+    placa: limparOuNull(params.placa),
+    motorista: limparOuNull(params.motorista),
+    motorista_nome: limparOuNull(params.motorista),
+    fluxo_status: fluxoPosPesagem,
+    etapa_operacional: fluxoPosPesagem,
+    status_processo: "EM_CONFERENCIA",
+    liberado_financeiro: false,
+  };
+  const coletaUpdateSemItens = { ...coletaUpdate };
+  delete coletaUpdateSemItens.residuos_itens;
+
+  let errorColeta = (await supabase.from("coletas").update(coletaUpdate).eq("id", params.coletaId))
+    .error;
+  if (isErroColunaResiduosItens(errorColeta)) {
+    errorColeta = (
+      await supabase.from("coletas").update(coletaUpdateSemItens).eq("id", params.coletaId)
+    ).error;
+  }
+
+  if (errorColeta) {
+    return {
+      ok: false,
+      message:
+        "Pesagem gravada, mas a coleta não foi atualizada no fluxo. Tente salvar novamente ou contacte o administrador.",
+    };
+  }
+
+  return { ok: true, ticketOk: ticketAuto.ok };
+}
+
 function coletaOpcaoParaTicketSnapshot(c: ColetaOpcao): TicketColetaSnapshot {
   return {
     id: c.id,
@@ -518,6 +790,8 @@ async function criarColetaVinculadaAMtr(
     return { ok: false, message: "MTR não encontrada. Atualize a lista e tente de novo." };
   }
 
+  const herancaMtr = await buscarMtrHerancaPesagem(mtrId);
+
   const m = mtr as Record<string, unknown>;
   let clienteId: string | null = null;
   let clienteNome = String(m.cliente ?? "");
@@ -551,15 +825,23 @@ async function criarColetaVinculadaAMtr(
 
   const dataAg =
     opts.dataRef.trim() || new Date().toISOString().slice(0, 10);
+  const camposHeranca = herancaMtr
+    ? aplicarHerancaMtrEmCamposPesagem(
+        { placa: opts.placa, motorista: opts.motorista },
+        herancaMtr
+      )
+    : { placa: opts.placa.trim(), motorista: opts.motorista.trim() };
+
   const tipoRes =
     opts.residuoFallback.trim() ||
+    herancaMtr?.tipo_residuo.trim() ||
     String(m.tipo_residuo ?? "");
 
   const resCat = residuoCatalogoIdParaDb(String(opts.residuo_catalogo_id ?? ""));
 
   const row: Record<string, unknown> = {
     mtr_id: mtrId,
-    programacao_id: progId,
+    programacao_id: progId ?? herancaMtr?.programacao_id ?? null,
     cliente_id: clienteId,
     cliente: clienteNome,
     cidade: String(m.cidade ?? ""),
@@ -576,9 +858,9 @@ async function criarColetaVinculadaAMtr(
     etapa_operacional: "BRUTO_REGISTRADO",
     status_processo: "EM_CONFERENCIA",
     liberado_financeiro: false,
-    motorista: opts.motorista.trim() || null,
-    motorista_nome: opts.motorista.trim() || null,
-    placa: opts.placa.trim() || null,
+    motorista: camposHeranca.motorista.trim() || null,
+    motorista_nome: camposHeranca.motorista.trim() || null,
+    placa: camposHeranca.placa.trim() || null,
     peso_tara: opts.pesoTara,
     peso_bruto: opts.pesoBruto,
     peso_liquido: opts.pesoLiquido,
@@ -626,10 +908,12 @@ export default function ControleMassa() {
 
   /** Todas as coletas (validação, URL e atualização no save). */
   const [todasColetas, setTodasColetas] = useState<ColetaOpcao[]>([]);
-  const [residuosCatalogo, setResiduosCatalogo] = useState<ResiduoCatalogo[]>([]);
   const [mtrsLista, setMtrsLista] = useState<MtrResumo[]>([]);
   const [loadingVinculo, setLoadingVinculo] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [imprimindoTicketColetaId, setImprimindoTicketColetaId] = useState<string | null>(null);
+  /** Coletas do último save — mantém botões de impressão mesmo após atualizar o formulário. */
+  const [coletasImpressaoSessao, setColetasImpressaoSessao] = useState<string[]>([]);
   const [secaoPesagemAberta, setSecaoPesagemAberta] = useState(true);
   const [modoTela, setModoTela] = useState<"operacao" | "auditoria">("operacao");
   const [tabelaAberta, setTabelaAberta] = useState(false);
@@ -650,6 +934,8 @@ export default function ControleMassa() {
   const [form, setForm] = useState<FormRegistro>(formInicial);
   /** MTR escolhida no select quando ainda não existe coleta — mantém o valor visível no `<select>`. */
   const [mtrSemColetaSelecionado, setMtrSemColetaSelecionado] = useState<string | null>(null);
+  /** Tipo de caminhão da programação da MTR selecionada (antes de existir coleta). */
+  const [tipoVeiculoMtrSelecionada, setTipoVeiculoMtrSelecionada] = useState("");
   const [mtrPickerAberto, setMtrPickerAberto] = useState(false);
   const [filtroMtr, setFiltroMtr] = useState("");
   const mtrComboRef = useRef<HTMLDivElement | null>(null);
@@ -663,7 +949,6 @@ export default function ControleMassa() {
     () => ({
       form,
       secaoPesagemAberta,
-      modoTela,
       tabelaAberta,
       filtroOperacao,
       buscaColetasLista,
@@ -675,7 +960,6 @@ export default function ControleMassa() {
     [
       form,
       secaoPesagemAberta,
-      modoTela,
       tabelaAberta,
       filtroOperacao,
       buscaColetasLista,
@@ -693,7 +977,7 @@ export default function ControleMassa() {
       const f = normalizarFormResiduosLinhas(d.form);
       setForm({ ...f, ...agregarPesosDasLinhas(f.residuos_linhas) });
       setSecaoPesagemAberta(d.secaoPesagemAberta);
-      setModoTela(d.modoTela);
+      setModoTela("operacao");
       setTabelaAberta(d.tabelaAberta);
       setFiltroOperacao(d.filtroOperacao);
       setBuscaColetasLista(d.buscaColetasLista);
@@ -704,8 +988,11 @@ export default function ControleMassa() {
     },
   });
 
+  const ehOperadoresTimeR = cargoEhOperadoresTimeR(usuarioCargo);
+  const somenteTicketPadrao = cargoPerfilSomenteLancamentoTicketPadrao(usuarioCargo);
   const podeMutarMassa = cargoPodeLancarPesagem(usuarioCargo);
-  const podeEditarOuExcluirColeta = cargoPodeExcluirMtr(usuarioCargo);
+  const podeEditarOuExcluirColeta =
+    cargoPodeExcluirMtr(usuarioCargo);
 
   const coletaSelecionada = useMemo(() => {
     const id = form.coleta_id.trim();
@@ -720,6 +1007,43 @@ export default function ControleMassa() {
     if (!id) return null;
     return mtrsLista.find((m) => m.id === id) ?? null;
   }, [mtrSemColetaSelecionado, coletaSelecionada, mtrsLista]);
+
+  const qtdResiduosNoForm = useMemo(
+    () => linhasComConteudo(form.residuos_linhas).length,
+    [form.residuos_linhas]
+  );
+
+  const numeroTicketAutoMtr = useMemo(
+    () => podeGerarNumeroTicketFromMtr(mtrSelecionada?.numero),
+    [mtrSelecionada?.numero]
+  );
+
+  useEffect(() => {
+    if (!ehOperadoresTimeR) return;
+    setForm((prev) =>
+      prev.tipo_ticket === "saida" ? prev : { ...prev, tipo_ticket: "saida" }
+    );
+  }, [ehOperadoresTimeR, form.coleta_id, mtrSemColetaSelecionado]);
+
+  useEffect(() => {
+    const mtrNo = mtrSelecionada?.numero;
+    if (!mtrNo) return;
+    const cid = form.coleta_id.trim();
+    const ticketEx = cid ? numeroTicketPorColeta.get(cid) : undefined;
+    setForm((prev) =>
+      preencherNumeroTicketNoForm(prev, {
+        numeroMtr: mtrNo,
+        ticketExistenteColeta: ticketEx,
+        totalSegmentos: Math.max(1, qtdResiduosNoForm),
+      })
+    );
+  }, [
+    mtrSelecionada?.numero,
+    mtrSelecionada?.id,
+    form.coleta_id,
+    qtdResiduosNoForm,
+    numeroTicketPorColeta,
+  ]);
 
   const estadoFluxo = useMemo(() => {
     const id = form.coleta_id.trim();
@@ -737,7 +1061,97 @@ export default function ControleMassa() {
     numeroTicketPorColeta,
   ]);
 
-  const podeImprimirTicket = Boolean(form.coleta_id.trim() && estadoFluxo.prontoImprimir);
+  const coletaIdImpressaoUnica =
+    form.coleta_id.trim() || coletasImpressaoSessao[0]?.trim() || "";
+  const podeImprimirTicket = Boolean(
+    coletaIdImpressaoUnica &&
+      (coletasImpressaoSessao.includes(coletaIdImpressaoUnica) || estadoFluxo.prontoImprimir)
+  );
+
+  const ticketsSegmentoImpressao = useMemo(() => {
+    const linhasForm = segmentosResiduoParaTickets(form.residuos_linhas);
+
+    const mtrId =
+      mtrSemColetaSelecionado ||
+      (form.coleta_id.trim()
+        ? todasColetas.find((c) => c.id === form.coleta_id.trim())?.mtr_id ?? null
+        : null) ||
+      (coletasImpressaoSessao[0]
+        ? todasColetas.find((c) => c.id === coletasImpressaoSessao[0])?.mtr_id ?? null
+        : null);
+
+    type LinhaSeg = { texto: string; coletaIdFixo?: string };
+    let linhas: LinhaSeg[] = linhasForm.map((l) => ({ texto: l.texto }));
+
+    if (linhas.length < 2 && coletasImpressaoSessao.length >= 2) {
+      linhas = coletasImpressaoSessao.map((id) => {
+        const c = todasColetas.find((x) => x.id === id);
+        return {
+          texto: (c?.tipo_residuo ?? "").trim() || `Coleta ${id.slice(0, 8)}`,
+          coletaIdFixo: id,
+        };
+      });
+    }
+
+    if (linhas.length < 2) return [];
+
+    const mtrNum = mtrId
+      ? (mtrsLista.find((m) => m.id === mtrId)?.numero ?? "").trim()
+      : "";
+    const coletasMtr = mtrId ? todasColetas.filter((c) => c.mtr_id === mtrId) : [];
+
+    return linhas.map((linha, i) => {
+      let coletaId = linha.coletaIdFixo?.trim() ?? "";
+
+      if (!coletaId) {
+        const coletaForm =
+          i === 0 && form.coleta_id.trim()
+            ? todasColetas.find((c) => c.id === form.coleta_id.trim())
+            : undefined;
+        if (coletaForm && coletaCorrespondeResiduo(coletaForm, linha.texto)) {
+          coletaId = coletaForm.id;
+        } else {
+          const existente = coletasMtr.find((c) => coletaCorrespondeResiduo(c, linha.texto));
+          if (existente) coletaId = existente.id;
+        }
+      }
+
+      const numeroPrevisto =
+        (coletaId ? numeroTicketPorColeta.get(coletaId) : undefined)?.trim() ||
+        (mtrNum
+          ? numeroTicketParaSegmento(mtrNum, i, linhas.length, form.numero_ticket)
+          : "");
+
+      const prontoImprimir = Boolean(
+        coletaId &&
+          (coletasImpressaoSessao.includes(coletaId) ||
+            numeroTicketPorColeta.get(coletaId)?.trim() ||
+            tipoTicketPorColeta.has(coletaId) ||
+            ultimaPesagemPorColeta.has(coletaId))
+      );
+
+      return {
+        indice: i + 1,
+        texto: linha.texto,
+        coletaId,
+        numeroTicket: numeroPrevisto,
+        prontoImprimir,
+      };
+    });
+  }, [
+    form.residuos_linhas,
+    form.coleta_id,
+    form.numero_ticket,
+    mtrSemColetaSelecionado,
+    mtrsLista,
+    todasColetas,
+    coletasImpressaoSessao,
+    numeroTicketPorColeta,
+    tipoTicketPorColeta,
+    ultimaPesagemPorColeta,
+  ]);
+
+  const multiTicketImpressao = ticketsSegmentoImpressao.length >= 2;
 
   const listaOperacao = useMemo(() => {
     const hojeIso = new Date().toISOString().slice(0, 10);
@@ -800,6 +1214,42 @@ export default function ControleMassa() {
   function limparContextoUrl() {
     setSearchParams({}, { replace: true });
     prevContextoUrlKeyRef.current = "";
+  }
+
+  async function imprimirTicketDaColeta(coletaId: string, rotulo: string) {
+    if (!podeMutarMassa) {
+      setErroTela(
+        "Seu perfil não pode registar impressão do ticket. Apenas balanceiro ou administrador."
+      );
+      return;
+    }
+    if (!coletaId.trim()) {
+      setErroTela(`Salve a pesagem antes de imprimir o ${rotulo}.`);
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, coleta_id: coletaId }));
+    setImprimindoTicketColetaId(coletaId);
+
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const res = await registrarTicketImpressoColeta(coletaId);
+    if (!res.ok) {
+      setErroTela(res.message);
+      setSucesso("");
+      setImprimindoTicketColetaId(null);
+      return;
+    }
+
+    setErroTela("");
+    setSucesso(`${rotulo} enviado para impressão.`);
+    setTimeout(() => setSucesso(""), 5000);
+    document.getElementById("ticket-operacional-anchor")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    window.print();
+    setImprimindoTicketColetaId(null);
   }
 
   function montarParamsFluxo(c: ColetaOpcao) {
@@ -927,6 +1377,27 @@ export default function ControleMassa() {
     }
   }, []);
 
+  /** Atualiza só as coletas gravadas (evita recarregar 500+ coletas após salvar). */
+  const atualizarColetasAposSalvar = useCallback(async (coletaIds: string[]) => {
+    const ids = [...new Set(coletaIds.filter(Boolean))];
+    if (ids.length === 0) return;
+
+    const [extraRows, ultima, ticketPorColeta] = await Promise.all([
+      buscarColetasPorIds(ids),
+      fetchUltimaPesagemPorColetaIds(ids),
+      fetchTicketOperacionalPorColetaIds(ids),
+    ]);
+
+    setTodasColetas((prev) => {
+      const porId = new Map(prev.map((c) => [c.id, c]));
+      for (const c of extraRows) porId.set(c.id, c);
+      return Array.from(porId.values());
+    });
+    setUltimaPesagemPorColeta((prev) => new Map([...prev, ...ultima]));
+    setTipoTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.tipoPorColeta]));
+    setNumeroTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.numeroPorColeta]));
+  }, []);
+
   useEffect(() => {
     queueMicrotask(() => {
       setLoadingVinculo(true);
@@ -947,57 +1418,40 @@ export default function ControleMassa() {
     return () => window.clearTimeout(t);
   }, [location.hash, loadingVinculo]);
 
-  /** Uma coleta por MTR (lista de coletas já vem por created_at desc — primeira ocorrência ganha). */
-  const coletaPorMtrId = useMemo(() => {
-    const map = new Map<string, ColetaOpcao>();
-    for (const c of todasColetas) {
-      if (!c.mtr_id) continue;
-      if (!map.has(c.mtr_id)) map.set(c.mtr_id, c);
-    }
-    return map;
-  }, [todasColetas]);
-
-  /** MTRs sem coleta vinculada — elegíveis para lançar nova pesagem (passo 1). */
+  /** Opções do passo 1: MTR (com ou sem coleta) e coletas filhas quando há vários tickets por MTR. */
   const opcoesMtrParaPesagem = useMemo(() => {
-    const resolved = resolverColetaContexto(todasColetas, {
-      coleta: urlColetaId,
-      mtr: urlMtrId,
-      programacao: urlProgramacaoId,
-      cliente: urlClienteId,
-    });
-
     const linhas: { mtr: MtrResumo; coleta: ColetaOpcao | null }[] = [];
 
     for (const m of mtrsLista) {
       if (m.status === "Cancelado") continue;
-      if (coletaPorMtrId.has(m.id)) continue;
-      linhas.push({ mtr: m, coleta: null });
-    }
-
-    linhas.sort((a, b) =>
-      b.mtr.numero.localeCompare(a.mtr.numero, "pt-BR", { numeric: true })
-    );
-
-    if (resolved?.mtr_id && !coletaPorMtrId.has(resolved.mtr_id)) {
-      const ja = linhas.some((l) => l.mtr.id === resolved.mtr_id);
-      if (!ja) {
-        const m = mtrsLista.find((x) => x.id === resolved.mtr_id);
-        if (m && m.status !== "Cancelado") {
-          linhas.unshift({ mtr: m, coleta: null });
+      const coletasMtr = todasColetas.filter((c) => c.mtr_id === m.id);
+      if (coletasMtr.length === 0) {
+        linhas.push({ mtr: m, coleta: null });
+      } else if (coletasMtr.length === 1) {
+        linhas.push({ mtr: m, coleta: coletasMtr[0]! });
+      } else {
+        linhas.push({ mtr: m, coleta: null });
+        for (const c of coletasMtr) {
+          linhas.push({ mtr: m, coleta: c });
         }
       }
     }
 
+    linhas.sort((a, b) => {
+      const na = a.mtr.numero;
+      const nb = b.mtr.numero;
+      if (na !== nb) return nb.localeCompare(na, "pt-BR", { numeric: true });
+      if (!a.coleta && b.coleta) return -1;
+      if (a.coleta && !b.coleta) return 1;
+      return String(b.coleta?.numero ?? "").localeCompare(
+        String(a.coleta?.numero ?? ""),
+        "pt-BR",
+        { numeric: true }
+      );
+    });
+
     return linhas;
-  }, [
-    mtrsLista,
-    coletaPorMtrId,
-    todasColetas,
-    urlColetaId,
-    urlMtrId,
-    urlProgramacaoId,
-    urlClienteId,
-  ]);
+  }, [mtrsLista, todasColetas]);
 
   /** Valor do `<select>`: id da MTR ou `coleta:uuid` para coleta sem MTR. */
   const valorSelectVinculo = useMemo(() => {
@@ -1054,33 +1508,6 @@ export default function ControleMassa() {
     void carregarCargo();
   }, []);
 
-  useEffect(() => {
-    void fetchResiduosCatalogo().then(setResiduosCatalogo);
-  }, []);
-
-  const catalogoResiduosPorId = useMemo(
-    () => mapResiduosPorId(residuosCatalogo),
-    [residuosCatalogo]
-  );
-
-  const coletasComCatalogoResiduo = useMemo(() => {
-    return todasColetas.map((c) => {
-      const rid = c.residuo_catalogo_id;
-      if (!rid) {
-        return {
-          ...c,
-          residuo_codigo: null as string | null,
-          residuo_nome_lista: null as string | null,
-        };
-      }
-      const r = catalogoResiduosPorId.get(rid);
-      if (!r) {
-        return { ...c, residuo_codigo: null, residuo_nome_lista: null };
-      }
-      return { ...c, residuo_codigo: r.codigo, residuo_nome_lista: r.nome };
-    });
-  }, [todasColetas, catalogoResiduosPorId]);
-
   function handleInputChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
@@ -1092,36 +1519,149 @@ export default function ControleMassa() {
     }));
   }
 
-  function aplicarColetaNoForm(coletaSelecionada: ColetaOpcao) {
-    setMtrSemColetaSelecionado(null);
+  function registrarTipoCaminhaoHeranca(heranca: MtrHerancaPesagem | null) {
+    if (!heranca?.programacao_id || !heranca.tipo_caminhao) return;
+    setTipoVeiculoMtrSelecionada("");
+    setTipoCaminhaoPorProgramacao((prev) => ({
+      ...prev,
+      [heranca.programacao_id!]: heranca.tipo_caminhao,
+    }));
+  }
+
+  function montarFormPesagemComColeta(
+    prev: FormRegistro,
+    coletaSelecionada: ColetaOpcao,
+    heranca: MtrHerancaPesagem | null
+  ): FormRegistro {
+    let herancaEfetiva = heranca;
+    if (heranca) {
+      const linhasMtr = linhasComConteudo(heranca.linhas_residuo);
+      if (linhasMtr.length > 1) {
+        const filtradas = heranca.linhas_residuo.filter((l) =>
+          coletaCorrespondeResiduo(coletaSelecionada, l.texto)
+        );
+        const filtradasCom = linhasComConteudo(filtradas);
+        const coletaItens = linhasComConteudo(
+          coletaSelecionada.residuos_itens ??
+            parseResiduosFromRow({
+              tipo_residuo: coletaSelecionada.tipo_residuo,
+              residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
+            })
+        );
+        // Coleta já é de um único resíduo → mantém só a linha correspondente da MTR
+        if (filtradasCom.length === 1 && coletaItens.length === 1) {
+          herancaEfetiva = { ...heranca, linhas_residuo: filtradas };
+        }
+      }
+    }
+
     const linhasBase =
       coletaSelecionada.residuos_itens ??
       parseResiduosFromRow({
         tipo_residuo: coletaSelecionada.tipo_residuo,
         residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
       });
-    const linhas = aplicarPesosColetaNasLinhas(linhasBase, {
-      peso_tara: coletaSelecionada.peso_tara,
-      peso_bruto: coletaSelecionada.peso_bruto,
-      peso_liquido: coletaSelecionada.peso_liquido,
-    });
-    setForm((prev) =>
+    const linhas = aplicarPesosColetaNasLinhas(
+      linhasResiduoHerancaOuColeta(linhasBase, herancaEfetiva),
+      {
+        peso_tara: coletaSelecionada.peso_tara,
+        peso_bruto: coletaSelecionada.peso_bruto,
+        peso_liquido: coletaSelecionada.peso_liquido,
+      }
+    );
+    const campos = herancaEfetiva
+      ? aplicarHerancaMtrEmCamposPesagem(
+          { placa: coletaSelecionada.placa, motorista: coletaSelecionada.motorista },
+          herancaEfetiva
+        )
+      : { placa: coletaSelecionada.placa, motorista: coletaSelecionada.motorista };
+
+    const mtrNo =
+      mtrsLista.find((m) => m.id === coletaSelecionada.mtr_id)?.numero ?? null;
+    const ticketEx = numeroTicketPorColeta.get(coletaSelecionada.id);
+
+    return preencherNumeroTicketNoForm(
       mergeFormResiduosLinhas(
         {
           ...prev,
           coleta_id: coletaSelecionada.id,
           empresa: coletaSelecionada.cliente || prev.empresa,
-          placa: coletaSelecionada.placa || prev.placa,
-          motorista: coletaSelecionada.motorista || prev.motorista,
+          placa: campos.placa || prev.placa,
+          motorista: campos.motorista || prev.motorista,
         },
         linhas
-      )
+      ),
+      {
+        numeroMtr: mtrNo,
+        ticketExistenteColeta: ticketEx,
+        totalSegmentos: linhasComConteudo(linhas).length || 1,
+      }
     );
+  }
+
+  function aplicarColetaNoForm(coletaSelecionada: ColetaOpcao) {
+    setMtrSemColetaSelecionado(null);
+    setTipoVeiculoMtrSelecionada("");
+
+    const aplicar = (heranca: MtrHerancaPesagem | null) => {
+      registrarTipoCaminhaoHeranca(heranca);
+      setForm((prev) => montarFormPesagemComColeta(prev, coletaSelecionada, heranca));
+    };
+
+    if (coletaSelecionada.mtr_id) {
+      void buscarMtrHerancaPesagem(coletaSelecionada.mtr_id).then((heranca) => {
+        aplicar(heranca);
+      });
+      return;
+    }
+
+    aplicar(null);
+  }
+
+  function aplicarHerancaMtrSemColeta(mtrId: string, clienteMtr: string) {
+    setMtrSemColetaSelecionado(mtrId);
+    void buscarMtrHerancaPesagem(mtrId).then((heranca) => {
+      const linhas = linhasResiduoHerancaOuColeta(
+        [linhaVaziaResiduoPesagem()],
+        heranca
+      );
+      if (heranca?.tipo_caminhao) {
+        setTipoVeiculoMtrSelecionada(heranca.tipo_caminhao);
+        registrarTipoCaminhaoHeranca(heranca);
+      } else {
+        setTipoVeiculoMtrSelecionada("");
+      }
+
+      const mtrNo = mtrsLista.find((m) => m.id === mtrId)?.numero ?? null;
+
+      setForm((prev) =>
+        preencherNumeroTicketNoForm(
+          mergeFormResiduosLinhas(
+            {
+              ...prev,
+              coleta_id: "",
+              empresa: clienteMtr || prev.empresa,
+              placa: heranca?.placa ?? "",
+              motorista: heranca?.motorista ?? "",
+              peso_tara: "",
+              peso_bruto: "",
+              peso_liquido: "",
+            },
+            linhas
+          ),
+          {
+            numeroMtr: mtrNo,
+            totalSegmentos: linhasComConteudo(linhas).length || 1,
+          }
+        )
+      );
+    });
   }
 
   function aplicarSelecaoVinculo(v: string) {
     if (!v) {
       setMtrSemColetaSelecionado(null);
+      setTipoVeiculoMtrSelecionada("");
       setErroTela("");
       setForm((prev) => ({
         ...prev,
@@ -1149,44 +1689,34 @@ export default function ControleMassa() {
       return;
     }
 
-    const c = todasColetas.find((item) => item.mtr_id === v);
-    if (!c) {
-      const m = mtrsLista.find((x) => x.id === v);
-      setMtrSemColetaSelecionado(v);
-      setForm((prev) =>
-        mergeFormResiduosLinhas(
-          {
-            ...prev,
-            coleta_id: "",
-            empresa: m?.cliente ?? "",
-            placa: "",
-            motorista: "",
-            peso_tara: "",
-            peso_bruto: "",
-            peso_liquido: "",
-          },
-          [
-            {
-              ...linhaVaziaResiduoPesagem(),
-              catalogo_id: "",
-              texto: m?.tipo_residuo ? m.tipo_residuo : prev.residuo,
-            },
-          ]
-        )
-      );
+    const coletasMtr = todasColetas.filter((item) => item.mtr_id === v);
+    const m = mtrsLista.find((x) => x.id === v);
+
+    if (coletasMtr.length === 0) {
+      aplicarHerancaMtrSemColeta(v, m?.cliente ?? "");
       setErroTela(
-        "Esta MTR ainda não tem coleta no sistema. Ao salvar a pesagem, uma coleta será criada e vinculada automaticamente a esta MTR."
+        "Esta MTR ainda não tem coleta no sistema. Ao salvar a pesagem, uma ou mais coletas/tickets serão criados (um resíduo por ticket)."
       );
       return;
     }
 
-    setErroTela("");
-    aplicarColetaNoForm(c);
+    if (coletasMtr.length === 1) {
+      setErroTela("");
+      aplicarColetaNoForm(coletasMtr[0]!);
+      return;
+    }
+
+    aplicarHerancaMtrSemColeta(v, m?.cliente ?? "");
+    setErroTela(
+      "Esta MTR tem vários resíduos/tickets. Preencha os pesos de cada linha e salve — será gerado ou atualizado um ticket por resíduo."
+    );
   }
 
   function limparFormularioPesagem() {
     setMtrSemColetaSelecionado(null);
+    setTipoVeiculoMtrSelecionada("");
     setMtrPickerAberto(false);
+    setColetasImpressaoSessao([]);
     setForm(formInicial);
     setErroTela("");
     setSucesso("");
@@ -1256,35 +1786,68 @@ export default function ControleMassa() {
     return c;
   }, [form.coleta_id, todasColetas]);
 
-  const rotuloVinculoMtrExibido = useMemo(() => {
-    const val = valorSelectMtrExibido;
-    if (!val) return "";
-    if (val.startsWith("coleta:")) {
-      const id = val.slice("coleta:".length);
-      const c =
-        opcaoColetaSemMtr?.id === id
-          ? opcaoColetaSemMtr
-          : todasColetas.find((x) => x.id === id);
-      if (c) return `Coleta ${c.numero} (sem MTR)`;
-      return "Coleta (sem MTR)";
+  const resumoSelecaoMtr = useMemo((): ResumoSelecaoMtr => {
+    if (opcaoColetaSemMtr && form.coleta_id.trim() === opcaoColetaSemMtr.id) {
+      return { tipo: "coleta_sem_mtr", coleta: opcaoColetaSemMtr };
     }
-    const linha = opcoesMtrParaPesagem.find((l) => l.mtr.id === val);
-    if (linha) {
-      const { mtr, coleta } = linha;
-      return !coleta
-        ? `${mtr.numero} · ${mtr.cliente} — sem coleta vinculada`
-        : `${mtr.numero} · ${mtr.cliente} · coleta ${coleta.numero} (${formatarEtapaParaUI(coleta.etapaFluxo)})`;
+
+    if (mtrSemColetaSelecionado) {
+      const m = mtrsLista.find((x) => x.id === mtrSemColetaSelecionado);
+      if (!m) return { tipo: "vazio" };
+      const qtd = todasColetas.filter((c) => c.mtr_id === mtrSemColetaSelecionado).length;
+      if (qtd > 1) return { tipo: "mtr_todos", mtr: m, qtdTickets: qtd };
+      return { tipo: "mtr_nova", mtr: m };
     }
-    const m = mtrsLista.find((x) => x.id === val);
-    if (m) return `${m.numero} · ${m.cliente} — sem coleta vinculada`;
-    return val;
+
+    const cid = form.coleta_id.trim();
+    if (!cid) return { tipo: "vazio" };
+
+    const c = todasColetas.find((x) => x.id === cid);
+    if (!c?.mtr_id) return { tipo: "vazio" };
+
+    const m = mtrsLista.find((x) => x.id === c.mtr_id);
+    if (!m) return { tipo: "vazio" };
+
+    const coletasMtr = todasColetas
+      .filter((x) => x.mtr_id === c.mtr_id)
+      .sort((a, b) =>
+        String(b.numero).localeCompare(String(a.numero), "pt-BR", { numeric: true })
+      );
+
+    if (coletasMtr.length === 1) {
+      return { tipo: "mtr_unica", mtr: m, coleta: c };
+    }
+
+    const indiceTicket = coletasMtr.findIndex((x) => x.id === c.id) + 1;
+    return {
+      tipo: "coleta",
+      mtrNumero: m.numero,
+      coleta: c,
+      indiceTicket: indiceTicket > 0 ? indiceTicket : undefined,
+    };
   }, [
-    valorSelectMtrExibido,
-    opcoesMtrParaPesagem,
+    form.coleta_id,
+    mtrSemColetaSelecionado,
     opcaoColetaSemMtr,
     todasColetas,
     mtrsLista,
   ]);
+
+  const mtrAtivoParaAtalhos = useMemo(() => {
+    if (mtrSemColetaSelecionado) return mtrSemColetaSelecionado;
+    const cid = form.coleta_id.trim();
+    if (!cid) return null;
+    return todasColetas.find((c) => c.id === cid)?.mtr_id ?? null;
+  }, [mtrSemColetaSelecionado, form.coleta_id, todasColetas]);
+
+  const coletasAtalhoMtr = useMemo(() => {
+    if (!mtrAtivoParaAtalhos) return [];
+    return todasColetas
+      .filter((c) => c.mtr_id === mtrAtivoParaAtalhos)
+      .sort((a, b) =>
+        String(b.numero).localeCompare(String(a.numero), "pt-BR", { numeric: true })
+      );
+  }, [mtrAtivoParaAtalhos, todasColetas]);
 
   const mostrarOpcaoColetaSemMtr = useMemo(() => {
     if (!opcaoColetaSemMtr) return false;
@@ -1327,10 +1890,20 @@ export default function ControleMassa() {
       cliente: urlClienteId,
     });
 
-    if (!target) return;
-
     const urlKey = [urlColetaId, urlMtrId, urlProgramacaoId, urlClienteId].join("|");
     if (prevContextoUrlKeyRef.current === urlKey) return;
+
+    if (!target) {
+      if (urlMtrId) {
+        prevContextoUrlKeyRef.current = urlKey;
+        setSecaoPesagemAberta(true);
+        const m = mtrsLista.find((x) => x.id === urlMtrId);
+        queueMicrotask(() => {
+          aplicarHerancaMtrSemColeta(urlMtrId, m?.cliente ?? "");
+        });
+      }
+      return;
+    }
 
     prevContextoUrlKeyRef.current = urlKey;
     setSecaoPesagemAberta(true);
@@ -1352,6 +1925,7 @@ export default function ControleMassa() {
     urlMtrId,
     urlProgramacaoId,
     urlClienteId,
+    mtrsLista,
   ]);
 
   function abrirFormularioPesagem() {
@@ -1377,11 +1951,6 @@ export default function ControleMassa() {
     setErroTela("");
     setSucesso("");
 
-    if (!form.numero_ticket.trim()) {
-      setErroTela("Preencha o número do ticket.");
-      return;
-    }
-
     if (!form.data.trim()) {
       setErroTela("Preencha a data.");
       return;
@@ -1396,6 +1965,15 @@ export default function ControleMassa() {
     const mtrLinha = mtrIdParaEmpresa
       ? mtrsLista.find((m) => m.id === mtrIdParaEmpresa)
       : undefined;
+    const mtrNumeroParaTicket = (mtrLinha?.numero ?? "").trim();
+
+    if (!form.numero_ticket.trim() && !podeGerarNumeroTicketFromMtr(mtrNumeroParaTicket)) {
+      setErroTela(
+        "Preencha o número do ticket ou selecione uma MTR com número válido para gerar automaticamente."
+      );
+      return;
+    }
+
     const empresaDaMtr = (mtrLinha?.cliente ?? "").trim();
 
     const empresaFinal = (form.empresa.trim() || empresaDaMtr).trim();
@@ -1409,13 +1987,174 @@ export default function ControleMassa() {
       : undefined;
     const tipoResiduoColeta = (coletaVinculoPre?.tipo_residuo ?? "").trim();
     const tipoResiduoMtr = (mtrLinha?.tipo_residuo != null ? String(mtrLinha.tipo_residuo) : "").trim();
-    const resolvido = resolverResiduosParaGravacao(form.residuos_linhas, catalogoResiduosPorId, {
+    const resolvido = resolverResiduosParaGravacao(form.residuos_linhas, {
       tipoResiduoColeta,
       tipoResiduoMtr,
     });
 
     if (resolvido.erro) {
       setErroTela(resolvido.erro);
+      return;
+    }
+
+    const mtrIdPreSegmentacao =
+      mtrSemColetaSelecionado || coletaVinculoPre?.mtr_id || null;
+
+    if (
+      !mtrIdPreSegmentacao &&
+      linhasComConteudo(form.residuos_linhas).length > 1
+    ) {
+      setErroTela(
+        "Cada ticket aceita apenas um resíduo. Vincule uma MTR com vários resíduos para gerar vários tickets (um por resíduo), ou deixe uma única linha de resíduo."
+      );
+      return;
+    }
+
+    const mtrIdSegmentacao =
+      mtrSemColetaSelecionado ||
+      coletaVinculoPre?.mtr_id ||
+      null;
+
+    if (deveSegmentarTicketsPorMtr(mtrIdSegmentacao, form.residuos_linhas)) {
+      const segmentos = segmentosResiduoParaTickets(form.residuos_linhas);
+      const mtrNumeroSeg =
+        mtrsLista.find((m) => m.id === mtrIdSegmentacao)?.numero?.trim() ?? "";
+      let coletasMtr = todasColetas.filter((c) => c.mtr_id === mtrIdSegmentacao);
+      const coletasUsadas = new Set<string>();
+      const coletasGravadas: string[] = [];
+      let ticketsOk = 0;
+
+      setSalvando(true);
+
+      for (let i = 0; i < segmentos.length; i++) {
+        const linha = segmentos[i]!;
+        const numeroTicketSeg = numeroTicketParaSegmento(
+          mtrNumeroSeg,
+          i,
+          segmentos.length,
+          form.numero_ticket
+        );
+
+        if (!numeroTicketSeg.trim()) {
+          setErroTela(
+            "Não foi possível gerar o número do ticket a partir da MTR. Verifique o número da MTR."
+          );
+          setSalvando(false);
+          return;
+        }
+
+        let coletaIdSeg = "";
+
+        const coletaForm =
+          form.coleta_id.trim() && i === 0
+            ? todasColetas.find((c) => c.id === form.coleta_id.trim())
+            : undefined;
+
+        if (coletaForm && coletaCorrespondeResiduo(coletaForm, linha.texto)) {
+          coletaIdSeg = coletaForm.id;
+        } else {
+          const existente = coletasMtr.find(
+            (c) => !coletasUsadas.has(c.id) && coletaCorrespondeResiduo(c, linha.texto)
+          );
+          if (existente) coletaIdSeg = existente.id;
+        }
+
+        if (!coletaIdSeg) {
+          const agSeg = agregarPesosDasLinhas([linha]);
+          const resSeg = resolverResiduosParaGravacao([linha], {
+            tipoResiduoMtr: tipoResiduoMtr,
+          });
+          if (resSeg.erro) {
+            setErroTela(resSeg.erro);
+            setSalvando(false);
+            return;
+          }
+
+          const criada = await criarColetaVinculadaAMtr(mtrIdSegmentacao!, {
+            dataRef: form.data,
+            pesoTara: agSeg.pesoTaraNum,
+            pesoBruto: agSeg.pesoBrutoNum,
+            pesoLiquido: agSeg.pesoLiquidoNum,
+            motorista: form.motorista,
+            placa: form.placa,
+            residuoFallback: resSeg.texto,
+            residuo_catalogo_id: resSeg.catalogo_id,
+            residuos_itens: resSeg.residuos_itens,
+          });
+
+          if (!criada.ok) {
+            setErroTela(criada.message);
+            setSalvando(false);
+            return;
+          }
+
+          coletaIdSeg = criada.coletaId;
+          coletasMtr = [
+            ...coletasMtr,
+            {
+              id: criada.coletaId,
+              numero: "—",
+              cliente: empresaFinal,
+              tipo_residuo: resSeg.texto,
+              residuo_catalogo_id: null,
+              placa: form.placa,
+              motorista: form.motorista,
+              status: "",
+              etapaFluxo: "BRUTO_REGISTRADO",
+              peso_tara: agSeg.pesoTaraNum,
+              peso_bruto: agSeg.pesoBrutoNum,
+              peso_liquido: agSeg.pesoLiquidoNum,
+              mtr_id: mtrIdSegmentacao,
+            },
+          ];
+        }
+
+        coletasUsadas.add(coletaIdSeg);
+
+        const coletaSeg = todasColetas.find((c) => c.id === coletaIdSeg) ?? coletasMtr.find((c) => c.id === coletaIdSeg);
+        const persist = await persistirPesagemUmSegmento({
+          coletaId: coletaIdSeg,
+          numeroTicket: numeroTicketSeg,
+          tipoTicket: form.tipo_ticket,
+          descricaoTicket: form.descricao_ticket,
+          data: form.data,
+          empresa: empresaFinal,
+          placa: form.placa,
+          motorista: form.motorista,
+          linhaResiduo: linha,
+          tipoResiduoMtr,
+          tipoResiduoColeta: (coletaSeg?.tipo_residuo ?? "").trim(),
+          status: form.status,
+        });
+
+        if (!persist.ok) {
+          setErroTela(persist.message);
+          setSalvando(false);
+          return;
+        }
+
+        if (persist.ticketOk) {
+          ticketsOk++;
+        }
+
+        coletasGravadas.push(coletaIdSeg);
+      }
+
+      setMtrSemColetaSelecionado(null);
+      await atualizarColetasAposSalvar(coletasGravadas);
+      setColetasImpressaoSessao(coletasGravadas);
+      setForm((prev) => ({
+        ...prev,
+        coleta_id: coletasGravadas[0] ?? prev.coleta_id,
+      }));
+      setSalvando(false);
+
+      setSucesso(
+        ticketsOk === segmentos.length
+          ? `${segmentos.length} tickets gerados (1 resíduo cada), vinculados à mesma MTR.`
+          : `${segmentos.length} pesagens gravadas; verifique avisos sobre tickets ou fila do Faturamento.`
+      );
+      setTimeout(() => setSucesso(""), 6000);
       return;
     }
 
@@ -1475,7 +2214,15 @@ export default function ControleMassa() {
 
     setSalvando(true);
 
-    const numeroTicketTrim = form.numero_ticket.trim();
+    const numeroTicketTrim =
+      form.numero_ticket.trim() ||
+      (podeGerarNumeroTicketFromMtr(mtrNumeroParaTicket)
+        ? numeroTicketFromMtr(
+            mtrNumeroParaTicket,
+            0,
+            Math.max(1, linhasComConteudo(form.residuos_linhas).length)
+          )
+        : "");
     const payloadCampos: Record<string, unknown> = {
       numero_ticket: numeroTicketTrim,
       data: form.data,
@@ -1571,6 +2318,9 @@ export default function ControleMassa() {
       tipo_residuo: tipoResGravar,
       residuo_catalogo_id: resCatGravar,
       residuos_itens: residuosItensPersist,
+      placa: limparOuNull(form.placa),
+      motorista: limparOuNull(form.motorista),
+      motorista_nome: limparOuNull(form.motorista),
       fluxo_status: fluxoPosPesagem,
       etapa_operacional: fluxoPosPesagem,
       status_processo: "EM_CONFERENCIA",
@@ -1611,11 +2361,12 @@ export default function ControleMassa() {
     }
 
     setMtrSemColetaSelecionado(null);
-    await fetchMtrsEColetas({ extraColetaIds: [coletaId] });
-    setForm({
-      ...formInicial,
+    await atualizarColetasAposSalvar([coletaId]);
+    setColetasImpressaoSessao([coletaId]);
+    setForm((prev) => ({
+      ...prev,
       coleta_id: coletaId,
-    });
+    }));
     setSalvando(false);
 
     setTimeout(() => {
@@ -1640,7 +2391,7 @@ export default function ControleMassa() {
   }
 
   const coletasListaOrdenadas = useMemo(() => {
-    const arr = [...coletasComCatalogoResiduo];
+    const arr = [...todasColetas];
     arr.sort((a, b) => {
       const ta = a.created_at ? Date.parse(a.created_at) : 0;
       const tb = b.created_at ? Date.parse(b.created_at) : 0;
@@ -1648,7 +2399,7 @@ export default function ControleMassa() {
       return String(b.numero).localeCompare(String(a.numero), undefined, { numeric: true });
     });
     return arr;
-  }, [coletasComCatalogoResiduo]);
+  }, [todasColetas]);
 
   const coletasListaFiltradas = useMemo(() => {
     const base = modoTela === "operacao" ? listaOperacao : coletasListaOrdenadas;
@@ -1664,8 +2415,6 @@ export default function ControleMassa() {
         c.numero,
         c.cliente,
         c.tipo_residuo,
-        c.residuo_codigo ?? "",
-        c.residuo_nome_lista ?? "",
         c.placa,
         c.motorista,
         mtrNo,
@@ -2166,9 +2915,6 @@ export default function ControleMassa() {
                       <th style={thListaColetaStyle}>Tipo cam.</th>
                     ) : null}
                     <th style={{ ...thListaColetaStyle, minWidth: "140px" }}>Cliente</th>
-                    {modoTela === "auditoria" ? (
-                      <th style={{ ...thListaColetaStyle, width: "76px" }}>Cód.</th>
-                    ) : null}
                     <th style={{ ...thListaColetaStyle, minWidth: "120px" }}>Resíduo</th>
                     {modoTela === "auditoria" ? (
                       <>
@@ -2276,20 +3022,6 @@ export default function ControleMassa() {
                         >
                           {c.cliente || "—"}
                         </td>
-                        {modoTela === "auditoria" ? (
-                          <td
-                            style={{
-                              ...tdListaColetaStyle,
-                              whiteSpace: "nowrap",
-                              fontWeight: 800,
-                              color: "#0f766e",
-                              fontSize: "10px",
-                            }}
-                            title={c.residuo_codigo || undefined}
-                          >
-                            {c.residuo_codigo || "—"}
-                          </td>
-                        ) : null}
                         <td
                           style={{
                             ...tdListaColetaStyle,
@@ -2297,9 +3029,9 @@ export default function ControleMassa() {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
-                          title={c.residuo_nome_lista || c.tipo_residuo || undefined}
+                          title={c.tipo_residuo || undefined}
                         >
-                          {c.residuo_nome_lista || c.tipo_residuo || "—"}
+                          {c.tipo_residuo || "—"}
                         </td>
                         {modoTela === "auditoria" ? (
                           <>
@@ -2496,6 +3228,24 @@ export default function ControleMassa() {
                 gap: "18px",
               }}
             >
+              {somenteTicketPadrao ? (
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "12px",
+                    border: "1px solid #99f6e4",
+                    background: "#f0fdfa",
+                    fontSize: "13px",
+                    color: "#0f766e",
+                    fontWeight: 600,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Perfil <strong>Operadores (Time R)</strong>: lançamento de pesagem e ticket no formato
+                  padrão (saída, número da MTR). Sem acesso a alterações de faturamento ou
+                  financeiro.
+                </div>
+              ) : null}
               <div>
                 <div
                   style={{
@@ -2508,180 +3258,41 @@ export default function ControleMassa() {
                   1. MTR
                 </div>
 
-                <div
-                  ref={mtrComboRef}
-                  style={{ position: "relative", width: "100%", maxWidth: "100%" }}
-                >
-                  <button
-                    type="button"
-                    disabled={loadingVinculo}
-                    onClick={() => {
-                      if (loadingVinculo) return;
-                      setMtrPickerAberto((aberto) => {
-                        const prox = !aberto;
-                        if (prox) setFiltroMtr("");
-                        return prox;
-                      });
-                    }}
-                    aria-expanded={mtrPickerAberto}
-                    aria-haspopup="listbox"
-                    style={{
-                      ...inputStyle,
-                      maxWidth: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "10px",
-                      textAlign: "left",
-                      cursor: loadingVinculo ? "not-allowed" : "pointer",
-                      opacity: loadingVinculo ? 0.65 : 1,
-                    }}
-                  >
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        flex: 1,
-                        minWidth: 0,
-                      }}
-                    >
-                      {loadingVinculo
-                        ? "A carregar…"
-                        : rotuloVinculoMtrExibido || "— Escolher MTR —"}
-                    </span>
-                    <span style={{ flexShrink: 0, color: "#64748b", fontSize: "11px" }} aria-hidden>
-                      {mtrPickerAberto ? "▲" : "▼"}
-                    </span>
-                  </button>
-
-                  {mtrPickerAberto && !loadingVinculo ? (
-                    <div
-                      role="listbox"
-                      style={{
-                        position: "absolute",
-                        zIndex: 50,
-                        left: 0,
-                        right: 0,
-                        top: "calc(100% + 6px)",
-                        background: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "12px",
-                        boxShadow: "0 10px 40px rgba(15, 23, 42, 0.12)",
-                        overflow: "hidden",
-                        display: "flex",
-                        flexDirection: "column",
-                        maxHeight: "min(380px, 70vh)",
-                      }}
-                    >
-                      <input
-                        type="search"
-                        autoComplete="off"
-                        autoFocus
-                        value={filtroMtr}
-                        onChange={(e) => setFiltroMtr(e.target.value)}
-                        placeholder="Pesquisar por n.º MTR, cliente, coleta, etapa, placa…"
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            e.stopPropagation();
-                            setMtrPickerAberto(false);
-                          }
-                        }}
-                        style={{
-                          ...inputStyle,
-                          borderRadius: 0,
-                          border: "none",
-                          borderBottom: "1px solid #e2e8f0",
-                          height: "44px",
-                        }}
-                      />
-                      <div
-                        style={{
-                          overflowY: "auto",
-                          flex: 1,
-                          minHeight: 0,
-                          padding: "6px 0",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          role="option"
-                          onClick={() => {
-                            aplicarSelecaoVinculo("");
-                            setMtrPickerAberto(false);
-                            setFiltroMtr("");
-                          }}
-                          style={{
-                            ...mtrComboOpcaoStyle,
-                            color: "#64748b",
-                            fontWeight: 600,
-                          }}
-                        >
-                          — Limpar seleção —
-                        </button>
-                        {mostrarOpcaoColetaSemMtr && opcaoColetaSemMtr ? (
-                          <button
-                            type="button"
-                            role="option"
-                            onClick={() => {
-                              aplicarSelecaoVinculo(`coleta:${opcaoColetaSemMtr.id}`);
-                              setMtrPickerAberto(false);
-                              setFiltroMtr("");
-                            }}
-                            style={{
-                              ...mtrComboOpcaoStyle,
-                              ...(valorSelectMtrExibido === `coleta:${opcaoColetaSemMtr.id}`
-                                ? { background: "#eff6ff" }
-                                : {}),
-                            }}
-                          >
-                            Coleta {opcaoColetaSemMtr.numero} (sem MTR)
-                          </button>
-                        ) : null}
-                        {opcoesMtrFiltradas.map(({ mtr, coleta }) => {
-                          const semColeta = !coleta;
-                          const label = semColeta
-                            ? `${mtr.numero} · ${mtr.cliente} — sem coleta vinculada`
-                            : `${mtr.numero} · ${mtr.cliente} · coleta ${coleta.numero} (${formatarEtapaParaUI(coleta.etapaFluxo)})`;
-                          const sel = valorSelectMtrExibido === mtr.id;
-                          return (
-                            <button
-                              key={mtr.id}
-                              type="button"
-                              role="option"
-                              onClick={() => {
-                                aplicarSelecaoVinculo(mtr.id);
-                                setMtrPickerAberto(false);
-                                setFiltroMtr("");
-                              }}
-                              style={{
-                                ...mtrComboOpcaoStyle,
-                                ...(sel ? { background: "#eff6ff" } : {}),
-                              }}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                        {filtroMtrNorm &&
-                        mtrsLista.length > 0 &&
-                        opcoesMtrFiltradas.length === 0 &&
-                        !(mostrarOpcaoColetaSemMtr && opcaoColetaSemMtr) ? (
-                          <div
-                            style={{
-                              padding: "14px 16px",
-                              fontSize: "13px",
-                              color: "#64748b",
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            Nenhum resultado para «{filtroMtr.trim()}». Tente outro termo.
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+                <ControleMassaMtrPicker
+                  comboRef={mtrComboRef}
+                  aberto={mtrPickerAberto}
+                  onToggleAberto={() => {
+                    if (loadingVinculo) return;
+                    setMtrPickerAberto((aberto) => {
+                      const prox = !aberto;
+                      if (prox) setFiltroMtr("");
+                      return prox;
+                    });
+                  }}
+                  loading={loadingVinculo}
+                  filtro={filtroMtr}
+                  onFiltroChange={setFiltroMtr}
+                  linhasFiltradas={opcoesMtrFiltradas}
+                  valorExibido={valorSelectMtrExibido}
+                  coletaIdSelecionada={form.coleta_id.trim()}
+                  mtrSemColetaId={mtrSemColetaSelecionado}
+                  resumoSelecao={resumoSelecaoMtr}
+                  coletasAtalho={coletasAtalhoMtr}
+                  onSelecionar={(v) => {
+                    aplicarSelecaoVinculo(v);
+                    setMtrPickerAberto(false);
+                    setFiltroMtr("");
+                  }}
+                  mostrarColetaSemMtr={mostrarOpcaoColetaSemMtr}
+                  coletaSemMtr={opcaoColetaSemMtr}
+                  semResultados={
+                    Boolean(filtroMtrNorm) &&
+                    mtrsLista.length > 0 &&
+                    opcoesMtrFiltradas.length === 0 &&
+                    !(mostrarOpcaoColetaSemMtr && opcaoColetaSemMtr)
+                  }
+                  filtroAtivo={filtroMtr}
+                />
 
                 {!loadingVinculo && mtrsLista.length === 0 ? (
                   <p style={{ fontSize: "12px", color: "#b45309", margin: "10px 0 0", lineHeight: 1.4 }}>
@@ -2747,9 +3358,12 @@ export default function ControleMassa() {
                       value={
                         form.coleta_id.trim()
                           ? tipoCaminhaoPorProgramacao[
-                              (todasColetas.find((x) => x.id === form.coleta_id.trim())?.programacao_id ?? "") as string
+                              (todasColetas.find((x) => x.id === form.coleta_id.trim())
+                                ?.programacao_id ?? "") as string
                             ] ?? "—"
-                          : "—"
+                          : mtrSemColetaSelecionado
+                            ? tipoVeiculoMtrSelecionada || "—"
+                            : "—"
                       }
                       readOnly
                       style={{ ...inputStyle, height: "44px", fontSize: "14px", background: "#f8fafc" }}
@@ -2784,8 +3398,6 @@ export default function ControleMassa() {
                     onLinhasChange={(linhas) =>
                       setForm((prev) => mergeFormResiduosLinhas(prev, linhas))
                     }
-                    residuosCatalogo={residuosCatalogo}
-                    catalogoPorId={catalogoResiduosPorId}
                     inputStyle={inputStyle}
                   />
 
@@ -2829,7 +3441,18 @@ export default function ControleMassa() {
                       name="tipo_ticket"
                       value={form.tipo_ticket}
                       onChange={handleInputChange}
-                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
+                      disabled={somenteTicketPadrao}
+                      title={
+                        somenteTicketPadrao
+                          ? "Perfil com ticket apenas no formato padrão (saída)."
+                          : undefined
+                      }
+                      style={{
+                        ...inputStyle,
+                        height: "44px",
+                        fontSize: "14px",
+                        ...(somenteTicketPadrao ? { background: "#f8fafc" } : {}),
+                      }}
                     >
                       <option value="saida">Saída</option>
                       <option value="entrada">Entrada</option>
@@ -2838,13 +3461,35 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Número</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                      Número
+                      {numeroTicketAutoMtr ? (
+                        <span style={{ fontWeight: 600, color: "#64748b", marginLeft: 6 }}>
+                          (sufixo MTR)
+                        </span>
+                      ) : null}
+                    </label>
                     <input
                       name="numero_ticket"
                       value={form.numero_ticket}
                       onChange={handleInputChange}
-                      placeholder="N.º ticket"
-                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
+                      readOnly={numeroTicketAutoMtr || somenteTicketPadrao}
+                      placeholder={
+                        numeroTicketAutoMtr || somenteTicketPadrao
+                          ? "Gerado da MTR"
+                          : "N.º ticket"
+                      }
+                      title={
+                        numeroTicketAutoMtr && mtrSelecionada?.numero
+                          ? `Gerado automaticamente a partir da MTR ${mtrSelecionada.numero}`
+                          : undefined
+                      }
+                      style={{
+                        ...inputStyle,
+                        height: "44px",
+                        fontSize: "14px",
+                        ...(numeroTicketAutoMtr ? { background: "#f8fafc" } : {}),
+                      }}
                     />
                   </div>
 
@@ -2900,115 +3545,123 @@ export default function ControleMassa() {
               </div>
 
               {/* CARD 4 — AÇÃO FINAL */}
-              <div
-                id="massa-finalizar-anchor"
-                style={{
-                  border: "1px solid #bbf7d0",
-                  background: "linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)",
-                  borderRadius: "16px",
-                  padding: "16px",
-                  boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "14px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ minWidth: 260 }}>
-                  <div style={{ fontWeight: 900, color: "#065f46" }}>4. Guardar e imprimir</div>
-                  <div style={{ marginTop: 4, fontSize: "12px", color: "#047857", fontWeight: 700 }}>
-                    {form.coleta_id.trim()
-                      ? "Use «Salvar pesagem e ticket» para enviar ao Faturamento. «Imprimir ticket» só abre a impressão em papel."
-                      : "Selecione uma MTR ou coleta no passo 1 antes de salvar."}
-                  </div>
+              <div id="massa-finalizar-anchor" style={massaAcaoFinalCardStyle}>
+                <div style={{ flex: "1 1 220px", maxWidth: "420px" }}>
+                  <h3 style={massaAcaoFinalTituloStyle}>4. Guardar e imprimir</h3>
+                  <p style={massaAcaoFinalDescStyle}>
+                    {multiTicketImpressao
+                      ? "Salve uma vez para gerar os tickets. Depois imprima cada um separadamente."
+                      : form.coleta_id.trim() || coletasImpressaoSessao.length > 0
+                        ? "Salvar envia ao Faturamento. Imprimir abre só o ticket em papel."
+                        : "Selecione uma MTR ou coleta no passo 1 antes de salvar."}
+                  </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                  <button
-                    type="submit"
-                    disabled={salvando || !podeMutarMassa}
-                    title={!podeMutarMassa ? "Apenas balanceiro ou administrador pode salvar." : undefined}
-                    style={{
-                      height: "44px",
-                      padding: "0 18px",
-                      borderRadius: "12px",
-                      border: "1px solid #0f766e",
-                      background: podeMutarMassa ? "#0d9488" : "#e2e8f0",
-                      color: podeMutarMassa ? "#ffffff" : "#64748b",
-                      fontWeight: 900,
-                      cursor: salvando || !podeMutarMassa ? "not-allowed" : "pointer",
-                      opacity: salvando || !podeMutarMassa ? 0.7 : 1,
-                    }}
-                  >
-                    {salvando ? "Salvando…" : "Salvar pesagem e ticket"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cid = form.coleta_id.trim();
-                      if (!cid) return;
-                      if (!podeMutarMassa) {
-                        setErroTela(
-                          "Seu perfil não pode registar impressão do ticket. Apenas balanceiro ou administrador."
-                        );
-                        return;
+                <div style={massaAcoesBarStyle}>
+                  <div style={massaAcoesLinhaStyle}>
+                    <button
+                      type="submit"
+                      disabled={salvando || !podeMutarMassa}
+                      title={
+                        !podeMutarMassa
+                          ? "Apenas balanceiro ou administrador pode salvar."
+                          : undefined
                       }
-                      void (async () => {
-                        const res = await registrarTicketImpressoColeta(cid);
-                        if (!res.ok) {
-                          setErroTela(res.message);
-                          setSucesso("");
-                          return;
-                        }
-                        setErroTela("");
-                        setSucesso("Ticket enviado para impressão.");
-                        setTimeout(() => setSucesso(""), 5000);
-                        window.print();
-                      })();
-                    }}
-                    disabled={!podeImprimirTicket || !podeMutarMassa}
-                    title={
-                      !podeMutarMassa
-                        ? "Sem permissão para registar impressão do ticket."
-                        : podeImprimirTicket
-                          ? "Abre a janela de impressão do ticket (papel térmico / A4). A fila do Faturamento é atualizada ao salvar."
-                          : "Guarde primeiro com «Salvar». O botão ativa quando o ticket estiver gerado no fluxo."
-                    }
-                    style={{
-                      height: "44px",
-                      padding: "0 18px",
-                      borderRadius: "12px",
-                      border: "1px solid #16a34a",
-                      background: podeImprimirTicket ? "#16a34a" : "#dcfce7",
-                      color: podeImprimirTicket ? "#ffffff" : "#166534",
-                      fontWeight: 900,
-                      cursor: podeImprimirTicket ? "pointer" : "not-allowed",
-                      boxShadow: podeImprimirTicket ? "0 8px 20px rgba(22, 163, 74, 0.2)" : "none",
-                    }}
-                  >
-                    Imprimir ticket
-                  </button>
+                      style={{
+                        ...massaBtnPrimarioStyle,
+                        background: podeMutarMassa ? "#0f172a" : "#e2e8f0",
+                        borderColor: podeMutarMassa ? "#0f172a" : "#e2e8f0",
+                        color: podeMutarMassa ? "#ffffff" : "#64748b",
+                        cursor: salvando || !podeMutarMassa ? "not-allowed" : "pointer",
+                        opacity: salvando || !podeMutarMassa ? 0.75 : 1,
+                      }}
+                    >
+                      {salvando ? "Salvando…" : "Salvar pesagem e ticket"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => limparFormularioPesagem()}
+                      style={massaBtnSecundarioStyle}
+                    >
+                      Limpar
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      limparFormularioPesagem();
-                    }}
-                    style={{
-                      height: "44px",
-                      padding: "0 16px",
-                      borderRadius: "12px",
-                      border: "1px solid #cbd5e1",
-                      background: "#ffffff",
-                      color: "#0f172a",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Limpar
-                  </button>
+                  {(multiTicketImpressao || coletasImpressaoSessao.length >= 2) && (
+                    <div style={massaImpressaoGrupoStyle}>
+                      <span style={massaImpressaoLabelStyle}>Impressão</span>
+                      {ticketsSegmentoImpressao.map((seg) => {
+                        const ocupado = Boolean(imprimindoTicketColetaId);
+                        const ativo = imprimindoTicketColetaId === seg.coletaId;
+                        const habilitado =
+                          podeMutarMassa && seg.prontoImprimir && !ocupado && !salvando;
+                        return (
+                          <button
+                            key={`imprimir-ticket-${seg.indice}`}
+                            type="button"
+                            onClick={() =>
+                              void imprimirTicketDaColeta(
+                                seg.coletaId,
+                                `Ticket ${seg.indice}`
+                              )
+                            }
+                            disabled={!habilitado}
+                            title={
+                              seg.prontoImprimir
+                                ? `Ticket ${seg.numeroTicket || seg.indice} — ${seg.texto}`
+                                : "Salve a pesagem deste resíduo antes de imprimir."
+                            }
+                            style={{
+                              ...massaBtnSecundarioStyle,
+                              borderColor: habilitado ? "#0f172a" : "#e2e8f0",
+                              color: habilitado ? "#0f172a" : "#94a3b8",
+                              background: habilitado ? "#f8fafc" : "#ffffff",
+                              cursor: habilitado ? "pointer" : "not-allowed",
+                              opacity: ativo ? 0.7 : 1,
+                            }}
+                          >
+                            {ativo ? "Abrindo…" : `Ticket ${seg.indice}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!multiTicketImpressao && coletasImpressaoSessao.length < 2 && (
+                    <div style={massaImpressaoGrupoStyle}>
+                      <span style={massaImpressaoLabelStyle}>Impressão</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cid = coletaIdImpressaoUnica;
+                          if (!cid) return;
+                          void imprimirTicketDaColeta(cid, "Ticket");
+                        }}
+                        disabled={
+                          !podeImprimirTicket ||
+                          !podeMutarMassa ||
+                          salvando ||
+                          Boolean(imprimindoTicketColetaId)
+                        }
+                        title={
+                          !podeMutarMassa
+                            ? "Sem permissão para registar impressão do ticket."
+                            : podeImprimirTicket
+                              ? "Abre a impressão do ticket (papel térmico / A4)."
+                              : "Guarde primeiro com «Salvar»."
+                        }
+                        style={{
+                          ...massaBtnSecundarioStyle,
+                          borderColor: podeImprimirTicket ? "#0f172a" : "#e2e8f0",
+                          color: podeImprimirTicket ? "#0f172a" : "#94a3b8",
+                          background: podeImprimirTicket ? "#f8fafc" : "#ffffff",
+                          cursor: podeImprimirTicket ? "pointer" : "not-allowed",
+                        }}
+                      >
+                        {imprimindoTicketColetaId ? "Abrindo…" : "Imprimir ticket"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
@@ -3123,20 +3776,6 @@ const inputStyle: CSSProperties = {
   fontSize: "14px",
   color: "#0f172a",
   boxSizing: "border-box",
-};
-
-const mtrComboOpcaoStyle: CSSProperties = {
-  width: "100%",
-  border: "none",
-  background: "#ffffff",
-  textAlign: "left",
-  padding: "10px 14px",
-  fontSize: "14px",
-  color: "#0f172a",
-  cursor: "pointer",
-  display: "block",
-  fontWeight: 500,
-  lineHeight: 1.35,
 };
 
 const thListaColetaStyle: CSSProperties = {

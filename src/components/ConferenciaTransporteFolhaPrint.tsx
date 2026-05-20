@@ -7,6 +7,7 @@ import {
 } from '../lib/checklistMotoristaItens'
 import type { FolhaConferenciaTransporte } from '../lib/conferenciaTransporteFolha'
 import { ROTAS_CONFERENCIA_LINHAS } from '../lib/conferenciaTransporteFolha'
+import { razaoSocialCabecalhoDocumentosRg } from '../lib/rgAmbientalDadosCorporativos'
 
 const cell: CSSProperties = {
   border: '1px solid #000',
@@ -94,7 +95,7 @@ export function ConferenciaTransporteFolhaPrintView({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
         <img src={logoSrc} alt="" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
         <div style={{ flex: 1, textAlign: 'center', fontWeight: 800, fontSize: '12pt', paddingTop: 4 }}>
-          RG Ambiental Transportes Ltda
+          {razaoSocialCabecalhoDocumentosRg()}
         </div>
         <div style={{ width: 72 }} />
       </div>

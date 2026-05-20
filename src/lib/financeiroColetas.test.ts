@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   coletaVisivelListaFinanceiro,
+  dadosCobrancaColeta,
   etapaVisivelListaFinanceiro,
   isVencidoFinanceiro,
+  saldoAbertoFinanceiro,
 } from './financeiroColetas'
 
 describe('etapaVisivelListaFinanceiro', () => {
@@ -58,5 +60,25 @@ describe('isVencidoFinanceiro', () => {
   it('retorna false quando pago ou sem data', () => {
     expect(isVencidoFinanceiro('2020-01-01', 'Pago')).toBe(false)
     expect(isVencidoFinanceiro('', 'Pendente')).toBe(false)
+    expect(isVencidoFinanceiro('2020-01-01', 'Cancelado')).toBe(false)
+  })
+})
+
+describe('saldoAbertoFinanceiro', () => {
+  it('usa valor_pago da conta a receber', () => {
+    expect(
+      saldoAbertoFinanceiro(100, { valor: 500, valor_pago: 200, status_pagamento: 'Parcial' })
+    ).toBe(300)
+  })
+})
+
+describe('dadosCobrancaColeta', () => {
+  it('prioriza vencimento da conta a receber', () => {
+    const d = dadosCobrancaColeta(
+      { data_vencimento: '2026-06-01', status_pagamento: 'Pendente', valor_coleta: 100 },
+      { data_vencimento: '2026-01-15', status_pagamento: 'Pendente', valor: 250, valor_pago: 0 }
+    )
+    expect(d.dataVencimento).toBe('2026-01-15')
+    expect(d.saldoAberto).toBe(250)
   })
 })

@@ -60,7 +60,10 @@ const CARGOS_UI = [
   'Desenvolvedor',
   'Administrador',
   'Operacional',
+  'Operadores (Time R)',
+  'Operacional (Time T)',
   'Logística',
+  'Balanceiro',
   'Financeiro',
   'Comercial',
 ] as const

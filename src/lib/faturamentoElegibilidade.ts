@@ -2,6 +2,7 @@ import { indiceEtapaFluxo, normalizarEtapaColeta, type EtapaFluxo } from './flux
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 export type MotivoInelegivelFaturamento =
+  | 'mtr_cancelada'
   | 'peso_liquido_invalido'
   | 'cliente_obrigatorio'
   | 'conferencia_pendente'
@@ -26,6 +27,12 @@ export function etapaDaLinhaFaturamento(row: Pick<FaturamentoResumoViewRow, 'flu
 export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): ResultadoElegibilidadeFaturamento {
   const etapa = etapaDaLinhaFaturamento(row)
   const motivos: MotivoInelegivelFaturamento[] = []
+
+  const mtrSt = (row.mtr_status ?? '').trim()
+  if (mtrSt === 'Cancelado') motivos.push('mtr_cancelada')
+
+  const scMtr = (row.status_conferencia ?? '').trim()
+  if (scMtr === 'MTR_CANCELADA') motivos.push('mtr_cancelada')
 
   const p = row.peso_liquido
   if (!(p != null && Number(p) > 0)) motivos.push('peso_liquido_invalido')
@@ -57,6 +64,8 @@ export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): Result
 
 export function rotuloMotivoInelegivel(m: MotivoInelegivelFaturamento): string {
   switch (m) {
+    case 'mtr_cancelada':
+      return 'MTR cancelada — use frete/custo operacional se aplicável ou reative ticket no histórico.'
     case 'peso_liquido_invalido':
       return 'Peso líquido ausente ou inválido.'
     case 'cliente_obrigatorio':

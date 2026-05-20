@@ -163,14 +163,13 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
               <th style={th}>Conferência</th>
               <th style={th}>Situação</th>
               <th style={th}>Valor</th>
-              <th style={th}>Ref. NF</th>
               <th style={{ ...th, width: '108px' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtradas.length === 0 ? (
               <tr>
-                <td colSpan={11} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
                   Nenhum registro neste filtro.
                 </td>
               </tr>
@@ -204,7 +203,6 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
                     </span>
                   </td>
                   <td style={{ ...td, fontWeight: 700 }}>{fmtValor(r.faturamento_registro_valor ?? r.valor_coleta)}</td>
-                  <td style={td}>{r.faturamento_referencia_nf || r.referencia_nf || '—'}</td>
                   <td style={td}>
                     <button type="button" style={btnResumo} onClick={() => setResumoRow(r)}>
                       Ver resumo

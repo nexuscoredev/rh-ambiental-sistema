@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -12,14 +12,27 @@ import {
 import { isBenignSupabaseFetchError } from '../lib/supabaseErrors'
 import { cargoEhDesenvolvedor, cargoPodeEditarMtr } from '../lib/workflowPermissions'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
-import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { MtrManifestoPrint } from '../components/mtr/MtrManifestoPrint'
+import { MtrResiduosDescricaoForm } from '../components/mtr/MtrResiduosDescricaoForm'
 import { officialSiteUrl } from '../lib/officialSiteUrl'
+import { isMissingClienteContratoColumnsError } from '../lib/clienteContratoCadastro'
+import {
+  acondicionamentoFromContratoVeiculoEquipamento,
+  listaResiduosParaDocumentoMtr,
+  parseContratoClienteMtr,
+  residuosContratoParaLinhasPesagem,
+  residuosContratoParaListaDetalhesMtr,
+  syncResiduoPrincipalComLista,
+  tipoResiduoResumoContrato,
+  type MtrResiduoDetalhesCampos,
+} from '../lib/mtrClienteContratoAutofill'
+import type { ResiduoPesagemItem } from '../lib/residuosPesagem'
 import {
   nomeIndicaRgAmbiental,
   preencherCamposVazios,
   TRANSPORTADOR_RG_AMBIENTAL_PADRAO,
 } from '../lib/mtrTransportadorRgDefaults'
-import { MTR_RODAPE_VIAS, MTR_TEXTO_VIDE_FICHA, mtrTextoCelula } from '../lib/mtrPrintTexto'
+import { MTR_TEXTO_VIDE_FICHA } from '../lib/mtrPrintTexto'
 import ProgramacaoCalendarPicker from '../components/mtr/ProgramacaoCalendarPicker'
 import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
@@ -166,6 +179,10 @@ type MTRDetalhes = {
     responsavel: string
     telefone: string
   }
+  residuos_lista?: MtrResiduoDetalhesCampos[]
+  residuos_itens?: ResiduoPesagemItem[]
+  contrato_veiculos?: { tipo_veiculo: string; sem_custo: boolean; valor: string }[]
+  contrato_equipamentos?: { descricao: string; com_custo: boolean; valor: string }[]
 }
 
 type MTRFormState = Omit<MTR, 'id' | 'created_at' | 'status' | 'criado_por_nome' | 'criado_por_user_id'>
@@ -276,6 +293,11 @@ type ClienteRowAutofill = {
   link_google_maps: string | null
   descricao_veiculo: string | null
   mtr_coleta: string | null
+  equipamentos?: string | null
+  veiculos_contrato?: unknown
+  equipamentos_contrato?: unknown
+  residuos_contrato?: unknown
+  frequencia_coleta?: string | null
 }
 
 function montarEnderecoLinhaCliente(row: ClienteRowAutofill): string {
@@ -356,11 +378,18 @@ function mergeMtrDetalhesProfundo(raw: MTRDetalhes | null | undefined): MTRDetal
   if (!raw) return z
   const residuoL = { ...(raw.residuo as Record<string, string>) }
   delete residuoL.fp_numero
+  const rawAny = raw as MTRDetalhes & Record<string, unknown>
   return {
     gerador: { ...z.gerador, ...raw.gerador },
     residuo: { ...z.residuo, ...(residuoL as MTRDetalhes['residuo']) },
     transportador: { ...z.transportador, ...raw.transportador },
     destinatario: { ...z.destinatario, ...raw.destinatario },
+    residuos_lista: Array.isArray(rawAny.residuos_lista) ? rawAny.residuos_lista : undefined,
+    residuos_itens: Array.isArray(rawAny.residuos_itens) ? rawAny.residuos_itens : undefined,
+    contrato_veiculos: Array.isArray(rawAny.contrato_veiculos) ? rawAny.contrato_veiculos : undefined,
+    contrato_equipamentos: Array.isArray(rawAny.contrato_equipamentos)
+      ? rawAny.contrato_equipamentos
+      : undefined,
     blocos: { ...z.blocos, ...(raw.blocos ?? z.blocos) },
     conformidade: { ...z.conformidade, ...(raw.conformidade ?? z.conformidade) },
   }
@@ -445,7 +474,11 @@ function mergeDetalhesParaDocumento(
     conformidade: { ...d.conformidade, telefone_discrepancias: telDisc },
   }
 
-  return d
+  const listaDoc = listaResiduosParaDocumentoMtr(d, mtr.tipo_residuo)
+  return {
+    ...d,
+    ...syncResiduoPrincipalComLista({ residuo: d.residuo, residuos_lista: listaDoc }),
+  }
 }
 
 function avisosImpressaoMtr(mtr: MTR, d: MTRDetalhes): string[] {
@@ -458,7 +491,10 @@ function avisosImpressaoMtr(mtr: MTR, d: MTRDetalhes): string[] {
   if (!(mtr.endereco ?? '').trim() && !(mtr.cidade ?? '').trim() && !(d.gerador.cep ?? '').trim()) {
     f.push('Endereço de coleta ou município')
   }
-  if (!(mtr.tipo_residuo ?? '').trim() && !(d.residuo.caracterizacao ?? '').trim()) {
+  const listaRes = listaResiduosParaDocumentoMtr(d, mtr.tipo_residuo)
+  const temCaracterizacao =
+    listaRes.some((r) => r.caracterizacao.trim()) || Boolean((mtr.tipo_residuo ?? '').trim())
+  if (!temCaracterizacao) {
     f.push('Descrição / caracterização dos resíduos')
   }
   if (!(mtr.transportador ?? '').trim()) f.push('Transportador')
@@ -1007,13 +1043,21 @@ export default function MTR() {
     const clienteId = programacao.cliente_id?.trim()
     if (!clienteId) return
 
-    const { data: clienteRow, error } = await supabase
-      .from('clientes')
-      .select(
-        'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta'
-      )
-      .eq('id', clienteId)
-      .maybeSingle()
+    const selContrato =
+      'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, veiculos_contrato, equipamentos_contrato, residuos_contrato, frequencia_coleta'
+    const selLegado =
+      'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, frequencia_coleta'
+
+    let clienteRow: Record<string, unknown> | null = null
+    let error: { message?: string } | null = null
+    let res = await supabase.from('clientes').select(selContrato).eq('id', clienteId).maybeSingle()
+    clienteRow = res.data as Record<string, unknown> | null
+    error = res.error
+    if (error && isMissingClienteContratoColumnsError(error)) {
+      res = await supabase.from('clientes').select(selLegado).eq('id', clienteId).maybeSingle()
+      clienteRow = res.data as Record<string, unknown> | null
+      error = res.error
+    }
 
     if (gen !== programacaoChangeGenRef.current) return
     if (error || !clienteRow) {
@@ -1024,11 +1068,37 @@ export default function MTR() {
     }
 
     const row = clienteRow as ClienteRowAutofill
+    const contrato = parseContratoClienteMtr(row)
+    const acondContrato = acondicionamentoFromContratoVeiculoEquipamento(
+      contrato,
+      programacao.tipo_caminhao ?? ''
+    )
+    const tipoResContrato = tipoResiduoResumoContrato(contrato.residuos)
+    const linhasResiduo = residuosContratoParaLinhasPesagem(contrato.residuos)
+    const listaResiduosMtr = residuosContratoParaListaDetalhesMtr(contrato.residuos, acondContrato)
 
     setForm((prev) => {
       if (prev.programacao_id !== programacao.id) return prev
       const dz = detalhesVazios()
-      const unidade = (row.unidade_medida ?? '').trim()
+      const unidade = (contrato.residuos[0]?.unidade_medida ?? row.unidade_medida ?? '').trim()
+      const listaResiduosForm = listaResiduosMtr.map((rowRes, i) => {
+        if (i !== 0) return rowRes
+        const prevR = prev.detalhes?.residuo
+        if (!prevR) return rowRes
+        return {
+          ...rowRes,
+          fonte_origem: (prevR.fonte_origem ?? '').trim() || rowRes.fonte_origem,
+          caracterizacao: (prevR.caracterizacao ?? '').trim() || rowRes.caracterizacao,
+          estado_fisico: (prevR.estado_fisico ?? '').trim() || rowRes.estado_fisico,
+          acondicionamento: (prevR.acondicionamento ?? '').trim() || rowRes.acondicionamento,
+          quantidade_aproximada: (prevR.quantidade_aproximada ?? '').trim() || rowRes.quantidade_aproximada,
+          onu: (prevR.onu ?? '').trim() || rowRes.onu,
+        }
+      })
+      const syncResiduos = syncResiduoPrincipalComLista({
+        residuo: listaResiduosForm[0],
+        residuos_lista: listaResiduosForm,
+      })
       const atividadeGerador =
         (row.classificacao ?? '').trim() ||
         (programacao.tipo_servico ?? '').trim() ||
@@ -1080,11 +1150,18 @@ export default function MTR() {
         cidade: montarCidadeUfCliente(row),
         destinador: destinoTxt || prev.destinador,
         tipo_residuo:
-          (prev.tipo_residuo || '').trim() || (row.tipo_residuo ?? '').trim() || prev.tipo_residuo,
+          tipoResContrato ||
+          (prev.tipo_residuo || '').trim() ||
+          (row.tipo_residuo ?? '').trim() ||
+          prev.tipo_residuo,
         unidade: unidade || prev.unidade,
         detalhes: {
           ...dz,
           ...prev.detalhes,
+          residuos_itens: linhasResiduo,
+          contrato_veiculos: contrato.veiculos,
+          contrato_equipamentos: contrato.equipamentos,
+          ...syncResiduos,
           gerador: {
             ...dz.gerador,
             ...(prev.detalhes?.gerador || {}),
@@ -1100,22 +1177,6 @@ export default function MTR() {
               (row.cidade ?? '').trim() ||
               (prev.detalhes?.gerador?.cidade ?? '').trim() ||
               dz.gerador.cidade,
-          },
-          residuo: {
-            ...dz.residuo,
-            ...(prev.detalhes?.residuo || {}),
-            fonte_origem:
-              (prev.detalhes?.residuo?.fonte_origem ?? '').trim() || dz.residuo.fonte_origem || 'Industrial',
-            caracterizacao:
-              (prev.detalhes?.residuo?.caracterizacao ?? '').trim() ||
-              (row.classificacao ?? '').trim() ||
-              (row.tipo_residuo ?? '').trim() ||
-              dz.residuo.caracterizacao,
-            acondicionamento:
-              (prev.detalhes?.residuo?.acondicionamento ?? '').trim() ||
-              (programacao.tipo_caminhao ?? '').trim() ||
-              (row.descricao_veiculo ?? '').trim() ||
-              dz.residuo.acondicionamento,
           },
           transportador: transportadorDet,
           destinatario: {
@@ -1296,9 +1357,11 @@ export default function MTR() {
         : Number(form.quantidade)
 
     const detBase = form.detalhes ?? detalhesVazios()
+    const syncResiduosGravar = syncResiduoPrincipalComLista(detBase)
     const cidadeSalvar = cidadeCompletaGeradorParaGravar(form.cidade, detBase.gerador)
     const detalhesGravar: MTRDetalhes = {
       ...detBase,
+      ...syncResiduosGravar,
       gerador: { ...detBase.gerador },
     }
 
@@ -1467,15 +1530,45 @@ export default function MTR() {
     resetForm()
   }
 
-  function handlePrint() {
-    if (!selectedMTR) return
-    if (avisosImpressao.length > 0) {
+  const detalhesDocumentoMtr = useCallback(
+    (mtr: MTR) => {
+      const coleta = coletaMapByMtrId.get(mtr.id)
+      const mot = coleta?.motorista_nome || coleta?.motorista || ''
+      const placa = coleta?.placa || ''
+      const prog = mtr.programacao_id ? programacaoMap.get(mtr.programacao_id) : null
+      return mergeDetalhesParaDocumento(mtr, mot, placa, { tipoCaminhao: prog?.tipo_caminhao })
+    },
+    [coletaMapByMtrId, programacaoMap]
+  )
+
+  function confirmarEImprimirMtr(mtr: MTR, detalhes: MTRDetalhes) {
+    const avisos = avisosImpressaoMtr(mtr, detalhes)
+    if (avisos.length > 0) {
       const ok = window.confirm(
-        `O manifesto ainda não está completo para impressão ideal. Itens a rever: ${avisosImpressao.join('; ')}.\n\nDeseja imprimir mesmo assim?`
+        `O manifesto ainda não está completo para impressão ideal. Itens a rever: ${avisos.join('; ')}.\n\nDeseja imprimir mesmo assim?`
       )
       if (!ok) return
     }
     window.print()
+  }
+
+  function visualizarMtr(item: MTR) {
+    setSelectedMTR(item)
+    const detalhes = detalhesDocumentoMtr(item)
+    requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById('mtr-documento-impressao')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+        confirmarEImprimirMtr(item, detalhes)
+      }, 220)
+    })
+  }
+
+  function handlePrint() {
+    if (!selectedMTR || !detalhesMtrSelecionada) return
+    confirmarEImprimirMtr(selectedMTR, detalhesMtrSelecionada)
   }
 
   const totalVinculadas = mtrs.filter((item) => !!item.programacao_id).length
@@ -1489,12 +1582,8 @@ export default function MTR() {
 
   const detalhesMtrSelecionada = useMemo(() => {
     if (!selectedMTR) return null
-    const coleta = coletaMapByMtrId.get(selectedMTR.id)
-    const mot = coleta?.motorista_nome || coleta?.motorista || ''
-    const placa = coleta?.placa || ''
-    const prog = selectedMTR.programacao_id ? programacaoMap.get(selectedMTR.programacao_id) : null
-    return mergeDetalhesParaDocumento(selectedMTR, mot, placa, { tipoCaminhao: prog?.tipo_caminhao })
-  }, [selectedMTR, coletaMapByMtrId, programacaoMap])
+    return detalhesDocumentoMtr(selectedMTR)
+  }, [selectedMTR, detalhesDocumentoMtr])
 
   const avisosImpressao = useMemo(() => {
     if (!selectedMTR || !detalhesMtrSelecionada) return []
@@ -2639,7 +2728,14 @@ export default function MTR() {
             max-width: 100% !important;
             width: 100% !important;
             margin: 0 !important;
+            padding: 0 !important;
             box-sizing: border-box !important;
+          }
+
+          .print-area .document-shell.mtr-modelo-pdf-shell {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
           }
 
           .print-area .mtr-mp-logo {
@@ -2849,7 +2945,7 @@ export default function MTR() {
           }
 
           .document-green-bar {
-            height: 5px !important;
+            display: none !important;
           }
 
           /* Não limitar o modelo PDF a 720px — deve usar a largura da folha. */
@@ -3160,7 +3256,11 @@ export default function MTR() {
                         ) : null}
 
                         <div className="table-actions">
-                          <button className="mini-btn" onClick={() => setSelectedMTR(item)}>
+                          <button
+                            className="mini-btn"
+                            onClick={() => visualizarMtr(item)}
+                            title="Abrir manifesto para impressão ou salvar em PDF"
+                          >
                             Visualizar
                           </button>
                           <button
@@ -3228,326 +3328,34 @@ export default function MTR() {
               ) : null}
 
               <div
+                id="mtr-documento-impressao"
                 className={`document-wrapper print-area${selectedMTR ? ' document-wrapper--mtr-excel' : ''}`}
               >
                 {selectedMTR && detalhesMtrSelecionada ? (
                   <div className="document-shell mtr-modelo-pdf-shell">
-                    <div className="document-green-bar" />
-
                     <div className="document-content mtr-modelo-pdf">
-                      {(() => {
-                        const d = detalhesMtrSelecionada
-                        const motoristaDoc = d.transportador.motorista?.trim() || ''
-                        const placaDoc = d.transportador.placa?.trim() || ''
-                        const telefonesDoc = d.transportador.telefones_gerais?.trim() || ''
-                        return (
+                      <MtrManifestoPrint
+                        numero={selectedMTR.numero}
+                        gerador={selectedMTR.gerador}
+                        endereco={selectedMTR.endereco}
+                        cidade={selectedMTR.cidade}
+                        tipo_residuo={selectedMTR.tipo_residuo}
+                        transportador={selectedMTR.transportador}
+                        destinador={selectedMTR.destinador}
+                        detalhes={detalhesMtrSelecionada}
+                        footerExtra={
                           <>
-                            <div className="mtr-excel">
-                              <div className="mtr-excel__header">
-                                <div className="mtr-excel__logo">
-                                  <img src={BRAND_LOGO_MARK} alt="RG Ambiental" />
-                                </div>
-                                <div className="mtr-excel__title">
-                                  <div className="mtr-excel__title-main">MTR - MANIFESTO PARA TRANSPORTE DE RESÍDUOS</div>
-                                </div>
-                                <div className="mtr-excel__mtrno">
-                                  <div className="mtr-excel__mtrno-label">Nº MTR:</div>
-                                  <div className="mtr-excel__mtrno-value">{selectedMTR.numero}</div>
-                                </div>
-                              </div>
-
-                              <table className="mtr-excel__table">
-                                <tbody>
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>1. GERADOR</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.atividade)}</td>
-                                    <td className="mtr-excel__k">Nº CADRI:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.cadri)}</td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.cnpj)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(selectedMTR.gerador)}</td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.ie)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço de coleta:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(selectedMTR.endereco)}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.bairro)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">
-                                      {mtrTextoCelula((d.gerador.cidade || selectedMTR.cidade || '').trim())}
-                                    </td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.cep)}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.estado)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(d.gerador.responsavel)}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.telefone)}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>2. DESCRIÇÃO DOS RESÍDUOS</td>
-                                  </tr>
-                                  <tr>
-                                    <td colSpan={6} style={{ padding: 0, borderBottom: 'none' }}>
-                                      <table className="mtr-excel__inner">
-                                        <tbody>
-                                          <tr className="mtr-excel__throw">
-                                            <td className="mtr-excel__th">Fonte de Origem</td>
-                                            <td className="mtr-excel__th" colSpan={2}>
-                                              Caracterização dos resíduos
-                                            </td>
-                                            <td className="mtr-excel__th">Estado Físico</td>
-                                            <td className="mtr-excel__th">Tipo de Acondicionamento</td>
-                                            <td className="mtr-excel__th">Qtde aprox.</td>
-                                            <td className="mtr-excel__th">Nº ONU</td>
-                                          </tr>
-                                          <tr>
-                                            <td className="mtr-excel__v">{mtrTextoCelula(d.residuo.fonte_origem)}</td>
-                                            <td className="mtr-excel__v" colSpan={2}>
-                                              {mtrTextoCelula(d.residuo.caracterizacao || selectedMTR.tipo_residuo)}
-                                            </td>
-                                            <td className="mtr-excel__v">{mtrTextoCelula(d.residuo.estado_fisico)}</td>
-                                            <td className="mtr-excel__v">{mtrTextoCelula(d.residuo.acondicionamento)}</td>
-                                            <td className="mtr-excel__v">{mtrTextoCelula(d.residuo.quantidade_aproximada)}</td>
-                                            <td className="mtr-excel__v">{mtrTextoCelula(d.residuo.onu)}</td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
-                                    </td>
-                                  </tr>
-                                  <tr className="mtr-excel__throw">
-                                    <td colSpan={6}>DESCRIÇÕES ADICIONAIS DOS RESÍDUOS ACIMA</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      {mtrTextoCelula(d.blocos.descricoes_adicionais_residuos)}
-                                    </td>
-                                  </tr>
-                                  <tr className="mtr-excel__throw">
-                                    <td colSpan={6}>
-                                      INSTRUÇÕES ESPECIAIS DE MANUSEIO E INFORMAÇÕES ADICIONAIS
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      {mtrTextoCelula(d.blocos.instrucoes_manuseio)}
-                                    </td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>3. TRANSPORTADOR</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>
-                                      {mtrTextoCelula(d.transportador.atividade || selectedMTR.transportador)}
-                                    </td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.cnpj)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>
-                                      {mtrTextoCelula(
-                                        (d.transportador.razao_social || selectedMTR.transportador || '').trim()
-                                      )}
-                                    </td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.ie)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(d.transportador.endereco)}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.bairro)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.municipio)}</td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.cep)}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.estado)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.responsavel)}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.telefone)}</td>
-                                    <td className="mtr-excel__k">Email:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.transportador.email)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Motorista:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(motoristaDoc)}</td>
-                                    <td className="mtr-excel__k">Placa do Veículo:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(placaDoc)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k" colSpan={1}>
-                                      Telefones:
-                                    </td>
-                                    <td className="mtr-excel__v" colSpan={5}>
-                                      {mtrTextoCelula(telefonesDoc)}
-                                    </td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>
-                                      4. UNIDADE DESTINATÁRIA (INSTALAÇÃO RECEPTORA)
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Atividade:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>
-                                      {mtrTextoCelula(d.destinatario.atividade || selectedMTR.destinador)}
-                                    </td>
-                                    <td className="mtr-excel__k">L.O:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.lo)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Razão Social:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>
-                                      {mtrTextoCelula(
-                                        (d.destinatario.razao_social || selectedMTR.destinador || '').trim()
-                                      )}
-                                    </td>
-                                    <td className="mtr-excel__k">CNPJ:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.cnpj)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Endereço:</td>
-                                    <td className="mtr-excel__v" colSpan={3}>{mtrTextoCelula(d.destinatario.endereco)}</td>
-                                    <td className="mtr-excel__k">Bairro:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.bairro)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Município:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.municipio)}</td>
-                                    <td className="mtr-excel__k">CEP:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.cep)}</td>
-                                    <td className="mtr-excel__k">Estado:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.estado)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__k">Responsável:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.responsavel)}</td>
-                                    <td className="mtr-excel__k">Telefone:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.telefone)}</td>
-                                    <td className="mtr-excel__k">I.E:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(d.destinatario.ie)}</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>5. CERTIFICAÇÃO DO GERADOR</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      Eu, por meio deste manifesto, declaro que os resíduos acima listados estão integralmente e corretamente descritos pelo nome, classificados, embalados e rotulados seguindo as normas vigentes e estão sob os aspectos em condições adequadas para transporte de acordo com os regulamentos nacionais e internacionais vigentes.
-                                    </td>
-                                  </tr>
-
-                                  <tr className="mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__sec" colSpan={6}>6. RESPONSÁVEIS</td>
-                                  </tr>
-                                  <tr className="mtr-excel__throw mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__th" colSpan={2}>
-                                      a) Gerador
-                                    </td>
-                                    <td className="mtr-excel__th" colSpan={2}>
-                                      b) Transportador
-                                    </td>
-                                    <td className="mtr-excel__th" colSpan={2}>
-                                      c) Instalação receptora
-                                    </td>
-                                  </tr>
-                                  <tr className="mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(selectedMTR.gerador)}</td>
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(selectedMTR.transportador)}</td>
-                                    <td className="mtr-excel__k">Nome:</td>
-                                    <td className="mtr-excel__v">{mtrTextoCelula(selectedMTR.destinador)}</td>
-                                  </tr>
-                                  <tr className="mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                    <td className="mtr-excel__k">Assinatura:</td>
-                                    <td className="mtr-excel__v">&nbsp;</td>
-                                  </tr>
-                                  <tr className="mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">____/____/________</td>
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">____/____/________</td>
-                                    <td className="mtr-excel__k">Data:</td>
-                                    <td className="mtr-excel__v">____/____/________</td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>7. COMUNICAÇÃO DE DISCREPÂNCIAS</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      Em caso de divergência entre a quantidade ou a qualidade dos resíduos recebidos e o
-                                      discriminado neste Manifesto, contatar:{' '}
-                                      <strong>{mtrTextoCelula(d.conformidade.telefone_discrepancias)}</strong>.
-                                    </td>
-                                  </tr>
-
-                                  <tr>
-                                    <td className="mtr-excel__sec" colSpan={6}>
-                                      8. CERTIFICAÇÃO DA INSTALAÇÃO RECEPTORA
-                                    </td>
-                                  </tr>
-                                  <tr className="mtr-excel__avoid-print-break">
-                                    <td className="mtr-excel__v" colSpan={6}>
-                                      Certificação de recebimento do material perigoso descrito neste manifesto, na quantidade
-                                      e tipo discriminados, exceto quando ocorrer o disposto na Seção 7 (Comunicação de
-                                      discrepâncias), acima.
-                                      <div className="mtr-excel__signrow" style={{ marginTop: 10 }}>
-                                        <span>Nome: ___________________________</span>
-                                        <span>Assinatura: ______________________________</span>
-                                        <span>Data: ____/____/________</span>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                  <tr className="mtr-excel__stretch-wrap" aria-hidden="true">
-                                    <td className="mtr-excel__stretch" colSpan={6} />
-                                  </tr>
-                                </tbody>
-                              </table>
-                              <div className="mtr-excel__doc-footer">
-                                <p className="mtr-excel__doc-footer-line">{MTR_RODAPE_VIAS}</p>
-                                <p className="mtr-excel__doc-footer-line">
-                                  Documento emitido pelo Sistema RG Ambiental · {officialSiteUrl('/mtr')}
-                                </p>
-                                {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at) ? (
-                                  <p className="mtr-excel__doc-footer-line">
-                                    {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at)}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
+                            <p className="mtr-excel__doc-footer-line">
+                              Documento emitido pelo Sistema RG Ambiental · {officialSiteUrl('/mtr')}
+                            </p>
+                            {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at) ? (
+                              <p className="mtr-excel__doc-footer-line">
+                                {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at)}
+                              </p>
+                            ) : null}
                           </>
-                        )
-                      })()}
+                        }
+                      />
                     </div>
                   </div>
                 ) : (
@@ -3559,6 +3367,7 @@ export default function MTR() {
             </div>
           </div>
         </div>
+
 
         {showForm && (
           <div className="modal-overlay no-print">
@@ -4035,117 +3844,35 @@ export default function MTR() {
                             />
                           </div>
 
-                          <div className="field field-full">
-                            <div style={{ fontWeight: 800 }}>2. Descrição dos resíduos</div>
-                          </div>
-                          <div className="field">
-                            <label>Fonte de origem</label>
-                            <input
-                              value={form.detalhes?.residuo.fonte_origem ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
+                          <MtrResiduosDescricaoForm
+                            detalhes={form.detalhes ?? detalhesVazios()}
+                            onChange={(next) =>
+                              setForm((prev) => {
+                                const base = prev.detalhes ?? detalhesVazios()
+                                return {
                                   ...prev,
                                   detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      fonte_origem: e.target.value,
+                                    ...base,
+                                    ...next,
+                                    blocos: {
+                                      ...base.blocos,
+                                      ...(next.blocos ?? {}),
                                     },
                                   },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Caracterização</label>
-                            <input
-                              value={form.detalhes?.residuo.caracterizacao ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      caracterizacao: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Estado físico</label>
-                            <input
-                              value={form.detalhes?.residuo.estado_fisico ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      estado_fisico: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Tipo de acondicionamento</label>
-                            <input
-                              value={form.detalhes?.residuo.acondicionamento ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      acondicionamento: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Qtde aproximada</label>
-                            <input
-                              value={form.detalhes?.residuo.quantidade_aproximada ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      quantidade_aproximada: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Nº ONU</label>
-                            <input
-                              value={form.detalhes?.residuo.onu ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    residuo: {
-                                      ...(prev.detalhes?.residuo ?? detalhesVazios().residuo),
-                                      onu: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
+                                  tipo_residuo: tipoResiduoResumoContrato(
+                                  (next.residuos_lista ?? []).map((l) => ({
+                                    tipo_residuo: l.caracterizacao,
+                                    classificacao: l.estado_fisico,
+                                    unidade_medida: '',
+                                    valor: '',
+                                    frequencia_coleta: '',
+                                    faturamento_minimo: l.quantidade_aproximada,
+                                  }))
+                                ) || prev.tipo_residuo,
+                                }
+                              })
+                            }
+                          />
 
                           <div className="field field-full">
                             <div style={{ fontWeight: 800 }}>Blocos adicionais e discrepâncias</div>

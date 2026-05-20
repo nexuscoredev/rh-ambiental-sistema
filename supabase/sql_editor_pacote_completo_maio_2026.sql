@@ -409,6 +409,13 @@ COMMENT ON FUNCTION public.chat_admin_apagar_historico_conversa(uuid) IS
 REVOKE ALL ON FUNCTION public.chat_admin_apagar_historico_conversa(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.chat_admin_apagar_historico_conversa(uuid) TO authenticated;
 
+-- Faturamento: snapshot financeiro desvinculado (ticket + MTR)
+ALTER TABLE public.faturamento_registros
+  ADD COLUMN IF NOT EXISTS resumo_financeiro jsonb;
+
+COMMENT ON COLUMN public.faturamento_registros.resumo_financeiro IS
+  'Snapshot JSON (ticket + MTR) com pesos/valores de faturamento desvinculados do operacional.';
+
 COMMIT;
 
 -- =============================================================================

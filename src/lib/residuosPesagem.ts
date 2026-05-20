@@ -1,16 +1,8 @@
-import type { ResiduoCatalogo } from "./residuosCatalogo";
-
-/** Valor sentinela no `<select>` — não existe em `residuos` (não gravar como FK). */
-export const RESIDUO_CATALOGO_ID_OUTROS_URBANOS = "__outros_residuos_urbanos__";
-
-export const TEXTO_RESIDUO_OUTROS_URBANOS_PADRAO =
-  "Outros resíduos urbanos não recicláveis (Classe II A), conforme legislação municipal/estadual aplicável.";
-
 /** Separador em `tipo_residuo` / `residuo` quando há vários itens sem JSON estruturado. */
 export const SEPARADOR_RESIDUOS_TEXTO = " · ";
 
 export type ResiduoPesagemItem = {
-  /** UUID do catálogo, sentinela «outros urbanos» ou vazio. */
+  /** Legado — não usado (entrada manual só em `texto`). */
   catalogo_id: string;
   texto: string;
   peso_tara: string;
@@ -45,10 +37,8 @@ function pesoNumeroParaInput(n: number | null | undefined): string {
   return String(n);
 }
 
-export function residuoCatalogoIdParaDb(raw: string): string | null {
-  const t = (raw ?? "").trim();
-  if (!t || t === RESIDUO_CATALOGO_ID_OUTROS_URBANOS) return null;
-  return t;
+export function residuoCatalogoIdParaDb(_raw?: string): string | null {
+  return null;
 }
 
 export function linhaVaziaResiduoPesagem(): ResiduoPesagemItem {
@@ -59,9 +49,6 @@ function normalizarItemJson(raw: unknown): ResiduoPesagemItem | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const texto = String(o.texto ?? "").trim();
-  const catRaw = o.catalogo_id;
-  const catalogo_id =
-    catRaw != null && String(catRaw).trim() !== "" ? String(catRaw) : "";
   const peso_tara = pesoNumeroParaInput(
     o.peso_tara != null ? Number(o.peso_tara) : null
   );
@@ -72,8 +59,8 @@ function normalizarItemJson(raw: unknown): ResiduoPesagemItem | null {
     o.peso_liquido != null && String(o.peso_liquido).trim() !== ""
       ? pesoNumeroParaInput(Number(o.peso_liquido))
       : calcularPesoLiquidoLinha(peso_bruto, peso_tara);
-  if (!texto && !catalogo_id) return null;
-  return { catalogo_id, texto, peso_tara, peso_bruto, peso_liquido };
+  if (!texto) return null;
+  return { catalogo_id: "", texto, peso_tara, peso_bruto, peso_liquido };
 }
 
 export function parseResiduosItensJson(raw: unknown): ResiduoPesagemItem[] | null {
@@ -92,12 +79,8 @@ export function parseResiduosFromRow(row: {
   if (fromJson) return fromJson;
 
   const texto = String(row.tipo_residuo ?? row.residuo ?? "").trim();
-  const catId =
-    row.residuo_catalogo_id != null && String(row.residuo_catalogo_id).trim() !== ""
-      ? String(row.residuo_catalogo_id)
-      : "";
 
-  if (!texto && !catId) return [linhaVaziaResiduoPesagem()];
+  if (!texto) return [linhaVaziaResiduoPesagem()];
 
   if (texto.includes(SEPARADOR_RESIDUOS_TEXTO)) {
     const partes = texto.split(SEPARADOR_RESIDUOS_TEXTO).map((p) => p.trim()).filter(Boolean);
@@ -106,7 +89,7 @@ export function parseResiduosFromRow(row: {
     }
   }
 
-  return [{ ...linhaVaziaResiduoPesagem(), catalogo_id: catId, texto }];
+  return [{ ...linhaVaziaResiduoPesagem(), texto }];
 }
 
 /** Soma os pesos das linhas para gravar totais na coleta / ticket. */
@@ -204,52 +187,28 @@ export function combinarResiduosTexto(itens: ResiduoPesagemItem[]): string {
     .join(SEPARADOR_RESIDUOS_TEXTO);
 }
 
-export function catalogoIdPrincipal(itens: ResiduoPesagemItem[]): string | null {
-  const ids = itens
-    .map((i) => residuoCatalogoIdParaDb(i.catalogo_id))
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 1) return ids[0];
+export function catalogoIdPrincipal(_itens: ResiduoPesagemItem[]): string | null {
   return null;
 }
 
-export function enriquecerLinhaResiduo(
-  linha: ResiduoPesagemItem,
-  catalogoPorId: Map<string, ResiduoCatalogo>
-): ResiduoPesagemItem {
-  const textoManual = linha.texto.trim();
-  if (textoManual) return { ...linha, texto: textoManual };
-
-  const dbId = residuoCatalogoIdParaDb(linha.catalogo_id);
-  if (dbId) {
-    const r = catalogoPorId.get(dbId);
-    if (r) return { ...linha, texto: `${r.codigo} — ${r.nome}` };
-  }
-
-  if (linha.catalogo_id === RESIDUO_CATALOGO_ID_OUTROS_URBANOS) {
-    return { ...linha, texto: TEXTO_RESIDUO_OUTROS_URBANOS_PADRAO };
-  }
-
-  return linha;
+export function enriquecerLinhaResiduo(linha: ResiduoPesagemItem): ResiduoPesagemItem {
+  return { ...linha, catalogo_id: "", texto: linha.texto.trim() };
 }
 
 export function linhasComConteudo(linhas: ResiduoPesagemItem[]): ResiduoPesagemItem[] {
-  return linhas.filter((l) => l.texto.trim() || l.catalogo_id.trim());
+  return linhas.filter((l) => l.texto.trim());
 }
 
-export function serializarResiduosItensDb(
-  linhas: ResiduoPesagemItem[],
-  catalogoPorId: Map<string, ResiduoCatalogo>
-): ResiduoPesagemItemDb[] {
+export function serializarResiduosItensDb(linhas: ResiduoPesagemItem[]): ResiduoPesagemItemDb[] {
   return linhasComConteudo(linhas)
-    .map((l) => enriquecerLinhaResiduo(l, catalogoPorId))
-    .filter((l) => l.texto.trim())
+    .map((l) => enriquecerLinhaResiduo(l))
     .map((l) => {
       const tara = converterNumeroPeso(l.peso_tara);
       const bruto = converterNumeroPeso(l.peso_bruto);
       const liqStr = l.peso_liquido.trim() || calcularPesoLiquidoLinha(l.peso_bruto, l.peso_tara);
       const liquido = converterNumeroPeso(liqStr);
       return {
-        catalogo_id: residuoCatalogoIdParaDb(l.catalogo_id),
+        catalogo_id: null,
         texto: l.texto.trim(),
         peso_tara: tara,
         peso_bruto: bruto,
@@ -266,25 +225,15 @@ export function linhasParaFormLegacy(linhas: ResiduoPesagemItem[]): {
   const texto = combinarResiduosTexto(
     comConteudo.length > 0 ? comConteudo : linhas
   );
-  const catPrincipal = catalogoIdPrincipal(comConteudo);
-  const sentinela =
-    comConteudo.length === 1 &&
-    comConteudo[0]!.catalogo_id === RESIDUO_CATALOGO_ID_OUTROS_URBANOS;
 
   return {
     residuo: texto,
-    residuo_catalogo_id:
-      sentinela
-        ? RESIDUO_CATALOGO_ID_OUTROS_URBANOS
-        : comConteudo.length === 1
-          ? comConteudo[0]!.catalogo_id
-          : catPrincipal ?? "",
+    residuo_catalogo_id: "",
   };
 }
 
 export function resolverResiduosParaGravacao(
   linhas: ResiduoPesagemItem[],
-  catalogoPorId: Map<string, ResiduoCatalogo>,
   fallbacks: { tipoResiduoColeta?: string; tipoResiduoMtr?: string }
 ): {
   texto: string;
@@ -292,10 +241,8 @@ export function resolverResiduosParaGravacao(
   catalogo_id: string | null;
   erro: string | null;
 } {
-  const enriquecidas = linhasComConteudo(linhas).map((l) =>
-    enriquecerLinhaResiduo(l, catalogoPorId)
-  );
-  const residuos_itens = serializarResiduosItensDb(linhas, catalogoPorId);
+  const enriquecidas = linhasComConteudo(linhas).map((l) => enriquecerLinhaResiduo(l));
+  const residuos_itens = serializarResiduosItensDb(linhas);
   const texto =
     combinarResiduosTexto(enriquecidas) ||
     (fallbacks.tipoResiduoColeta ?? "").trim() ||
@@ -307,7 +254,7 @@ export function resolverResiduosParaGravacao(
       residuos_itens: [],
       catalogo_id: null,
       erro:
-        "Informe ao menos um resíduo (catálogo ou texto) ou use uma coleta/MTR com tipo de resíduo definido.",
+        "Informe ao menos um resíduo (texto) ou use uma coleta/MTR com tipo de resíduo definido.",
     };
   }
 

@@ -42,7 +42,6 @@ import {
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
-import { useResiduosCatalogo } from "../lib/residuosCatalogo";
 
 type Cliente = {
   id: string;
@@ -840,15 +839,6 @@ export default function Clientes() {
 
   type RepresentanteRgOpcao = { id: string; nome: string };
   const [representantesRg, setRepresentantesRg] = useState<RepresentanteRgOpcao[]>([]);
-  const {
-    catalogo: residuosCatalogo,
-    carregando: residuosCatalogoCarregando,
-    erro: residuosCatalogoErro,
-    semSessao: residuosCatalogoSemSessao,
-    recarregar: recarregarResiduosCatalogo,
-    ativos: residuosCatalogoAtivos,
-  } = useResiduosCatalogo();
-
   const rotuloRepresentanteRgCliente = useCallback(
     (c: Cliente) => {
       const rid = c.representante_rg_id;
@@ -2954,12 +2944,6 @@ export default function Clientes() {
 
                 <ClienteContratoCadastroSecoes
                   inputStyle={inputStyle}
-                  residuosCatalogo={residuosCatalogo}
-                  residuosCatalogoCarregando={residuosCatalogoCarregando}
-                  residuosCatalogoErro={residuosCatalogoErro}
-                  residuosCatalogoSemSessao={residuosCatalogoSemSessao}
-                  residuosCatalogoAtivosCount={residuosCatalogoAtivos.length}
-                  onRecarregarResiduosCatalogo={recarregarResiduosCatalogo}
                   veiculos={form.veiculos_contrato}
                   equipamentos={form.equipamentos_contrato}
                   residuos={form.residuos}
@@ -4250,10 +4234,12 @@ function ClienteDetalheModal({
 
           <DetalheSecao titulo="Contato">
             <DetalheCampo rotulo="Responsável" valor={cliente.responsavel_nome} />
+            <DetalheCampo rotulo="Representante RG" valor={representanteRotulo} />
             <DetalheCampo rotulo="Telefone" valor={cliente.telefone} />
             <DetalheCampo rotulo="E-mail" valor={cliente.email} />
             <DetalheCampo rotulo="E-mail para NF" valor={cliente.email_nf} />
             <DetalheCampo rotulo="Solicitante" valor={cliente.solicitante} />
+            <DetalheCampo rotulo="Margem de lucro" valor={margemRotulo} />
           </DetalheSecao>
 
           <DetalheSecao titulo="Endereços">
@@ -4328,10 +4314,8 @@ function ClienteDetalheModal({
             />
           </DetalheSecao>
 
-          <DetalheSecao titulo="Vínculos & Equipamentos">
-            <DetalheCampo rotulo="Representante RG" valor={representanteRotulo} />
-            <DetalheCampo rotulo="Veículos Contrato" valor={veiculoRotulo} colunas={2} />
-            <DetalheCampo rotulo="Margem de lucro" valor={margemRotulo} />
+          <DetalheSecao titulo="Veículos e Equipamentos">
+            <DetalheCampo rotulo="Veículos" valor={veiculoRotulo} colunas={2} />
             <DetalheCampo
               rotulo="Equipamentos"
               valor={rotuloEquipamentosContratoResumo(
@@ -4374,7 +4358,7 @@ function ClienteDetalheModal({
                         Frequência
                       </th>
                       <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
-                        Fat. mínimo
+                        Mín. (kg)
                       </th>
                     </tr>
                   </thead>
@@ -4387,7 +4371,7 @@ function ClienteDetalheModal({
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.valor ? `R$ ${r.valor}` : "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.frequencia_coleta || "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#1f2937" }}>
-                          {r.faturamento_minimo ? `R$ ${r.faturamento_minimo}` : "—"}
+                          {r.faturamento_minimo ? `${r.faturamento_minimo} kg` : "—"}
                         </td>
                       </tr>
                     ))}

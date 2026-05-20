@@ -116,9 +116,13 @@ export default function ComprovantesDescarte() {
   )
 
   async function handleExcluir(row: ComprovanteDescarteRow) {
-    if (!podeMutar) return
+    if (!podeMutar) {
+      window.alert('Seu perfil não pode excluir comprovantes de descarte.')
+      return
+    }
+    const rotulo = (row.codigo_remessa ?? '').trim() || row.id
     const ok = window.confirm(
-      `Excluir comprovante ${(row.codigo_remessa ?? '').trim() || row.id}? Esta ação não pode ser desfeita.`
+      `Excluir comprovante ${rotulo}? Esta ação não pode ser desfeita (inclui imagens anexadas).`
     )
     if (!ok) return
     const { error } = await excluirComprovanteDescarte(supabase, row.id)

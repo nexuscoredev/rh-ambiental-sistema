@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { NEXUS_CARGOS_POR_ROTA } from './lib/nexusCargosPorRota'
 import { usuarioPodeAcessarRota } from './lib/paginasSistema'
+import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
 import { PresencaAoVivoProvider } from './contexts/PresencaAoVivoContext'
@@ -29,7 +30,6 @@ const ConferenciaTransporte = lazyWithRetry(() => import('./pages/ConferenciaTra
 const TicketOperacional = lazyWithRetry(() => import('./pages/TicketOperacional'))
 const AprovacaoDiretoria = lazyWithRetry(() => import('./pages/AprovacaoDiretoria'))
 const FaturamentoOperacional = lazyWithRetry(() => import('./pages/FaturamentoOperacional'))
-const FaturamentoRegrasPreco = lazyWithRetry(() => import('./pages/FaturamentoRegrasPreco'))
 const Programacao = lazyWithRetry(() => import('./pages/Programacao'))
 const MTR = lazyWithRetry(() => import('./pages/MTR'))
 const ControleMassa = lazyWithRetry(() => import('./pages/ControleMassa'))
@@ -105,7 +105,11 @@ function ProtectedRoute({
     return <Navigate to="/" replace />
   }
 
-  if (!apenasAutenticado && !allowedRoles.includes(usuario.cargo)) {
+  if (
+    !apenasAutenticado &&
+    !allowedRoles.includes(usuario.cargo) &&
+    !cargoTemAutoridadeMaximaSistema(usuario.cargo)
+  ) {
     return <Navigate to="/bem-vindo" replace />
   }
 
@@ -587,16 +591,7 @@ function App() {
 
             <Route
               path="/faturamento/regras-preco"
-              element={
-                <ProtectedRoute
-                  session={session}
-                  usuario={usuario}
-                  carregandoUsuario={carregandoUsuario}
-                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento/regras-preco']]}
-                >
-                  <FaturamentoRegrasPreco />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/faturamento" replace />}
             />
 
             <Route
