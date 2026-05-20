@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useMemo,
@@ -29,6 +29,32 @@ import {
 } from "../lib/fluxoEtapas";
 import { useSessionObjectDraft } from "../lib/usePageSessionPersistence";
 import { registrarTicketImpressoColeta } from "../lib/faturamentoTicketFluxo";
+import { PesagemResiduosLista } from "../components/controleMassa/PesagemResiduosLista";
+import {
+  agregarPesosDasLinhas,
+  aplicarPesosColetaNasLinhas,
+  isErroColunaResiduosItens,
+  linhaVaziaResiduoPesagem,
+  linhasParaFormLegacy,
+  normalizarFormResiduosLinhas,
+  parseResiduosFromRow,
+  parseResiduosItensJson,
+  residuoCatalogoIdParaDb,
+  resolverResiduosParaGravacao,
+  type ResiduoPesagemItem,
+} from "../lib/residuosPesagem";
+
+function mergeFormResiduosLinhas(
+  prev: FormRegistro,
+  linhas: ResiduoPesagemItem[]
+): FormRegistro {
+  return {
+    ...prev,
+    residuos_linhas: linhas,
+    ...linhasParaFormLegacy(linhas),
+    ...agregarPesosDasLinhas(linhas),
+  };
+}
 
 /** Busca insensível a maiúsculas e acentos (MTR / cliente / coleta). */
 function normalizarTextoBusca(s: string): string {
@@ -37,17 +63,6 @@ function normalizarTextoBusca(s: string): string {
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .trim();
-}
-
-/** Valor sentinela no `<select>` do catálogo — não existe em `residuos` (não gravar como FK). */
-const RESIDUO_CATALOGO_ID_OUTROS_URBANOS = "__outros_residuos_urbanos__";
-const TEXTO_RESIDUO_OUTROS_URBANOS_PADRAO =
-  "Outros resíduos urbanos não recicláveis (Classe II A), conforme legislação municipal/estadual aplicável.";
-
-function residuoCatalogoIdParaDb(raw: string): string | null {
-  const t = (raw ?? "").trim();
-  if (!t || t === RESIDUO_CATALOGO_ID_OUTROS_URBANOS) return null;
-  return t;
 }
 
 type ColetaOpcao = {
@@ -73,6 +88,7 @@ type ColetaOpcao = {
   cliente_id?: string | null;
   /** Para ordenar a lista (mais recente primeiro). */
   created_at?: string | null;
+  residuos_itens?: ResiduoPesagemItem[] | null;
 };
 
 /** Campos mínimos da tabela `mtrs` para o vínculo na pesagem. */
@@ -93,6 +109,7 @@ type FormRegistro = {
   empresa: string;
   residuo: string;
   residuo_catalogo_id: string;
+  residuos_linhas: ResiduoPesagemItem[];
   placa: string;
   motorista: string;
   peso_tara: string;
@@ -110,6 +127,7 @@ const formInicial: FormRegistro = {
   empresa: "",
   residuo: "",
   residuo_catalogo_id: "",
+  residuos_linhas: [linhaVaziaResiduoPesagem()],
   placa: "",
   motorista: "",
   peso_tara: "",
@@ -121,20 +139,6 @@ const formInicial: FormRegistro = {
 function limparOuNull(valor: string) {
   const texto = valor.trim();
   return texto === "" ? null : texto;
-}
-
-function converterNumero(valor: string) {
-  const texto = valor.trim();
-  if (texto === "") return null;
-  const numero = Number(texto.replace(",", "."));
-  return Number.isNaN(numero) ? null : numero;
-}
-
-function calcularPesoLiquido(pesoBruto: string, pesoTara: string) {
-  const bruto = converterNumero(pesoBruto);
-  const tara = converterNumero(pesoTara);
-  if (bruto === null || tara === null) return "";
-  return String(bruto - tara);
 }
 
 function mapRowToColetaOpcao(item: Record<string, unknown>): ColetaOpcao {
@@ -171,6 +175,7 @@ function mapRowToColetaOpcao(item: Record<string, unknown>): ColetaOpcao {
     programacao_id: item.programacao_id != null ? String(item.programacao_id) : null,
     cliente_id: item.cliente_id != null ? String(item.cliente_id) : null,
     created_at: item.created_at != null ? String(item.created_at) : null,
+    residuos_itens: parseResiduosItensJson(item.residuos_itens),
   };
 }
 
@@ -493,13 +498,14 @@ async function criarColetaVinculadaAMtr(
   mtrId: string,
   opts: {
     dataRef: string;
-    pesoTara: number;
-    pesoBruto: number;
-    pesoLiquido: number;
+    pesoTara: number | null;
+    pesoBruto: number | null;
+    pesoLiquido: number | null;
     motorista: string;
     placa: string;
     residuoFallback: string;
     residuo_catalogo_id?: string | null;
+    residuos_itens?: { catalogo_id: string | null; texto: string; peso_tara: number | null; peso_bruto: number | null; peso_liquido: number | null }[];
   }
 ): Promise<{ ok: true; coletaId: string } | { ok: false; message: string }> {
   const { data: mtr, error: errMtr } = await supabase
@@ -559,6 +565,7 @@ async function criarColetaVinculadaAMtr(
     cidade: String(m.cidade ?? ""),
     tipo_residuo: tipoRes || "—",
     residuo_catalogo_id: resCat,
+    residuos_itens: opts.residuos_itens ?? [],
     endereco: String(m.endereco ?? "—"),
     responsavel_interno: "—",
     data_agendada: dataAg,
@@ -579,13 +586,15 @@ async function criarColetaVinculadaAMtr(
     assinatura_no_local: true,
   };
 
-  const { data: ins, error: insErr } = await supabase
-    .from("coletas")
-    .insert([row])
-    .select("id")
-    .single();
+  let ins = await supabase.from("coletas").insert([row]).select("id").single();
+  if (isErroColunaResiduosItens(ins.error)) {
+    const rowSemItens = { ...row };
+    delete rowSemItens.residuos_itens;
+    ins = await supabase.from("coletas").insert([rowSemItens]).select("id").single();
+  }
 
-  if (insErr || !ins?.id) {
+  const insErr = ins.error;
+  if (insErr || !ins.data?.id) {
     console.error(insErr);
     return {
       ok: false,
@@ -595,7 +604,7 @@ async function criarColetaVinculadaAMtr(
     };
   }
 
-  const coletaId = String(ins.id);
+  const coletaId = String(ins.data.id);
 
   if (progId) {
     await supabase.from("programacoes").update({ coleta_id: coletaId }).eq("id", progId);
@@ -643,12 +652,9 @@ export default function ControleMassa() {
   const [mtrSemColetaSelecionado, setMtrSemColetaSelecionado] = useState<string | null>(null);
   const [mtrPickerAberto, setMtrPickerAberto] = useState(false);
   const [filtroMtr, setFiltroMtr] = useState("");
-  const [filtroCodigoCatalogoResiduo, setFiltroCodigoCatalogoResiduo] = useState("");
   const mtrComboRef = useRef<HTMLDivElement | null>(null);
   const dataInputRef = useRef<HTMLInputElement | null>(null);
   const placaInputRef = useRef<HTMLInputElement | null>(null);
-  const pesoTaraRef = useRef<HTMLInputElement | null>(null);
-  const pesoBrutoRef = useRef<HTMLInputElement | null>(null);
   const tipoTicketRef = useRef<HTMLSelectElement | null>(null);
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null);
   const [excluindoColetaId, setExcluindoColetaId] = useState<string | null>(null);
@@ -684,7 +690,8 @@ export default function ControleMassa() {
     cacheKey: "controle-massa",
     data: controleMassaDraft,
     onRestore: (d) => {
-      setForm(d.form);
+      const f = normalizarFormResiduosLinhas(d.form);
+      setForm({ ...f, ...agregarPesosDasLinhas(f.residuos_linhas) });
       setSecaoPesagemAberta(d.secaoPesagemAberta);
       setModoTela(d.modoTela);
       setTabelaAberta(d.tabelaAberta);
@@ -1056,13 +1063,6 @@ export default function ControleMassa() {
     [residuosCatalogo]
   );
 
-  const residuosCatalogoFiltrados = useMemo(() => {
-    const base = residuosCatalogo.filter((r) => r.ativo);
-    const q = normalizarTextoBusca(filtroCodigoCatalogoResiduo);
-    if (!q) return base;
-    return base.filter((r) => normalizarTextoBusca(r.codigo).includes(q));
-  }, [residuosCatalogo, filtroCodigoCatalogoResiduo]);
-
   const coletasComCatalogoResiduo = useMemo(() => {
     return todasColetas.map((c) => {
       const rid = c.residuo_catalogo_id;
@@ -1086,49 +1086,6 @@ export default function ControleMassa() {
   ) {
     const { name, value } = e.target;
 
-    if (name === "residuo_catalogo_id") {
-      setForm((prev) => {
-        if (!value) {
-          return { ...prev, residuo_catalogo_id: "" };
-        }
-        if (value === RESIDUO_CATALOGO_ID_OUTROS_URBANOS) {
-          const texto =
-            (prev.residuo ?? "").trim() || TEXTO_RESIDUO_OUTROS_URBANOS_PADRAO;
-          return {
-            ...prev,
-            residuo_catalogo_id: value,
-            residuo: texto,
-          };
-        }
-        const r = catalogoResiduosPorId.get(value);
-        const texto = r ? `${r.codigo} — ${r.nome}` : prev.residuo;
-        return { ...prev, residuo_catalogo_id: value, residuo: texto };
-      });
-      return;
-    }
-
-    if (name === "residuo") {
-      setForm((prev) => ({
-        ...prev,
-        residuo: value,
-        residuo_catalogo_id: "",
-      }));
-      return;
-    }
-
-    if (name === "peso_tara" || name === "peso_bruto") {
-      const proximo = {
-        ...form,
-        [name]: value,
-      };
-
-      setForm({
-        ...proximo,
-        peso_liquido: calcularPesoLiquido(proximo.peso_bruto, proximo.peso_tara),
-      });
-      return;
-    }
-
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -1137,23 +1094,29 @@ export default function ControleMassa() {
 
   function aplicarColetaNoForm(coletaSelecionada: ColetaOpcao) {
     setMtrSemColetaSelecionado(null);
-    setForm((prev) => ({
-      ...prev,
-      coleta_id: coletaSelecionada.id,
-      empresa: coletaSelecionada.cliente || prev.empresa,
-      residuo: coletaSelecionada.tipo_residuo || prev.residuo,
-      residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id ?? "",
-      placa: coletaSelecionada.placa || prev.placa,
-      motorista: coletaSelecionada.motorista || prev.motorista,
-      peso_tara:
-        coletaSelecionada.peso_tara !== null ? String(coletaSelecionada.peso_tara) : "",
-      peso_bruto:
-        coletaSelecionada.peso_bruto !== null ? String(coletaSelecionada.peso_bruto) : "",
-      peso_liquido: calcularPesoLiquido(
-        coletaSelecionada.peso_bruto !== null ? String(coletaSelecionada.peso_bruto) : "",
-        coletaSelecionada.peso_tara !== null ? String(coletaSelecionada.peso_tara) : ""
-      ),
-    }));
+    const linhasBase =
+      coletaSelecionada.residuos_itens ??
+      parseResiduosFromRow({
+        tipo_residuo: coletaSelecionada.tipo_residuo,
+        residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
+      });
+    const linhas = aplicarPesosColetaNasLinhas(linhasBase, {
+      peso_tara: coletaSelecionada.peso_tara,
+      peso_bruto: coletaSelecionada.peso_bruto,
+      peso_liquido: coletaSelecionada.peso_liquido,
+    });
+    setForm((prev) =>
+      mergeFormResiduosLinhas(
+        {
+          ...prev,
+          coleta_id: coletaSelecionada.id,
+          empresa: coletaSelecionada.cliente || prev.empresa,
+          placa: coletaSelecionada.placa || prev.placa,
+          motorista: coletaSelecionada.motorista || prev.motorista,
+        },
+        linhas
+      )
+    );
   }
 
   function aplicarSelecaoVinculo(v: string) {
@@ -1166,6 +1129,7 @@ export default function ControleMassa() {
         empresa: "",
         residuo: "",
         residuo_catalogo_id: "",
+        residuos_linhas: [linhaVaziaResiduoPesagem()],
         placa: "",
         motorista: "",
         peso_tara: "",
@@ -1189,18 +1153,27 @@ export default function ControleMassa() {
     if (!c) {
       const m = mtrsLista.find((x) => x.id === v);
       setMtrSemColetaSelecionado(v);
-      setForm((prev) => ({
-        ...prev,
-        coleta_id: "",
-        empresa: m?.cliente ?? "",
-        residuo: m?.tipo_residuo ? m.tipo_residuo : prev.residuo,
-        residuo_catalogo_id: "",
-        placa: "",
-        motorista: "",
-        peso_tara: "",
-        peso_bruto: "",
-        peso_liquido: "",
-      }));
+      setForm((prev) =>
+        mergeFormResiduosLinhas(
+          {
+            ...prev,
+            coleta_id: "",
+            empresa: m?.cliente ?? "",
+            placa: "",
+            motorista: "",
+            peso_tara: "",
+            peso_bruto: "",
+            peso_liquido: "",
+          },
+          [
+            {
+              ...linhaVaziaResiduoPesagem(),
+              catalogo_id: "",
+              texto: m?.tipo_residuo ? m.tipo_residuo : prev.residuo,
+            },
+          ]
+        )
+      );
       setErroTela(
         "Esta MTR ainda não tem coleta no sistema. Ao salvar a pesagem, uma coleta será criada e vinculada automaticamente a esta MTR."
       );
@@ -1414,25 +1387,6 @@ export default function ControleMassa() {
       return;
     }
 
-    const pesoTaraNumero = converterNumero(form.peso_tara);
-    const pesoBrutoNumero = converterNumero(form.peso_bruto);
-    const pesoLiquidoNumero = converterNumero(form.peso_liquido);
-
-    if (pesoTaraNumero === null) {
-      setErroTela("Preencha o peso tara.");
-      return;
-    }
-
-    if (pesoBrutoNumero === null) {
-      setErroTela("Preencha o peso bruto.");
-      return;
-    }
-
-    if (pesoLiquidoNumero === null) {
-      setErroTela("Não foi possível calcular o peso líquido.");
-      return;
-    }
-
     const mtrIdParaEmpresa =
       mtrSemColetaSelecionado ||
       (form.coleta_id.trim()
@@ -1449,6 +1403,26 @@ export default function ControleMassa() {
       setErroTela("Preencha a empresa (ou selecione uma MTR com cliente cadastrado).");
       return;
     }
+
+    const coletaVinculoPre = form.coleta_id.trim()
+      ? todasColetas.find((c) => c.id === form.coleta_id.trim())
+      : undefined;
+    const tipoResiduoColeta = (coletaVinculoPre?.tipo_residuo ?? "").trim();
+    const tipoResiduoMtr = (mtrLinha?.tipo_residuo != null ? String(mtrLinha.tipo_residuo) : "").trim();
+    const resolvido = resolverResiduosParaGravacao(form.residuos_linhas, catalogoResiduosPorId, {
+      tipoResiduoColeta,
+      tipoResiduoMtr,
+    });
+
+    if (resolvido.erro) {
+      setErroTela(resolvido.erro);
+      return;
+    }
+
+    const agregado = agregarPesosDasLinhas(form.residuos_linhas);
+    const pesoTaraNumero = agregado.pesoTaraNum;
+    const pesoBrutoNumero = agregado.pesoBrutoNum;
+    const pesoLiquidoNumero = agregado.pesoLiquidoNum;
 
     let coletaId = form.coleta_id.trim();
     let coletaAcabouDeSerCriada = false;
@@ -1469,8 +1443,9 @@ export default function ControleMassa() {
         pesoLiquido: pesoLiquidoNumero,
         motorista: form.motorista,
         placa: form.placa,
-        residuoFallback: form.residuo,
-        residuo_catalogo_id: residuoCatalogoIdParaDb(form.residuo_catalogo_id),
+        residuoFallback: resolvido.texto,
+        residuo_catalogo_id: resolvido.catalogo_id,
+        residuos_itens: resolvido.residuos_itens,
       });
 
       if (!criada.ok) {
@@ -1485,7 +1460,7 @@ export default function ControleMassa() {
       setForm((prev) => ({ ...prev, coleta_id: coletaId }));
     }
 
-    const coletaVinculo = todasColetas.find((c) => c.id === coletaId);
+    const coletaVinculo = coletaVinculoPre ?? todasColetas.find((c) => c.id === coletaId);
 
     if (!coletaAcabouDeSerCriada && !coletaVinculo) {
       setErroTela(
@@ -1494,38 +1469,26 @@ export default function ControleMassa() {
       return;
     }
 
-    const catalogIdPersist = residuoCatalogoIdParaDb(form.residuo_catalogo_id);
-    const rCatRow = catalogIdPersist ? catalogoResiduosPorId.get(catalogIdPersist) : undefined;
-    const textoDoCatalogo = rCatRow ? `${rCatRow.codigo} — ${rCatRow.nome}` : "";
-    const tipoResiduoColeta = (coletaVinculo?.tipo_residuo ?? "").trim();
-    const tipoResiduoMtr = (mtrLinha?.tipo_residuo != null ? String(mtrLinha.tipo_residuo) : "").trim();
-    const residuoParaInsert = (
-      form.residuo.trim() ||
-      textoDoCatalogo ||
-      tipoResiduoColeta ||
-      tipoResiduoMtr
-    ).trim();
-
-    if (!residuoParaInsert) {
-      setErroTela(
-        "Preencha o resíduo (texto ou catálogo) ou use uma coleta/MTR com tipo de resíduo definido."
-      );
-      return;
-    }
+    const residuoParaInsert = resolvido.texto;
+    const catalogIdPersist = resolvido.catalogo_id;
+    const residuosItensPersist = resolvido.residuos_itens;
 
     setSalvando(true);
 
     const numeroTicketTrim = form.numero_ticket.trim();
-    const payloadCampos = {
+    const payloadCampos: Record<string, unknown> = {
       numero_ticket: numeroTicketTrim,
       data: form.data,
       empresa: empresaFinal,
       residuo: residuoParaInsert,
+      residuos_itens: residuosItensPersist,
       placa: limparOuNull(form.placa),
       motorista: limparOuNull(form.motorista),
       peso_liquido: pesoLiquidoNumero,
       status: form.status || "Pendente",
     };
+    const payloadSemItens = { ...payloadCampos };
+    delete payloadSemItens.residuos_itens;
 
     const { data: cmExistenteRows, error: errBuscaCm } = await supabase
       .from("controle_massa")
@@ -1545,16 +1508,29 @@ export default function ControleMassa() {
     let error: { message: string; details?: string; code?: string } | null = null;
 
     if (cmExistenteId) {
-      const { error: upErr } = await supabase
-        .from("controle_massa")
-        .update(payloadCampos)
-        .eq("id", cmExistenteId);
+      let upErr = (
+        await supabase.from("controle_massa").update(payloadCampos).eq("id", cmExistenteId)
+      ).error;
+      if (isErroColunaResiduosItens(upErr)) {
+        upErr = (
+          await supabase.from("controle_massa").update(payloadSemItens).eq("id", cmExistenteId)
+        ).error;
+      }
       error = upErr;
     } else {
-      const { error: insErr } = await supabase.from("controle_massa").insert([
-        { coleta_id: limparOuNull(coletaId), ...payloadCampos },
-      ]);
-      error = insErr;
+      let insCmErr = (
+        await supabase.from("controle_massa").insert([
+          { coleta_id: limparOuNull(coletaId), ...payloadCampos },
+        ])
+      ).error;
+      if (isErroColunaResiduosItens(insCmErr)) {
+        insCmErr = (
+          await supabase.from("controle_massa").insert([
+            { coleta_id: limparOuNull(coletaId), ...payloadSemItens },
+          ])
+        ).error;
+      }
+      error = insCmErr;
     }
 
     if (error) {
@@ -1588,20 +1564,28 @@ export default function ControleMassa() {
     const tipoResGravar = residuoParaInsert;
     const resCatGravar = catalogIdPersist;
 
-    const { error: errorColeta } = await supabase
-      .from("coletas")
-      .update({
-        peso_tara: pesoTaraNumero,
-        peso_bruto: pesoBrutoNumero,
-        peso_liquido: pesoLiquidoNumero,
-        tipo_residuo: tipoResGravar,
-        residuo_catalogo_id: resCatGravar,
-        fluxo_status: fluxoPosPesagem,
-        etapa_operacional: fluxoPosPesagem,
-        status_processo: "EM_CONFERENCIA",
-        liberado_financeiro: false,
-      })
-      .eq("id", coletaId);
+    const coletaUpdate: Record<string, unknown> = {
+      peso_tara: pesoTaraNumero,
+      peso_bruto: pesoBrutoNumero,
+      peso_liquido: pesoLiquidoNumero,
+      tipo_residuo: tipoResGravar,
+      residuo_catalogo_id: resCatGravar,
+      residuos_itens: residuosItensPersist,
+      fluxo_status: fluxoPosPesagem,
+      etapa_operacional: fluxoPosPesagem,
+      status_processo: "EM_CONFERENCIA",
+      liberado_financeiro: false,
+    };
+    const coletaUpdateSemItens = { ...coletaUpdate };
+    delete coletaUpdateSemItens.residuos_itens;
+
+    let errorColeta = (await supabase.from("coletas").update(coletaUpdate).eq("id", coletaId))
+      .error;
+    if (isErroColunaResiduosItens(errorColeta)) {
+      errorColeta = (
+        await supabase.from("coletas").update(coletaUpdateSemItens).eq("id", coletaId)
+      ).error;
+    }
 
     if (errorColeta) {
       console.error("Erro ao atualizar coleta após controle de massa:", errorColeta);
@@ -2795,95 +2779,17 @@ export default function ControleMassa() {
                     />
                   </div>
 
-                  <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Resíduo (catálogo)</label>
-                    <input
-                      aria-label="Filtrar catálogo de resíduos por código"
-                      value={filtroCodigoCatalogoResiduo}
-                      onChange={(e) => setFiltroCodigoCatalogoResiduo(e.target.value)}
-                      placeholder="Filtrar por código…"
-                      style={{
-                        ...inputStyle,
-                        height: "36px",
-                        fontSize: "12px",
-                        marginBottom: "8px",
-                      }}
-                    />
-                    <select
-                      name="residuo_catalogo_id"
-                      value={form.residuo_catalogo_id}
-                      onChange={handleInputChange}
-                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
-                      aria-label="Catálogo de resíduos (código)"
-                    >
-                      <option value="">Selecione (opcional)</option>
-                      <option value={RESIDUO_CATALOGO_ID_OUTROS_URBANOS}>
-                        Outros resíduos urbanos (texto livre — sem código de catálogo)
-                      </option>
-                      {residuosCatalogoFiltrados.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.codigo} — {r.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                                    <PesagemResiduosLista
+                    linhas={form.residuos_linhas}
+                    onLinhasChange={(linhas) =>
+                      setForm((prev) => mergeFormResiduosLinhas(prev, linhas))
+                    }
+                    residuosCatalogo={residuosCatalogo}
+                    catalogoPorId={catalogoResiduosPorId}
+                    inputStyle={inputStyle}
+                  />
 
-                  <div style={{ gridColumn: "span 12" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Resíduo (texto)</label>
-                    <input
-                      name="residuo"
-                      value={form.residuo}
-                      onChange={handleInputChange}
-                      placeholder="Texto do resíduo (livre ou preenchido pelo catálogo)"
-                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
-                    />
-                  </div>
 
-                  <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Peso tara (kg)</label>
-                    <input
-                      ref={pesoTaraRef}
-                      name="peso_tara"
-                      inputMode="decimal"
-                      value={form.peso_tara}
-                      onChange={handleInputChange}
-                      placeholder="Ex.: 320"
-                      style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Peso bruto (kg)</label>
-                    <input
-                      ref={pesoBrutoRef}
-                      name="peso_bruto"
-                      inputMode="decimal"
-                      value={form.peso_bruto}
-                      onChange={handleInputChange}
-                      placeholder="Ex.: 2540"
-                      style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
-                      Peso líquido (auto)
-                    </label>
-                    <input
-                      name="peso_liquido"
-                      value={form.peso_liquido}
-                      readOnly
-                      placeholder="—"
-                      style={{
-                        ...inputStyle,
-                        height: "46px",
-                        fontSize: "15px",
-                        fontWeight: 900,
-                        background: "#f8fafc",
-                        borderColor: "#cbd5e1",
-                      }}
-                    />
-                  </div>
                 </div>
               </div>
 

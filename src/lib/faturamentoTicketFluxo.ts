@@ -154,3 +154,34 @@ export async function devolverTicketParaFilaConferenciaColeta(
 
   return { ok: true }
 }
+
+/** Ajuste manual do peso líquido antes da aprovação do ticket (fila de conferência). */
+export async function atualizarPesoLiquidoConferenciaTicket(
+  coletaId: string,
+  pesoLiquido: number
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const id = coletaId.trim()
+  if (!id) return { ok: false, message: 'Coleta inválida.' }
+
+  const peso = Number(pesoLiquido)
+  if (!Number.isFinite(peso) || peso <= 0) {
+    return { ok: false, message: 'Informe um peso líquido maior que zero (kg).' }
+  }
+
+  const { error: errColeta } = await supabase.from('coletas').update({ peso_liquido: peso }).eq('id', id)
+
+  if (errColeta) {
+    return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
+  }
+
+  const { error: errMassa } = await supabase
+    .from('controle_massa')
+    .update({ peso_liquido: peso })
+    .eq('coleta_id', id)
+
+  if (errMassa) {
+    console.warn('controle_massa.peso_liquido:', errMassa.message)
+  }
+
+  return { ok: true }
+}

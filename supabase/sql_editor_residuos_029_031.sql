@@ -11,14 +11,14 @@ INSERT INTO public.residuos (codigo, nome, descricao, grupo, sort_order) VALUES
   ),
   (
     'RG-R-030',
-    'Resíduo comercial',
-    'Resíduos comerciais segregados (não perigosos ou baixo risco operacional)',
+    'Resíduo comercial classe 1',
+    'Resíduos comerciais classe I (não perigosos ou baixo risco operacional)',
     'II-B',
     276
   ),
   (
     'RG-R-031',
-    'Resíduo Comercial classe 2',
+    'Resíduo comercial classe 2',
     'Resíduos comerciais classe II (perigosos — NBR 10004)',
     'II-A',
     277
