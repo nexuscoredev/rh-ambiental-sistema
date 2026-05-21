@@ -15,10 +15,14 @@ import {
   ControleMassaMtrPicker,
   type ResumoSelecaoMtr,
 } from "../components/controleMassa/ControleMassaMtrPicker";
+import { queryColetasListaFluxoControle } from "../lib/coletasSelectSeguimento";
 import {
-  COLETAS_SELECT_SEGUIMENTO,
-  queryColetasListaFluxoControle,
-} from "../lib/coletasSelectSeguimento";
+  buscarColetasPorIdsControleMassa,
+  fetchColetaIdsComPesagemRecente,
+  fetchTicketOperacionalPorColetaIds,
+  fetchTipoCaminhaoPorProgramacaoIds,
+  fetchUltimaPesagemPorColetaIds,
+} from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
@@ -337,133 +341,8 @@ function formatarDataIsoCurta(iso: string | null | undefined): string {
 }
 
 async function buscarColetasPorIds(ids: string[]): Promise<ColetaOpcao[]> {
-  const uniq = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
-  if (uniq.length === 0) return [];
-
-  const chunkSize = 120;
-  const out: ColetaOpcao[] = [];
-
-  for (let i = 0; i < uniq.length; i += chunkSize) {
-    const chunk = uniq.slice(i, i + chunkSize);
-    const { data, error } = await supabase
-      .from("coletas")
-      .select(COLETAS_SELECT_SEGUIMENTO)
-      .in("id", chunk);
-
-    if (error) {
-      console.error("Erro ao buscar coletas por id:", error);
-      continue;
-    }
-
-    for (const row of (data as Record<string, unknown>[]) || []) {
-      out.push(mapRowToColetaOpcao(row));
-    }
-  }
-
-  return out;
-}
-
-async function fetchUltimaPesagemChunk(
-  chunk: string[]
-): Promise<Record<string, unknown>[] | null> {
-  if (chunk.length === 0) return null;
-  const lim = Math.min(5000, chunk.length * 40);
-  const prim = await supabase
-    .from("controle_massa")
-    .select("coleta_id, data, hora_entrada, hora_saida, created_at")
-    .in("coleta_id", chunk)
-    .order("created_at", { ascending: false })
-    .limit(lim);
-  if (!prim.error && prim.data) return prim.data as Record<string, unknown>[];
-  const alt = await supabase
-    .from("controle_massa")
-    .select("coleta_id, data, hora_entrada, hora_saida, id")
-    .in("coleta_id", chunk)
-    .order("id", { ascending: false })
-    .limit(lim);
-  if (!alt.error && alt.data) return alt.data as Record<string, unknown>[];
-  return null;
-}
-
-/**
- * Última pesagem por coleta — consultas `.in(coleta_id)` em lotes em vez de varrer milhares de linhas.
- */
-async function fetchUltimaPesagemPorColetaIds(
-  coletaIds: string[]
-): Promise<
-  Map<string, { data: string | null; hora_entrada: string | null; hora_saida: string | null }>
-> {
-  const ultima = new Map<
-    string,
-    { data: string | null; hora_entrada: string | null; hora_saida: string | null }
-  >();
-  const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))];
-  const chunkSize = 100;
-  const parallel = 5;
-  for (let i = 0; i < uniq.length; i += chunkSize * parallel) {
-    const wave: string[][] = [];
-    for (let w = 0; w < parallel; w++) {
-      const start = i + w * chunkSize;
-      const ch = uniq.slice(start, start + chunkSize);
-      if (ch.length > 0) wave.push(ch);
-    }
-    const rowsArrays = await Promise.all(wave.map((ch) => fetchUltimaPesagemChunk(ch)));
-    for (const rows of rowsArrays) {
-      if (!rows) continue;
-      for (const r of rows) {
-        const cid = r.coleta_id != null ? String(r.coleta_id) : "";
-        if (!cid || ultima.has(cid)) continue;
-        ultima.set(cid, {
-          data: r.data != null ? String(r.data) : null,
-          hora_entrada: r.hora_entrada != null ? String(r.hora_entrada) : null,
-          hora_saida: r.hora_saida != null ? String(r.hora_saida) : null,
-        });
-      }
-    }
-  }
-  return ultima;
-}
-
-/** Dados resumidos do ticket operacional por coleta (no máx. um ticket por coleta). */
-async function fetchTicketOperacionalPorColetaIds(coletaIds: string[]): Promise<{
-  tipoPorColeta: Map<string, string>;
-  numeroPorColeta: Map<string, string>;
-}> {
-  const tipoPorColeta = new Map<string, string>();
-  const numeroPorColeta = new Map<string, string>();
-  const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))];
-  if (uniq.length === 0) return { tipoPorColeta, numeroPorColeta };
-  const chunkSize = 200;
-  const visto = new Set<string>();
-  for (let i = 0; i < uniq.length; i += chunkSize) {
-    const chunk = uniq.slice(i, i + chunkSize);
-    const { data, error } = await supabase
-      .from("tickets_operacionais")
-      .select("coleta_id, tipo_ticket, numero")
-      .in("coleta_id", chunk);
-    if (error) {
-      console.error("Erro ao buscar ticket operacional por coleta:", error);
-      continue;
-    }
-    const rows =
-      (data as
-        | Array<{
-            coleta_id?: string;
-            tipo_ticket?: string | null;
-            numero?: string | null;
-          }>
-        | null) ?? [];
-    for (const row of rows) {
-      const cid = row.coleta_id != null ? String(row.coleta_id) : "";
-      if (!cid || visto.has(cid)) continue;
-      visto.add(cid);
-      const tt = row.tipo_ticket != null ? String(row.tipo_ticket).trim() : "";
-      const num = row.numero != null ? String(row.numero).trim() : "";
-      if (tt) tipoPorColeta.set(cid, tt);
-      numeroPorColeta.set(cid, num);
-    }
-  }
-  return { tipoPorColeta, numeroPorColeta };
+  const rows = await buscarColetasPorIdsControleMassa(supabase, ids);
+  return rows.map((row) => mapRowToColetaOpcao(row));
 }
 
 function formatarTipoTicketLista(raw: string | null | undefined): string {
@@ -905,6 +784,7 @@ export default function ControleMassa() {
   const urlClienteId = searchParams.get("cliente");
 
   const prevContextoUrlKeyRef = useRef<string>("");
+  const ultimoEnriquecimentoKeyRef = useRef<string>("");
 
   /** Todas as coletas (validação, URL e atualização no save). */
   const [todasColetas, setTodasColetas] = useState<ColetaOpcao[]>([]);
@@ -1268,23 +1148,34 @@ export default function ControleMassa() {
     navigate(`/mtr?${montarParamsFluxo(c).toString()}`);
   }
 
+  const enriquecerListaColetas = useCallback(async (merged: ColetaOpcao[]) => {
+    const coletaIds = merged.map((c) => c.id);
+    const progIds = [...new Set(merged.map((c) => c.programacao_id).filter(Boolean))] as string[];
+    const [tipoCam, ultima, ticketPorColeta] = await Promise.all([
+      fetchTipoCaminhaoPorProgramacaoIds(supabase, progIds),
+      fetchUltimaPesagemPorColetaIds(supabase, coletaIds),
+      fetchTicketOperacionalPorColetaIds(supabase, coletaIds),
+    ]);
+    setTipoCaminhaoPorProgramacao(tipoCam);
+    setUltimaPesagemPorColeta(ultima);
+    setTipoTicketPorColeta(ticketPorColeta.tipoPorColeta);
+    setNumeroTicketPorColeta(ticketPorColeta.numeroPorColeta);
+  }, []);
+
   const fetchMtrsEColetas = useCallback(async (opts?: { silent?: boolean; extraColetaIds?: string[] }) => {
     const silent = Boolean(opts?.silent);
     if (!silent) setLoadingVinculo(true);
+    ultimoEnriquecimentoKeyRef.current = "";
 
     try {
-      const [mRes, cRes, cmRes] = await Promise.all([
+      const [mRes, cRes, idsMassa] = await Promise.all([
         supabase
           .from("mtrs")
           .select("id, numero, cliente, tipo_residuo, status, created_at")
           .order("created_at", { ascending: false })
           .limit(300),
         queryColetasListaFluxoControle(500),
-        supabase
-          .from("controle_massa")
-          .select("coleta_id")
-          .not("coleta_id", "is", null)
-          .limit(1200),
+        fetchColetaIdsComPesagemRecente(supabase),
       ]);
 
       if (mRes.error) {
@@ -1312,17 +1203,6 @@ export default function ControleMassa() {
         );
       }
 
-      if (cmRes.error) {
-        console.error("Erro ao listar coleta_id em controle_massa:", cmRes.error);
-      }
-
-      const idsMassa = [
-        ...new Set(
-          ((cmRes.data as { coleta_id?: string | null }[]) || [])
-            .map((r) => r.coleta_id)
-            .filter((id): id is string => Boolean(id))
-        ),
-      ];
       const extrasParam = (opts?.extraColetaIds ?? []).filter(Boolean);
       const baseIds = new Set(base.map((c) => c.id));
       const faltando = [
@@ -1339,43 +1219,46 @@ export default function ControleMassa() {
         merged = Array.from(porId.values());
       }
 
-      const progIds = [...new Set(merged.map((c) => c.programacao_id).filter(Boolean))] as string[];
-      const tipoCam: Record<string, string> = {};
-      const progChunk = 200;
-      const fatiasProg: string[][] = [];
-      for (let pi = 0; pi < progIds.length; pi += progChunk) {
-        fatiasProg.push(progIds.slice(pi, pi + progChunk));
-      }
-      if (fatiasProg.length > 0) {
-        const progRespostas = await Promise.all(
-          fatiasProg.map((slice) =>
-            supabase.from("programacoes").select("id, tipo_caminhao").in("id", slice)
-          )
-        );
-        for (const { data: prows, error: pErr } of progRespostas) {
-          if (!pErr && prows) {
-            for (const p of prows as { id: string; tipo_caminhao?: string | null }[]) {
-              tipoCam[p.id] = (p.tipo_caminhao ?? "").trim() || "—";
-            }
-          }
-        }
-      }
-
-      const coletaIds = merged.map((c) => c.id);
-      const [ultima, ticketPorColeta] = await Promise.all([
-        fetchUltimaPesagemPorColetaIds(coletaIds),
-        fetchTicketOperacionalPorColetaIds(coletaIds),
-      ]);
-
-      setTipoCaminhaoPorProgramacao(tipoCam);
-      setUltimaPesagemPorColeta(ultima);
-      setTipoTicketPorColeta(ticketPorColeta.tipoPorColeta);
-      setNumeroTicketPorColeta(ticketPorColeta.numeroPorColeta);
       setTodasColetas(merged);
     } finally {
       setLoadingVinculo(false);
     }
   }, []);
+
+  const coletaIdsEnriquecimentoKey = useMemo(
+    () => todasColetas.map((c) => c.id).sort().join("|"),
+    [todasColetas]
+  );
+
+  useEffect(() => {
+    if (loadingVinculo || !coletaIdsEnriquecimentoKey) return;
+    const precisaEnriquecer =
+      modoTela === "auditoria" ||
+      secaoPesagemAberta ||
+      mtrPickerAberto ||
+      Boolean(urlColetaId);
+    if (!precisaEnriquecer) return;
+    if (ultimoEnriquecimentoKeyRef.current === coletaIdsEnriquecimentoKey) return;
+
+    ultimoEnriquecimentoKeyRef.current = coletaIdsEnriquecimentoKey;
+    let cancelled = false;
+    void (async () => {
+      await enriquecerListaColetas(todasColetas);
+      if (cancelled) ultimoEnriquecimentoKeyRef.current = "";
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loadingVinculo,
+    coletaIdsEnriquecimentoKey,
+    todasColetas,
+    modoTela,
+    secaoPesagemAberta,
+    mtrPickerAberto,
+    urlColetaId,
+    enriquecerListaColetas,
+  ]);
 
   /** Atualiza só as coletas gravadas (evita recarregar 500+ coletas após salvar). */
   const atualizarColetasAposSalvar = useCallback(async (coletaIds: string[]) => {
@@ -1384,8 +1267,8 @@ export default function ControleMassa() {
 
     const [extraRows, ultima, ticketPorColeta] = await Promise.all([
       buscarColetasPorIds(ids),
-      fetchUltimaPesagemPorColetaIds(ids),
-      fetchTicketOperacionalPorColetaIds(ids),
+      fetchUltimaPesagemPorColetaIds(supabase, ids),
+      fetchTicketOperacionalPorColetaIds(supabase, ids),
     ]);
 
     setTodasColetas((prev) => {

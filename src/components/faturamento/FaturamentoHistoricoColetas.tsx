@@ -71,18 +71,27 @@ function fimDiaInclusive(isoDate: string): number {
 }
 
 type Props = {
-  todasLinhas: FaturamentoResumoViewRow[]
+  linhas: FaturamentoResumoViewRow[]
+  /** Histórico ainda não foi pedido ao servidor (carga lazy). */
+  naoCarregado?: boolean
+  carregando?: boolean
+  onCarregar?: () => void
 }
 
-export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
+export function FaturamentoHistoricoColetas({
+  linhas,
+  naoCarregado = false,
+  carregando = false,
+  onCarregar,
+}: Props) {
   const [busca, setBusca] = useState('')
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
   const [resumoRow, setResumoRow] = useState<FaturamentoResumoViewRow | null>(null)
 
   const historicoBase = useMemo(
-    () => todasLinhas.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
-    [todasLinhas]
+    () => linhas.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
+    [linhas]
   )
 
   const filtradas = useMemo(() => {
@@ -106,9 +115,30 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
     <div style={wrap}>
       <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#475569' }}>Coletas faturadas</h2>
       <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94a3b8', maxWidth: '820px', lineHeight: 1.5 }}>
-        Consulta secundária: coletas já enviadas ao Financeiro. Filtre por período (data da coleta) ou busque por cliente / número.
-        A coluna «Conferência» mostra quando o pacote operacional foi conferido, quando existir registo.
+        Consulta secundária: coletas já enviadas ao Financeiro (carregamento sob demanda). Filtre por período ou busque por
+        cliente / número.
       </p>
+      {naoCarregado ? (
+        <div style={{ marginBottom: '14px' }}>
+          <button
+            type="button"
+            onClick={() => onCarregar?.()}
+            disabled={carregando || !onCarregar}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: '1px solid #0d9488',
+              background: '#f0fdfa',
+              color: '#0f766e',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: carregando ? 'wait' : 'pointer',
+            }}
+          >
+            {carregando ? 'A carregar histórico…' : 'Carregar coletas já faturadas'}
+          </button>
+        </div>
+      ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', alignItems: 'flex-end' }}>
         <div>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
@@ -167,10 +197,16 @@ export function FaturamentoHistoricoColetas({ todasLinhas }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtradas.length === 0 ? (
+            {naoCarregado ? (
               <tr>
                 <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
-                  Nenhum registro neste filtro.
+                  Clique em «Carregar coletas já faturadas» para ver o histórico.
+                </td>
+              </tr>
+            ) : filtradas.length === 0 ? (
+              <tr>
+                <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                  {carregando ? 'A carregar…' : 'Nenhum registro neste filtro.'}
                 </td>
               </tr>
             ) : (

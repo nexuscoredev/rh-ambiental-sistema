@@ -48,19 +48,29 @@ function fmtMoeda(n: number) {
 }
 
 type Props = {
-  linhas: FaturamentoResumoViewRow[]
+  linhasOperacional: FaturamentoResumoViewRow[]
+  linhasHistorico: FaturamentoResumoViewRow[] | null
+  naoCarregadoHistorico?: boolean
+  carregandoHistorico?: boolean
+  onCarregarHistorico?: () => void
 }
 
-export function FaturamentoRelatoriosPanel({ linhas }: Props) {
+export function FaturamentoRelatoriosPanel({
+  linhasOperacional,
+  linhasHistorico,
+  naoCarregadoHistorico = false,
+  carregandoHistorico = false,
+  onCarregarHistorico,
+}: Props) {
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
 
   const historico = useMemo(
-    () => linhas.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
-    [linhas]
+    () => (linhasHistorico ?? []).filter((r) => coletaHistoricoFaturamentoEmitido(r)),
+    [linhasHistorico]
   )
 
-  const fila = useMemo(() => linhas.filter((r) => coletaNaFilaFaturamento(r)), [linhas])
+  const fila = useMemo(() => linhasOperacional.filter((r) => coletaNaFilaFaturamento(r)), [linhasOperacional])
 
   const historicoPeriodo = useMemo(() => {
     const t0 = de ? inicioDiaMs(de) : null
@@ -129,8 +139,30 @@ export function FaturamentoRelatoriosPanel({ linhas }: Props) {
         Relatórios e indicadores
       </h2>
       <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94a3b8', maxWidth: '880px', lineHeight: 1.5 }}>
-        Resumo com base na vista carregada. Ajuste o período para filtrar totais e ranking (data da coleta).
+        Fila «a faturar» usa dados operacionais já carregados; totais de emitidas exigem carregar o histórico.
       </p>
+
+      {naoCarregadoHistorico ? (
+        <div style={{ marginBottom: '14px' }}>
+          <button
+            type="button"
+            onClick={() => onCarregarHistorico?.()}
+            disabled={carregandoHistorico || !onCarregarHistorico}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              background: '#f8fafc',
+              color: '#0f172a',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: carregandoHistorico ? 'wait' : 'pointer',
+            }}
+          >
+            {carregandoHistorico ? 'A carregar histórico…' : 'Carregar histórico para relatórios'}
+          </button>
+        </div>
+      ) : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px', alignItems: 'flex-end' }}>
         <div>

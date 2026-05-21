@@ -41,6 +41,13 @@ import {
   excluirMtrPorId,
   listarColetaIdsPorMtr,
 } from '../lib/excluirOperacionalCascata'
+import {
+  coletarProgramacaoIdsVinculadasMtr,
+  fetchProgramacoesMtrCatalogo,
+  fetchProgramacoesMtrPorIds,
+  mergeProgramacoesMtrPorId,
+  mtrProgramacoesMesesJanela,
+} from '../lib/mtrProgramacoesFetch'
 
 type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado'
 
@@ -610,7 +617,14 @@ export default function MTR() {
   const prevContextoUrlKeyRef = useRef<string>('')
 
   const [mtrs, setMtrs] = useState<MTR[]>([])
-  const [programacoes, setProgramacoes] = useState<Programacao[]>([])
+  const [programacoesVinculadas, setProgramacoesVinculadas] = useState<Programacao[]>([])
+  const [programacoesCatalogo, setProgramacoesCatalogo] = useState<Programacao[]>([])
+  const [catalogoProgramacoesCarregado, setCatalogoProgramacoesCarregado] = useState(false)
+  const [carregandoCatalogoProgramacoes, setCarregandoCatalogoProgramacoes] = useState(false)
+  const programacoes = useMemo(
+    () => mergeProgramacoesMtrPorId(programacoesVinculadas, programacoesCatalogo) as Programacao[],
+    [programacoesVinculadas, programacoesCatalogo]
+  )
   const [coletas, setColetas] = useState<Coleta[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -654,6 +668,43 @@ export default function MTR() {
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
+  const catalogoProgLoadGenRef = useRef(0)
+
+  const carregarProgramacoesVinculadas = useCallback(
+    async (
+      mtrsRows: MTR[],
+      coletasRows: Coleta[],
+      extras: (string | null | undefined)[]
+    ) => {
+      const ids = coletarProgramacaoIdsVinculadasMtr(mtrsRows, coletasRows, extras)
+      if (ids.length === 0) {
+        setProgramacoesVinculadas([])
+        return
+      }
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, ids)
+      if (error) {
+        console.warn('[MTR] programações vinculadas:', error.message)
+        return
+      }
+      setProgramacoesVinculadas(data as Programacao[])
+    },
+    []
+  )
+
+  const ensureCatalogoProgramacoes = useCallback(async () => {
+    if (catalogoProgramacoesCarregado) return
+    const gen = ++catalogoProgLoadGenRef.current
+    setCarregandoCatalogoProgramacoes(true)
+    const { data, error } = await fetchProgramacoesMtrCatalogo(supabase)
+    if (gen !== catalogoProgLoadGenRef.current) return
+    setCarregandoCatalogoProgramacoes(false)
+    if (error) {
+      console.warn('[MTR] catálogo de programações:', error.message)
+      return
+    }
+    setProgramacoesCatalogo(data as Programacao[])
+    setCatalogoProgramacoesCarregado(true)
+  }, [catalogoProgramacoesCarregado])
 
   function resetForm() {
     setForm({
@@ -671,7 +722,7 @@ export default function MTR() {
     const gen = ++loadDataGenRef.current
     setLoading(true)
 
-    const [mtrsRes, programacoesRes, coletasRes] = await Promise.all([
+    const [mtrsRes, coletasRes] = await Promise.all([
       supabase
         .from('mtrs')
         .select(
@@ -679,32 +730,6 @@ export default function MTR() {
         )
         .order('created_at', { ascending: false })
         .limit(300),
-      (async () => {
-        // Supabase PostgREST devolve no máximo 1000 linhas por chamada.
-        // Com coletas fixas semanais geradas, pode haver milhares de programações.
-        // Paginamos em blocos de 1000 e filtramos os últimos 12 meses + futuro.
-        const dataLimite = new Date()
-        dataLimite.setMonth(dataLimite.getMonth() - 12)
-        const dataLimiteStr = dataLimite.toISOString().slice(0, 10)
-
-        const PROG_PAGE = 1000
-        const acc: Programacao[] = []
-        for (let from = 0; from < 10000; from += PROG_PAGE) {
-          const { data, error } = await supabase
-            .from('programacoes')
-            .select(
-              'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, observacoes, coleta_fixa, frequencia, periodicidade, status_programacao, created_at, criado_por_nome, criado_por_user_id'
-            )
-            .neq('status_programacao', 'CANCELADA')
-            .gte('data_programada', dataLimiteStr)
-            .order('data_programada', { ascending: false })
-            .range(from, from + PROG_PAGE - 1)
-          if (error) return { data: acc, error }
-          acc.push(...((data || []) as Programacao[]))
-          if ((data || []).length < PROG_PAGE) break
-        }
-        return { data: acc, error: null }
-      })(),
       supabase
         .from('coletas')
         .select(
@@ -727,6 +752,7 @@ export default function MTR() {
       alert(`${titulo}\n${buildSupabaseErrorMessage(err)}`)
     }
 
+    let mtrsRows: MTR[] = []
     if (mtrsRes.error) {
       alertarSeCritico('Erro ao carregar MTRs:', mtrsRes.error)
     } else {
@@ -735,27 +761,29 @@ export default function MTR() {
         .filter((m) => !(m.criado_por_nome || '').trim() && (m.criado_por_user_id || '').trim())
         .map((m) => m.criado_por_user_id as string)
       const nomePorUsuarioId = await montarMapNomeExibicaoPorUsuarioId(supabase, idsAutorSemNome)
-      setMtrs(
-        rawMtrs.map((m) => ({
-          ...m,
-          criado_por_nome:
-            (m.criado_por_nome || '').trim() ||
-            nomePorUsuarioId.get(String(m.criado_por_user_id || '').trim()) ||
-            null,
-        }))
-      )
+      mtrsRows = rawMtrs.map((m) => ({
+        ...m,
+        criado_por_nome:
+          (m.criado_por_nome || '').trim() ||
+          nomePorUsuarioId.get(String(m.criado_por_user_id || '').trim()) ||
+          null,
+      }))
+      setMtrs(mtrsRows)
     }
 
-    if (programacoesRes.error) {
-      alertarSeCritico('Erro ao carregar programações:', programacoesRes.error)
-    } else {
-      setProgramacoes((programacoesRes.data || []) as Programacao[])
-    }
-
+    let coletasRows: Coleta[] = []
     if (coletasRes.error) {
       alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
     } else {
-      setColetas((coletasRes.data || []) as Coleta[])
+      coletasRows = (coletasRes.data || []) as Coleta[]
+      setColetas(coletasRows)
+    }
+
+    if (gen === loadDataGenRef.current) {
+      await carregarProgramacoesVinculadas(mtrsRows, coletasRows, [
+        urlProgramacaoId,
+        urlColetaId,
+      ])
     }
 
     setLoading(false)
@@ -818,6 +846,13 @@ export default function MTR() {
       })
     }
   }, [showForm, editingId])
+
+  useEffect(() => {
+    if (!showForm) return
+    queueMicrotask(() => {
+      void ensureCatalogoProgramacoes()
+    })
+  }, [showForm, ensureCatalogoProgramacoes])
 
   const mtrMapByProgramacaoId = useMemo(() => {
     const map = new Map<string, MTR>()
@@ -948,6 +983,7 @@ export default function MTR() {
     }
     resetForm()
     setShowForm(true)
+    void ensureCatalogoProgramacoes()
   }
 
   function openEditForm(item: MTR) {
@@ -975,10 +1011,29 @@ export default function MTR() {
       observacoes: item.observacoes || '',
     })
     setShowForm(true)
+    if (item.programacao_id) {
+      void fetchProgramacoesMtrPorIds(supabase, [item.programacao_id]).then(({ data, error }) => {
+        if (error || data.length === 0) return
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+      })
+    }
+    void ensureCatalogoProgramacoes()
   }
 
   async function handleProgramacaoChange(programacaoIdSelecionada: string) {
-    const programacao = programacoes.find((item) => item.id === programacaoIdSelecionada)
+    let programacao = programacoes.find((item) => item.id === programacaoIdSelecionada)
+
+    if (!programacao) {
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, [programacaoIdSelecionada])
+      if (!error && data.length > 0) {
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+        programacao = data[0] as Programacao
+      }
+    }
 
     if (!programacao) {
       setForm((prev) => ({
@@ -3424,7 +3479,13 @@ export default function MTR() {
                         placeholder="Selecione a data da programação"
                       />
                       <span className="helper">
-                        Abra o calendário, clique no dia que tem programação (dias destacados em verde, com o número de programações no canto) e escolha uma na lista que aparece. Se a programação já tiver MTR, o sistema abre a MTR existente.
+                        Catálogo: últimos {mtrProgramacoesMesesJanela()} meses
+                        {carregandoCatalogoProgramacoes
+                          ? ' (a carregar…)'
+                          : catalogoProgramacoesCarregado
+                            ? ''
+                            : ' — abre ao criar/editar MTR'}
+                        . Abra o calendário, escolha o dia (verde) e a programação. Se já existir MTR, abre a existente.
                       </span>
                     </div>
 

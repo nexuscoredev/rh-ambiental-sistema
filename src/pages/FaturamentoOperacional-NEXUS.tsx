@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -11,12 +11,11 @@ import {
   cargoPodeEncerrarTicketDefinitivoFaturamento,
 } from '../lib/workflowPermissions'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
-import { fetchVwFaturamentoResumoPaginated } from '../lib/faturamentoResumoFetch'
+import { useFaturamentoOperacionalVista } from '../lib/faturamentoOperacionalVista'
 import {
   coletaConferenciaPendente,
   coletaProntaNaVistaExcluindoFluxoTicket,
   coletaAguardandoImpressaoTicketFaturamento,
-  coletaHistoricoFaturamentoEmitido,
   coletaNaFilaFaturamento,
   coletaNaFilaAprovacaoTicketFaturamento,
 } from '../lib/faturamentoOperacionalFila'
@@ -82,11 +81,23 @@ export default function FaturamentoOperacional() {
   const [searchParams, setSearchParams] = useSearchParams()
   const idsCtx = useMemo(() => idsContextoFromSearchParams(searchParams), [searchParams])
 
-  const [linhasView, setLinhasView] = useState<FaturamentoResumoViewRow[]>([])
-  const [carregandoVista, setCarregandoVista] = useState(true)
-  const [erroVista, setErroVista] = useState('')
-  const [ticketAprovacaoAtivo, setTicketAprovacaoAtivo] = useState(true)
   const [cargo, setCargo] = useState<string | null>(null)
+
+  const {
+    linhasView,
+    linhasOperacional,
+    linhasHistorico,
+    historicoCarregado,
+    carregandoVista,
+    carregandoHistorico,
+    erroVista,
+    ticketAprovacaoAtivo,
+    recarregarTudo,
+    carregarHistorico,
+    qtdEmitidasCartao,
+    valorEmitidasCartao,
+    diasJanela,
+  } = useFaturamentoOperacionalVista(idsCtx.coleta)
 
   const [modalAberto, setModalAberto] = useState(false)
   const [modalColetaId, setModalColetaId] = useState<string | null>(null)
@@ -95,33 +106,6 @@ export default function FaturamentoOperacional() {
   const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo)
   const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo)
   const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo)
-
-  const carregarVista = useCallback(async () => {
-    setCarregandoVista(true)
-    setErroVista('')
-    const { data, error, ticketAprovacaoAtivo: ticketCols } = await fetchVwFaturamentoResumoPaginated(supabase)
-
-    if (error) {
-      console.error(error)
-      setErroVista(
-        'Não foi possível carregar a consolidação de faturamento. Verifique se a view vw_faturamento_resumo existe e está publicada no Supabase.'
-      )
-      setLinhasView([])
-      setTicketAprovacaoAtivo(false)
-      setCarregandoVista(false)
-      return
-    }
-
-    setTicketAprovacaoAtivo(ticketCols)
-    setLinhasView(data)
-    setCarregandoVista(false)
-  }, [])
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void carregarVista()
-    })
-  }, [carregarVista])
 
   useEffect(() => {
     async function carregarCargo() {
@@ -168,11 +152,6 @@ export default function FaturamentoOperacional() {
     })
   }, [linhasView])
 
-  const historicoEmitidos = useMemo(
-    () => linhasView.filter((r) => coletaHistoricoFaturamentoEmitido(r)),
-    [linhasView]
-  )
-
   const qtdProntoConferencia = useMemo(
     () => linhasView.filter((r) => coletaProntaNaVistaExcluindoFluxoTicket(r)).length,
     [linhasView]
@@ -205,15 +184,6 @@ export default function FaturamentoOperacional() {
       ? s.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
       : '—'
   }, [fila])
-
-  const valorTotalEmitidoBase = useMemo(() => {
-    let s = 0
-    for (const r of historicoEmitidos) {
-      const v = r.faturamento_registro_valor ?? r.valor_coleta
-      if (v != null && Number.isFinite(Number(v))) s += Number(v)
-    }
-    return s
-  }, [historicoEmitidos])
 
   const modalRow = useMemo(
     () => (modalColetaId ? linhasView.find((r) => r.coleta_id === modalColetaId) ?? null : null),
@@ -265,7 +235,7 @@ export default function FaturamentoOperacional() {
             <span style={{ whiteSpace: 'pre-wrap', display: 'block' }}>{erroVista}</span>
             <button
               type="button"
-              onClick={() => void carregarVista()}
+              onClick={() => void recarregarTudo()}
               style={{
                 marginTop: '12px',
                 padding: '6px 12px',
@@ -303,7 +273,7 @@ export default function FaturamentoOperacional() {
         <div style={{ marginTop: '22px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
-            onClick={() => void carregarVista()}
+            onClick={() => void recarregarTudo()}
             disabled={carregandoVista}
             style={{
               padding: '8px 16px',
@@ -318,6 +288,8 @@ export default function FaturamentoOperacional() {
             {carregandoVista ? 'Atualizando…' : 'Atualizar dados'}
           </button>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
+            Janela: <strong style={{ color: '#0f172a' }}>{diasJanela != null ? `${diasJanela} dias` : 'completa'}</strong>
+            {' · '}
             Perfil: <strong style={{ color: '#0f172a' }}>{cargo ?? '—'}</strong>
             {!podeConfirmarEmissao
               ? ' · somente leitura'
@@ -334,12 +306,8 @@ export default function FaturamentoOperacional() {
             valorSomaProntoConferencia={valorSomaProntoConferencia}
             qtdPodeEmitir={fila.length}
             valorEstimadoEmitir={valorEstimadoFila}
-            qtdEmitidasFinanceiro={historicoEmitidos.length}
-            valorEmitidas={
-              valorTotalEmitidoBase > 0
-                ? valorTotalEmitidoBase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                : '—'
-            }
+            qtdEmitidasFinanceiro={qtdEmitidasCartao}
+            valorEmitidas={valorEmitidasCartao}
             qtdPendenteConferencia={qtdPendenteConferencia}
           />
         </div>
@@ -350,14 +318,14 @@ export default function FaturamentoOperacional() {
           linhas={filaAprovacao}
           carregando={carregandoVista}
           podeAprovar={podeAprovarTicketFila}
-          onAprovado={() => void carregarVista()}
+          onAprovado={() => void recarregarTudo()}
         />
 
         <FaturamentoFilaColetas
           linhas={fila}
           carregando={carregandoVista}
           onFaturar={abrirModalFaturar}
-          onDevolvidoConferencia={() => void carregarVista()}
+          onDevolvidoConferencia={() => void recarregarTudo()}
           podeDevolverConferencia={podeAprovarTicketFila && ticketAprovacaoAtivo}
         />
 
@@ -401,8 +369,19 @@ export default function FaturamentoOperacional() {
           </div>
         ) : null}
 
-        <FaturamentoHistoricoColetas todasLinhas={linhasView} />
-        <FaturamentoRelatoriosPanel linhas={linhasView} />
+        <FaturamentoHistoricoColetas
+          linhas={linhasHistorico ?? []}
+          naoCarregado={!historicoCarregado}
+          carregando={carregandoHistorico}
+          onCarregar={() => void carregarHistorico()}
+        />
+        <FaturamentoRelatoriosPanel
+          linhasOperacional={linhasOperacional}
+          linhasHistorico={linhasHistorico}
+          naoCarregadoHistorico={!historicoCarregado}
+          carregandoHistorico={carregandoHistorico}
+          onCarregarHistorico={() => void carregarHistorico()}
+        />
       </div>
 
       <FaturamentoModalRegisto
@@ -413,7 +392,7 @@ export default function FaturamentoOperacional() {
         podeEncerrarTicketDefinitivo={podeEncerrarTicket}
         usuarioCargo={cargo}
         onClose={fecharModal}
-        onGravado={() => void carregarVista()}
+        onGravado={() => void recarregarTudo()}
       />
     </MainLayout>
   )

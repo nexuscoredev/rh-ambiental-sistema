@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -22,6 +22,13 @@ import {
 } from '../components/mtr/MtrManifestoPrint'
 import { MTR_TEXTO_VIDE_FICHA } from '../lib/mtrPrintTexto'
 import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
+import {
+  coletarProgramacaoIdsVinculadasMtr,
+  fetchProgramacoesMtrCatalogo,
+  fetchProgramacoesMtrPorIds,
+  mergeProgramacoesMtrPorId,
+  mtrProgramacoesMesesJanela,
+} from '../lib/mtrProgramacoesFetch'
 
 type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado' | 'Baixada'
 
@@ -393,7 +400,14 @@ export default function MTR() {
   const prevContextoUrlKeyRef = useRef<string>('')
 
   const [mtrs, setMtrs] = useState<MTR[]>([])
-  const [programacoes, setProgramacoes] = useState<Programacao[]>([])
+  const [programacoesVinculadas, setProgramacoesVinculadas] = useState<Programacao[]>([])
+  const [programacoesCatalogo, setProgramacoesCatalogo] = useState<Programacao[]>([])
+  const [catalogoProgramacoesCarregado, setCatalogoProgramacoesCarregado] = useState(false)
+  const [carregandoCatalogoProgramacoes, setCarregandoCatalogoProgramacoes] = useState(false)
+  const programacoes = useMemo(
+    () => mergeProgramacoesMtrPorId(programacoesVinculadas, programacoesCatalogo) as Programacao[],
+    [programacoesVinculadas, programacoesCatalogo]
+  )
   const [coletas, setColetas] = useState<Coleta[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -409,6 +423,43 @@ export default function MTR() {
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
+  const catalogoProgLoadGenRef = useRef(0)
+
+  const carregarProgramacoesVinculadas = useCallback(
+    async (
+      mtrsRows: MTR[],
+      coletasRows: Coleta[],
+      extras: (string | null | undefined)[]
+    ) => {
+      const ids = coletarProgramacaoIdsVinculadasMtr(mtrsRows, coletasRows, extras)
+      if (ids.length === 0) {
+        setProgramacoesVinculadas([])
+        return
+      }
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, ids)
+      if (error) {
+        console.warn('[MTR] programações vinculadas:', error.message)
+        return
+      }
+      setProgramacoesVinculadas(data as Programacao[])
+    },
+    []
+  )
+
+  const ensureCatalogoProgramacoes = useCallback(async () => {
+    if (catalogoProgramacoesCarregado) return
+    const gen = ++catalogoProgLoadGenRef.current
+    setCarregandoCatalogoProgramacoes(true)
+    const { data, error } = await fetchProgramacoesMtrCatalogo(supabase)
+    if (gen !== catalogoProgLoadGenRef.current) return
+    setCarregandoCatalogoProgramacoes(false)
+    if (error) {
+      console.warn('[MTR] catálogo de programações:', error.message)
+      return
+    }
+    setProgramacoesCatalogo(data as Programacao[])
+    setCatalogoProgramacoesCarregado(true)
+  }, [catalogoProgramacoesCarregado])
 
   function resetForm() {
     setForm({
@@ -424,7 +475,7 @@ export default function MTR() {
     const gen = ++loadDataGenRef.current
     setLoading(true)
 
-    const [mtrsRes, programacoesRes, coletasRes] = await Promise.all([
+    const [mtrsRes, coletasRes] = await Promise.all([
       supabase
         .from('mtrs')
         .select(
@@ -432,12 +483,6 @@ export default function MTR() {
         )
         .order('created_at', { ascending: false })
         .limit(300),
-      supabase
-        .from('programacoes')
-        .select(
-          'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, observacoes, coleta_fixa, frequencia, periodicidade, status_programacao, created_at'
-        )
-        .order('data_programada', { ascending: false }),
       supabase
         .from('coletas')
         .select(
@@ -466,16 +511,20 @@ export default function MTR() {
       setMtrs((mtrsRes.data || []) as MTR[])
     }
 
-    if (programacoesRes.error) {
-      alertarSeCritico('Erro ao carregar programações:', programacoesRes.error)
-    } else {
-      setProgramacoes((programacoesRes.data || []) as Programacao[])
-    }
-
+    const mtrsRows = mtrsRes.error ? [] : ((mtrsRes.data || []) as MTR[])
+    let coletasRows: Coleta[] = []
     if (coletasRes.error) {
       alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
     } else {
-      setColetas((coletasRes.data || []) as Coleta[])
+      coletasRows = (coletasRes.data || []) as Coleta[]
+      setColetas(coletasRows)
+    }
+
+    if (gen === loadDataGenRef.current) {
+      await carregarProgramacoesVinculadas(mtrsRows, coletasRows, [
+        urlProgramacaoId,
+        urlColetaId,
+      ])
     }
 
     setLoading(false)
@@ -635,6 +684,13 @@ export default function MTR() {
     })
   }, [programacoes, mtrMapByProgramacaoId, editingId])
 
+  useEffect(() => {
+    if (!showForm) return
+    queueMicrotask(() => {
+      void ensureCatalogoProgramacoes()
+    })
+  }, [showForm, ensureCatalogoProgramacoes])
+
   function openNewForm() {
     if (!podeMutarMtr) {
       alert('Seu perfil não pode criar MTR. Apenas operacional ou administrador.')
@@ -642,6 +698,7 @@ export default function MTR() {
     }
     resetForm()
     setShowForm(true)
+    void ensureCatalogoProgramacoes()
   }
 
   function openEditForm(item: MTR) {
@@ -667,10 +724,29 @@ export default function MTR() {
       observacoes: item.observacoes || '',
     })
     setShowForm(true)
+    if (item.programacao_id) {
+      void fetchProgramacoesMtrPorIds(supabase, [item.programacao_id]).then(({ data, error }) => {
+        if (error || data.length === 0) return
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+      })
+    }
+    void ensureCatalogoProgramacoes()
   }
 
   async function handleProgramacaoChange(programacaoIdSelecionada: string) {
-    const programacao = programacoes.find((item) => item.id === programacaoIdSelecionada)
+    let programacao = programacoes.find((item) => item.id === programacaoIdSelecionada)
+
+    if (!programacao) {
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, [programacaoIdSelecionada])
+      if (!error && data.length > 0) {
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+        programacao = data[0] as Programacao
+      }
+    }
 
     if (!programacao) {
       setForm((prev) => ({
@@ -2851,7 +2927,13 @@ export default function MTR() {
                         ))}
                       </select>
                       <span className="helper">
-                        Aqui é o início correto do fluxo. A coleta será criada depois a partir desta MTR.
+                        Lista: últimos {mtrProgramacoesMesesJanela()} meses
+                        {carregandoCatalogoProgramacoes
+                          ? ' (a carregar…)'
+                          : catalogoProgramacoesCarregado
+                            ? ''
+                            : ' — carrega ao abrir o formulário'}
+                        . A coleta será criada depois a partir desta MTR.
                       </span>
                     </div>
 

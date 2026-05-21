@@ -2,24 +2,79 @@ import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 const PAGE_SIZE = 1000
-/** PostgREST costuma limitar a 1000 linhas por pedido; várias páginas evitam “perder” a fila de faturamento. */
-const MAX_PAGES = 20
 
-/** Opt-in: só aplica filtro se `VITE_FATURAMENTO_RESUMO_DESDE_DIAS` for um número positivo (reduz carga em bases enormes). */
-function createdAtMinIsoOptIn(): string | null {
-  const raw = String(import.meta.env.VITE_FATURAMENTO_RESUMO_DESDE_DIAS ?? '').trim()
-  if (!raw) return null
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n <= 0) return null
-  const d = new Date()
-  d.setUTCDate(d.getUTCDate() - Math.floor(n))
-  d.setUTCHours(0, 0, 0, 0)
-  return d.toISOString()
-}
+/** PostgREST costuma limitar a 1000 linhas por pedido; várias páginas evitam “perder” a fila de faturamento. */
+const MAX_PAGES_COMPLETO = 20
+const MAX_PAGES_OPERACIONAL = 8
+const MAX_PAGES_HISTORICO = 12
+
+/** Janela padrão (dias) quando `VITE_FATURAMENTO_RESUMO_DESDE_DIAS` não está definida. */
+export const FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO = 180
+
+export type FaturamentoResumoEscopo =
+  /** Filas ativas (ticket, conferência, a faturar) — exclui registo emitido. */
+  | 'operacional'
+  /** Coletas já emitidas ao Financeiro (consulta / relatórios). */
+  | 'historico'
+  /** Sem filtro de escopo (evitar em produção; uso legado / debug). */
+  | 'completo'
 
 export type FetchVwFaturamentoResumoPaginatedOpts = {
   /** Filtro PostgREST `.or(...)` — ex.: lista financeira (`COLETAS_OR_FINANCEIRO_QUERY`). */
   orFilter?: string
+  escopo?: FaturamentoResumoEscopo
+  /** Sobrescreve o teto de páginas do escopo (ex.: contagem rápida). */
+  maxPages?: number
+}
+
+/**
+ * Dias de histórico em `vw_faturamento_resumo`.
+ * - Env ausente → {@link FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO}
+ * - `0` ou vazio explícito → sem corte (histórico completo paginado)
+ */
+export function faturamentoResumoDesdeDias(): number | null {
+  const raw = import.meta.env.VITE_FATURAMENTO_RESUMO_DESDE_DIAS
+  const trimmed = raw == null ? '' : String(raw).trim()
+  if (trimmed === '0') return null
+  if (!trimmed) return FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO
+  const n = Number(trimmed)
+  if (!Number.isFinite(n) || n <= 0) return FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO
+  return Math.floor(n)
+}
+
+export function faturamentoResumoCreatedAtMinIso(): string | null {
+  const dias = faturamentoResumoDesdeDias()
+  if (dias == null) return null
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - dias)
+  d.setUTCHours(0, 0, 0, 0)
+  return d.toISOString()
+}
+
+/** Filtro PostgREST `.or(...)` conforme o escopo da carga. */
+export function escopoOrFilterPostgrest(escopo: FaturamentoResumoEscopo): string | undefined {
+  switch (escopo) {
+    case 'operacional':
+      return 'faturamento_registro_status.is.null,faturamento_registro_status.neq.emitido'
+    case 'historico':
+      return 'faturamento_registro_status.eq.emitido,liberado_financeiro.eq.true'
+    case 'completo':
+      return undefined
+    default:
+      return undefined
+  }
+}
+
+function maxPagesParaEscopo(escopo: FaturamentoResumoEscopo, override?: number): number {
+  if (override != null && override > 0) return override
+  switch (escopo) {
+    case 'operacional':
+      return MAX_PAGES_OPERACIONAL
+    case 'historico':
+      return MAX_PAGES_HISTORICO
+    default:
+      return MAX_PAGES_COMPLETO
+  }
 }
 
 /** Erro PostgREST típico quando a view ainda não foi criada no projeto Supabase. */
@@ -63,27 +118,40 @@ export type FetchVwFaturamentoResumoResult = {
   ticketAprovacaoAtivo: boolean
 }
 
+function ordenarLinhas(rows: FaturamentoResumoViewRow[]): FaturamentoResumoViewRow[] {
+  return [...rows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime()
+    const tb = new Date(b.created_at).getTime()
+    if (tb !== ta) return tb - ta
+    return a.coleta_id < b.coleta_id ? 1 : a.coleta_id > b.coleta_id ? -1 : 0
+  })
+}
+
 /**
- * Carrega linhas da view `vw_faturamento_resumo` com paginação, para não ficar preso ao primeiro lote
- * quando há muitas coletas já finalizadas (ex.: seeds de histórico).
+ * Carrega linhas da view `vw_faturamento_resumo` com paginação.
+ * Use `escopo: 'operacional'` nas filas e `historico` na consulta de emitidas.
  */
 export async function fetchVwFaturamentoResumoPaginated(
   supabase: SupabaseClient,
   opts?: FetchVwFaturamentoResumoPaginatedOpts
 ): Promise<FetchVwFaturamentoResumoResult> {
-  const byId = new Map<string, FaturamentoResumoViewRow>()
-  const createdMin = createdAtMinIsoOptIn()
+  const escopo = opts?.escopo ?? 'completo'
+  const createdMin = faturamentoResumoCreatedAtMinIso()
+  const escopoOr = escopoOrFilterPostgrest(escopo)
   const orFilter = (opts?.orFilter ?? '').trim()
+  const maxPages = maxPagesParaEscopo(escopo, opts?.maxPages)
+  const byId = new Map<string, FaturamentoResumoViewRow>()
   let exitDueToMaxPages = false
   let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}`
   let ticketAprovacaoAtivo = true
 
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page < maxPages; page++) {
     const from = page * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
     let qb = supabase.from('vw_faturamento_resumo').select(sel)
     if (createdMin) qb = qb.gte('created_at', createdMin)
+    if (escopoOr) qb = qb.or(escopoOr)
     if (orFilter) qb = qb.or(orFilter)
     const { data, error } = await qb
       .order('created_at', { ascending: false })
@@ -111,22 +179,71 @@ export async function fetchVwFaturamentoResumoPaginated(
     }
 
     if (chunk.length < PAGE_SIZE) break
-    if (page === MAX_PAGES - 1) exitDueToMaxPages = true
+    if (page === maxPages - 1) exitDueToMaxPages = true
   }
 
   if (exitDueToMaxPages) {
     console.warn(
-      `[faturamentoResumoFetch] Limite de ${MAX_PAGES} páginas × ${PAGE_SIZE} linhas atingido; a lista pode estar truncada. ` +
-        'Defina VITE_FATURAMENTO_RESUMO_DESDE_DIAS (opt-in) ou aumente MAX_PAGES se necessário.'
+      `[faturamentoResumoFetch] Escopo «${escopo}»: limite de ${maxPages} páginas × ${PAGE_SIZE} linhas; a lista pode estar truncada. ` +
+        `Ajuste VITE_FATURAMENTO_RESUMO_DESDE_DIAS (atual ~${faturamentoResumoDesdeDias() ?? 'sem corte'} dias) se necessário.`
     )
   }
 
-  const merged = [...byId.values()].sort((a, b) => {
-    const ta = new Date(a.created_at).getTime()
-    const tb = new Date(b.created_at).getTime()
-    if (tb !== ta) return tb - ta
-    return a.coleta_id < b.coleta_id ? 1 : a.coleta_id > b.coleta_id ? -1 : 0
-  })
+  return { data: ordenarLinhas([...byId.values()]), error: null, ticketAprovacaoAtivo }
+}
 
-  return { data: merged, error: null, ticketAprovacaoAtivo }
+/** Contagem aproximada de emitidas (cartões) sem trazer todas as linhas. */
+export async function fetchContagemHistoricoFaturamentoEmitido(
+  supabase: SupabaseClient
+): Promise<{ count: number; error: Error | null }> {
+  const createdMin = faturamentoResumoCreatedAtMinIso()
+  const escopoOr = escopoOrFilterPostgrest('historico')
+  let qb = supabase.from('vw_faturamento_resumo').select('coleta_id', { count: 'exact', head: true })
+  if (createdMin) qb = qb.gte('created_at', createdMin)
+  if (escopoOr) qb = qb.or(escopoOr)
+  const { count, error } = await qb
+  if (error) return { count: 0, error: new Error(error.message) }
+  return { count: count ?? 0, error: null }
+}
+
+/** Uma ou poucas coletas (ex.: contexto na URL) fora do lote operacional. */
+export async function fetchVwFaturamentoResumoPorColetaIds(
+  supabase: SupabaseClient,
+  coletaIds: string[]
+): Promise<FetchVwFaturamentoResumoResult> {
+  const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
+  if (uniq.length === 0) {
+    return { data: [], error: null, ticketAprovacaoAtivo: true }
+  }
+
+  const createdMin = faturamentoResumoCreatedAtMinIso()
+  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}`
+  let ticketAprovacaoAtivo = true
+
+  let qb = supabase.from('vw_faturamento_resumo').select(sel).in('coleta_id', uniq)
+  if (createdMin) qb = qb.gte('created_at', createdMin)
+
+  let { data, error } = await qb
+
+  if (error && isTicketAprovacaoColumnMissingError(error)) {
+    ticketAprovacaoAtivo = false
+    sel = SEL_VW_FATURAMENTO_BASE
+    let qb2 = supabase.from('vw_faturamento_resumo').select(sel).in('coleta_id', uniq)
+    if (createdMin) qb2 = qb2.gte('created_at', createdMin)
+    const retry = await qb2
+    data = retry.data
+    error = retry.error
+  }
+
+  if (error) {
+    const base = error.message || 'Erro ao ler vw_faturamento_resumo.'
+    const msg = isVwFaturamentoResumoMissingError(error) ? base + mensagemCorrecaoViewFaturamento() : base
+    return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false }
+  }
+
+  return {
+    data: ordenarLinhas((data ?? []) as unknown as FaturamentoResumoViewRow[]),
+    error: null,
+    ticketAprovacaoAtivo,
+  }
 }

@@ -25,7 +25,10 @@ import {
 import { registrarBaixaContaReceber, upsertContaReceber } from '../services/financeiroReceber'
 import { FinanceiroConferenciaDetalhe } from '../components/financeiro/FinanceiroConferenciaDetalhe'
 import { fetchContasReceberByColetaIds } from '../lib/contasReceberFetch'
-import { fetchVwFaturamentoResumoPaginated } from '../lib/faturamentoResumoFetch'
+import {
+  fetchVwFaturamentoResumoPaginated,
+  faturamentoResumoDesdeDias,
+} from '../lib/faturamentoResumoFetch'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
 
 type StatusPagamento = 'Pendente' | 'Parcial' | 'Pago'
@@ -785,7 +788,9 @@ export default function Financeiro() {
             <Link to="/faturamento" style={{ color: '#0d9488', fontWeight: 800 }}>
               Faturamento
             </Link>
-            .
+            . Lista carregada com janela de{' '}
+            <strong>{faturamentoResumoDesdeDias() != null ? `${faturamentoResumoDesdeDias()} dias` : 'histórico completo'}</strong>{' '}
+            (variável <code style={{ fontSize: '11px' }}>VITE_FATURAMENTO_RESUMO_DESDE_DIAS</code>).
           </p>
           {usuarioCargo ? (
             <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
