@@ -28,8 +28,13 @@ const Usuarios = lazyWithRetry(() => import('./pages/Usuarios'))
 const ChecklistTransporte = lazyWithRetry(() => import('./pages/ChecklistTransporte'))
 const ConferenciaTransporte = lazyWithRetry(() => import('./pages/ConferenciaTransporte'))
 const TicketOperacional = lazyWithRetry(() => import('./pages/TicketOperacional'))
-const AprovacaoDiretoria = lazyWithRetry(() => import('./pages/AprovacaoDiretoria'))
 const FaturamentoOperacional = lazyWithRetry(() => import('./pages/FaturamentoOperacional'))
+
+/** Etapa antiga «Aprovação Diretoria» — conferência do ticket passou para Faturamento. */
+function RedirectAprovacaoParaFaturamento() {
+  const { search } = useLocation()
+  return <Navigate to={`/faturamento${search}`} replace />
+}
 const Programacao = lazyWithRetry(() => import('./pages/Programacao'))
 const MTR = lazyWithRetry(() => import('./pages/MTR'))
 const ControleMassa = lazyWithRetry(() => import('./pages/ControleMassa'))
@@ -568,9 +573,9 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
-                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/aprovacao']]}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento']]}
                 >
-                  <AprovacaoDiretoria />
+                  <RedirectAprovacaoParaFaturamento />
                 </ProtectedRoute>
               }
             />

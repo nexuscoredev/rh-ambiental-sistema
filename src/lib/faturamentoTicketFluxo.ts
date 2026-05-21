@@ -295,9 +295,71 @@ function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string }
   const code = err.code ?? ''
   return (
     code === 'PGRST202' ||
+    code === '42883' ||
     msg.includes('could not find the function') ||
-    msg.includes('atualizar_peso_liquido_conferencia_ticket')
+    msg.includes('does not exist') ||
+    msg.includes('atualizar_peso_liquido_conferencia_ticket') ||
+    msg.includes('rg_is_operacional_time_t')
   )
+}
+
+const MENSAGEM_SQL_PESO_CONFERENCIA =
+  'Execute no Supabase SQL Editor o ficheiro supabase/sql_editor_FATURAMENTO_COMPLETO_EXECUTAR.sql (secção 0 + 6) e volte a tentar.'
+
+async function gravarPesoColetaDireto(
+  id: string,
+  peso: number,
+  itens: ReturnType<typeof serializarResiduosItensDb> | null
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const patchColeta: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
+    { peso_liquido: peso }
+  if (itens) patchColeta.residuos_itens = itens
+
+  let { error: errColeta } = await supabase.from('coletas').update(patchColeta).eq('id', id)
+
+  if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
+    const retry = await supabase.from('coletas').update({ peso_liquido: peso }).eq('id', id)
+    errColeta = retry.error
+  }
+
+  if (errColeta) {
+    return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
+  }
+
+  const { data: verificacao, error: errVer } = await supabase
+    .from('coletas')
+    .select('peso_liquido')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (errVer) {
+    return { ok: false, message: errVer.message || 'Não foi possível confirmar o peso gravado.' }
+  }
+
+  const gravado = verificacao?.peso_liquido != null ? Number(verificacao.peso_liquido) : null
+  if (gravado == null || Math.abs(gravado - peso) > 0.01) {
+    return {
+      ok: false,
+      message: `Sem permissão para alterar o peso desta coleta (RLS). ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
+    }
+  }
+
+  const patchMassa: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
+    { peso_liquido: peso }
+  if (itens) patchMassa.residuos_itens = itens
+
+  let { error: errMassa } = await supabase.from('controle_massa').update(patchMassa).eq('coleta_id', id)
+
+  if (errMassa && itens && isErroColunaResiduosItens(errMassa)) {
+    const retry = await supabase.from('controle_massa').update({ peso_liquido: peso }).eq('coleta_id', id)
+    errMassa = retry.error
+  }
+
+  if (errMassa) {
+    console.warn('controle_massa.peso_liquido:', errMassa.message)
+  }
+
+  return { ok: true }
 }
 
 /** Ajuste manual do peso líquido antes da aprovação do ticket (fila de conferência). */
@@ -335,62 +397,26 @@ export async function atualizarPesoLiquidoConferenciaTicket(
   })
 
   if (!rpcErr) {
-    return parseRpcPesoConferencia(rpcData)
+    const rpcRes = parseRpcPesoConferencia(rpcData)
+    if (rpcRes.ok) return rpcRes
+    const direto = await gravarPesoColetaDireto(id, peso, itens)
+    if (direto.ok) return direto
+    return {
+      ok: false,
+      message: `${rpcRes.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
+    }
   }
 
   if (!rpcPesoConferenciaIndisponivel(rpcErr)) {
     return { ok: false, message: rpcErr.message || 'Não foi possível atualizar o peso.' }
   }
 
-  const patchColeta: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
-    { peso_liquido: peso }
-  if (itens) patchColeta.residuos_itens = itens
-
-  let { data: linhasAtualizadas, error: errColeta } = await supabase
-    .from('coletas')
-    .update(patchColeta)
-    .eq('id', id)
-    .select('id')
-
-  if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
-    const retry = await supabase
-      .from('coletas')
-      .update({ peso_liquido: peso })
-      .eq('id', id)
-      .select('id')
-    linhasAtualizadas = retry.data
-    errColeta = retry.error
-  }
-
-  if (errColeta) {
-    return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
-  }
-  if (!linhasAtualizadas?.length) {
+  const direto = await gravarPesoColetaDireto(id, peso, itens)
+  if (!direto.ok) {
     return {
       ok: false,
-      message:
-        'Sem permissão para alterar o peso desta coleta (perfil ou política RLS). Execute no Supabase a migração 20260605120000_coletas_peso_conferencia_rpc.sql ou 20260603120000_coletas_peso_operacional_time_t.sql.',
+      message: `${direto.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
     }
   }
-
-  const patchMassa: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } = {
-    peso_liquido: peso,
-  }
-  if (itens) patchMassa.residuos_itens = itens
-
-  let { error: errMassa } = await supabase
-    .from('controle_massa')
-    .update(patchMassa)
-    .eq('coleta_id', id)
-
-  if (errMassa && itens && isErroColunaResiduosItens(errMassa)) {
-    const retry = await supabase.from('controle_massa').update({ peso_liquido: peso }).eq('coleta_id', id)
-    errMassa = retry.error
-  }
-
-  if (errMassa) {
-    console.warn('controle_massa.peso_liquido:', errMassa.message)
-  }
-
-  return { ok: true }
+  return direto
 }

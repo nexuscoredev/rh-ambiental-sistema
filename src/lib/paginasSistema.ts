@@ -23,7 +23,6 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/checklist-transporte', label: 'Checklist de transportes' },
   { path: '/conferencia-transporte', label: 'Conferência de transportes' },
   { path: '/ticket-operacional', label: 'Ticket operacional' },
-  { path: '/aprovacao', label: 'Aprovação' },
   { path: '/faturamento', label: 'Faturamento' },
   { path: '/envio-nf', label: 'Mala Direta' },
   { path: '/financeiro', label: 'Financeiro' },

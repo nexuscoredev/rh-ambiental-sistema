@@ -7,6 +7,7 @@ import { resolverColetaPorContextoUrl, idsContextoFromSearchParams } from '../li
 import { formatarEtapaParaUI, normalizarEtapaColeta, type EtapaFluxo } from '../lib/fluxoEtapas'
 import {
   cargoPodeAprovarTicketConferenciaFaturamento,
+  cargoPodeEditarPesoConferenciaTicket,
   cargoPodeConfirmarEmissaoFaturamento,
   cargoPodeEditarResumosFinanceirosFaturamento,
   cargoPodeEncerrarTicketDefinitivoFaturamento,
@@ -146,6 +147,7 @@ export default function FaturamentoOperacional() {
   const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo)
   const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo)
   const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo)
+  const podeEditarPesoTicketFila = cargoPodeEditarPesoConferenciaTicket(cargo)
   const podeConfirmarNfBoleto = cargoPodeEnviarNfEmail(cargo)
 
   useEffect(() => {
@@ -291,8 +293,9 @@ export default function FaturamentoOperacional() {
           Esteira: <strong>conferência do ticket</strong> → <strong>ajuste de valores</strong> →{' '}
           <strong>relatório de medição</strong> →{' '}
           <Link to="/envio-nf?tipo=medicao">Mala Direta (medição)</Link> → <strong>aprovação do cliente</strong> →{' '}
-          <strong>confirmar faturamento</strong> → <Link to="/envio-nf">Mala Direta (NF e boleto)</Link> →{' '}
-          <strong>finalizado</strong> (Financeiro → Contas a Receber).
+          <strong>confirmar faturamento</strong> → <strong>registar n.º NF / boleto</strong> →{' '}
+          <strong>Financeiro → Contas a Receber</strong> (envio por e-mail opcional em{' '}
+          <Link to="/envio-nf">Mala Direta</Link>).
         </p>
 
         <FaturamentoEsteiraFluxo />
@@ -413,6 +416,7 @@ export default function FaturamentoOperacional() {
           linhas={filaAprovacao}
           carregando={carregandoVista}
           podeAprovar={podeAprovarTicketFila}
+          podeEditarPeso={podeEditarPesoTicketFila}
           onAprovado={() => recarregarTudo()}
         />
 
@@ -460,12 +464,6 @@ export default function FaturamentoOperacional() {
                 style={{ color: ACCENT, fontWeight: 700, fontSize: '14px' }}
               >
                 Pesagem e Ticket →
-              </Link>
-              <Link
-                to={`/aprovacao?${montarParamsColeta(coletaAtiva).toString()}`}
-                style={{ color: '#2563eb', fontWeight: 700, fontSize: '14px' }}
-              >
-                Aprovação →
               </Link>
               {podeConfirmarEmissao && fila.some((r) => r.coleta_id === coletaAtiva.id) ? (
                 <button

@@ -140,7 +140,7 @@ export function coletaFinalizadaEsteira(row: FaturamentoResumoViewRow): boolean 
   return esteiraDaLinha(row) === 'FINALIZADO'
 }
 
-/** Pós-faturamento: faturamento emitido, aguarda confirmação de NF + boleto ao cliente. */
+/** Pós-faturamento: emitido, aguarda registo do número da NF/boleto antes de Contas a Receber. */
 export function coletaAguardandoConfirmacaoNfBoleto(row: FaturamentoResumoViewRow): boolean {
   if (!coletaHistoricoFaturamentoEmitido(row)) return false
   if (coletaFinalizadaEsteira(row)) return false

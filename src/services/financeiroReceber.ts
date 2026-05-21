@@ -4,7 +4,124 @@ import {
   derivarStatusPagamento,
 } from '../lib/contasReceberUtils'
 import { payloadFaturamentoEmitidoEnviaAoFinanceiro } from '../lib/coletaFluxoAtualizacao'
+import {
+  parseResumoFinanceiroJson,
+  totalResumoFinanceiro,
+} from '../lib/faturamentoDesvinculacao'
 import { marcarEsteiraFinalizadaPorNf } from '../lib/faturamentoEsteira'
+
+type RegistroFaturamentoValor = {
+  id: string
+  valor: unknown
+  valor_adicionais?: unknown
+  resumo_financeiro?: unknown
+  observacoes?: string | null
+  status?: string | null
+}
+
+function valorNumericoPositivo(n: unknown): number {
+  const v = Number(n)
+  return Number.isFinite(v) && v > 0 ? v : 0
+}
+
+/** Mesma regra da emissão na esteira: coluna `valor`, senão total do `resumo_financeiro`. */
+export function valorTotalDoRegistroFaturamento(reg: {
+  valor: unknown
+  valor_adicionais?: unknown
+  resumo_financeiro?: unknown
+}): number {
+  const vColuna = valorNumericoPositivo(reg.valor)
+  if (vColuna > 0) return vColuna
+  const resumo = parseResumoFinanceiroJson(reg.resumo_financeiro)
+  if (resumo) {
+    const t = totalResumoFinanceiro(resumo)
+    if (t > 0) return t
+  }
+  return 0
+}
+
+async function resolverValorCobrancaColeta(
+  supabase: SupabaseClient,
+  coletaId: string,
+  coleta: {
+    valor_coleta: unknown
+    mtr_id?: string | null
+  }
+): Promise<{ valor: number; regFat: RegistroFaturamentoValor | null; jaEmitido: boolean }> {
+  const { data: cr } = await supabase
+    .from('contas_receber')
+    .select('valor, faturamento_registro_id')
+    .eq('referencia_coleta_id', coletaId)
+    .maybeSingle()
+
+  const valorConta = valorNumericoPositivo(cr?.valor)
+  if (valorConta > 0) {
+    return {
+      valor: valorConta,
+      regFat: cr?.faturamento_registro_id
+        ? { id: cr.faturamento_registro_id as string, valor: valorConta }
+        : null,
+      jaEmitido: true,
+    }
+  }
+
+  const { data: registros } = await supabase
+    .from('faturamento_registros')
+    .select('id, valor, valor_adicionais, resumo_financeiro, observacoes, status')
+    .eq('coleta_id', coletaId)
+    .in('status', ['emitido', 'pendente'])
+    .order('updated_at', { ascending: false })
+    .limit(5)
+
+  let jaEmitido = false
+  for (const reg of registros ?? []) {
+    if (reg.status === 'emitido') jaEmitido = true
+    const v = valorTotalDoRegistroFaturamento(reg)
+    if (v > 0) {
+      return { valor: v, regFat: reg as RegistroFaturamentoValor, jaEmitido }
+    }
+  }
+
+  const valorColeta = valorNumericoPositivo(coleta.valor_coleta)
+  if (valorColeta > 0) {
+    const emitido = (registros ?? []).find((r) => r.status === 'emitido')
+    return {
+      valor: valorColeta,
+      regFat: (emitido ?? registros?.[0] ?? null) as RegistroFaturamentoValor | null,
+      jaEmitido: jaEmitido || !!emitido,
+    }
+  }
+
+  const mtrId = (coleta.mtr_id ?? '').trim()
+  if (mtrId) {
+    const { data: coletasMtr } = await supabase.from('coletas').select('id').eq('mtr_id', mtrId)
+    const idsIrmas = (coletasMtr ?? []).map((c) => c.id).filter((id) => id && id !== coletaId)
+    if (idsIrmas.length > 0) {
+      const { data: regsMtr } = await supabase
+        .from('faturamento_registros')
+        .select('id, valor, valor_adicionais, resumo_financeiro, observacoes, status')
+        .in('coleta_id', idsIrmas)
+        .eq('status', 'emitido')
+        .order('updated_at', { ascending: false })
+        .limit(10)
+
+      for (const reg of regsMtr ?? []) {
+        jaEmitido = true
+        const v = valorTotalDoRegistroFaturamento(reg)
+        if (v > 0) {
+          return { valor: v, regFat: reg as RegistroFaturamentoValor, jaEmitido: true }
+        }
+      }
+    }
+  }
+
+  const emitido = (registros ?? []).find((r) => r.status === 'emitido')
+  return {
+    valor: 0,
+    regFat: (emitido ?? null) as RegistroFaturamentoValor | null,
+    jaEmitido: jaEmitido || !!emitido,
+  }
+}
 
 export type UpsertContaReceberInput = {
   cliente_id: string | null
@@ -247,35 +364,21 @@ export async function liberarColetaParaFinanceiroContasReceber(
   try {
     const { data: coleta, error: errColeta } = await supabase
       .from('coletas')
-      .select('id, cliente_id, valor_coleta, data_vencimento, liberado_financeiro')
+      .select('id, cliente_id, valor_coleta, data_vencimento, liberado_financeiro, mtr_id')
       .eq('id', coletaId)
       .maybeSingle()
 
     if (errColeta) return { error: new Error(errColeta.message) }
     if (!coleta) return { error: new Error('Coleta não encontrada.') }
 
-    const { data: regFat } = await supabase
-      .from('faturamento_registros')
-      .select('id, valor, observacoes, status')
-      .eq('coleta_id', coletaId)
-      .eq('status', 'emitido')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const valorReg = Number(regFat?.valor)
-    const valorColeta = Number(coleta.valor_coleta)
-    const valor =
-      Number.isFinite(valorReg) && valorReg > 0
-        ? valorReg
-        : Number.isFinite(valorColeta) && valorColeta > 0
-          ? valorColeta
-          : 0
+    const { valor, regFat, jaEmitido } = await resolverValorCobrancaColeta(supabase, coletaId, coleta)
 
     if (valor <= 0) {
       return {
         error: new Error(
-          'Valor do faturamento ausente. Emita o faturamento antes de registar o envio da NF.'
+          jaEmitido
+            ? 'O faturamento está emitido, mas o valor total não foi encontrado no registo (coluna valor ou resumo financeiro). Reabra «Ajuste de valores», guarde os totais e volte a faturar, ou contacte o suporte.'
+            : 'Valor do faturamento ausente. Emita o faturamento na esteira antes de confirmar o envio da NF.'
         ),
       }
     }
@@ -288,7 +391,7 @@ export async function liberarColetaParaFinanceiroContasReceber(
       data_vencimento: (coleta.data_vencimento as string | null)?.trim() || null,
       referencia_coleta_id: coletaId,
       faturamento_registro_id: regFat?.id ?? undefined,
-      observacoes: (regFat?.observacoes as string | null)?.trim() || null,
+      observacoes: (regFat?.observacoes ?? '').trim() || null,
       origem: 'faturamento',
     })
     if (crErr) return { error: crErr }
@@ -358,6 +461,81 @@ export async function registrarEnvioNfContaReceber(
 
 const OBS_NF_BOLETO_PADRAO =
   'NF e boleto enviados ao cliente (confirmado na esteira de faturamento).'
+
+/**
+ * Etapa 7 da esteira: grava número da NF (e opcionalmente boleto/ref.), cria/atualiza Contas a Receber e finaliza.
+ */
+export async function registarNumeroNfBoletoEsteiraFaturamento(
+  supabase: SupabaseClient,
+  input: {
+    referencia_coleta_id: string
+    numero_nf: string
+    numero_boleto?: string | null
+    observacao?: string | null
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const coletaId = input.referencia_coleta_id.trim()
+  const numeroNf = input.numero_nf.trim()
+  if (!coletaId) return { ok: false, message: 'Coleta inválida.' }
+  if (!numeroNf) return { ok: false, message: 'Informe o número da NF.' }
+
+  const boleto = (input.numero_boleto ?? '').trim()
+  const obsExtra = (input.observacao ?? '').trim()
+  const obsEsteira = [
+    `NF ${numeroNf}`,
+    boleto ? `Boleto/ref. ${boleto}` : null,
+    obsExtra || null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const { error: errColeta } = await supabase
+    .from('coletas')
+    .update({ numero_nf: numeroNf })
+    .eq('id', coletaId)
+
+  if (errColeta) {
+    return { ok: false, message: errColeta.message || 'Não foi possível gravar o número da NF na coleta.' }
+  }
+
+  const { data: regEmitido } = await supabase
+    .from('faturamento_registros')
+    .select('id')
+    .eq('coleta_id', coletaId)
+    .eq('status', 'emitido')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (regEmitido?.id) {
+    const { error: errReg } = await supabase
+      .from('faturamento_registros')
+      .update({
+        referencia_nf: numeroNf,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', regEmitido.id)
+    if (errReg && !ignoraErroSchema(errReg)) {
+      console.warn('faturamento_registros.referencia_nf:', errReg.message)
+    }
+  }
+
+  const lib = await liberarColetaParaFinanceiroContasReceber(supabase, coletaId)
+  if (lib.error) {
+    return { ok: false, message: lib.error.message }
+  }
+
+  const reg = await registrarEnvioNfContaReceber(supabase, {
+    referencia_coleta_id: coletaId,
+    modo: 'esteira_registo_nf',
+    observacaoUsuario: obsEsteira || `NF ${numeroNf}`,
+  })
+  if (reg.error) {
+    return { ok: false, message: reg.error.message }
+  }
+
+  return { ok: true }
+}
 
 /**
  * Confirma envio de NF e boleto ao cliente → esteira Finalizado e Contas a Receber.

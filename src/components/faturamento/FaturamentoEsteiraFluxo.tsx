@@ -23,7 +23,7 @@ const step = (ativo: boolean): CSSProperties => ({
   border: '1px solid #cbd5e1',
 })
 
-/** Indicador visual da esteira (passos 1–7). */
+/** Indicador visual da esteira (passos 1–8). */
 export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: number }) {
   const labels = [
     '1. Conferência ticket',
@@ -32,8 +32,8 @@ export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: number })
     '4. Mala Direta (medição)',
     '5. Aprovação cliente',
     '6. Faturar',
-    '7. NF / boleto',
-    '8. Finalizado',
+    '7. Mala Direta (NF / boleto)',
+    '8. Financeiro (Contas a Receber)',
   ]
 
   return (

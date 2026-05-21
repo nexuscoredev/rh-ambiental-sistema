@@ -41,6 +41,7 @@ type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
   podeAprovar: boolean
+  podeEditarPeso: boolean
   onAprovado: () => void | Promise<void>
 }
 
@@ -71,6 +72,7 @@ export function FaturamentoFilaAprovacaoTicket({
   linhas,
   carregando,
   podeAprovar,
+  podeEditarPeso,
   onAprovado,
 }: Props) {
   const [aprovandoId, setAprovandoId] = useState<string | null>(null)
@@ -91,11 +93,14 @@ export function FaturamentoFilaAprovacaoTicket({
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
 
   function iniciarEdicaoPeso(row: FaturamentoResumoViewRow) {
-    if (!podeAprovar) return
+    if (!podeEditarPeso) {
+      setErroPeso('O seu perfil não pode alterar o peso nesta fila.')
+      return
+    }
     setErroPeso('')
     setConfirmarPesoId(null)
     setEditandoPesoId(row.coleta_id)
-    setPesoEditValor(pesoParaInput(row.peso_liquido))
+    setPesoEditValor(pesoParaInput(pesoLocal[row.coleta_id] ?? row.peso_liquido))
   }
 
   function cancelarEdicaoPeso() {
@@ -174,10 +179,15 @@ export function FaturamentoFilaAprovacaoTicket({
       <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#78716c', lineHeight: 1.55, maxWidth: 720 }}>
         Coletas com pesagem e ticket <strong>salvos</strong> no Controle de Massa, aguardando validação do Faturamento.
         Depois de aprovar, a coleta segue na esteira (ajuste de valores → medição → faturar).
-        {podeAprovar ? (
+        {podeEditarPeso ? (
           <>
             {' '}
-            Pode <strong>corrigir o peso líquido</strong> manualmente antes de aprovar, se necessário.
+            Clique em <strong>Editar peso</strong>, altere o valor, <strong>Guardar</strong> e confirme.
+          </>
+        ) : podeAprovar ? (
+          <>
+            {' '}
+            O seu perfil pode aprovar tickets, mas não alterar o peso manualmente.
           </>
         ) : (
           <>
@@ -332,7 +342,7 @@ export function FaturamentoFilaAprovacaoTicket({
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                           <span>{fmtPeso(pesoLocal[r.coleta_id] ?? r.peso_liquido)}</span>
-                          {podeAprovar ? (
+                          {podeEditarPeso ? (
                             <button
                               type="button"
                               disabled={ocupada}

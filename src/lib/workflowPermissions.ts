@@ -290,6 +290,27 @@ export function cargoPodeAprovarTicketConferenciaFaturamento(
   return c.includes('faturamento') || cargoEhDiretoria(cargo)
 }
 
+/** Corrigir peso líquido na fila de conferência do ticket (alinhado à RPC no Supabase). */
+export function cargoPodeEditarPesoConferenciaTicket(
+  cargo: string | null | undefined
+): boolean {
+  if (liberadoSeAutoridadeMaxima(cargo)) return true
+  if (cargoEhVisualizador(cargo)) return false
+  if (cargoEhOperacionalTimeT(cargo)) return true
+  if (cargoEhDiretoria(cargo)) return true
+  const c = normalizarTextoCargo(cargo)
+  if (!c) return false
+  if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
+  return (
+    c.includes('faturamento') ||
+    c.includes('financeiro') ||
+    c.includes('operacional') ||
+    c.includes('logistica') ||
+    c.includes('balanceiro') ||
+    c.includes('pesagem')
+  )
+}
+
 /** Alterar valor da conta após faturamento (travado) — só Administrador e Desenvolvedor. */
 export function cargoPodeAlterarValorContaTravada(cargo: string | null | undefined): boolean {
   return cargoEhAdministradorOuDesenvolvedor(cargo)

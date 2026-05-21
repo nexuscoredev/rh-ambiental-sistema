@@ -109,7 +109,6 @@ export function TicketOperacionalPanel({
 
   const [carregandoTicket, setCarregandoTicket] = useState(false)
   const [salvando, setSalvando] = useState(false)
-  const [enviandoAprovacao, setEnviandoAprovacao] = useState(false)
   const [editandoTicketGerado, setEditandoTicketGerado] = useState(false)
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
@@ -123,8 +122,6 @@ export function TicketOperacionalPanel({
   const [carregandoPreReq, setCarregandoPreReq] = useState(false)
 
   const podeMutar = cargoPodeEditarTicketOperacional(cargo)
-
-  const podeEnviarAprovacao = Boolean(coletaAtiva && ticketId && podeMutar)
 
   const fluxoAlemDoTicket =
     coletaAtiva && etapaTicketJaRegistradoNoFluxo(coletaAtiva.etapaFluxo)
@@ -399,37 +396,6 @@ export function TicketOperacionalPanel({
     }
   }
 
-  async function handleEnviarAprovacao() {
-    if (!coletaAtiva || !podeEnviarAprovacao) return
-    const ok = window.confirm(
-      'Enviar este pacote (ticket + contexto) para aprovação da diretoria? A coleta passará a «Em aprovação».'
-    )
-    if (!ok) return
-
-    setEnviandoAprovacao(true)
-    setErro('')
-    setMensagem('')
-
-    try {
-      const { error } = await supabase
-        .from('coletas')
-        .update({
-          fluxo_status: 'ENVIADO_APROVACAO',
-          etapa_operacional: 'ENVIADO_APROVACAO',
-        })
-        .eq('id', coletaAtiva.id)
-
-      if (error) throw error
-      setMensagem('Coleta enviada para aprovação. Abra «Aprovação» para a diretoria decidir.')
-      onEtapaColetaAlterada?.()
-    } catch (err: unknown) {
-      console.error(err)
-      setErro(mensagemErroSupabase(err))
-    } finally {
-      setEnviandoAprovacao(false)
-    }
-  }
-
   const opcoesSelect = useMemo(() => {
     const sorted = [...coletasOpcoes].sort((a, b) =>
       String(b.numero).localeCompare(String(a.numero), undefined, { numeric: true })
@@ -673,10 +639,10 @@ export function TicketOperacionalPanel({
                 </div>
                 <div style={{ marginTop: '10px' }}>
                   <Link
-                    to={`/aprovacao?${montarParamsColeta(coletaAtiva).toString()}`}
+                    to={`/faturamento?${montarParamsColeta(coletaAtiva).toString()}`}
                     style={{ color: '#2563eb', fontWeight: 700 }}
                   >
-                    Ir para Aprovação →
+                    Ir para Faturamento (conferência do ticket) →
                   </Link>
                 </div>
               </div>
@@ -778,7 +744,7 @@ export function TicketOperacionalPanel({
                 ) : null}
 
                 {coletaAtiva.etapaFluxo === 'TICKET_GERADO' ? (
-                  <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                     {!podeMutar ? (
                       <p style={{ color: '#92400e', fontSize: '14px', width: '100%', margin: 0 }}>
                         O seu perfil só pode consultar.
@@ -801,23 +767,21 @@ export function TicketOperacionalPanel({
                         >
                           Editar ticket
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleEnviarAprovacao()}
-                          disabled={enviandoAprovacao || !podeEnviarAprovacao}
+                        <Link
+                          to={`/faturamento?${montarParamsColeta(coletaAtiva).toString()}`}
                           style={{
                             padding: '10px 20px',
                             borderRadius: '10px',
                             border: 'none',
-                            background: podeEnviarAprovacao ? '#7c3aed' : '#94a3b8',
+                            background: '#0d9488',
                             color: '#fff',
                             fontWeight: 800,
                             fontSize: '14px',
-                            cursor: podeEnviarAprovacao && !enviandoAprovacao ? 'pointer' : 'not-allowed',
+                            textDecoration: 'none',
                           }}
                         >
-                          {enviandoAprovacao ? 'A enviar…' : 'Enviar para aprovação'}
-                        </button>
+                          Conferir no Faturamento →
+                        </Link>
                       </>
                     )}
                   </div>
