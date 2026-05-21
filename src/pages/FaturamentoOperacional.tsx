@@ -10,6 +10,7 @@ import {
   cargoPodeConfirmarEmissaoFaturamento,
   cargoPodeEditarResumosFinanceirosFaturamento,
   cargoPodeEncerrarTicketDefinitivoFaturamento,
+  cargoPodeEnviarNfEmail,
 } from '../lib/workflowPermissions'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { useFaturamentoOperacionalVista } from '../lib/faturamentoOperacionalVista'
@@ -135,6 +136,7 @@ export default function FaturamentoOperacional() {
   const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo)
   const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo)
   const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo)
+  const podeConfirmarNfBoleto = cargoPodeEnviarNfEmail(cargo)
 
   useEffect(() => {
     async function carregarCargo() {
@@ -392,7 +394,12 @@ export default function FaturamentoOperacional() {
           podeDevolverConferencia={podeAprovarTicketFila && ticketAprovacaoAtivo}
         />
 
-        <FaturamentoFilaPosFaturamento linhas={linhasView} carregando={carregandoVista} />
+        <FaturamentoFilaPosFaturamento
+          linhas={linhasView}
+          carregando={carregandoVista}
+          podeConfirmar={podeConfirmarNfBoleto}
+          onAtualizar={() => void recarregarTudo()}
+        />
 
         {coletaAtiva ? (
           <div style={cardStyle}>

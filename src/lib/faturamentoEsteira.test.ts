@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  coletaAguardandoConfirmacaoNfBoleto,
   coletaLiberadaParaFaturarEsteira,
   coletaNaFilaRelatorioMedicao,
   inferirEsteiraStatus,
@@ -70,6 +71,27 @@ describe('inferirEsteiraStatus', () => {
         row({ faturamento_esteira_status: 'LIBERADO_FATURAMENTO' })
       )
     ).toBe('LIBERADO_FATURAMENTO')
+  })
+})
+
+describe('coletaAguardandoConfirmacaoNfBoleto', () => {
+  it('emitido com esteira liberado financeiro aguarda confirmação', () => {
+    expect(
+      coletaAguardandoConfirmacaoNfBoleto(
+        row({
+          faturamento_esteira_status: 'LIBERADO_FINANCEIRO',
+          faturamento_registro_status: 'emitido',
+        })
+      )
+    ).toBe(true)
+  })
+
+  it('finalizado não aguarda', () => {
+    expect(
+      coletaAguardandoConfirmacaoNfBoleto(
+        row({ faturamento_esteira_status: 'FINALIZADO', faturamento_registro_status: 'emitido' })
+      )
+    ).toBe(false)
   })
 })
 

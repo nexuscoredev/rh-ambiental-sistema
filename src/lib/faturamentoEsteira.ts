@@ -23,7 +23,7 @@ export const ROTULO_ESTEIRA: Record<FaturamentoEsteiraStatus, string> = {
   MEDICAO_EMAIL_PENDENTE: 'Envio do relatório (e-mail)',
   MEDICAO_AGUARDANDO_CLIENTE: 'Aprovação do cliente',
   LIBERADO_FATURAMENTO: 'Liberado faturamento',
-  LIBERADO_FINANCEIRO: 'Liberado financeiro',
+  LIBERADO_FINANCEIRO: 'Liberado para o Financeiro',
   FINALIZADO: 'Finalizado',
 }
 
@@ -132,12 +132,19 @@ export function coletaFinalizadaEsteira(row: FaturamentoResumoViewRow): boolean 
   return esteiraDaLinha(row) === 'FINALIZADO'
 }
 
-/** Pós-faturamento: emitido, NF ainda não registada como enviada. */
-export function coletaAguardandoEnvioNfCliente(row: FaturamentoResumoViewRow): boolean {
+/** Pós-faturamento: faturamento emitido, aguarda confirmação de NF + boleto ao cliente. */
+export function coletaAguardandoConfirmacaoNfBoleto(row: FaturamentoResumoViewRow): boolean {
   if (!coletaHistoricoFaturamentoEmitido(row)) return false
   if (coletaFinalizadaEsteira(row)) return false
-  return !row.conta_receber_nf_enviada_em
+  if (row.conta_receber_nf_enviada_em) return false
+  const e = esteiraDaLinha(row)
+  if (e === 'LIBERADO_FINANCEIRO') return true
+  if (!row.faturamento_esteira_status?.trim()) return true
+  return false
 }
+
+/** @deprecated Use `coletaAguardandoConfirmacaoNfBoleto`. */
+export const coletaAguardandoEnvioNfCliente = coletaAguardandoConfirmacaoNfBoleto
 
 export type GrupoMedicaoCliente = {
   cliente_id: string

@@ -356,6 +356,44 @@ export async function registrarEnvioNfContaReceber(
   }
 }
 
+const OBS_NF_BOLETO_PADRAO =
+  'NF e boleto enviados ao cliente (confirmado na esteira de faturamento).'
+
+/**
+ * Confirma envio de NF e boleto ao cliente → esteira Finalizado e Contas a Receber.
+ * Use após Envio de NF ou quando o envio foi feito fora do sistema.
+ */
+export async function confirmarNfBoletoEnviadosAoCliente(
+  supabase: SupabaseClient,
+  coletaIds: string[],
+  observacao?: string | null
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const ids = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
+  if (ids.length === 0) {
+    return { ok: false, message: 'Selecione ao menos uma coleta.' }
+  }
+
+  const obs = (observacao ?? '').trim() || OBS_NF_BOLETO_PADRAO
+
+  for (const coletaId of ids) {
+    const lib = await liberarColetaParaFinanceiroContasReceber(supabase, coletaId)
+    if (lib.error) {
+      return { ok: false, message: lib.error.message }
+    }
+
+    const reg = await registrarEnvioNfContaReceber(supabase, {
+      referencia_coleta_id: coletaId,
+      modo: 'esteira_confirmacao',
+      observacaoUsuario: obs,
+    })
+    if (reg.error) {
+      return { ok: false, message: reg.error.message }
+    }
+  }
+
+  return { ok: true }
+}
+
 export async function registrarBaixaContaReceber(
   supabase: SupabaseClient,
   input: {
