@@ -123,7 +123,7 @@ export function FaturamentoFilaAprovacaoTicket({
 
     setPesoLocal((prev) => ({ ...prev, [row.coleta_id]: peso }))
     cancelarEdicaoPeso()
-    await onAprovado()
+    void onAprovado()
   }
 
   function pedirConfirmacaoSalvar(row: FaturamentoResumoViewRow) {
@@ -133,9 +133,11 @@ export function FaturamentoFilaAprovacaoTicket({
       return
     }
 
-    const atual = row.peso_liquido != null ? Number(row.peso_liquido) : null
+    const atual =
+      pesoLocal[row.coleta_id] ??
+      (row.peso_liquido != null ? Number(row.peso_liquido) : null)
     if (atual != null && Math.abs(atual - peso) < 0.001) {
-      cancelarEdicaoPeso()
+      setErroPeso('O peso informado é igual ao atual. Altere o valor antes de guardar.')
       return
     }
 
@@ -346,7 +348,11 @@ export function FaturamentoFilaAprovacaoTicket({
                             <button
                               type="button"
                               disabled={ocupada}
-                              onClick={() => iniciarEdicaoPeso(r)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                iniciarEdicaoPeso(r)
+                              }}
                               title="Corrigir peso líquido manualmente"
                               style={{
                                 padding: 0,

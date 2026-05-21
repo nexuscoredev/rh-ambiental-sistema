@@ -494,7 +494,6 @@ export default function FaturamentoOperacional() {
           linhas={linhasHistorico ?? []}
           naoCarregado={!historicoCarregado}
           carregando={carregandoHistorico}
-          onCarregar={() => void carregarHistorico()}
         />
         <FaturamentoRelatoriosPanel
           linhasOperacional={linhasOperacional}

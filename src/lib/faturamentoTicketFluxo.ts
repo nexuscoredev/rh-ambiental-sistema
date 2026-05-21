@@ -280,13 +280,29 @@ function patchResiduosItensPesoLiquido(
   return serializarResiduosItensDb(atualizadas)
 }
 
+function normalizeRpcPesoPayload(data: unknown): Record<string, unknown> | null {
+  if (data == null) return null
+  if (typeof data === 'string') {
+    try {
+      return normalizeRpcPesoPayload(JSON.parse(data) as unknown)
+    } catch {
+      return null
+    }
+  }
+  if (Array.isArray(data) && data.length > 0) {
+    return normalizeRpcPesoPayload(data[0])
+  }
+  if (typeof data === 'object') return data as Record<string, unknown>
+  return null
+}
+
 function parseRpcPesoConferencia(data: unknown): { ok: true } | { ok: false; message: string } {
-  if (!data || typeof data !== 'object') {
+  const o = normalizeRpcPesoPayload(data)
+  if (!o) {
     return { ok: false, message: 'Resposta inválida ao gravar o peso.' }
   }
-  const o = data as { ok?: boolean; message?: string }
   if (o.ok === true) return { ok: true }
-  return { ok: false, message: o.message || 'Não foi possível atualizar o peso.' }
+  return { ok: false, message: String(o.message || 'Não foi possível atualizar o peso.') }
 }
 
 function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string } | null): boolean {
@@ -306,6 +322,14 @@ function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string }
 const MENSAGEM_SQL_PESO_CONFERENCIA =
   'Execute no Supabase SQL Editor o ficheiro supabase/sql_editor_FATURAMENTO_COMPLETO_EXECUTAR.sql (secção 0 + 6) e volte a tentar.'
 
+function pesoGravadoConfere(
+  row: { peso_liquido?: number | string | null } | null | undefined,
+  peso: number
+): boolean {
+  const gravado = row?.peso_liquido != null ? Number(row.peso_liquido) : null
+  return gravado != null && Math.abs(gravado - peso) <= 0.01
+}
+
 async function gravarPesoColetaDireto(
   id: string,
   peso: number,
@@ -315,10 +339,21 @@ async function gravarPesoColetaDireto(
     { peso_liquido: peso }
   if (itens) patchColeta.residuos_itens = itens
 
-  let { error: errColeta } = await supabase.from('coletas').update(patchColeta).eq('id', id)
+  let { data: coletaAtualizada, error: errColeta } = await supabase
+    .from('coletas')
+    .update(patchColeta)
+    .eq('id', id)
+    .select('peso_liquido')
+    .maybeSingle()
 
   if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
-    const retry = await supabase.from('coletas').update({ peso_liquido: peso }).eq('id', id)
+    const retry = await supabase
+      .from('coletas')
+      .update({ peso_liquido: peso })
+      .eq('id', id)
+      .select('peso_liquido')
+      .maybeSingle()
+    coletaAtualizada = retry.data
     errColeta = retry.error
   }
 
@@ -326,21 +361,10 @@ async function gravarPesoColetaDireto(
     return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
   }
 
-  const { data: verificacao, error: errVer } = await supabase
-    .from('coletas')
-    .select('peso_liquido')
-    .eq('id', id)
-    .maybeSingle()
-
-  if (errVer) {
-    return { ok: false, message: errVer.message || 'Não foi possível confirmar o peso gravado.' }
-  }
-
-  const gravado = verificacao?.peso_liquido != null ? Number(verificacao.peso_liquido) : null
-  if (gravado == null || Math.abs(gravado - peso) > 0.01) {
+  if (!pesoGravadoConfere(coletaAtualizada, peso)) {
     return {
       ok: false,
-      message: `Sem permissão para alterar o peso desta coleta (RLS). ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
+      message: `Sem permissão para alterar o peso desta coleta (RLS ou RPC pendente no Supabase). ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
     }
   }
 

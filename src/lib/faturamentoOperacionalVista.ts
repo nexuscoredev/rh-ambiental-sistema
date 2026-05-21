@@ -70,12 +70,13 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     setCarregandoHistorico(false)
     if (error) {
       console.warn('[faturamento] histórico emitidas:', error.message)
+      setLinhasHistorico([])
       return
     }
     setTicketAprovacaoAtivo(ticketCols)
     setEsteiraMedicaoAtiva(esteiraCols)
     setLinhasHistorico(data)
-  }, [carregandoHistorico])
+  }, [])
 
   const recarregarTudo = useCallback(async () => {
     await carregarOperacional()
@@ -90,11 +91,12 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
   useEffect(() => {
     queueMicrotask(() => {
       void carregarOperacional()
+      void carregarHistorico()
       void fetchContagemHistoricoFaturamentoEmitido(supabase).then(({ count, error }) => {
         if (!error) setContagemHistorico(count)
       })
     })
-  }, [carregarOperacional])
+  }, [carregarOperacional, carregarHistorico])
 
   useEffect(() => {
     const id = (coletaIdUrl ?? '').trim()
