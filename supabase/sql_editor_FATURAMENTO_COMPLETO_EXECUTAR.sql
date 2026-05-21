@@ -1,56 +1,183 @@
 -- =============================================================================
--- RG Ambiental — aplicar no Supabase (SQL Editor)
--- Esteira de medição + aprovação de ticket + view faturamento + RPC controle de massa
+-- RG Ambiental — SQL COMPLETO para o Supabase SQL Editor (copiar e executar de uma vez)
 --
--- ATENÇÃO: se falhar com "rg_is_operacional_time_t() does not exist", use o pacote
--- completo (secção 0 com helpers de cargo):
---   supabase/sql_editor_FATURAMENTO_COMPLETO_EXECUTAR.sql
+-- Inclui tudo o que falhou ou ficou pendente nas conversas recentes:
+--   • Esteira (AJUSTE_VALORES → medição → Mala Direta → faturar → NF → finalizado)
+--   • View vw_faturamento_resumo
+--   • Função rg_is_operacional_time_t (corrige erro 42883)
+--   • RPC atualizar_peso_liquido_conferencia_ticket (editar peso na conferência)
+--   • RLS coletas / controle_massa / contas_receber (Time T + Faturamento)
 --
--- Ordem: executar o ficheiro completo de uma vez.
--- Idempotente: ADD COLUMN IF NOT EXISTS / CREATE OR REPLACE.
+-- COMO USAR:
+--   1. Abra SQL Editor → New query
+--   2. Cole TODO este ficheiro
+--   3. Run (uma vez)
 --
--- Pré-requisitos (já costumam existir em produção):
---   - contas_receber, faturamento_registros, coleta_faturamento_sla_vencido()
---   - clientes.email_nf, clientes.margem_lucro_percentual
---   - mtrs.status, mtrs.baixa_cenario_complexo (migração mtr_ciclo_vida)
--- Se a criação da VIEW falhar em colunas de mtrs, aplique antes:
+-- Se a VIEW falhar em m.baixa_cenario_complexo, aplique antes no projeto:
 --   supabase/migrations/20260527120000_mtr_ciclo_vida_faturamento.sql
+--
+-- Idempotente: pode executar mais de uma vez.
 -- =============================================================================
 
 BEGIN;
 
--- -----------------------------------------------------------------------------
--- 1) Contrato comercial no cadastro de clientes (relatório de medição / preços)
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- 0) Funções de cargo (dependências — inclui rg_is_operacional_time_t)
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.rg_user_cargo()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT coalesce((SELECT u.cargo FROM public.usuarios u WHERE u.id = auth.uid()), '');
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_cargo_like(p text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT lower(public.rg_user_cargo()) LIKE '%' || lower(coalesce(p, '')) || '%';
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_cargo_vazio_compat()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT btrim(public.rg_user_cargo()) = '';
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.rg_cargo_like('administrador');
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_is_diretoria()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.rg_cargo_like('diretoria') OR public.rg_cargo_like('diretor');
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_is_visualizador()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.rg_cargo_like('visualizador');
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_is_desenvolvedor()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.usuarios u
+    WHERE u.id = auth.uid()
+      AND lower(btrim(coalesce(u.cargo, ''))) LIKE '%desenvolvedor%'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.rg_is_operacional_time_t()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    public.rg_cargo_like('operacional')
+    AND (
+      public.rg_cargo_like('time t')
+      OR public.rg_cargo_like('thais')
+      OR public.rg_cargo_like('operacional time thais')
+    )
+    OR (
+      public.rg_cargo_like('gerente')
+      AND public.rg_cargo_like('time')
+    )
+    OR lower(btrim(public.rg_user_cargo())) = 'gerente time';
+$$;
+
+-- Colunas para peso por item (RPC de peso na conferência)
+ALTER TABLE public.coletas
+  ADD COLUMN IF NOT EXISTS residuos_itens jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE public.controle_massa
+  ADD COLUMN IF NOT EXISTS residuos_itens jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+-- SLA na view (se ainda não existir em produção)
+CREATE OR REPLACE FUNCTION public.coleta_faturamento_sla_vencido(
+  p_created_at timestamptz,
+  p_faturamento_registro_status text,
+  p_fluxo_status text,
+  p_etapa_operacional text
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+SET search_path = public
+AS $$
+  SELECT
+    p_created_at < (now() - interval '3 days')
+    AND COALESCE(btrim(p_faturamento_registro_status), '') <> 'emitido'
+    AND NOT (
+      COALESCE(btrim(p_fluxo_status), '') IN (
+        'ENVIADO_FINANCEIRO', 'FINALIZADO', 'FATURADO', 'LIBERADO_FINANCEIRO'
+      )
+      OR COALESCE(btrim(p_etapa_operacional), '') IN (
+        'ENVIADO_FINANCEIRO', 'FINALIZADO', 'FATURADO', 'LIBERADO_FINANCEIRO'
+      )
+    );
+$$;
+
+-- MTR rateio (coluna usada na view)
+ALTER TABLE public.mtrs
+  ADD COLUMN IF NOT EXISTS baixa_cenario_complexo boolean NOT NULL DEFAULT false;
+
+-- =============================================================================
+-- 1) Contrato comercial no cadastro de clientes
+-- =============================================================================
 ALTER TABLE public.clientes
   ADD COLUMN IF NOT EXISTS veiculos_contrato jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS equipamentos_contrato jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS residuos_contrato jsonb NOT NULL DEFAULT '[]'::jsonb;
 
-COMMENT ON COLUMN public.clientes.veiculos_contrato IS
-  'Lista [{ tipo_veiculo, sem_custo, valor }] — veículos do contrato comercial.';
-COMMENT ON COLUMN public.clientes.equipamentos_contrato IS
-  'Lista [{ descricao, com_custo, valor }] — equipamentos do contrato.';
-COMMENT ON COLUMN public.clientes.residuos_contrato IS
-  'Lista [{ tipo_residuo, classificacao, unidade_medida, valor, frequencia_coleta, faturamento_minimo }].';
-
--- -----------------------------------------------------------------------------
+-- =============================================================================
 -- 2) Ticket: impressão + aprovação pelo Faturamento
--- -----------------------------------------------------------------------------
+-- =============================================================================
 ALTER TABLE public.coletas
   ADD COLUMN IF NOT EXISTS ticket_impresso_em timestamptz,
   ADD COLUMN IF NOT EXISTS faturamento_ticket_aprovado_em timestamptz,
   ADD COLUMN IF NOT EXISTS faturamento_ticket_aprovado_por_user_id uuid REFERENCES auth.users (id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS faturamento_ticket_aprovacao_obs text;
 
-COMMENT ON COLUMN public.coletas.ticket_impresso_em IS
-  'Preenchido quando o operador imprime o ticket no Controle de Massa; dispara fila de aprovação do Faturamento.';
-COMMENT ON COLUMN public.coletas.faturamento_ticket_aprovado_em IS
-  'Validação do ticket pelo Faturamento; obrigatório antes de faturar.';
-
--- -----------------------------------------------------------------------------
--- 3) Esteira de faturamento: medição → e-mail → cliente → faturar → NF → finalizado
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- 3) Esteira de faturamento
+-- =============================================================================
 ALTER TABLE public.coletas
   ADD COLUMN IF NOT EXISTS faturamento_esteira_status text,
   ADD COLUMN IF NOT EXISTS medicao_relatorio_gerado_em timestamptz,
@@ -79,7 +206,6 @@ SET faturamento_esteira_status = CASE
 END
 WHERE faturamento_esteira_status IS NULL;
 
--- Coletas já em MEDICAO_PENDENTE sem relatório → ajuste de valores (reordenar esteira).
 UPDATE public.coletas c
 SET faturamento_esteira_status = 'AJUSTE_VALORES_MEDICAO'
 WHERE c.faturamento_ticket_aprovado_em IS NOT NULL
@@ -92,9 +218,9 @@ WHERE c.faturamento_ticket_aprovado_em IS NOT NULL
   )
   AND COALESCE(c.faturamento_esteira_status, '') = 'MEDICAO_PENDENTE';
 
--- -----------------------------------------------------------------------------
--- 4) View vw_faturamento_resumo (versão com esteira + ticket + MTR cancelada)
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- 4) View vw_faturamento_resumo
+-- =============================================================================
 DROP VIEW IF EXISTS public.vw_faturamento_resumo CASCADE;
 
 CREATE VIEW public.vw_faturamento_resumo
@@ -118,10 +244,7 @@ SELECT
   m.numero AS mtr_numero,
   m.observacoes AS mtr_observacoes,
   m.status AS mtr_status,
-  COALESCE(
-    NULLIF(btrim(c.ticket_numero), ''),
-    ltk.ticket_numero
-  ) AS ticket_comprovante,
+  COALESCE(NULLIF(btrim(c.ticket_numero), ''), ltk.ticket_numero) AS ticket_comprovante,
   c.peso_tara,
   c.peso_bruto,
   c.peso_liquido,
@@ -166,8 +289,7 @@ SELECT
   CASE
     WHEN m.status = 'Cancelado' THEN 'MTR_CANCELADA'::text
     WHEN c.mtr_id IS NOT NULL
-      AND c.peso_liquido IS NOT NULL
-      AND c.peso_liquido > 0
+      AND c.peso_liquido IS NOT NULL AND c.peso_liquido > 0
       AND (
         (c.ticket_numero IS NOT NULL AND btrim(c.ticket_numero) <> '')
         OR (ltk.ticket_numero IS NOT NULL AND btrim(ltk.ticket_numero) <> '')
@@ -195,8 +317,7 @@ SELECT
       THEN 'ticket não impresso'
     END,
     CASE
-      WHEN c.ticket_impresso_em IS NOT NULL
-        AND c.faturamento_ticket_aprovado_em IS NULL
+      WHEN c.ticket_impresso_em IS NOT NULL AND c.faturamento_ticket_aprovado_em IS NULL
       THEN 'aguardando aprovação do Faturamento'
     END,
     CASE
@@ -208,130 +329,64 @@ SELECT
     END,
     CASE WHEN c.valor_coleta IS NULL OR c.valor_coleta <= 0 THEN 'sem valor' END
   )) AS pendencias_resumo,
-  public.coleta_faturamento_sla_vencido(
-    c.created_at,
-    lfr.status,
-    c.fluxo_status,
-    c.etapa_operacional
-  ) AS faturamento_sla_vencido,
+  public.coleta_faturamento_sla_vencido(c.created_at, lfr.status, c.fluxo_status, c.etapa_operacional) AS faturamento_sla_vencido,
   c.status_pagamento AS status_faturamento
 FROM public.coletas c
 LEFT JOIN public.clientes cl ON cl.id = c.cliente_id
 LEFT JOIN public.programacoes p ON p.id = c.programacao_id
 LEFT JOIN public.mtrs m ON m.id = c.mtr_id
 LEFT JOIN LATERAL (
-  SELECT t.numero AS ticket_numero
-  FROM public.tickets_operacionais t
-  WHERE t.coleta_id = c.id
-  ORDER BY t.created_at DESC NULLS LAST, t.id DESC
-  LIMIT 1
+  SELECT t.numero AS ticket_numero FROM public.tickets_operacionais t
+  WHERE t.coleta_id = c.id ORDER BY t.created_at DESC NULLS LAST, t.id DESC LIMIT 1
 ) ltk ON true
 LEFT JOIN LATERAL (
-  SELECT ad.decisao, ad.observacoes, ad.decidido_em
-  FROM public.aprovacoes_diretoria ad
-  WHERE ad.coleta_id = c.id
-  ORDER BY ad.decidido_em DESC NULLS LAST, ad.id DESC
-  LIMIT 1
+  SELECT ad.decisao, ad.observacoes, ad.decidido_em FROM public.aprovacoes_diretoria ad
+  WHERE ad.coleta_id = c.id ORDER BY ad.decidido_em DESC NULLS LAST, ad.id DESC LIMIT 1
 ) la ON true
 LEFT JOIN LATERAL (
-  SELECT fr.status, fr.referencia_nf, fr.valor
-  FROM public.faturamento_registros fr
-  WHERE fr.coleta_id = c.id
-  ORDER BY fr.updated_at DESC NULLS LAST, fr.id DESC
-  LIMIT 1
+  SELECT fr.status, fr.referencia_nf, fr.valor FROM public.faturamento_registros fr
+  WHERE fr.coleta_id = c.id ORDER BY fr.updated_at DESC NULLS LAST, fr.id DESC LIMIT 1
 ) lfr ON true
 LEFT JOIN LATERAL (
-  SELECT co.documentos_ok, co.observacoes, co.conferido_em
-  FROM public.conferencia_operacional co
-  WHERE co.coleta_id = c.id
-  ORDER BY co.conferido_em DESC NULLS LAST, co.id DESC
-  LIMIT 1
+  SELECT co.documentos_ok, co.observacoes, co.conferido_em FROM public.conferencia_operacional co
+  WHERE co.coleta_id = c.id ORDER BY co.conferido_em DESC NULLS LAST, co.id DESC LIMIT 1
 ) lco ON true
 LEFT JOIN LATERAL (
   SELECT cr.nf_enviada_em, cr.nf_envio_observacao, cr.valor_pago, cr.valor_travado
   FROM public.contas_receber cr
-  WHERE cr.referencia_coleta_id = c.id
-  ORDER BY cr.updated_at DESC NULLS LAST, cr.id DESC
-  LIMIT 1
+  WHERE cr.referencia_coleta_id = c.id ORDER BY cr.updated_at DESC NULLS LAST, cr.id DESC LIMIT 1
 ) lcr ON true;
 
 GRANT SELECT ON public.vw_faturamento_resumo TO authenticated;
 
-COMMENT ON VIEW public.vw_faturamento_resumo IS
-  'Faturamento / financeiro com esteira de medição e status de conferência do ticket.';
-
--- -----------------------------------------------------------------------------
--- 5) RPC — última pesagem por coleta (Controle de Massa, performance)
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- 5) RPC última pesagem (Controle de Massa)
+-- =============================================================================
 CREATE OR REPLACE FUNCTION public.ultima_pesagem_por_coleta_ids(p_ids uuid[])
-RETURNS TABLE (
-  coleta_id uuid,
-  data date,
-  hora_entrada time,
-  hora_saida time
-)
-LANGUAGE sql
-STABLE
-SECURITY INVOKER
-SET search_path = public
+RETURNS TABLE (coleta_id uuid, data date, hora_entrada time, hora_saida time)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public
 AS $$
-  SELECT DISTINCT ON (cm.coleta_id)
-    cm.coleta_id,
-    cm.data,
-    cm.hora_entrada,
-    cm.hora_saida
+  SELECT DISTINCT ON (cm.coleta_id) cm.coleta_id, cm.data, cm.hora_entrada, cm.hora_saida
   FROM public.controle_massa cm
   WHERE cm.coleta_id = ANY (p_ids)
   ORDER BY cm.coleta_id, cm.created_at DESC NULLS LAST;
 $$;
 
-COMMENT ON FUNCTION public.ultima_pesagem_por_coleta_ids(uuid[]) IS
-  'Retorna a pesagem mais recente (por created_at) de cada coleta_id informado.';
-
 GRANT EXECUTE ON FUNCTION public.ultima_pesagem_por_coleta_ids(uuid[]) TO authenticated;
 
--- -----------------------------------------------------------------------------
--- 6) Peso na conferência do ticket + permissões (Time T / Faturamento)
---     ORDEM: criar rg_is_operacional_time_t ANTES de funções que a referenciam.
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION public.rg_is_operacional_time_t()
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT
-    public.rg_cargo_like('operacional')
-    AND (
-      public.rg_cargo_like('time t')
-      OR public.rg_cargo_like('thais')
-      OR public.rg_cargo_like('operacional time thais')
-    )
-    OR (
-      public.rg_cargo_like('gerente')
-      AND public.rg_cargo_like('time')
-    )
-    OR lower(btrim(public.rg_user_cargo())) = 'gerente time';
-$$;
-
+-- =============================================================================
+-- 6) RLS peso + RPC conferência do ticket
+-- =============================================================================
 DROP POLICY IF EXISTS "coletas_update_roles_fluxo" ON public.coletas;
 CREATE POLICY "coletas_update_roles_fluxo"
   ON public.coletas FOR UPDATE TO authenticated
   USING (NOT public.rg_is_visualizador())
   WITH CHECK (
-    public.rg_is_admin()
-    OR public.rg_is_desenvolvedor()
-    OR public.rg_is_operacional_time_t()
-    OR public.rg_cargo_vazio_compat()
-    OR public.rg_cargo_like('operacional')
-    OR public.rg_cargo_like('logistica')
-    OR public.rg_cargo_like('balanceiro')
-    OR public.rg_cargo_like('pesagem')
-    OR public.rg_cargo_like('faturamento')
-    OR public.rg_cargo_like('financeiro')
-    OR public.rg_is_diretoria()
+    public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+    OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('operacional')
+    OR public.rg_cargo_like('logistica') OR public.rg_cargo_like('balanceiro')
+    OR public.rg_cargo_like('pesagem') OR public.rg_cargo_like('faturamento')
+    OR public.rg_cargo_like('financeiro') OR public.rg_is_diretoria()
   );
 
 DROP POLICY IF EXISTS "controle_massa_mutate_pesagem" ON public.controle_massa;
@@ -340,65 +395,37 @@ CREATE POLICY "controle_massa_mutate_pesagem"
   USING (
     NOT public.rg_is_visualizador()
     AND (
-      public.rg_is_admin()
-      OR public.rg_is_desenvolvedor()
-      OR public.rg_is_operacional_time_t()
-      OR public.rg_cargo_vazio_compat()
-      OR public.rg_cargo_like('balanceiro')
-      OR public.rg_cargo_like('pesagem')
-      OR public.rg_cargo_like('logistica')
-      OR public.rg_cargo_like('operacional')
-      OR public.rg_cargo_like('faturamento')
+      public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+      OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('balanceiro')
+      OR public.rg_cargo_like('pesagem') OR public.rg_cargo_like('logistica')
+      OR public.rg_cargo_like('operacional') OR public.rg_cargo_like('faturamento')
     )
   )
   WITH CHECK (
-    public.rg_is_admin()
-    OR public.rg_is_desenvolvedor()
-    OR public.rg_is_operacional_time_t()
-    OR public.rg_cargo_vazio_compat()
-    OR public.rg_cargo_like('balanceiro')
-    OR public.rg_cargo_like('pesagem')
-    OR public.rg_cargo_like('logistica')
-    OR public.rg_cargo_like('operacional')
-    OR public.rg_cargo_like('faturamento')
+    public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+    OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('balanceiro')
+    OR public.rg_cargo_like('pesagem') OR public.rg_cargo_like('logistica')
+    OR public.rg_cargo_like('operacional') OR public.rg_cargo_like('faturamento')
   );
 
 CREATE OR REPLACE FUNCTION public.rg_pode_ajustar_peso_conferencia_ticket()
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT
-    NOT public.rg_is_visualizador()
-    AND (
-      public.rg_is_admin()
-      OR public.rg_is_desenvolvedor()
-      OR public.rg_is_operacional_time_t()
-      OR public.rg_cargo_vazio_compat()
-      OR public.rg_cargo_like('faturamento')
-      OR public.rg_cargo_like('financeiro')
-      OR public.rg_is_diretoria()
-      OR public.rg_cargo_like('operacional')
-      OR public.rg_cargo_like('logistica')
-      OR public.rg_cargo_like('balanceiro')
-      OR public.rg_cargo_like('pesagem')
-    );
+  SELECT NOT public.rg_is_visualizador() AND (
+    public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+    OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('faturamento')
+    OR public.rg_cargo_like('financeiro') OR public.rg_is_diretoria()
+    OR public.rg_cargo_like('operacional') OR public.rg_cargo_like('logistica')
+    OR public.rg_cargo_like('balanceiro') OR public.rg_cargo_like('pesagem')
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION public.atualizar_peso_liquido_conferencia_ticket(
-  p_coleta_id uuid,
-  p_peso_liquido numeric,
-  p_residuos_itens jsonb DEFAULT NULL
+  p_coleta_id uuid, p_peso_liquido numeric, p_residuos_itens jsonb DEFAULT NULL
 )
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE
-  v_rows int;
+DECLARE v_rows int;
 BEGIN
   IF p_coleta_id IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'message', 'Coleta inválida.');
@@ -428,40 +455,28 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.atualizar_peso_liquido_conferencia_ticket(uuid, numeric, jsonb) TO authenticated;
 
--- -----------------------------------------------------------------------------
--- 7) Mala direta / NF: Time T e Desenvolvedor em contas_receber
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- 7) Mala direta / NF — contas a receber
+-- =============================================================================
 DROP POLICY IF EXISTS "contas_receber_mutate_financeiro" ON public.contas_receber;
-
 CREATE POLICY "contas_receber_mutate_financeiro"
   ON public.contas_receber FOR ALL TO authenticated
   USING (
-    NOT public.rg_is_visualizador()
-    AND (
-      public.rg_is_admin()
-      OR public.rg_is_desenvolvedor()
-      OR public.rg_is_operacional_time_t()
-      OR public.rg_cargo_vazio_compat()
-      OR public.rg_cargo_like('financeiro')
-      OR public.rg_cargo_like('faturamento')
-      OR public.rg_is_diretoria()
+    NOT public.rg_is_visualizador() AND (
+      public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+      OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('financeiro')
+      OR public.rg_cargo_like('faturamento') OR public.rg_is_diretoria()
     )
   )
   WITH CHECK (
-    public.rg_is_admin()
-    OR public.rg_is_desenvolvedor()
-    OR public.rg_is_operacional_time_t()
-    OR public.rg_cargo_vazio_compat()
-    OR public.rg_cargo_like('financeiro')
-    OR public.rg_cargo_like('faturamento')
-    OR public.rg_is_diretoria()
+    public.rg_is_admin() OR public.rg_is_desenvolvedor() OR public.rg_is_operacional_time_t()
+    OR public.rg_cargo_vazio_compat() OR public.rg_cargo_like('financeiro')
+    OR public.rg_cargo_like('faturamento') OR public.rg_is_diretoria()
   );
 
 COMMIT;
 
--- Verificação rápida (opcional):
--- SELECT column_name FROM information_schema.columns
---   WHERE table_schema = 'public' AND table_name = 'coletas'
---     AND column_name LIKE 'faturamento_%' OR column_name LIKE 'medicao_%'
---   ORDER BY 1;
+-- Verificação (opcional, executar depois do COMMIT):
+-- SELECT proname FROM pg_proc WHERE proname = 'rg_is_operacional_time_t';
+-- SELECT proname FROM pg_proc WHERE proname = 'atualizar_peso_liquido_conferencia_ticket';
 -- SELECT COUNT(*) FROM public.vw_faturamento_resumo LIMIT 1;

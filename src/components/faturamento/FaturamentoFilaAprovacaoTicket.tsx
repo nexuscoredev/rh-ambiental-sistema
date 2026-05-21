@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import {
@@ -41,7 +41,7 @@ type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
   podeAprovar: boolean
-  onAprovado: () => void
+  onAprovado: () => void | Promise<void>
 }
 
 function fmtData(iso: string | null | undefined) {
@@ -80,6 +80,12 @@ export function FaturamentoFilaAprovacaoTicket({
   const [salvandoPesoId, setSalvandoPesoId] = useState<string | null>(null)
   const [confirmarPesoId, setConfirmarPesoId] = useState<string | null>(null)
   const [erroPeso, setErroPeso] = useState('')
+  /** Reflete o peso gravado antes do refresh da vista. */
+  const [pesoLocal, setPesoLocal] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    setPesoLocal({})
+  }, [linhas])
 
   const linhaOcupada = (coletaId: string) =>
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
@@ -110,8 +116,9 @@ export function FaturamentoFilaAprovacaoTicket({
       return
     }
 
+    setPesoLocal((prev) => ({ ...prev, [row.coleta_id]: peso }))
     cancelarEdicaoPeso()
-    onAprovado()
+    await onAprovado()
   }
 
   function pedirConfirmacaoSalvar(row: FaturamentoResumoViewRow) {
@@ -166,7 +173,7 @@ export function FaturamentoFilaAprovacaoTicket({
       </h2>
       <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#78716c', lineHeight: 1.55, maxWidth: 720 }}>
         Coletas com pesagem e ticket <strong>salvos</strong> no Controle de Massa, aguardando validação do Faturamento.
-        Depois de aprovar, a coleta aparece na fila «Faturar» para registar valores e emitir ao Financeiro.
+        Depois de aprovar, a coleta segue na esteira (ajuste de valores → medição → faturar).
         {podeAprovar ? (
           <>
             {' '}
@@ -255,7 +262,7 @@ export function FaturamentoFilaAprovacaoTicket({
                           />
                           {(r.peso_tara != null || r.peso_bruto != null) && (
                             <span style={{ fontSize: 11, color: '#64748b' }}>
-                              Tara {fmtPeso(r.peso_tara)} · Bruto {fmtPeso(r.peso_bruto)}
+                              Bruto {fmtPeso(r.peso_bruto)} · Tara {fmtPeso(r.peso_tara)}
                             </span>
                           )}
                           {confirmando && pesoConfirm != null ? (
@@ -324,7 +331,7 @@ export function FaturamentoFilaAprovacaoTicket({
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                          <span>{fmtPeso(r.peso_liquido)}</span>
+                          <span>{fmtPeso(pesoLocal[r.coleta_id] ?? r.peso_liquido)}</span>
                           {podeAprovar ? (
                             <button
                               type="button"

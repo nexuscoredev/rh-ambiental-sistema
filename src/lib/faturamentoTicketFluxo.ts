@@ -263,10 +263,41 @@ function patchResiduosItensPesoLiquido(
   const comTexto = linhas.filter((l) => l.texto.trim())
   if (comTexto.length === 0) return null
 
+  const pesoStr = String(pesoLiquido)
+  if (comTexto.length === 1) {
+    const alvo = comTexto[0]
+    const idx = linhas.findIndex((l) => l === alvo)
+    const atualizadas = linhas.map((l, i) =>
+      i === idx ? { ...l, peso_liquido: pesoStr } : l
+    )
+    return serializarResiduosItensDb(atualizadas)
+  }
+
+  const idxPrincipal = linhas.findIndex((l) => l.texto.trim())
   const atualizadas = linhas.map((l, i) =>
-    i === 0 ? { ...l, peso_liquido: String(pesoLiquido) } : l
+    i === idxPrincipal ? { ...l, peso_liquido: pesoStr } : l
   )
   return serializarResiduosItensDb(atualizadas)
+}
+
+function parseRpcPesoConferencia(data: unknown): { ok: true } | { ok: false; message: string } {
+  if (!data || typeof data !== 'object') {
+    return { ok: false, message: 'Resposta inválida ao gravar o peso.' }
+  }
+  const o = data as { ok?: boolean; message?: string }
+  if (o.ok === true) return { ok: true }
+  return { ok: false, message: o.message || 'Não foi possível atualizar o peso.' }
+}
+
+function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false
+  const msg = (err.message ?? '').toLowerCase()
+  const code = err.code ?? ''
+  return (
+    code === 'PGRST202' ||
+    msg.includes('could not find the function') ||
+    msg.includes('atualizar_peso_liquido_conferencia_ticket')
+  )
 }
 
 /** Ajuste manual do peso líquido antes da aprovação do ticket (fila de conferência). */
@@ -295,17 +326,31 @@ export async function atualizarPesoLiquidoConferenciaTicket(
     return { ok: false, message: 'Coleta não encontrada.' }
   }
 
+  const itens = patchResiduosItensPesoLiquido(rowAtual.residuos_itens, peso)
+
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('atualizar_peso_liquido_conferencia_ticket', {
+    p_coleta_id: id,
+    p_peso_liquido: peso,
+    p_residuos_itens: itens ?? null,
+  })
+
+  if (!rpcErr) {
+    return parseRpcPesoConferencia(rpcData)
+  }
+
+  if (!rpcPesoConferenciaIndisponivel(rpcErr)) {
+    return { ok: false, message: rpcErr.message || 'Não foi possível atualizar o peso.' }
+  }
+
   const patchColeta: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
     { peso_liquido: peso }
-  const itens = patchResiduosItensPesoLiquido(rowAtual.residuos_itens, peso)
   if (itens) patchColeta.residuos_itens = itens
 
-  let { data: atualizada, error: errColeta } = await supabase
+  let { data: linhasAtualizadas, error: errColeta } = await supabase
     .from('coletas')
     .update(patchColeta)
     .eq('id', id)
     .select('id')
-    .maybeSingle()
 
   if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
     const retry = await supabase
@@ -313,19 +358,18 @@ export async function atualizarPesoLiquidoConferenciaTicket(
       .update({ peso_liquido: peso })
       .eq('id', id)
       .select('id')
-      .maybeSingle()
-    atualizada = retry.data
+    linhasAtualizadas = retry.data
     errColeta = retry.error
   }
 
   if (errColeta) {
     return { ok: false, message: errColeta.message || 'Não foi possível atualizar o peso na coleta.' }
   }
-  if (!atualizada?.id) {
+  if (!linhasAtualizadas?.length) {
     return {
       ok: false,
       message:
-        'Sem permissão para alterar o peso desta coleta (perfil ou política RLS). Peça ao administrador aplicar a migração de permissões ou use um perfil Faturamento.',
+        'Sem permissão para alterar o peso desta coleta (perfil ou política RLS). Execute no Supabase a migração 20260605120000_coletas_peso_conferencia_rpc.sql ou 20260603120000_coletas_peso_operacional_time_t.sql.',
     }
   }
 

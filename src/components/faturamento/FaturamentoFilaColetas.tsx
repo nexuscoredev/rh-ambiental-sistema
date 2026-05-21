@@ -230,7 +230,8 @@ function ChipFaturamento({
 type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
-  onFaturar: (coletaId: string) => void
+  onFaturar: (coletaId: string) => void | Promise<void>
+  emitindoColetaId?: string | null
   /** Após devolver à fila de conferência/aprovação do ticket. */
   onDevolvidoConferencia?: () => void
   podeDevolverConferencia?: boolean
@@ -271,11 +272,13 @@ export function FaturamentoFilaColetas({
   onFaturar,
   onDevolvidoConferencia,
   podeDevolverConferencia = false,
-  titulo = 'Fila para faturar (emitir ao Financeiro)',
-  subtitulo = 'Critérios: ticket impresso e aprovado pelo Faturamento, peso líquido e MTR na vista, ainda sem emissão ao Financeiro. Coletas com mais de 3 dias nessa situação aparecem com indicador vermelho intermitente na coluna Faturamento.',
+  titulo = 'Fila para faturar',
+  subtitulo =
+    'Medição e valores já conferidos. Use o botão para confirmar a emissão e avançar na esteira (Mala Direta → NF/boleto). Os cálculos foram guardados na etapa «Ajuste de valores» — aqui não se editam ticket nem MTR.',
   mensagemVazia = 'Nenhuma coleta aprovada aguardando faturamento.',
-  rotuloBotao = 'Faturar',
+  rotuloBotao = 'Confirmar e avançar',
   agruparPorMtr = true,
+  emitindoColetaId = null,
 }: Props) {
   const [devolvendoId, setDevolvendoId] = useState<string | null>(null)
 
@@ -372,6 +375,7 @@ export function FaturamentoFilaColetas({
                   podeDevolverConferencia={podeDevolverConferencia}
                   onDevolvidoConferencia={onDevolvidoConferencia}
                   onFaturar={onFaturar}
+                  emitindoColetaId={emitindoColetaId}
                   onDevolver={handleDevolver}
                   rotuloBotao={rotuloBotao}
                 />
@@ -390,6 +394,7 @@ function LinhaFilaFaturamento({
   podeDevolverConferencia,
   onDevolvidoConferencia,
   onFaturar,
+  emitindoColetaId,
   onDevolver,
   rotuloBotao,
 }: {
@@ -397,7 +402,8 @@ function LinhaFilaFaturamento({
   devolvendoId: string | null
   podeDevolverConferencia: boolean
   onDevolvidoConferencia?: () => void
-  onFaturar: (coletaId: string) => void
+  onFaturar: (coletaId: string) => void | Promise<void>
+  emitindoColetaId?: string | null
   onDevolver: (row: FaturamentoResumoViewRow) => void
   rotuloBotao: string
 }) {
@@ -409,6 +415,7 @@ function LinhaFilaFaturamento({
         podeDevolverConferencia={podeDevolverConferencia}
         onDevolvidoConferencia={onDevolvidoConferencia}
         onFaturar={onFaturar}
+        emitindoColetaId={emitindoColetaId}
         onDevolver={onDevolver}
         rotuloBotao={rotuloBotao}
       />
@@ -462,8 +469,17 @@ function LinhaFilaFaturamento({
           Caminhão/equip. uma vez · resíduos somados
         </td>
         <td style={{ ...td, textAlign: 'center' }}>
-          <button type="button" onClick={() => onFaturar(coleta_lider.coleta_id)} style={btnPrimario}>
-            {rotuloBotao}
+          <button
+            type="button"
+            disabled={!!emitindoColetaId}
+            onClick={() => void onFaturar(coleta_lider.coleta_id)}
+            style={{
+              ...btnPrimario,
+              opacity: emitindoColetaId ? 0.65 : 1,
+              cursor: emitindoColetaId ? 'wait' : 'pointer',
+            }}
+          >
+            {emitindoColetaId === coleta_lider.coleta_id ? 'A confirmar…' : rotuloBotao}
           </button>
         </td>
       </tr>
@@ -531,6 +547,7 @@ function LinhaColetaFaturamento({
   podeDevolverConferencia,
   onDevolvidoConferencia,
   onFaturar,
+  emitindoColetaId,
   onDevolver,
   rotuloBotao,
 }: {
@@ -538,7 +555,8 @@ function LinhaColetaFaturamento({
   devolvendoId: string | null
   podeDevolverConferencia: boolean
   onDevolvidoConferencia?: () => void
-  onFaturar: (coletaId: string) => void
+  onFaturar: (coletaId: string) => void | Promise<void>
+  emitindoColetaId?: string | null
   onDevolver: (row: FaturamentoResumoViewRow) => void
   rotuloBotao: string
 }) {
@@ -610,8 +628,17 @@ function LinhaColetaFaturamento({
               {devolvendoId === r.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
             </button>
           ) : null}
-          <button type="button" onClick={() => onFaturar(r.coleta_id)} style={btnPrimario}>
-            {rotuloBotao}
+          <button
+            type="button"
+            disabled={!!emitindoColetaId}
+            onClick={() => void onFaturar(r.coleta_id)}
+            style={{
+              ...btnPrimario,
+              opacity: emitindoColetaId ? 0.65 : 1,
+              cursor: emitindoColetaId ? 'wait' : 'pointer',
+            }}
+          >
+            {emitindoColetaId === r.coleta_id ? 'A confirmar…' : rotuloBotao}
           </button>
         </div>
       </td>

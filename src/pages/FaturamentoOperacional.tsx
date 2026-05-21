@@ -37,6 +37,10 @@ import {
   escolherColetaLiderFaturamento,
   resolverGrupoFaturamentoNaFila,
 } from '../lib/faturamentoConsolidacaoMtr'
+import {
+  emitirFaturamentoPelaEsteira,
+  mensagemConfirmacaoEmitirEsteira,
+} from '../lib/emitirFaturamentoEsteira'
 
 type ColetaResumo = {
   id: string
@@ -117,6 +121,7 @@ export default function FaturamentoOperacional() {
   const [modalGrupoConsolidado, setModalGrupoConsolidado] = useState<FaturamentoResumoViewRow[] | undefined>(
     undefined
   )
+  const [emitindoFaturamentoId, setEmitindoFaturamentoId] = useState<string | null>(null)
 
   const faturamentoOperDraft = useMemo(
     () => ({
@@ -245,12 +250,20 @@ export default function FaturamentoOperacional() {
     setSearchParams(p, { replace: true })
   }
 
-  function abrirModalFaturar(coletaId: string) {
-    setModalPreparacaoMedicao(false)
-    setModalGrupoConsolidado(undefined)
-    aoEscolherColetaUrl(coletaId)
-    setModalColetaId(coletaId)
-    setModalAberto(true)
+  async function confirmarFaturarEsteira(coletaId: string) {
+    if (!podeConfirmarEmissao) return
+    const msg = mensagemConfirmacaoEmitirEsteira(coletaId, fila)
+    if (!window.confirm(msg)) return
+
+    setEmitindoFaturamentoId(coletaId)
+    const res = await emitirFaturamentoPelaEsteira(coletaId, fila)
+    setEmitindoFaturamentoId(null)
+
+    if (!res.ok) {
+      window.alert(res.message)
+      return
+    }
+    await recarregarTudo()
   }
 
   function abrirModalAjusteValores(row: FaturamentoResumoViewRow, grupo?: FaturamentoResumoViewRow[]) {
@@ -278,8 +291,8 @@ export default function FaturamentoOperacional() {
           Esteira: <strong>conferência do ticket</strong> → <strong>ajuste de valores</strong> →{' '}
           <strong>relatório de medição</strong> →{' '}
           <Link to="/envio-nf?tipo=medicao">Mala Direta (medição)</Link> → <strong>aprovação do cliente</strong> →{' '}
-          <strong>faturar</strong> → <Link to="/envio-nf">Mala Direta (NF e boleto)</Link> → <strong>finalizado</strong>{' '}
-          (Financeiro → Contas a Receber).
+          <strong>confirmar faturamento</strong> → <Link to="/envio-nf">Mala Direta (NF e boleto)</Link> →{' '}
+          <strong>finalizado</strong> (Financeiro → Contas a Receber).
         </p>
 
         <FaturamentoEsteiraFluxo />
@@ -400,7 +413,7 @@ export default function FaturamentoOperacional() {
           linhas={filaAprovacao}
           carregando={carregandoVista}
           podeAprovar={podeAprovarTicketFila}
-          onAprovado={() => void recarregarTudo()}
+          onAprovado={() => recarregarTudo()}
         />
 
         <FaturamentoFilaAjusteValores
@@ -421,7 +434,8 @@ export default function FaturamentoOperacional() {
         <FaturamentoFilaColetas
           linhas={fila}
           carregando={carregandoVista}
-          onFaturar={abrirModalFaturar}
+          onFaturar={confirmarFaturarEsteira}
+          emitindoColetaId={emitindoFaturamentoId}
           onDevolvidoConferencia={() => void recarregarTudo()}
           podeDevolverConferencia={podeAprovarTicketFila && ticketAprovacaoAtivo}
         />
@@ -453,22 +467,27 @@ export default function FaturamentoOperacional() {
               >
                 Aprovação →
               </Link>
-              <button
-                type="button"
-                onClick={() => abrirModalFaturar(coletaAtiva.id)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: ACCENT,
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
-              >
-                Abrir faturamento desta coleta
-              </button>
+              {podeConfirmarEmissao && fila.some((r) => r.coleta_id === coletaAtiva.id) ? (
+                <button
+                  type="button"
+                  disabled={!!emitindoFaturamentoId}
+                  onClick={() => void confirmarFaturarEsteira(coletaAtiva.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: ACCENT,
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: emitindoFaturamentoId ? 'wait' : 'pointer',
+                  }}
+                >
+                  {emitindoFaturamentoId === coletaAtiva.id
+                    ? 'A confirmar…'
+                    : 'Confirmar faturamento'}
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -489,7 +508,7 @@ export default function FaturamentoOperacional() {
       </div>
 
       <FaturamentoModalRegisto
-        open={modalAberto}
+        open={modalAberto && modalPreparacaoMedicao}
         row={modalRow}
         coletasConsolidadas={modalGrupo.length > 1 ? modalGrupo : undefined}
         modoPreparacaoMedicao={modalPreparacaoMedicao}
