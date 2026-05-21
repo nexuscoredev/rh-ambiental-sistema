@@ -11,7 +11,10 @@ import {
   type RegraPrecoRow,
 } from '../../services/pricing'
 import { isMissingClienteContratoColumnsError } from '../../lib/clienteContratoCadastro'
-import { marcarEsteiraPosFaturamentoEmitido } from '../../lib/faturamentoEsteira'
+import {
+  marcarEsteiraPosFaturamentoEmitido,
+  marcarValoresMedicaoRevisados,
+} from '../../lib/faturamentoEsteira'
 import {
   calcularPrecoContratoColetaMtr,
   rotuloOrigemContrato,
@@ -70,6 +73,8 @@ type Props = {
   onGravado: () => void
   /** Se false, após emitir mantém-se na página atual (ex.: Financeiro unificado). Padrão: navega para Financeiro com contexto da coleta. */
   navegarAposEmitir?: boolean
+  /** Revisão de valores antes do relatório de medição (não emite faturamento). */
+  modoPreparacaoMedicao?: boolean
 }
 
 export function FaturamentoModalRegisto({
@@ -84,6 +89,7 @@ export function FaturamentoModalRegisto({
   onClose,
   onGravado,
   navegarAposEmitir: _navegarAposEmitir = true,
+  modoPreparacaoMedicao = false,
 }: Props) {
   const podeConfirmarEmissao = podeConfirmarEmissaoProp ?? podeMutar ?? false
   const [registroId, setRegistroId] = useState<string | null>(null)
@@ -276,16 +282,16 @@ export function FaturamentoModalRegisto({
       }
       setObservacoes(rec.observacoes ?? '')
       const st = rec.status === 'emitido' || rec.status === 'cancelado' ? rec.status : 'pendente'
-      setStatus(st)
+      setStatus(modoPreparacaoMedicao ? 'pendente' : st)
     } else {
       setRegistroId(null)
       setResumoFinanceiro(null)
       setObservacoes('')
-      setStatus('emitido')
+      setStatus(modoPreparacaoMedicao ? 'pendente' : 'emitido')
       resumoInicializadoColetaRef.current = null
     }
     if (gen === carregarRegistoGenRef.current) setCarregando(false)
-  }, [])
+  }, [modoPreparacaoMedicao])
 
   useEffect(() => {
     if (!open) {
@@ -299,6 +305,11 @@ export function FaturamentoModalRegisto({
     contratoAutoAplicadoRef.current = null
     void carregarRegisto(coletaIdModal)
   }, [open, coletaIdModal, carregarRegisto])
+
+  useEffect(() => {
+    if (!open || !modoPreparacaoMedicao) return
+    setStatus('pendente')
+  }, [open, modoPreparacaoMedicao])
 
   useEffect(() => {
     if (!open) return
@@ -522,7 +533,18 @@ export function FaturamentoModalRegisto({
     e.preventDefault()
     if (!row || !podeConfirmarEmissao) return
 
-    if (status === 'emitido') {
+    if (modoPreparacaoMedicao) {
+      if (totalNumero <= 0) {
+        setErro('Preencha os valores nos resumos (ticket e/ou MTR) antes de liberar a medição.')
+        return
+      }
+      if (!resumoFinanceiro) {
+        setErro('Aguarde o carregamento dos resumos ou recarregue a página.')
+        return
+      }
+    }
+
+    if (!modoPreparacaoMedicao && status === 'emitido') {
       const alvo = grupoConsolidado && grupoConsolidado.length > 1 ? grupoConsolidado : [row]
       for (const c of alvo) {
         const el = coletaElegivelParaFaturar(c)
@@ -583,12 +605,13 @@ export function FaturamentoModalRegisto({
         return
       }
 
+      const statusGravar = modoPreparacaoMedicao ? 'pendente' : status
       const payloads = montarPayloadsFaturamentoRegistro({
         valor: valorTotal,
         valorAdicionais,
         resumoFinanceiro: resumoJson,
         observacoes,
-        status,
+        status: statusGravar,
         updatedAt: agora,
       })
 
@@ -603,6 +626,26 @@ export function FaturamentoModalRegisto({
 
       if (resPersist.id && !registroId) {
         setRegistroId(resPersist.id)
+      }
+
+      if (modoPreparacaoMedicao) {
+        const ids =
+          grupoConsolidado && grupoConsolidado.length > 1
+            ? grupoConsolidado.map((c) => c.coleta_id)
+            : [coletaAtual.coleta_id]
+        const est = await marcarValoresMedicaoRevisados(ids)
+        if (!est.ok) {
+          setErro(est.message)
+          setSalvando(false)
+          return
+        }
+        setOkMsg(
+          'Valores guardados. Pode gerar o relatório de medição e enviar ao cliente pela mala direta.'
+        )
+        onGravado()
+        onClose()
+        setSalvando(false)
+        return
       }
 
       if (status === 'emitido') {
@@ -679,9 +722,13 @@ export function FaturamentoModalRegisto({
       >
         <div style={{ padding: '22px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
           <h2 id="fat-modal-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
-            {grupoConsolidado && grupoConsolidado.length > 1
-              ? 'Faturamento consolidado (1 por MTR)'
-              : 'Faturamento da coleta'}
+            {modoPreparacaoMedicao
+              ? grupoConsolidado && grupoConsolidado.length > 1
+                ? 'Ajuste de valores — MTR consolidada'
+                : 'Ajuste de valores — preparação para medição'
+              : grupoConsolidado && grupoConsolidado.length > 1
+                ? 'Faturamento consolidado (1 por MTR)'
+                : 'Faturamento da coleta'}
           </h2>
           <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
             {grupoConsolidado && grupoConsolidado.length > 1 ? (
@@ -781,7 +828,25 @@ export function FaturamentoModalRegisto({
                 </p>
               ) : null}
 
-              {status === 'emitido' ? (
+              {modoPreparacaoMedicao ? (
+                <p
+                  style={{
+                    margin: '0 0 14px',
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    background: '#ecfdf5',
+                    border: '1px solid #a7f3d0',
+                    fontSize: 13,
+                    color: '#065f46',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Modo <strong>preparação para medição</strong>: os valores ficam em registo pendente. Não
+                  envia ao Financeiro — após guardar, gere o relatório de medição na esteira seguinte.
+                </p>
+              ) : null}
+
+              {!modoPreparacaoMedicao && status === 'emitido' ? (
                 <>
                   <label
                     style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}
@@ -858,26 +923,32 @@ export function FaturamentoModalRegisto({
                 }}
               />
 
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                Estado do registro
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as StatusFat)}
-                disabled={!podeConfirmarEmissao}
-                style={{
-                  width: '100%',
-                  marginBottom: '14px',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="emitido">Emitido — envia ao Financeiro</option>
-                <option value="pendente">Pendente — apenas salva o registro (não envia ao Financeiro)</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
+              {!modoPreparacaoMedicao ? (
+                <>
+                  <label
+                    style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}
+                  >
+                    Estado do registro
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as StatusFat)}
+                    disabled={!podeConfirmarEmissao}
+                    style={{
+                      width: '100%',
+                      marginBottom: '14px',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="emitido">Emitido — envia ao Financeiro</option>
+                    <option value="pendente">Pendente — apenas salva o registro (não envia ao Financeiro)</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </>
+              ) : null}
 
               {erro ? <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '10px' }}>{erro}</p> : null}
               {okMsg ? <p style={{ color: '#15803d', fontSize: '14px', fontWeight: 600, marginBottom: '10px' }}>{okMsg}</p> : null}
@@ -910,7 +981,13 @@ export function FaturamentoModalRegisto({
                     cursor: podeConfirmarEmissao && !salvando ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  {salvando ? 'Salvando…' : status === 'emitido' ? 'Confirmar faturamento' : 'Salvar registro'}
+                  {salvando
+                    ? 'Salvando…'
+                    : modoPreparacaoMedicao
+                      ? 'Guardar valores e liberar medição'
+                      : status === 'emitido'
+                        ? 'Confirmar faturamento'
+                        : 'Salvar registro'}
                 </button>
               </div>
             </>

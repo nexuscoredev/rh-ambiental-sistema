@@ -2595,19 +2595,6 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Peso tara (kg)</label>
-                    <input
-                      ref={pesoTaraRef}
-                      name="peso_tara"
-                      inputMode="decimal"
-                      value={form.peso_tara}
-                      onChange={handleInputChange}
-                      placeholder="Ex.: 320"
-                      style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: "span 4" }} className="field">
                     <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Peso bruto (kg)</label>
                     <input
                       ref={pesoBrutoRef}
@@ -2616,6 +2603,19 @@ export default function ControleMassa() {
                       value={form.peso_bruto}
                       onChange={handleInputChange}
                       placeholder="Ex.: 2540"
+                      style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: "span 4" }} className="field">
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Peso tara (kg)</label>
+                    <input
+                      ref={pesoTaraRef}
+                      name="peso_tara"
+                      inputMode="decimal"
+                      value={form.peso_tara}
+                      onChange={handleInputChange}
+                      placeholder="Ex.: 320"
                       style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
                     />
                   </div>

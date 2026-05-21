@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { confirmarEmailMedicaoEnviado } from '../lib/faturamentoEsteira'
 import { supabase } from '../lib/supabase'
 import {
   formatarErroEdgeFunction,
@@ -40,6 +42,8 @@ const MAX_ANEXOS = 5
 /** Total no e-mail: anexos de NF (até 5) + opcional boleto PDF (1). */
 const MAX_TOTAL_ANEXOS_EMAIL = 6
 const MAX_BYTES_ANEXO = 4 * 1024 * 1024 // 4 MiB
+const ASSUNTO_NF_PADRAO = 'Nota fiscal — RG Ambiental'
+const ASSUNTO_MEDICAO_PADRAO = 'Relatório de medição — RG Ambiental'
 
 function formatarTamanho(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -90,6 +94,7 @@ export default function EnvioNF() {
   const [somenteComEmail, setSomenteComEmail] = useState(true)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [observacao, setObservacao] = useState('')
+  const [assuntoEmail, setAssuntoEmail] = useState(ASSUNTO_NF_PADRAO)
   const [anexoFiles, setAnexoFiles] = useState<File[]>([])
   const [boletoFile, setBoletoFile] = useState<File | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -101,6 +106,14 @@ export default function EnvioNF() {
     { referencia_coleta_id: string; numero: string; saldoFmt: string }[]
   >([])
   const [coletasComContaMarcadas, setColetasComContaMarcadas] = useState<Set<string>>(new Set())
+  const [coletasMedicaoPorCliente, setColetasMedicaoPorCliente] = useState<
+    { coleta_id: string; numero: string; cliente_id: string }[]
+  >([])
+
+  const modoMedicao = useMemo(
+    () => (searchParams.get('tipo') || '').trim().toLowerCase() === 'medicao',
+    [searchParams]
+  )
 
   const envioNfDraft = useMemo(
     () => ({
@@ -130,6 +143,11 @@ export default function EnvioNF() {
   const podeDisparar = cargoPodeEnviarNfEmail(usuarioCargo)
   const clienteParam = useMemo(() => (searchParams.get('cliente') || '').trim(), [searchParams])
   const coletaParam = useMemo(() => (searchParams.get('coleta') || '').trim(), [searchParams])
+
+  useEffect(() => {
+    setAssuntoEmail(modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO)
+    if (modoMedicao) setBoletoFile(null)
+  }, [modoMedicao])
 
   const carregarClientes = useCallback(async () => {
     setLoading(true)
@@ -274,6 +292,66 @@ export default function EnvioNF() {
       cancel = true
     }
   }, [selecionados])
+
+  useEffect(() => {
+    if (!modoMedicao) {
+      setColetasMedicaoPorCliente([])
+      return
+    }
+    const clientIds = [...selecionados]
+    if (clientIds.length === 0) {
+      setColetasMedicaoPorCliente([])
+      return
+    }
+    let cancel = false
+    void (async () => {
+      const { data, error } = await supabase
+        .from('coletas')
+        .select('id, numero, cliente_id')
+        .in('cliente_id', clientIds)
+        .eq('faturamento_esteira_status', 'MEDICAO_EMAIL_PENDENTE')
+        .limit(500)
+      if (cancel) return
+      if (error) {
+        console.error(error)
+        setColetasMedicaoPorCliente([])
+        return
+      }
+      setColetasMedicaoPorCliente(
+        (data ?? []).map((r: { id: string; numero: string; cliente_id: string }) => ({
+          coleta_id: r.id,
+          numero: r.numero,
+          cliente_id: r.cliente_id,
+        }))
+      )
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [modoMedicao, selecionados])
+
+  const registrarMedicaoEnviadaClientes = useCallback(async (clienteIds: string[]) => {
+    const ids = new Set<string>()
+    for (const cid of clienteIds) {
+      const { data, error } = await supabase
+        .from('coletas')
+        .select('id')
+        .eq('cliente_id', cid)
+        .eq('faturamento_esteira_status', 'MEDICAO_EMAIL_PENDENTE')
+      if (error) {
+        console.warn('Medição (esteira):', error.message)
+        continue
+      }
+      for (const row of data ?? []) {
+        ids.add((row as { id: string }).id)
+      }
+    }
+    if (ids.size === 0) return { ok: true as const, atualizadas: 0 }
+    const res = await confirmarEmailMedicaoEnviado([...ids])
+    return res.ok
+      ? { ok: true as const, atualizadas: ids.size }
+      : { ok: false as const, message: res.message }
+  }, [])
 
   useEffect(() => {
     async function c() {
@@ -471,7 +549,7 @@ export default function EnvioNF() {
       const { data: logRow, error } = await supabase
         .from('nf_envios_log')
         .insert({
-          modo: 'simulacao',
+          modo: modoMedicao ? 'medicao_simulacao' : 'simulacao',
           destinatarios,
           total_destinatarios: destinatarios.length,
           observacao: obsComAnexos || null,
@@ -486,10 +564,19 @@ export default function EnvioNF() {
         logRow && typeof logRow === 'object' && 'id' in logRow && logRow.id
           ? String(logRow.id)
           : null
-      await aplicarEnvioNasContasMarcadas('simulacao', obsComAnexos, logId)
+      let coletasMedicaoAtualizadas = 0
+      if (!modoMedicao) {
+        await aplicarEnvioNasContasMarcadas('simulacao', obsComAnexos, logId)
+      } else {
+        const est = await registrarMedicaoEnviadaClientes(destinatarios.map((d) => d.cliente_id))
+        if (!est.ok) throw new Error(est.message)
+        coletasMedicaoAtualizadas = est.atualizadas
+      }
 
       setMensagem(
-        `Simulação concluída: ${destinatarios.length} destinatário(s). Nenhum e-mail foi enviado.`
+        modoMedicao
+          ? `Simulação de medição: ${destinatarios.length} destinatário(s). Esteira avançada para aprovação do cliente (${coletasMedicaoAtualizadas} coleta(s)).`
+          : `Simulação concluída: ${destinatarios.length} destinatário(s). Nenhum e-mail foi enviado.`
       )
       setObservacao('')
       limparAnexos()
@@ -552,6 +639,7 @@ export default function EnvioNF() {
         body: {
           destinatarios,
           observacao: observacao.trim() || null,
+          assunto: assuntoEmail.trim() || (modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO),
           ...(anexos && anexos.length > 0 ? { anexos } : {}),
         },
         headers: headersJwtSessao(sessao),
@@ -581,14 +669,26 @@ export default function EnvioNF() {
         const logId =
           'nfEnvioLogId' in data && data.nfEnvioLogId ? String(data.nfEnvioLogId) : undefined
         const modo = 'modo' in data && data.modo ? String(data.modo) : 'email'
-        await aplicarEnvioNasContasMarcadas(modo, observacao, logId ?? null)
+        if (modoMedicao) {
+          const est = await registrarMedicaoEnviadaClientes(destinatarios.map((d) => d.cliente_id))
+          if (!est.ok) throw new Error(est.message)
+        } else {
+          await aplicarEnvioNasContasMarcadas(modo, observacao, logId ?? null)
+        }
+      } else if (modoMedicao) {
+        const est = await registrarMedicaoEnviadaClientes(destinatarios.map((d) => d.cliente_id))
+        if (!est.ok) throw new Error(est.message)
       }
 
-      const msg =
+      const msgBase =
         data && typeof data === 'object' && 'message' in data && data.message
           ? String(data.message)
           : 'Pedido concluído.'
-      setMensagem(msg)
+      setMensagem(
+        modoMedicao
+          ? `${msgBase} Coletas do cliente passaram para aguardar aprovação na esteira de faturamento.`
+          : msgBase
+      )
       setObservacao('')
       limparAnexos()
       limparBoleto()
@@ -624,14 +724,42 @@ export default function EnvioNF() {
                   color: '#0f172a',
                 }}
               >
-                Mala direta a clientes
+                {modoMedicao ? 'Mala Direta — Medição' : 'Mala Direta'}
               </h1>
               <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
-                Selecione clientes com <strong>e-mail para NF</strong> em <strong>Clientes</strong>. Use{' '}
-                <strong>Enviar e-mails</strong> para disparo real (Outlook/Hotmail SMTP ou Resend, conforme segredos na
-                Edge Function) ou <strong>simulação</strong> só para testar o histórico sem enviar.
+                {modoMedicao ? (
+                  <>
+                    Envie o <strong>relatório de medição</strong> ao cliente (e-mail em Clientes). Após envio ou
+                    simulação, as coletas em <strong>envio do relatório</strong> passam para{' '}
+                    <strong>aprovação do cliente</strong> na{' '}
+                    <Link to="/faturamento-operacional" style={{ fontWeight: 700 }}>
+                      esteira de faturamento
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  <>
+                    Envio ao cliente de <strong>medição</strong>, <strong>nota fiscal</strong> e{' '}
+                    <strong>boleto</strong>. Selecione clientes com e-mail em <strong>Clientes</strong>. Use{' '}
+                    <strong>Enviar e-mails</strong> (SMTP/Resend) ou <strong>simulação</strong> para registar no
+                    histórico sem disparar.
+                  </>
+                )}
               </p>
-              {coletaParam ? (
+              {modoMedicao ? (
+                <p style={{ margin: '10px 0 0', fontSize: '13px' }}>
+                  <Link to="/envio-nf" style={{ fontWeight: 700, color: '#2563eb' }}>
+                    ← Mala Direta (NF e boleto)
+                  </Link>
+                </p>
+              ) : (
+                <p style={{ margin: '10px 0 0', fontSize: '13px' }}>
+                  <Link to="/envio-nf?tipo=medicao" style={{ fontWeight: 700, color: '#0d9488' }}>
+                    Mala Direta — Medição →
+                  </Link>
+                </p>
+              )}
+              {coletaParam && !modoMedicao ? (
                 <p
                   style={{
                     margin: '10px 0 0',
@@ -871,7 +999,7 @@ export default function EnvioNF() {
               </table>
             </div>
 
-            {contasAbertasOpts.length > 0 ? (
+            {!modoMedicao && contasAbertasOpts.length > 0 ? (
               <div
                 style={{
                   marginTop: '18px',
@@ -915,6 +1043,45 @@ export default function EnvioNF() {
               </div>
             ) : null}
 
+            {modoMedicao && coletasMedicaoPorCliente.length > 0 ? (
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  background: '#f0fdfa',
+                  border: '1px solid #99f6e4',
+                  fontSize: '13px',
+                  color: '#0f766e',
+                }}
+              >
+                <strong>{coletasMedicaoPorCliente.length}</strong> coleta(s) na esteira aguardando envio do relatório
+                (serão marcadas como e-mail enviado após confirmar o envio):{' '}
+                {coletasMedicaoPorCliente.map((c) => c.numero).join(', ')}
+              </div>
+            ) : null}
+
+            <div style={{ marginTop: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
+                Assunto do e-mail
+              </div>
+              <input
+                type="text"
+                value={assuntoEmail}
+                onChange={(e) => setAssuntoEmail(e.target.value)}
+                disabled={!podeDisparar}
+                style={{
+                  width: '100%',
+                  maxWidth: '560px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
                 Observação interna (opcional, gravada no log)
@@ -923,7 +1090,11 @@ export default function EnvioNF() {
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
                 rows={3}
-                placeholder="Ex.: Lote NF abril / referência interna"
+                placeholder={
+                  modoMedicao
+                    ? 'Ex.: Medição maio — aguardamos retorno para faturamento'
+                    : 'Ex.: Lote NF abril / referência interna'
+                }
                 disabled={!podeDisparar}
                 style={{
                   width: '100%',
@@ -940,13 +1111,23 @@ export default function EnvioNF() {
 
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
-                Anexar Nota Fiscal
+                {modoMedicao ? 'Anexar relatório de medição' : 'Anexar Nota Fiscal'}
               </div>
               <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
-                PDF, XML ou imagens. Até {MAX_ANEXOS} ficheiros de NF, {formatarTamanho(MAX_BYTES_ANEXO)} cada. Pode
-                anexar ainda <strong>um boleto em PDF</strong> abaixo (conta no limite de {MAX_TOTAL_ANEXOS_EMAIL}{' '}
-                ficheiros no e-mail). Os anexos são enviados no e-mail real; na <strong>simulação</strong> só ficam
-                registados os nomes no log.
+                {modoMedicao ? (
+                  <>
+                    PDF do relatório de medição (gere na esteira de faturamento). Até {MAX_ANEXOS} ficheiros,{' '}
+                    {formatarTamanho(MAX_BYTES_ANEXO)} cada.
+                  </>
+                ) : (
+                  <>
+                    PDF, XML ou imagens. Até {MAX_ANEXOS} ficheiros de NF, {formatarTamanho(MAX_BYTES_ANEXO)} cada.
+                    Pode anexar ainda <strong>um boleto em PDF</strong> abaixo (conta no limite de{' '}
+                    {MAX_TOTAL_ANEXOS_EMAIL} ficheiros no e-mail).
+                  </>
+                )}{' '}
+                Os anexos são enviados no e-mail real; na <strong>simulação</strong> só ficam registados os nomes no
+                log.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                 <label
@@ -979,7 +1160,7 @@ export default function EnvioNF() {
                     }}
                     style={{ display: 'none' }}
                   />
-                  Anexar Nota Fiscal
+                  {modoMedicao ? 'Anexar relatório (PDF)' : 'Anexar Nota Fiscal'}
                 </label>
                 {anexoFiles.length > 0 ? (
                   <button
@@ -1042,6 +1223,7 @@ export default function EnvioNF() {
               ) : null}
             </div>
 
+            {!modoMedicao ? (
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
                 Anexar boleto (PDF)
@@ -1111,6 +1293,7 @@ export default function EnvioNF() {
                 ) : null}
               </div>
             </div>
+            ) : null}
 
             <div style={{ marginTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
               <button
@@ -1131,7 +1314,11 @@ export default function EnvioNF() {
                       : 'pointer',
                 }}
               >
-                {enviando && envioModo === 'email' ? 'A enviar e-mails…' : 'Enviar e-mails'}
+                {enviando && envioModo === 'email'
+                  ? 'A enviar e-mails…'
+                  : modoMedicao
+                    ? 'Enviar medição por e-mail'
+                    : 'Enviar e-mails'}
               </button>
               <button
                 type="button"

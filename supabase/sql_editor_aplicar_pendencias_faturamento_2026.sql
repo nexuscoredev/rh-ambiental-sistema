@@ -58,7 +58,7 @@ ALTER TABLE public.coletas
   ADD COLUMN IF NOT EXISTS faturamento_relatorio_cliente_em timestamptz;
 
 COMMENT ON COLUMN public.coletas.faturamento_esteira_status IS
-  'MEDICAO_PENDENTE | MEDICAO_EMAIL_PENDENTE | MEDICAO_AGUARDANDO_CLIENTE | LIBERADO_FATURAMENTO | LIBERADO_FINANCEIRO | FINALIZADO';
+  'AJUSTE_VALORES_MEDICAO | MEDICAO_PENDENTE | MEDICAO_EMAIL_PENDENTE | MEDICAO_AGUARDANDO_CLIENTE | LIBERADO_FATURAMENTO | LIBERADO_FINANCEIRO | FINALIZADO';
 
 UPDATE public.coletas c
 SET faturamento_esteira_status = CASE
@@ -70,10 +70,23 @@ SET faturamento_esteira_status = CASE
     SELECT 1 FROM public.faturamento_registros fr
     WHERE fr.coleta_id = c.id AND fr.status = 'emitido'
   ) THEN 'LIBERADO_FINANCEIRO'
-  WHEN c.faturamento_ticket_aprovado_em IS NOT NULL THEN 'MEDICAO_PENDENTE'
+  WHEN c.faturamento_ticket_aprovado_em IS NOT NULL THEN 'AJUSTE_VALORES_MEDICAO'
   ELSE c.faturamento_esteira_status
 END
 WHERE faturamento_esteira_status IS NULL;
+
+-- Coletas já em MEDICAO_PENDENTE sem relatório → ajuste de valores (reordenar esteira).
+UPDATE public.coletas c
+SET faturamento_esteira_status = 'AJUSTE_VALORES_MEDICAO'
+WHERE c.faturamento_ticket_aprovado_em IS NOT NULL
+  AND c.medicao_relatorio_gerado_em IS NULL
+  AND c.medicao_email_enviado_em IS NULL
+  AND c.medicao_cliente_aprovado_em IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.faturamento_registros fr
+    WHERE fr.coleta_id = c.id AND fr.status = 'emitido'
+  )
+  AND COALESCE(c.faturamento_esteira_status, '') = 'MEDICAO_PENDENTE';
 
 -- -----------------------------------------------------------------------------
 -- 4) View vw_faturamento_resumo (versão com esteira + ticket + MTR cancelada)

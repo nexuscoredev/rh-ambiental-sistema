@@ -25,7 +25,7 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/ticket-operacional', label: 'Ticket operacional' },
   { path: '/aprovacao', label: 'Aprovação' },
   { path: '/faturamento', label: 'Faturamento' },
-  { path: '/envio-nf', label: 'Envio de NF' },
+  { path: '/envio-nf', label: 'Mala Direta' },
   { path: '/financeiro', label: 'Financeiro' },
   { path: '/financeiro/contas-receber', label: 'Contas a receber' },
   { path: '/financeiro/contas-pagar', label: 'Contas a pagar' },

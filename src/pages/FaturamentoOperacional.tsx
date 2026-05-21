@@ -27,6 +27,7 @@ import { FaturamentoFilaAprovacaoTicket } from '../components/faturamento/Fatura
 import { FaturamentoFilaColetas } from '../components/faturamento/FaturamentoFilaColetas'
 import { FaturamentoHistoricoColetas } from '../components/faturamento/FaturamentoHistoricoColetas'
 import { FaturamentoRelatoriosPanel } from '../components/faturamento/FaturamentoRelatoriosPanel'
+import { FaturamentoFilaAjusteValores } from '../components/faturamento/FaturamentoFilaAjusteValores'
 import { FaturamentoFilaMedicao } from '../components/faturamento/FaturamentoFilaMedicao'
 import { FaturamentoFilaPosFaturamento } from '../components/faturamento/FaturamentoFilaPosFaturamento'
 import { FaturamentoEsteiraFluxo } from '../components/faturamento/FaturamentoEsteiraFluxo'
@@ -112,6 +113,10 @@ export default function FaturamentoOperacional() {
 
   const [modalAberto, setModalAberto] = useState(false)
   const [modalColetaId, setModalColetaId] = useState<string | null>(null)
+  const [modalPreparacaoMedicao, setModalPreparacaoMedicao] = useState(false)
+  const [modalGrupoConsolidado, setModalGrupoConsolidado] = useState<FaturamentoResumoViewRow[] | undefined>(
+    undefined
+  )
 
   const faturamentoOperDraft = useMemo(
     () => ({
@@ -216,10 +221,16 @@ export default function FaturamentoOperacional() {
       : '—'
   }, [fila])
 
-  const modalGrupo = useMemo(
-    () => (modalColetaId ? resolverGrupoFaturamentoNaFila(modalColetaId, fila) : []),
-    [modalColetaId, fila]
-  )
+  const modalGrupo = useMemo(() => {
+    if (!modalColetaId) return []
+    if (modalPreparacaoMedicao && modalGrupoConsolidado && modalGrupoConsolidado.length > 1) {
+      return modalGrupoConsolidado
+    }
+    if (modalPreparacaoMedicao) {
+      return linhasView.filter((r) => r.coleta_id === modalColetaId)
+    }
+    return resolverGrupoFaturamentoNaFila(modalColetaId, fila)
+  }, [modalColetaId, fila, modalPreparacaoMedicao, modalGrupoConsolidado, linhasView])
 
   const modalRow = useMemo(() => {
     if (!modalColetaId) return null
@@ -235,14 +246,26 @@ export default function FaturamentoOperacional() {
   }
 
   function abrirModalFaturar(coletaId: string) {
+    setModalPreparacaoMedicao(false)
+    setModalGrupoConsolidado(undefined)
     aoEscolherColetaUrl(coletaId)
     setModalColetaId(coletaId)
+    setModalAberto(true)
+  }
+
+  function abrirModalAjusteValores(row: FaturamentoResumoViewRow, grupo?: FaturamentoResumoViewRow[]) {
+    setModalPreparacaoMedicao(true)
+    setModalGrupoConsolidado(grupo)
+    aoEscolherColetaUrl(row.coleta_id)
+    setModalColetaId(row.coleta_id)
     setModalAberto(true)
   }
 
   function fecharModal() {
     setModalAberto(false)
     setModalColetaId(null)
+    setModalPreparacaoMedicao(false)
+    setModalGrupoConsolidado(undefined)
   }
 
   return (
@@ -252,10 +275,11 @@ export default function FaturamentoOperacional() {
           Consolidação e emissão por coleta
         </h1>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
-          Esteira: <strong>conferência do ticket</strong> → <strong>relatório de medição</strong> (por cliente) →
-          confirmação de <strong>e-mail</strong> → <strong>aprovação do cliente</strong> →{' '}
-          <strong>faturar</strong> → relatório pós-faturamento e <Link to="/envio-nf">envio de NF</Link> →{' '}
-          <strong>finalizado</strong> (aí entra em Financeiro → Contas a Receber).
+          Esteira: <strong>conferência do ticket</strong> → <strong>ajuste de valores</strong> →{' '}
+          <strong>relatório de medição</strong> →{' '}
+          <Link to="/envio-nf?tipo=medicao">Mala Direta (medição)</Link> → <strong>aprovação do cliente</strong> →{' '}
+          <strong>faturar</strong> → <Link to="/envio-nf">Mala Direta (NF e boleto)</Link> → <strong>finalizado</strong>{' '}
+          (Financeiro → Contas a Receber).
         </p>
 
         <FaturamentoEsteiraFluxo />
@@ -379,6 +403,14 @@ export default function FaturamentoOperacional() {
           onAprovado={() => void recarregarTudo()}
         />
 
+        <FaturamentoFilaAjusteValores
+          linhas={linhasView}
+          carregando={carregandoVista}
+          esteiraAtiva={esteiraMedicaoAtiva}
+          podeRevisar={podeConfirmarEmissao}
+          onRevisarValores={abrirModalAjusteValores}
+        />
+
         <FaturamentoFilaMedicao
           linhas={linhasView}
           carregando={carregandoVista}
@@ -460,6 +492,7 @@ export default function FaturamentoOperacional() {
         open={modalAberto}
         row={modalRow}
         coletasConsolidadas={modalGrupo.length > 1 ? modalGrupo : undefined}
+        modoPreparacaoMedicao={modalPreparacaoMedicao}
         podeConfirmarEmissao={podeConfirmarEmissao}
         podeEditarResumosFinanceiros={podeEditarResumos}
         podeEncerrarTicketDefinitivo={podeEncerrarTicket}

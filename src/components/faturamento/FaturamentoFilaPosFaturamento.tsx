@@ -80,7 +80,7 @@ export function FaturamentoFilaPosFaturamento({
       </h2>
       <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
         Após emitir o faturamento, o status fica <strong>Liberado para o Financeiro</strong>. Registre o
-        envio em <Link to="/envio-nf">Envio de NF</Link> ou confirme abaixo que <strong>NF e boleto</strong>{' '}
+        envio em <Link to="/envio-nf">Mala Direta</Link> ou confirme abaixo que <strong>NF e boleto</strong>{' '}
         foram enviados ao cliente. Só então a esteira passa para <strong>Finalizado</strong> e a cobrança
         entra em Financeiro → Contas a Receber.
       </p>
@@ -128,7 +128,7 @@ export function FaturamentoFilaPosFaturamento({
                 className="rg-btn rg-btn--outline"
                 style={{ fontSize: '12px', padding: '6px 12px' }}
               >
-                Envio de NF
+                Mala Direta
               </Link>
               <button
                 type="button"

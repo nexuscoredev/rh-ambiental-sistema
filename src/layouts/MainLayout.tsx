@@ -39,7 +39,7 @@ type UsuarioLogado = {
 
 type MenuLeaf = { label: string; path: string }
 
-/** Item com subitens (ex.: Faturamento → Envio de NF). */
+/** Item com subitens (ex.: Faturamento → Mala Direta). */
 type MenuBranch = { label: string; path: string; children: MenuLeaf[] }
 
 type MenuItem = MenuLeaf | MenuBranch
@@ -94,7 +94,7 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
       {
         label: 'Faturamento',
         path: '/faturamento',
-        children: [{ label: 'Envio de NF', path: '/envio-nf' }],
+        children: [{ label: 'Mala Direta', path: '/envio-nf' }],
       },
     ],
   },

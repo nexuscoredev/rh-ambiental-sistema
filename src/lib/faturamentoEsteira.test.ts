@@ -61,8 +61,14 @@ function row(partial: Partial<FaturamentoResumoViewRow>): FaturamentoResumoViewR
 }
 
 describe('inferirEsteiraStatus', () => {
-  it('ticket aprovado sem medição → MEDICAO_PENDENTE', () => {
-    expect(inferirEsteiraStatus(row({}))).toBe('MEDICAO_PENDENTE')
+  it('ticket aprovado sem medição → AJUSTE_VALORES_MEDICAO', () => {
+    expect(inferirEsteiraStatus(row({}))).toBe('AJUSTE_VALORES_MEDICAO')
+  })
+
+  it('valores revisados → MEDICAO_PENDENTE', () => {
+    expect(
+      inferirEsteiraStatus(row({ faturamento_esteira_status: 'MEDICAO_PENDENTE' }))
+    ).toBe('MEDICAO_PENDENTE')
   })
 
   it('cliente aprovou → LIBERADO_FATURAMENTO', () => {

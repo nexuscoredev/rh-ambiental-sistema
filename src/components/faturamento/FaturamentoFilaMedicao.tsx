@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { carregarLinhasRelatorioMedicao } from '../../lib/carregarLinhasRelatorioMedicao'
@@ -5,7 +6,6 @@ import type { LinhaRelatorioMedicao } from '../../lib/faturamentoRelatorioMedica
 import {
   agruparPorClienteMedicao,
   aprovarMedicaoCliente,
-  confirmarEmailMedicaoEnviado,
   coletaNaFilaMedicaoAprovacaoCliente,
   coletaNaFilaMedicaoEmail,
   coletaNaFilaRelatorioMedicao,
@@ -202,11 +202,11 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
     <>
       <div style={{ ...card, background: '#f5f3ff', borderColor: '#c4b5fd' }}>
         <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#312e81' }}>
-          Esteira 2–4 · Medição e aprovação do cliente
+          Esteira 3–5 · Medição e aprovação do cliente
         </h2>
         <p style={{ margin: 0, fontSize: '13px', color: '#4c1d95', lineHeight: 1.55 }}>
-          Tabela no modelo do relatório impresso. Use <strong>Imprimir / PDF</strong> para gerar o documento
-          em página inteira (paisagem).
+          Tabela no modelo do relatório impresso. Use <strong>Imprimir / PDF</strong> para gerar o documento.
+          O envio ao cliente é feito em <Link to="/envio-nf?tipo=medicao">Mala Direta — Medição</Link>.
         </p>
       </div>
 
@@ -243,29 +243,18 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
           key={`email-${g.cliente_id}`}
           grupo={g}
           filtro={coletaNaFilaMedicaoEmail}
-          titulo="Confirmar envio do relatório por e-mail"
+          titulo="Enviar relatório por e-mail (mala direta)"
           esteiraAtiva={esteiraAtiva}
           onImprimir={(l, nome) => void imprimirRelatorioMedicao(l, nome)}
           preparandoPrint={preparandoPrint}
           acao={
-            <button
-              type="button"
+            <Link
+              to={`/envio-nf?tipo=medicao&cliente=${encodeURIComponent(g.cliente_id)}`}
               className="rg-btn rg-btn--primary"
-              disabled={processando || !esteiraAtiva}
-              onClick={() => {
-                const ok = window.confirm(
-                  `Confirmar que o relatório de medição foi enviado por e-mail ao cliente ${g.cliente_nome}?`
-                )
-                if (!ok) return
-                void run(() =>
-                  confirmarEmailMedicaoEnviado(
-                    g.linhas.filter(coletaNaFilaMedicaoEmail).map((r) => r.coleta_id)
-                  )
-                )
-              }}
+              style={{ fontSize: '12px', padding: '8px 14px', textDecoration: 'none' }}
             >
-              E-mail enviado
-            </button>
+              Mala Direta — Medição
+            </Link>
           }
         />
       ))}

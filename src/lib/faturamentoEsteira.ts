@@ -8,6 +8,7 @@ import {
 
 /** Etapas da esteira pós-conferência do ticket. */
 export const FATURAMENTO_ESTEIRA_STATUS = [
+  'AJUSTE_VALORES_MEDICAO',
   'MEDICAO_PENDENTE',
   'MEDICAO_EMAIL_PENDENTE',
   'MEDICAO_AGUARDANDO_CLIENTE',
@@ -19,6 +20,7 @@ export const FATURAMENTO_ESTEIRA_STATUS = [
 export type FaturamentoEsteiraStatus = (typeof FATURAMENTO_ESTEIRA_STATUS)[number]
 
 export const ROTULO_ESTEIRA: Record<FaturamentoEsteiraStatus, string> = {
+  AJUSTE_VALORES_MEDICAO: 'Ajuste de valores (medição)',
   MEDICAO_PENDENTE: 'Relatório de medição',
   MEDICAO_EMAIL_PENDENTE: 'Envio do relatório (e-mail)',
   MEDICAO_AGUARDANDO_CLIENTE: 'Aprovação do cliente',
@@ -28,6 +30,7 @@ export const ROTULO_ESTEIRA: Record<FaturamentoEsteiraStatus, string> = {
 }
 
 export const ORDEM_ESTEIRA_UI: FaturamentoEsteiraStatus[] = [
+  'AJUSTE_VALORES_MEDICAO',
   'MEDICAO_PENDENTE',
   'MEDICAO_EMAIL_PENDENTE',
   'MEDICAO_AGUARDANDO_CLIENTE',
@@ -71,7 +74,7 @@ export function inferirEsteiraStatus(row: FaturamentoResumoViewRow): Faturamento
   if (row.medicao_cliente_aprovado_em) return 'LIBERADO_FATURAMENTO'
   if (row.medicao_email_enviado_em) return 'MEDICAO_AGUARDANDO_CLIENTE'
   if (row.medicao_relatorio_gerado_em) return 'MEDICAO_EMAIL_PENDENTE'
-  if (row.faturamento_ticket_aprovado_em) return 'MEDICAO_PENDENTE'
+  if (row.faturamento_ticket_aprovado_em) return 'AJUSTE_VALORES_MEDICAO'
   return null
 }
 
@@ -90,10 +93,15 @@ export function coletaNaEsteiraMedicao(row: FaturamentoResumoViewRow): boolean {
   if (coletaHistoricoFaturamentoEmitido(row)) return false
   const e = esteiraDaLinha(row)
   return (
+    e === 'AJUSTE_VALORES_MEDICAO' ||
     e === 'MEDICAO_PENDENTE' ||
     e === 'MEDICAO_EMAIL_PENDENTE' ||
     e === 'MEDICAO_AGUARDANDO_CLIENTE'
   )
+}
+
+export function coletaNaFilaAjusteValoresMedicao(row: FaturamentoResumoViewRow): boolean {
+  return esteiraDaLinha(row) === 'AJUSTE_VALORES_MEDICAO'
 }
 
 export function coletaNaFilaRelatorioMedicao(row: FaturamentoResumoViewRow): boolean {
@@ -287,11 +295,39 @@ export async function marcarEsteiraFinalizadaPorNf(
   await atualizarEsteiraColeta(coletaId, { faturamento_esteira_status: 'FINALIZADO' })
 }
 
-/** Ao aprovar ticket: entra na esteira de medição (não na fila de faturar). */
+/** Ao aprovar ticket: primeiro ajuste de valores, depois medição. */
 export async function marcarEsteiraAposAprovacaoTicket(
   coletaId: string
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  return atualizarEsteiraColeta(coletaId, { faturamento_esteira_status: 'MEDICAO_PENDENTE' })
+  return atualizarEsteiraColeta(coletaId, { faturamento_esteira_status: 'AJUSTE_VALORES_MEDICAO' })
+}
+
+/** Valores do ticket/MTR revisados — libera geração do relatório de medição. */
+export async function marcarValoresMedicaoRevisados(
+  coletaIds: string[]
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const ids = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
+  if (ids.length === 0) return { ok: false, message: 'Nenhuma coleta selecionada.' }
+  const { error } = await supabase
+    .from('coletas')
+    .update({ faturamento_esteira_status: 'MEDICAO_PENDENTE' })
+    .in('id', ids)
+  if (error) {
+    if (erroColunasEsteiraAusentes(error)) {
+      return { ok: false, message: MENSAGEM_MIGRACAO_ESTEIRA }
+    }
+    return { ok: false, message: error.message || 'Erro ao liberar etapa de medição.' }
+  }
+  return { ok: true }
+}
+
+/** Coletas do cliente aguardando envio do relatório de medição por e-mail (mala direta). */
+export function coletaAguardandoEmailMedicaoCliente(
+  row: FaturamentoResumoViewRow,
+  clienteId?: string
+): boolean {
+  if (clienteId && row.cliente_id !== clienteId) return false
+  return esteiraDaLinha(row) === 'MEDICAO_EMAIL_PENDENTE'
 }
 
 export function resumoEsteiraPasso1(row: FaturamentoResumoViewRow): boolean {

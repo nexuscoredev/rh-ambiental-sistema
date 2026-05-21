@@ -128,19 +128,6 @@ export function PesagemResiduosLista({
 
             <div style={{ gridColumn: "span 4" }} className="field">
               <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
-                Peso tara (kg)
-              </label>
-              <input
-                inputMode="decimal"
-                value={linha.peso_tara}
-                onChange={(e) => onPesoChange(index, "peso_tara", e.target.value)}
-                placeholder="Ex.: 320"
-                style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
-              />
-            </div>
-
-            <div style={{ gridColumn: "span 4" }} className="field">
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
                 Peso bruto (kg)
               </label>
               <input
@@ -148,6 +135,19 @@ export function PesagemResiduosLista({
                 value={linha.peso_bruto}
                 onChange={(e) => onPesoChange(index, "peso_bruto", e.target.value)}
                 placeholder="Ex.: 2540"
+                style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
+              />
+            </div>
+
+            <div style={{ gridColumn: "span 4" }} className="field">
+              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                Peso tara (kg)
+              </label>
+              <input
+                inputMode="decimal"
+                value={linha.peso_tara}
+                onChange={(e) => onPesoChange(index, "peso_tara", e.target.value)}
+                placeholder="Ex.: 320"
                 style={{ ...inputStyle, height: "46px", fontSize: "15px", fontWeight: 800 }}
               />
             </div>

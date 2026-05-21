@@ -27,12 +27,13 @@ const step = (ativo: boolean): CSSProperties => ({
 export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: number }) {
   const labels = [
     '1. Conferência ticket',
-    '2. Relatório medição',
-    '3. E-mail medição',
-    '4. Aprovação cliente',
-    '5. Faturar',
-    '6. NF / boleto',
-    '7. Finalizado',
+    '2. Ajuste de valores',
+    '3. Relatório medição',
+    '4. Mala Direta (medição)',
+    '5. Aprovação cliente',
+    '6. Faturar',
+    '7. NF / boleto',
+    '8. Finalizado',
   ]
 
   return (

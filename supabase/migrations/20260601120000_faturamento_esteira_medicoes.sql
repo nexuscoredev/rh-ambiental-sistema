@@ -11,7 +11,7 @@ ALTER TABLE public.coletas
   ADD COLUMN IF NOT EXISTS faturamento_relatorio_cliente_em timestamptz;
 
 COMMENT ON COLUMN public.coletas.faturamento_esteira_status IS
-  'Esteira: MEDICAO_PENDENTE | MEDICAO_EMAIL_PENDENTE | MEDICAO_AGUARDANDO_CLIENTE | LIBERADO_FATURAMENTO | LIBERADO_FINANCEIRO | FINALIZADO';
+  'Esteira: AJUSTE_VALORES_MEDICAO | MEDICAO_PENDENTE | MEDICAO_EMAIL_PENDENTE | MEDICAO_AGUARDANDO_CLIENTE | LIBERADO_FATURAMENTO | LIBERADO_FINANCEIRO | FINALIZADO';
 
 -- Backfill conservador (coletas já emitidas não voltam para medição).
 UPDATE public.coletas c
@@ -24,7 +24,7 @@ SET faturamento_esteira_status = CASE
     SELECT 1 FROM public.faturamento_registros fr
     WHERE fr.coleta_id = c.id AND fr.status = 'emitido'
   ) THEN 'LIBERADO_FINANCEIRO'
-  WHEN c.faturamento_ticket_aprovado_em IS NOT NULL THEN 'MEDICAO_PENDENTE'
+  WHEN c.faturamento_ticket_aprovado_em IS NOT NULL THEN 'AJUSTE_VALORES_MEDICAO'
   ELSE c.faturamento_esteira_status
 END
 WHERE faturamento_esteira_status IS NULL;
