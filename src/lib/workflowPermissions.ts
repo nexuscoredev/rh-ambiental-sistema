@@ -283,6 +283,7 @@ export function cargoPodeAprovarTicketConferenciaFaturamento(
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhOperadoresTimeR(cargo)) return false
   if (cargoEhVisualizador(cargo)) return false
+  if (cargoEhOperacionalTimeT(cargo)) return true
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
   if (cargoTemAcessoTipoAdministradorApp(cargo)) return true

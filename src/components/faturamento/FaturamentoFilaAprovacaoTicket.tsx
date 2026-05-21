@@ -78,14 +78,16 @@ export function FaturamentoFilaAprovacaoTicket({
   const [editandoPesoId, setEditandoPesoId] = useState<string | null>(null)
   const [pesoEditValor, setPesoEditValor] = useState('')
   const [salvandoPesoId, setSalvandoPesoId] = useState<string | null>(null)
+  const [confirmarPesoId, setConfirmarPesoId] = useState<string | null>(null)
+  const [erroPeso, setErroPeso] = useState('')
 
   const linhaOcupada = (coletaId: string) =>
-    aprovandoId === coletaId ||
-    abrindoPdfId === coletaId ||
-    salvandoPesoId === coletaId
+    aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
 
   function iniciarEdicaoPeso(row: FaturamentoResumoViewRow) {
     if (!podeAprovar) return
+    setErroPeso('')
+    setConfirmarPesoId(null)
     setEditandoPesoId(row.coleta_id)
     setPesoEditValor(pesoParaInput(row.peso_liquido))
   }
@@ -93,12 +95,29 @@ export function FaturamentoFilaAprovacaoTicket({
   function cancelarEdicaoPeso() {
     setEditandoPesoId(null)
     setPesoEditValor('')
+    setConfirmarPesoId(null)
+    setErroPeso('')
   }
 
-  async function salvarPeso(row: FaturamentoResumoViewRow) {
+  async function executarSalvarPeso(row: FaturamentoResumoViewRow, peso: number) {
+    setSalvandoPesoId(row.coleta_id)
+    setErroPeso('')
+    const res = await atualizarPesoLiquidoConferenciaTicket(row.coleta_id, peso)
+    setSalvandoPesoId(null)
+
+    if (!res.ok) {
+      setErroPeso(res.message)
+      return
+    }
+
+    cancelarEdicaoPeso()
+    onAprovado()
+  }
+
+  function pedirConfirmacaoSalvar(row: FaturamentoResumoViewRow) {
     const peso = parsePesoInput(pesoEditValor)
     if (peso == null || peso <= 0) {
-      window.alert('Informe um peso líquido válido (ex.: 1250 ou 1250,5).')
+      setErroPeso('Informe um peso líquido válido (ex.: 1250 ou 1250,5).')
       return
     }
 
@@ -108,22 +127,8 @@ export function FaturamentoFilaAprovacaoTicket({
       return
     }
 
-    const ok = window.confirm(
-      `Alterar o peso líquido da coleta ${row.numero_coleta ?? row.numero} para ${peso.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg?\n\nO ticket e a coleta serão atualizados. Confira o PDF antes de aprovar.`
-    )
-    if (!ok) return
-
-    setSalvandoPesoId(row.coleta_id)
-    const res = await atualizarPesoLiquidoConferenciaTicket(row.coleta_id, peso)
-    setSalvandoPesoId(null)
-
-    if (!res.ok) {
-      window.alert(res.message)
-      return
-    }
-
-    cancelarEdicaoPeso()
-    onAprovado()
+    setErroPeso('')
+    setConfirmarPesoId(row.coleta_id)
   }
 
   async function handleVisualizar(row: FaturamentoResumoViewRow) {
@@ -167,8 +172,31 @@ export function FaturamentoFilaAprovacaoTicket({
             {' '}
             Pode <strong>corrigir o peso líquido</strong> manualmente antes de aprovar, se necessário.
           </>
-        ) : null}
+        ) : (
+          <>
+            {' '}
+            O seu perfil não pode alterar peso nem aprovar tickets nesta fila.
+          </>
+        )}
       </p>
+
+      {erroPeso ? (
+        <p
+          role="alert"
+          style={{
+            margin: '0 0 12px',
+            padding: '10px 12px',
+            borderRadius: 8,
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {erroPeso}
+        </p>
+      ) : null}
 
       {carregando ? (
         <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>A carregar…</p>
@@ -194,7 +222,9 @@ export function FaturamentoFilaAprovacaoTicket({
             <tbody>
               {linhas.map((r) => {
                 const editando = editandoPesoId === r.coleta_id
+                const confirmando = confirmarPesoId === r.coleta_id
                 const ocupada = linhaOcupada(r.coleta_id)
+                const pesoConfirm = confirmando ? parsePesoInput(pesoEditValor) : null
 
                 return (
                   <tr key={r.coleta_id}>
@@ -204,7 +234,7 @@ export function FaturamentoFilaAprovacaoTicket({
                     <td style={{ ...td, fontWeight: 700 }}>{r.ticket_comprovante ?? '—'}</td>
                     <td style={td}>
                       {editando ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 160 }}>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -228,42 +258,69 @@ export function FaturamentoFilaAprovacaoTicket({
                               Tara {fmtPeso(r.peso_tara)} · Bruto {fmtPeso(r.peso_bruto)}
                             </span>
                           )}
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              disabled={salvandoPesoId === r.coleta_id}
-                              onClick={() => void salvarPeso(r)}
+                          {confirmando && pesoConfirm != null ? (
+                            <div
                               style={{
-                                padding: '6px 10px',
+                                padding: '8px 10px',
                                 borderRadius: 8,
-                                border: 'none',
-                                background: '#d97706',
-                                color: '#fff',
-                                fontWeight: 800,
-                                fontSize: 11,
-                                cursor: salvandoPesoId === r.coleta_id ? 'wait' : 'pointer',
+                                background: '#fffbeb',
+                                border: '1px solid #fcd34d',
+                                fontSize: 12,
+                                color: '#92400e',
                               }}
                             >
-                              {salvandoPesoId === r.coleta_id ? 'A guardar…' : 'Guardar'}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={salvandoPesoId === r.coleta_id}
-                              onClick={cancelarEdicaoPeso}
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: 8,
-                                border: '1px solid #cbd5e1',
-                                background: '#fff',
-                                color: '#475569',
-                                fontWeight: 700,
-                                fontSize: 11,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Cancelar
-                            </button>
-                          </div>
+                              Confirmar peso{' '}
+                              <strong>
+                                {pesoConfirm.toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 3,
+                                })}{' '}
+                                kg
+                              </strong>
+                              ? O ticket e a coleta serão atualizados.
+                              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  className="rg-btn rg-btn--primary"
+                                  style={{ fontSize: 11, padding: '6px 10px' }}
+                                  disabled={salvandoPesoId === r.coleta_id}
+                                  onClick={() => void executarSalvarPeso(r, pesoConfirm)}
+                                >
+                                  {salvandoPesoId === r.coleta_id ? 'A guardar…' : 'Sim, guardar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rg-btn rg-btn--outline"
+                                  style={{ fontSize: 11, padding: '6px 10px' }}
+                                  disabled={salvandoPesoId === r.coleta_id}
+                                  onClick={() => setConfirmarPesoId(null)}
+                                >
+                                  Voltar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="rg-btn rg-btn--primary"
+                                style={{ fontSize: 11, padding: '6px 10px' }}
+                                disabled={salvandoPesoId === r.coleta_id}
+                                onClick={() => pedirConfirmacaoSalvar(r)}
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                type="button"
+                                className="rg-btn rg-btn--outline"
+                                style={{ fontSize: 11, padding: '6px 10px' }}
+                                disabled={salvandoPesoId === r.coleta_id}
+                                onClick={cancelarEdicaoPeso}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
@@ -271,7 +328,7 @@ export function FaturamentoFilaAprovacaoTicket({
                           {podeAprovar ? (
                             <button
                               type="button"
-                              disabled={ocupada || editandoPesoId != null}
+                              disabled={ocupada}
                               onClick={() => iniciarEdicaoPeso(r)}
                               title="Corrigir peso líquido manualmente"
                               style={{
@@ -281,8 +338,7 @@ export function FaturamentoFilaAprovacaoTicket({
                                 color: '#b45309',
                                 fontWeight: 800,
                                 fontSize: 11,
-                                cursor:
-                                  ocupada || editandoPesoId != null ? 'not-allowed' : 'pointer',
+                                cursor: ocupada ? 'not-allowed' : 'pointer',
                                 textDecoration: 'underline',
                               }}
                             >
@@ -300,37 +356,25 @@ export function FaturamentoFilaAprovacaoTicket({
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                         <button
                           type="button"
+                          className="rg-btn rg-btn--outline"
+                          style={{ fontSize: 12, padding: '8px 14px' }}
                           disabled={ocupada || editando}
                           onClick={() => void handleVisualizar(r)}
                           title="Abrir PDF do ticket para conferência"
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: 10,
-                            border: '1px solid #94a3b8',
-                            background: '#fff',
-                            color: '#334155',
-                            fontWeight: 800,
-                            fontSize: 12,
-                            cursor: ocupada || editando ? 'not-allowed' : 'pointer',
-                          }}
                         >
                           {abrindoPdfId === r.coleta_id ? 'A abrir…' : 'Visualizar ticket'}
                         </button>
                         <button
                           type="button"
+                          className="rg-btn rg-btn--primary"
+                          style={{
+                            fontSize: 12,
+                            padding: '8px 14px',
+                            background: podeAprovar && !ocupada && !editando ? '#f59e0b' : undefined,
+                            borderColor: podeAprovar && !ocupada && !editando ? '#d97706' : undefined,
+                          }}
                           disabled={!podeAprovar || ocupada || editando}
                           onClick={() => void handleAprovar(r)}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: 10,
-                            border: '1px solid #d97706',
-                            background: podeAprovar && !ocupada && !editando ? '#f59e0b' : '#f1f5f9',
-                            color: podeAprovar && !ocupada && !editando ? '#fff' : '#94a3b8',
-                            fontWeight: 800,
-                            fontSize: 12,
-                            cursor:
-                              podeAprovar && !ocupada && !editando ? 'pointer' : 'not-allowed',
-                          }}
                         >
                           {aprovandoId === r.coleta_id ? 'Aprovando…' : 'Aprovar ticket'}
                         </button>
