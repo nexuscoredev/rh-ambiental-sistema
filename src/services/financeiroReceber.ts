@@ -3,6 +3,8 @@ import {
   alinharValorPagoComStatusUi,
   derivarStatusPagamento,
 } from '../lib/contasReceberUtils'
+import { payloadFaturamentoEmitidoEnviaAoFinanceiro } from '../lib/coletaFluxoAtualizacao'
+import { marcarEsteiraFinalizadaPorNf } from '../lib/faturamentoEsteira'
 
 export type UpsertContaReceberInput = {
   cliente_id: string | null
@@ -234,7 +236,79 @@ export function sugerirDataVencimentoIso(dias = 7): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** Marca envio de NF na conta a receber da coleta (0 linhas se ainda não existir conta). */
+/**
+ * Cria/atualiza conta a receber e libera a coleta para o Financeiro.
+ * Chamado ao registar envio de NF (status esteira Finalizado).
+ */
+export async function liberarColetaParaFinanceiroContasReceber(
+  supabase: SupabaseClient,
+  coletaId: string
+): Promise<{ error: Error | null }> {
+  try {
+    const { data: coleta, error: errColeta } = await supabase
+      .from('coletas')
+      .select('id, cliente_id, valor_coleta, data_vencimento, liberado_financeiro')
+      .eq('id', coletaId)
+      .maybeSingle()
+
+    if (errColeta) return { error: new Error(errColeta.message) }
+    if (!coleta) return { error: new Error('Coleta não encontrada.') }
+
+    const { data: regFat } = await supabase
+      .from('faturamento_registros')
+      .select('id, valor, observacoes, status')
+      .eq('coleta_id', coletaId)
+      .eq('status', 'emitido')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const valorReg = Number(regFat?.valor)
+    const valorColeta = Number(coleta.valor_coleta)
+    const valor =
+      Number.isFinite(valorReg) && valorReg > 0
+        ? valorReg
+        : Number.isFinite(valorColeta) && valorColeta > 0
+          ? valorColeta
+          : 0
+
+    if (valor <= 0) {
+      return {
+        error: new Error(
+          'Valor do faturamento ausente. Emita o faturamento antes de registar o envio da NF.'
+        ),
+      }
+    }
+
+    const hojeIso = new Date().toISOString().slice(0, 10)
+    const { error: crErr } = await upsertContaReceber(supabase, {
+      cliente_id: (coleta.cliente_id as string | null) ?? null,
+      valor,
+      data_emissao: hojeIso,
+      data_vencimento: (coleta.data_vencimento as string | null)?.trim() || null,
+      referencia_coleta_id: coletaId,
+      faturamento_registro_id: regFat?.id ?? undefined,
+      observacoes: (regFat?.observacoes as string | null)?.trim() || null,
+      origem: 'faturamento',
+    })
+    if (crErr) return { error: crErr }
+
+    if (!coleta.liberado_financeiro) {
+      const { error: updErr } = await supabase
+        .from('coletas')
+        .update(payloadFaturamentoEmitidoEnviaAoFinanceiro({ valorColeta: valor }))
+        .eq('id', coletaId)
+      if (updErr) return { error: new Error(updErr.message) }
+    }
+
+    await marcarEsteiraFinalizadaPorNf(coletaId)
+    return { error: null }
+  } catch (e) {
+    return { error: e instanceof Error ? e : new Error(String(e)) }
+  }
+}
+
+/** Marca envio de NF na conta a receber e libera a coleta para Contas a Receber. */
 export async function registrarEnvioNfContaReceber(
   supabase: SupabaseClient,
   input: {
@@ -245,6 +319,12 @@ export async function registrarEnvioNfContaReceber(
   }
 ): Promise<{ error: Error | null }> {
   try {
+    const liberar = await liberarColetaParaFinanceiroContasReceber(
+      supabase,
+      input.referencia_coleta_id
+    )
+    if (liberar.error) return liberar
+
     const agora = new Date().toISOString()
     const partes = [
       input.observacaoUsuario?.trim() || null,

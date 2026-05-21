@@ -1,4 +1,6 @@
-import { indiceEtapaFluxo, normalizarEtapaColeta, type EtapaFluxo } from './fluxoEtapas'
+import { coletaVisivelListaFinanceiro } from './financeiroColetas'
+import { normalizarEtapaColeta, type EtapaFluxo } from './fluxoEtapas'
+import { coletaLiberadaParaFaturarEsteira, inferirEsteiraStatus } from './faturamentoEsteira'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 export type MotivoInelegivelFaturamento =
@@ -8,6 +10,7 @@ export type MotivoInelegivelFaturamento =
   | 'conferencia_pendente'
   | 'ticket_nao_impresso'
   | 'ticket_aguardando_aprovacao'
+  | 'medicao_pendente'
   | 'ja_emitido'
   | 'ja_no_financeiro'
 
@@ -55,9 +58,16 @@ export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): Result
     }
   }
 
+  if (row.faturamento_ticket_aprovado_em && !coletaLiberadaParaFaturarEsteira(row)) {
+    const esteira = inferirEsteiraStatus(row)
+    if (esteira && esteira !== 'LIBERADO_FATURAMENTO') {
+      motivos.push('medicao_pendente')
+    }
+  }
+
   if (row.faturamento_registro_status === 'emitido') motivos.push('ja_emitido')
 
-  if (indiceEtapaFluxo(etapa) >= indiceEtapaFluxo('ENVIADO_FINANCEIRO')) motivos.push('ja_no_financeiro')
+  if (coletaVisivelListaFinanceiro(row)) motivos.push('ja_no_financeiro')
 
   return { ok: motivos.length === 0, etapa, motivos }
 }
@@ -76,10 +86,12 @@ export function rotuloMotivoInelegivel(m: MotivoInelegivelFaturamento): string {
       return 'Salve a pesagem e o ticket no Controle de Massa (passo 4) antes de faturar.'
     case 'ticket_aguardando_aprovacao':
       return 'Aguardando validação do ticket pelo Faturamento (fila de aprovação).'
+    case 'medicao_pendente':
+      return 'Conclua medição, envio do relatório por e-mail e aprovação do cliente antes de faturar.'
     case 'ja_emitido':
       return 'Faturamento já emitido.'
     case 'ja_no_financeiro':
-      return 'Coleta já enviada ao financeiro.'
+      return 'Coleta já finalizada (Contas a Receber / Financeiro).'
     default:
       return 'Não elegível para faturar.'
   }

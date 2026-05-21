@@ -68,6 +68,13 @@ export type FaturamentoResumoViewRow = {
   ticket_impresso_em?: string | null
   faturamento_ticket_aprovado_em?: string | null
   faturamento_ticket_aprovacao_obs?: string | null
+  faturamento_esteira_status?: string | null
+  medicao_relatorio_gerado_em?: string | null
+  medicao_email_enviado_em?: string | null
+  medicao_cliente_aprovado_em?: string | null
+  medicao_cliente_aprovacao_obs?: string | null
+  faturamento_relatorio_cliente_em?: string | null
+  cliente_email_nf?: string | null
   ultima_aprovacao_decisao: string | null
   ultima_aprovacao_obs: string | null
   ultima_aprovacao_em: string | null

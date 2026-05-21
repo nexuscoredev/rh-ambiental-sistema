@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.26",
+  "version": "1.2.27",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -89,7 +89,7 @@
     "globals": "^17.4.0",
     "pg": "^8.20.0",
     "sharp": "^0.34.5",
-    "supabase": "^2.85.0",
+    "supabase": "^2.101.0",
     "to-ico": "1.0.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",

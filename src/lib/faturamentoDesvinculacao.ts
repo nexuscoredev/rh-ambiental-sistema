@@ -85,6 +85,16 @@ export function moedaParaCampo(v: number | null | undefined): string {
   return String(Math.round(Number(v) * 100) / 100)
 }
 
+/** Caminhão, equipamento e resíduo sem valor informado (para aplicar contrato automaticamente). */
+export function resumoMtrPrecosVazios(m: ResumoMtrFinanceiro): boolean {
+  return (
+    parseNumeroCampo(m.caminhao_valor) <= 0 &&
+    parseNumeroCampo(m.equipamento_valor) <= 0 &&
+    parseNumeroCampo(m.residuo_valor) <= 0 &&
+    parseNumeroCampo(m.residuo_valor_unitario) <= 0
+  )
+}
+
 export function totalResumoFinanceiro(r: ResumoFinanceiroDesvinculado): number {
   const ticket = parseNumeroCampo(r.ticket.valor_total)
   const mtr =

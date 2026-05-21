@@ -102,6 +102,19 @@ const SEL_VW_FATURAMENTO_BASE =
 const SEL_VW_FATURAMENTO_TICKET_APROVACAO =
   ', ticket_impresso_em, faturamento_ticket_aprovado_em, faturamento_ticket_aprovacao_obs'
 
+const SEL_VW_FATURAMENTO_ESTEIRA =
+  ', faturamento_esteira_status, medicao_relatorio_gerado_em, medicao_email_enviado_em, medicao_cliente_aprovado_em, medicao_cliente_aprovacao_obs, faturamento_relatorio_cliente_em, cliente_email_nf, mtr_status'
+
+function isEsteiraColumnMissingError(err: { message?: string }): boolean {
+  const msg = String(err.message ?? '').toLowerCase()
+  return (
+    msg.includes('faturamento_esteira_status') ||
+    msg.includes('medicao_relatorio') ||
+    msg.includes('cliente_email_nf') ||
+    (msg.includes('column') && msg.includes('vw_faturamento_resumo'))
+  )
+}
+
 function isTicketAprovacaoColumnMissingError(err: { message?: string }): boolean {
   const msg = String(err.message ?? '').toLowerCase()
   return (
@@ -116,6 +129,8 @@ export type FetchVwFaturamentoResumoResult = {
   error: Error | null
   /** View com colunas de impressão/aprovação do ticket (migração 20260518130000). */
   ticketAprovacaoAtivo: boolean
+  /** View com colunas da esteira de medição (migração 20260601120000). */
+  esteiraMedicaoAtiva: boolean
 }
 
 function ordenarLinhas(rows: FaturamentoResumoViewRow[]): FaturamentoResumoViewRow[] {
@@ -142,8 +157,9 @@ export async function fetchVwFaturamentoResumoPaginated(
   const maxPages = maxPagesParaEscopo(escopo, opts?.maxPages)
   const byId = new Map<string, FaturamentoResumoViewRow>()
   let exitDueToMaxPages = false
-  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}`
+  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}${SEL_VW_FATURAMENTO_ESTEIRA}`
   let ticketAprovacaoAtivo = true
+  let esteiraMedicaoAtiva = true
 
   for (let page = 0; page < maxPages; page++) {
     const from = page * PAGE_SIZE
@@ -159,16 +175,23 @@ export async function fetchVwFaturamentoResumoPaginated(
       .range(from, to)
 
     if (error) {
+      if (page === 0 && esteiraMedicaoAtiva && isEsteiraColumnMissingError(error)) {
+        esteiraMedicaoAtiva = false
+        sel = `${SEL_VW_FATURAMENTO_BASE}${ticketAprovacaoAtivo ? SEL_VW_FATURAMENTO_TICKET_APROVACAO : ''}`
+        page = -1
+        byId.clear()
+        continue
+      }
       if (page === 0 && ticketAprovacaoAtivo && isTicketAprovacaoColumnMissingError(error)) {
         ticketAprovacaoAtivo = false
-        sel = SEL_VW_FATURAMENTO_BASE
+        sel = `${SEL_VW_FATURAMENTO_BASE}${esteiraMedicaoAtiva ? SEL_VW_FATURAMENTO_ESTEIRA : ''}`
         page = -1
         byId.clear()
         continue
       }
       const base = error.message || 'Erro ao ler vw_faturamento_resumo.'
       const msg = isVwFaturamentoResumoMissingError(error) ? base + mensagemCorrecaoViewFaturamento() : base
-      return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false }
+      return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false, esteiraMedicaoAtiva: false }
     }
 
     const chunk = ((data ?? []) as unknown as FaturamentoResumoViewRow[]) || []
@@ -189,7 +212,7 @@ export async function fetchVwFaturamentoResumoPaginated(
     )
   }
 
-  return { data: ordenarLinhas([...byId.values()]), error: null, ticketAprovacaoAtivo }
+  return { data: ordenarLinhas([...byId.values()]), error: null, ticketAprovacaoAtivo, esteiraMedicaoAtiva }
 }
 
 /** Contagem aproximada de emitidas (cartões) sem trazer todas as linhas. */
@@ -213,21 +236,32 @@ export async function fetchVwFaturamentoResumoPorColetaIds(
 ): Promise<FetchVwFaturamentoResumoResult> {
   const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
   if (uniq.length === 0) {
-    return { data: [], error: null, ticketAprovacaoAtivo: true }
+    return { data: [], error: null, ticketAprovacaoAtivo: true, esteiraMedicaoAtiva: true }
   }
 
   const createdMin = faturamentoResumoCreatedAtMinIso()
-  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}`
+  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}${SEL_VW_FATURAMENTO_ESTEIRA}`
   let ticketAprovacaoAtivo = true
+  let esteiraMedicaoAtiva = true
 
   let qb = supabase.from('vw_faturamento_resumo').select(sel).in('coleta_id', uniq)
   if (createdMin) qb = qb.gte('created_at', createdMin)
 
   let { data, error } = await qb
 
-  if (error && isTicketAprovacaoColumnMissingError(error)) {
+  if (error && esteiraMedicaoAtiva && isEsteiraColumnMissingError(error)) {
+    esteiraMedicaoAtiva = false
+    sel = `${SEL_VW_FATURAMENTO_BASE}${ticketAprovacaoAtivo ? SEL_VW_FATURAMENTO_TICKET_APROVACAO : ''}`
+    let qb2 = supabase.from('vw_faturamento_resumo').select(sel).in('coleta_id', uniq)
+    if (createdMin) qb2 = qb2.gte('created_at', createdMin)
+    const retry = await qb2
+    data = retry.data
+    error = retry.error
+  }
+
+  if (error && ticketAprovacaoAtivo && isTicketAprovacaoColumnMissingError(error)) {
     ticketAprovacaoAtivo = false
-    sel = SEL_VW_FATURAMENTO_BASE
+    sel = `${SEL_VW_FATURAMENTO_BASE}${esteiraMedicaoAtiva ? SEL_VW_FATURAMENTO_ESTEIRA : ''}`
     let qb2 = supabase.from('vw_faturamento_resumo').select(sel).in('coleta_id', uniq)
     if (createdMin) qb2 = qb2.gte('created_at', createdMin)
     const retry = await qb2
@@ -238,12 +272,13 @@ export async function fetchVwFaturamentoResumoPorColetaIds(
   if (error) {
     const base = error.message || 'Erro ao ler vw_faturamento_resumo.'
     const msg = isVwFaturamentoResumoMissingError(error) ? base + mensagemCorrecaoViewFaturamento() : base
-    return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false }
+    return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false, esteiraMedicaoAtiva: false }
   }
 
   return {
     data: ordenarLinhas((data ?? []) as unknown as FaturamentoResumoViewRow[]),
     error: null,
     ticketAprovacaoAtivo,
+    esteiraMedicaoAtiva,
   }
 }

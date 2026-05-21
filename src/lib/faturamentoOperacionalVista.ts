@@ -30,6 +30,7 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
   const [carregandoHistorico, setCarregandoHistorico] = useState(false)
   const [erroVista, setErroVista] = useState('')
   const [ticketAprovacaoAtivo, setTicketAprovacaoAtivo] = useState(true)
+  const [esteiraMedicaoAtiva, setEsteiraMedicaoAtiva] = useState(true)
 
   const linhasView = useMemo(
     () => mergeLinhasPorColetaId(linhasOperacional, linhasHistorico, linhasExtras),
@@ -39,10 +40,8 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
   const carregarOperacional = useCallback(async () => {
     setCarregandoOperacional(true)
     setErroVista('')
-    const { data, error, ticketAprovacaoAtivo: ticketCols } = await fetchVwFaturamentoResumoPaginated(
-      supabase,
-      { escopo: 'operacional' }
-    )
+    const { data, error, ticketAprovacaoAtivo: ticketCols, esteiraMedicaoAtiva: esteiraCols } =
+      await fetchVwFaturamentoResumoPaginated(supabase, { escopo: 'operacional' })
 
     if (error) {
       console.error(error)
@@ -53,27 +52,28 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
       )
       setLinhasOperacional([])
       setTicketAprovacaoAtivo(false)
+      setEsteiraMedicaoAtiva(false)
       setCarregandoOperacional(false)
       return
     }
 
     setTicketAprovacaoAtivo(ticketCols)
+    setEsteiraMedicaoAtiva(esteiraCols)
     setLinhasOperacional(data)
     setCarregandoOperacional(false)
   }, [])
 
   const carregarHistorico = useCallback(async () => {
     setCarregandoHistorico(true)
-    const { data, error, ticketAprovacaoAtivo: ticketCols } = await fetchVwFaturamentoResumoPaginated(
-      supabase,
-      { escopo: 'historico' }
-    )
+    const { data, error, ticketAprovacaoAtivo: ticketCols, esteiraMedicaoAtiva: esteiraCols } =
+      await fetchVwFaturamentoResumoPaginated(supabase, { escopo: 'historico' })
     setCarregandoHistorico(false)
     if (error) {
       console.warn('[faturamento] histórico emitidas:', error.message)
       return
     }
     setTicketAprovacaoAtivo(ticketCols)
+    setEsteiraMedicaoAtiva(esteiraCols)
     setLinhasHistorico(data)
   }, [carregandoHistorico])
 
@@ -154,6 +154,7 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     carregandoVista: carregandoOperacional,
     erroVista,
     ticketAprovacaoAtivo,
+    esteiraMedicaoAtiva,
     carregarOperacional,
     carregarHistorico,
     recarregarTudo,

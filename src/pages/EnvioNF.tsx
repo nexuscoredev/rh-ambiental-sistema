@@ -8,7 +8,7 @@ import {
   headersJwtSessao,
   obterSessaoParaEdgeFunctions,
 } from '../lib/edgeFunctionErrors'
-import { cargoPodeEmitirFaturamento } from '../lib/workflowPermissions'
+import { cargoPodeEnviarNfEmail, PERFIS_ENVIO_NF_EMAIL } from '../lib/workflowPermissions'
 import { registrarEnvioNfContaReceber } from '../services/financeiroReceber'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
@@ -127,7 +127,7 @@ export default function EnvioNF() {
     },
   })
 
-  const podeDisparar = cargoPodeEmitirFaturamento(usuarioCargo)
+  const podeDisparar = cargoPodeEnviarNfEmail(usuarioCargo)
   const clienteParam = useMemo(() => (searchParams.get('cliente') || '').trim(), [searchParams])
   const coletaParam = useMemo(() => (searchParams.get('coleta') || '').trim(), [searchParams])
 
@@ -434,7 +434,7 @@ export default function EnvioNF() {
     setErro('')
     setMensagem('')
     if (!podeDisparar) {
-      setErro('Sem permissão para registar envio. Perfis: Faturamento, Financeiro, Diretoria ou Administrador.')
+      setErro(`Sem permissão para registar envio. Perfis: ${PERFIS_ENVIO_NF_EMAIL}.`)
       return
     }
     if (selecionadosComEmail.length === 0) {
@@ -508,7 +508,7 @@ export default function EnvioNF() {
     setErro('')
     setMensagem('')
     if (!podeDisparar) {
-      setErro('Sem permissão para envio. Perfis: Faturamento, Financeiro, Diretoria ou Administrador.')
+      setErro(`Sem permissão para envio. Perfis: ${PERFIS_ENVIO_NF_EMAIL}.`)
       return
     }
     if (selecionadosComEmail.length === 0) {

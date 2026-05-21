@@ -41,16 +41,38 @@ function normalizarCargo(s: string | null | undefined): string {
     .replace(/\p{M}/gu, "");
 }
 
-/** Espelha cargoPodeMutarFaturamentoFluxo (src/lib/workflowPermissions). */
+/** Espelha cargoPodeEnviarNfEmail (src/lib/workflowPermissions). */
+function cargoEhOperacionalTimeT(c: string): boolean {
+  if (!c) return false;
+  if (c.includes("operacional") && (c.includes("time t") || c.includes("thais"))) {
+    return true;
+  }
+  if (c.includes("gerente") && c.includes("time")) return true;
+  return c === "gerente time" || c.includes("operacional time thais");
+}
+
 function podeEnviarNf(cargo: string | null | undefined): boolean {
   const c = normalizarCargo(cargo);
+  if (c.includes("desenvolvedor")) return true;
+  if (
+    c.includes("operadores") &&
+    (c.includes("time r") || c.includes("rafael") || c.includes("time rafael"))
+  ) {
+    return false;
+  }
+  if (c === "operadores" || c.includes("meninos") || c === "os meninos") {
+    return false;
+  }
   if (c.includes("visualizador")) return false;
   if (!c) return false;
+  if (cargoEhOperacionalTimeT(c)) return true;
   if (c.includes("administrador")) return true;
+  if (c.includes("financeiro") && !c.includes("operacional")) return true;
   return (
     c.includes("faturamento") ||
     c.includes("financeiro") ||
-    c.includes("diretoria")
+    c.includes("diretoria") ||
+    c.includes("diretor")
   );
 }
 
@@ -301,7 +323,7 @@ Deno.serve(async (req: Request) => {
   if (!podeEnviarNf(perfil?.cargo ?? null)) {
     return jsonResponse(req,403, {
       error:
-        "Sem permissão para envio de NF. Perfis: Administrador, Faturamento, Financeiro ou Diretoria.",
+        "Sem permissão para envio de NF. Perfis: Desenvolvedor, Administrador, Operacional (Time T), Faturamento, Financeiro ou Diretoria.",
     });
   }
 

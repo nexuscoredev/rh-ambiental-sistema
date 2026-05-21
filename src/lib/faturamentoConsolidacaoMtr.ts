@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { payloadFaturamentoEmitidoEnviaAoFinanceiro } from './coletaFluxoAtualizacao'
-import { upsertContaReceber } from '../services/financeiroReceber'
+import { payloadFaturamentoEmitidoAguardaFinalizacaoEsteira } from './coletaFluxoAtualizacao'
 import {
   montarPayloadsFaturamentoRegistro,
   persistirFaturamentoRegistro,
@@ -20,6 +19,7 @@ import {
   type ResultadoPrecoContrato,
 } from './faturamentoPrecoContrato'
 import { coletaElegivelParaFaturar } from './faturamentoElegibilidade'
+import { marcarEsteiraPosFaturamentoEmitido } from './faturamentoEsteira'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 export type ItemFilaFaturamento =
@@ -278,8 +278,6 @@ export async function emitirFaturamentoConsolidadoMtr(
     return { ok: false, message: resLider.message }
   }
 
-  const idFaturamentoRegistro = resLider.id ?? input.registroIdLider ?? null
-
   const obsIrma = `Consolidado na coleta ${lider.numero_coleta ?? lider.numero} (mesma MTR).`
   const payloadsIrma = montarPayloadsFaturamentoRegistro({
     valor: null,
@@ -312,9 +310,12 @@ export async function emitirFaturamentoConsolidadoMtr(
     }
   }
 
-  const payloadColeta = payloadFaturamentoEmitidoEnviaAoFinanceiro({
-    valorColeta: valorTotal,
-  })
+  const payloadColeta = {
+    ...payloadFaturamentoEmitidoAguardaFinalizacaoEsteira({
+      valorColeta: valorTotal,
+    }),
+    data_vencimento: input.dataVencimentoIso.trim() || null,
+  }
 
   for (const c of coletas) {
     const { error: errColeta } = await supabase
@@ -336,20 +337,9 @@ export async function emitirFaturamentoConsolidadoMtr(
     }
   }
 
-  const hojeIso = new Date().toISOString().slice(0, 10)
-  const { error: crErr } = await upsertContaReceber(supabase, {
-    cliente_id: lider.cliente_id,
-    valor: valorTotal,
-    data_emissao: hojeIso,
-    data_vencimento: input.dataVencimentoIso.trim() || null,
-    referencia_coleta_id: lider.coleta_id,
-    faturamento_registro_id: idFaturamentoRegistro ?? undefined,
-    observacoes:
-      input.observacoes.trim() ||
-      `Faturamento consolidado MTR ${lider.mtr_numero ?? ''} (${coletas.length} tickets).`,
-    origem: 'faturamento',
-  })
-  if (crErr) console.warn('Conta a receber:', crErr.message)
+  for (const c of coletas) {
+    await marcarEsteiraPosFaturamentoEmitido(c.coleta_id)
+  }
 
   return { ok: true }
 }

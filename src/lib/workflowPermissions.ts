@@ -364,6 +364,22 @@ export const cargoPodeEmitirFaturamento = cargoPodeMutarFaturamentoFluxo
 export const cargoPodeConfirmarEmissaoFaturamento = cargoPodeMutarFaturamentoFluxo
 export const cargoPodeCancelarFaturamento = cargoPodeMutarFaturamentoFluxo
 
+/** Mala direta / envio real de NF por e-mail (UI + Edge Function send-nf-email). */
+export function cargoPodeEnviarNfEmail(cargo: string | null | undefined): boolean {
+  if (liberadoSeAutoridadeMaxima(cargo)) return true
+  if (cargoEhOperadoresTimeR(cargo)) return false
+  if (cargoEhVisualizador(cargo)) return false
+  if (cargoEhOperacionalTimeT(cargo)) return true
+  if (cargoEhAdministrador(cargo)) return true
+  const c = normalizarTextoCargo(cargo)
+  if (!c) return false
+  if (c.includes('financeiro') && !c.includes('operacional')) return true
+  return c.includes('faturamento') || c.includes('financeiro') || cargoEhDiretoria(cargo)
+}
+
+export const PERFIS_ENVIO_NF_EMAIL =
+  'Desenvolvedor, Administrador, Operacional (Time T), Faturamento, Financeiro ou Diretoria'
+
 export const cargoPodeEditarCobranca = cargoPodeMutarFinanceiro
 export const cargoPodeMarcarPagamento = cargoPodeMutarFinanceiro
 

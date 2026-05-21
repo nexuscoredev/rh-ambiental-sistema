@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
-import { payloadFaturamentoEmitidoEnviaAoFinanceiro } from '../../lib/coletaFluxoAtualizacao'
+import { payloadFaturamentoEmitidoAguardaFinalizacaoEsteira } from '../../lib/coletaFluxoAtualizacao'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { coletaElegivelParaFaturar, rotuloMotivoInelegivel } from '../../lib/faturamentoElegibilidade'
-import { upsertContaReceber, sugerirDataVencimentoIso } from '../../services/financeiroReceber'
+import { sugerirDataVencimentoIso } from '../../services/financeiroReceber'
 import {
   resolverPrecoSugerido,
   rotuloOrigemPreco,
   type RegraPrecoRow,
 } from '../../services/pricing'
 import { isMissingClienteContratoColumnsError } from '../../lib/clienteContratoCadastro'
+import { marcarEsteiraPosFaturamentoEmitido } from '../../lib/faturamentoEsteira'
 import {
   calcularPrecoContratoColetaMtr,
   rotuloOrigemContrato,
@@ -19,6 +19,7 @@ import {
 } from '../../lib/faturamentoPrecoContrato'
 import {
   aplicarSugestaoContratoNoResumoMtr,
+  resumoMtrPrecosVazios,
   criarResumoFinanceiroDoOperacional,
   marcarTicketEncerradoDefinitivoResumo,
   parseNumeroCampo,
@@ -47,15 +48,6 @@ function parseValor(s: string): number | null {
   if (!t) return null
   const n = Number(t)
   return Number.isFinite(n) ? n : null
-}
-
-function montarParamsColeta(row: FaturamentoResumoViewRow) {
-  const p = new URLSearchParams()
-  p.set('coleta', row.coleta_id)
-  if (row.mtr_id) p.set('mtr', row.mtr_id)
-  if (row.programacao_id) p.set('programacao', row.programacao_id)
-  if (row.cliente_id) p.set('cliente', row.cliente_id)
-  return p
 }
 
 type StatusFat = 'pendente' | 'emitido' | 'cancelado'
@@ -91,10 +83,9 @@ export function FaturamentoModalRegisto({
   usuarioCargo = null,
   onClose,
   onGravado,
-  navegarAposEmitir = true,
+  navegarAposEmitir: _navegarAposEmitir = true,
 }: Props) {
   const podeConfirmarEmissao = podeConfirmarEmissaoProp ?? podeMutar ?? false
-  const navigate = useNavigate()
   const [registroId, setRegistroId] = useState<string | null>(null)
   const [resumoFinanceiro, setResumoFinanceiro] = useState<ResumoFinanceiroDesvinculado | null>(null)
   const [observacoes, setObservacoes] = useState('')
@@ -122,6 +113,8 @@ export function FaturamentoModalRegisto({
   const [carregandoContrato, setCarregandoContrato] = useState(false)
   /** Evita reinicializar o resumo a cada tecla (loop que congelava o formulário MTR). */
   const resumoInicializadoColetaRef = useRef<string | null>(null)
+  /** Evita reaplicar preços do contrato em loop quando o resumo já foi preenchido. */
+  const contratoAutoAplicadoRef = useRef<string | null>(null)
   const carregarRegistoGenRef = useRef(0)
 
   const coletaIdModal = row?.coleta_id ?? null
@@ -297,11 +290,13 @@ export function FaturamentoModalRegisto({
   useEffect(() => {
     if (!open) {
       resumoInicializadoColetaRef.current = null
+      contratoAutoAplicadoRef.current = null
       carregarRegistoGenRef.current += 1
       return
     }
     if (!coletaIdModal) return
     resumoInicializadoColetaRef.current = null
+    contratoAutoAplicadoRef.current = null
     void carregarRegisto(coletaIdModal)
   }, [open, coletaIdModal, carregarRegisto])
 
@@ -366,10 +361,42 @@ export function FaturamentoModalRegisto({
   }, [row, montarResumoOperacional, contextoMtr])
 
   useEffect(() => {
-    if (!open || !coletaIdModal || carregando) return
+    if (!open || !coletaIdModal || carregando || carregandoContrato) return
     if (resumoInicializadoColetaRef.current === coletaIdModal) return
     garantirResumoMontado()
-  }, [open, coletaIdModal, carregando, garantirResumoMontado])
+  }, [open, coletaIdModal, carregando, carregandoContrato, garantirResumoMontado])
+
+  /** Após o contrato carregar, preenche caminhão/equipamento/resíduo se o resumo ainda estiver sem valores. */
+  useEffect(() => {
+    if (!open || !coletaIdModal || carregandoContrato || !resumoFinanceiro || !sugestaoContrato) return
+    const temPrecoContrato =
+      sugestaoContrato.valorCaminhao > 0 ||
+      sugestaoContrato.valorEquipamentos > 0 ||
+      sugestaoContrato.valorResiduo > 0 ||
+      sugestaoContrato.valorUnitario > 0
+    if (!temPrecoContrato || !resumoMtrPrecosVazios(resumoFinanceiro.mtr)) return
+
+    const chaveAuto = `${coletaIdModal}|${sugestaoContrato.total}|${sugestaoContrato.valorResiduo}|${contextoMtr?.tipoCaminhao ?? ''}`
+    if (contratoAutoAplicadoRef.current === chaveAuto) return
+    contratoAutoAplicadoRef.current = chaveAuto
+
+    setResumoFinanceiro((prev) =>
+      prev
+        ? aplicarSugestaoContratoNoResumoMtr(prev, sugestaoContrato, {
+            tipoCaminhao: contextoMtr?.tipoCaminhao,
+            acondicionamento: contextoMtr?.acondicionamento,
+          })
+        : prev
+    )
+  }, [
+    open,
+    coletaIdModal,
+    carregandoContrato,
+    resumoFinanceiro,
+    sugestaoContrato,
+    contextoMtr?.tipoCaminhao,
+    contextoMtr?.acondicionamento,
+  ])
 
   const onResumoFinanceiroChange = useCallback((next: ResumoFinanceiroDesvinculado) => {
     setResumoFinanceiro(next)
@@ -548,12 +575,9 @@ export function FaturamentoModalRegisto({
           return
         }
         setOkMsg(
-          `Faturamento consolidado (${grupoConsolidado.length} tickets, 1 conta). As coletas seguem para o Financeiro.`
+          `Faturamento consolidado (${grupoConsolidado.length} tickets). Conclua o relatório pós-faturamento e o envio de NF; após Finalizado, a cobrança entra em Contas a Receber.`
         )
         onGravado()
-        if (navegarAposEmitir && row) {
-          navigate(`/financeiro?${montarParamsColeta(row).toString()}`)
-        }
         onClose()
         setSalvando(false)
         return
@@ -577,38 +601,29 @@ export function FaturamentoModalRegisto({
         throw new Error(resPersist.message)
       }
 
-      let idFaturamentoRegistro = resPersist.id ?? registroId
       if (resPersist.id && !registroId) {
         setRegistroId(resPersist.id)
       }
 
       if (status === 'emitido') {
+        const vencIso = dataVencimentoIso.trim() || null
         const { error: errColeta } = await supabase
           .from('coletas')
-          .update(payloadFaturamentoEmitidoEnviaAoFinanceiro({ valorColeta: valorTotal }))
+          .update({
+            ...payloadFaturamentoEmitidoAguardaFinalizacaoEsteira({ valorColeta: valorTotal }),
+            data_vencimento: vencIso,
+          })
           .eq('id', coletaAtual.coleta_id)
         if (errColeta) {
           console.error(errColeta)
           setErro('Registro salvo, mas falhou ao atualizar a coleta. Entre em contato com o administrador.')
         } else {
-          const hojeIso = new Date().toISOString().slice(0, 10)
-          const { error: crErr } = await upsertContaReceber(supabase, {
-            cliente_id: coletaAtual.cliente_id,
-            valor: valorTotal!,
-            data_emissao: hojeIso,
-            data_vencimento: dataVencimentoIso.trim() || null,
-            referencia_coleta_id: coletaAtual.coleta_id,
-            faturamento_registro_id: idFaturamentoRegistro ?? undefined,
-            observacoes: observacoes.trim() || null,
-            origem: 'faturamento',
-          })
-          if (crErr) console.warn('Conta a receber:', crErr.message)
+          await marcarEsteiraPosFaturamentoEmitido(coletaAtual.coleta_id)
 
-          setOkMsg('Faturamento realizado com sucesso. A coleta segue para o Financeiro.')
+          setOkMsg(
+            'Faturamento emitido. Conclua o relatório pós-faturamento e registre o envio de NF; após status Finalizado, a cobrança entra em Financeiro → Contas a Receber.'
+          )
           onGravado()
-          if (navegarAposEmitir) {
-            navigate(`/financeiro?${montarParamsColeta(coletaAtual).toString()}`)
-          }
           onClose()
         }
       } else {

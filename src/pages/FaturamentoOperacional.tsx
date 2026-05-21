@@ -26,6 +26,10 @@ import { FaturamentoFilaAprovacaoTicket } from '../components/faturamento/Fatura
 import { FaturamentoFilaColetas } from '../components/faturamento/FaturamentoFilaColetas'
 import { FaturamentoHistoricoColetas } from '../components/faturamento/FaturamentoHistoricoColetas'
 import { FaturamentoRelatoriosPanel } from '../components/faturamento/FaturamentoRelatoriosPanel'
+import { FaturamentoFilaMedicao } from '../components/faturamento/FaturamentoFilaMedicao'
+import { FaturamentoFilaPosFaturamento } from '../components/faturamento/FaturamentoFilaPosFaturamento'
+import { FaturamentoEsteiraFluxo } from '../components/faturamento/FaturamentoEsteiraFluxo'
+import { MENSAGEM_MIGRACAO_ESTEIRA } from '../lib/faturamentoEsteira'
 import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
 import {
   escolherColetaLiderFaturamento,
@@ -97,6 +101,7 @@ export default function FaturamentoOperacional() {
     carregandoHistorico,
     erroVista,
     ticketAprovacaoAtivo,
+    esteiraMedicaoAtiva,
     recarregarTudo,
     carregarHistorico,
     qtdEmitidasCartao,
@@ -245,10 +250,29 @@ export default function FaturamentoOperacional() {
           Consolidação e emissão por coleta
         </h1>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
-          Após <strong>salvar</strong> pesagem e ticket no Controle de Massa, a coleta entra na <strong>fila de conferência do ticket</strong>.
-          Valide na tabela abaixo; depois use a fila <strong>Faturar</strong> para registar valores e enviar ao{' '}
-          <Link to="/financeiro">Financeiro</Link>.
+          Esteira: <strong>conferência do ticket</strong> → <strong>relatório de medição</strong> (por cliente) →
+          confirmação de <strong>e-mail</strong> → <strong>aprovação do cliente</strong> →{' '}
+          <strong>faturar</strong> → relatório pós-faturamento e <Link to="/envio-nf">envio de NF</Link> →{' '}
+          <strong>finalizado</strong> (aí entra em Financeiro → Contas a Receber).
         </p>
+
+        <FaturamentoEsteiraFluxo />
+
+        {!carregandoVista && !esteiraMedicaoAtiva ? (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              color: '#92400e',
+              fontSize: '13px',
+            }}
+          >
+            <strong>Esteira de medição ainda não ativa no Supabase.</strong> {MENSAGEM_MIGRACAO_ESTEIRA}
+          </div>
+        ) : null}
 
         {erroVista ? (
           <div
@@ -353,6 +377,13 @@ export default function FaturamentoOperacional() {
           onAprovado={() => void recarregarTudo()}
         />
 
+        <FaturamentoFilaMedicao
+          linhas={linhasView}
+          carregando={carregandoVista}
+          esteiraAtiva={esteiraMedicaoAtiva}
+          onAtualizar={() => void recarregarTudo()}
+        />
+
         <FaturamentoFilaColetas
           linhas={fila}
           carregando={carregandoVista}
@@ -360,6 +391,8 @@ export default function FaturamentoOperacional() {
           onDevolvidoConferencia={() => void recarregarTudo()}
           podeDevolverConferencia={podeAprovarTicketFila && ticketAprovacaoAtivo}
         />
+
+        <FaturamentoFilaPosFaturamento linhas={linhasView} carregando={carregandoVista} />
 
         {coletaAtiva ? (
           <div style={cardStyle}>

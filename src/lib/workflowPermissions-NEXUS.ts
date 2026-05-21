@@ -163,6 +163,10 @@ export const cargoPodeLancarPesagem = cargoPodeMutarControleMassa
 
 export const cargoPodeEmitirFaturamento = cargoPodeMutarFaturamentoFluxo
 export const cargoPodeCancelarFaturamento = cargoPodeMutarFaturamentoFluxo
+export {
+  cargoPodeEnviarNfEmail,
+  PERFIS_ENVIO_NF_EMAIL,
+} from './workflowPermissions'
 
 export const cargoPodeEditarCobranca = cargoPodeMutarFinanceiro
 export const cargoPodeMarcarPagamento = cargoPodeMutarFinanceiro

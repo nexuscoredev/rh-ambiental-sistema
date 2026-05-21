@@ -1,3 +1,4 @@
+import { marcarEsteiraAposAprovacaoTicket } from './faturamentoEsteira'
 import { supabase } from './supabase'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { indiceEtapaFluxo, normalizarEtapaColeta } from './fluxoEtapas'
@@ -120,6 +121,11 @@ export async function aprovarTicketFaturamentoColeta(
       return { ok: false, message: MENSAGEM_MIGRACAO_TICKET_APROVACAO }
     }
     return { ok: false, message: error.message || 'Não foi possível aprovar o ticket.' }
+  }
+
+  const esteira = await marcarEsteiraAposAprovacaoTicket(id)
+  if (!esteira.ok) {
+    return esteira
   }
 
   return { ok: true }

@@ -39,11 +39,13 @@ describe('coletaProntaNaVistaExcluindoFluxoTicket', () => {
     expect(coletaProntaNaVistaExcluindoFluxoTicket(row)).toBe(false)
   })
 
-  it('conta coleta aprovada ainda sem emissão', () => {
+  it('conta coleta liberada para faturar (medição aprovada)', () => {
     const row = linhaBase({
       fluxo_status: 'TICKET_GERADO',
       etapa_operacional: 'TICKET_GERADO',
       faturamento_registro_status: 'pendente',
+      faturamento_esteira_status: 'LIBERADO_FATURAMENTO',
+      medicao_cliente_aprovado_em: '2026-05-20T13:00:00Z',
     })
     expect(coletaNaFilaFaturamento(row)).toBe(true)
     expect(coletaProntaNaVistaExcluindoFluxoTicket(row)).toBe(true)

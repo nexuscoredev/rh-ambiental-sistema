@@ -8,10 +8,10 @@ import {
 } from './financeiroColetas'
 
 describe('etapaVisivelListaFinanceiro', () => {
-  it('inclui FATURADO, ENVIADO_FINANCEIRO e FINALIZADO', () => {
-    expect(etapaVisivelListaFinanceiro('FATURADO')).toBe(true)
-    expect(etapaVisivelListaFinanceiro('ENVIADO_FINANCEIRO')).toBe(true)
+  it('inclui só FINALIZADO', () => {
     expect(etapaVisivelListaFinanceiro('FINALIZADO')).toBe(true)
+    expect(etapaVisivelListaFinanceiro('FATURADO')).toBe(false)
+    expect(etapaVisivelListaFinanceiro('ENVIADO_FINANCEIRO')).toBe(false)
   })
 
   it('exclui etapas anteriores ao financeiro', () => {
@@ -45,14 +45,39 @@ describe('coletaVisivelListaFinanceiro', () => {
     ).toBe(true)
   })
 
-  it('inclui quando liberado_financeiro', () => {
+  it('inclui quando esteira FINALIZADO ou NF na conta', () => {
     expect(
       coletaVisivelListaFinanceiro({
-        fluxo_status: 'COLETA_REALIZADA',
-        etapa_operacional: 'COLETA_REALIZADA',
-        liberado_financeiro: true,
+        fluxo_status: 'FATURADO',
+        etapa_operacional: 'FATURADO',
+        faturamento_esteira_status: 'FINALIZADO',
       })
     ).toBe(true)
+    expect(
+      coletaVisivelListaFinanceiro({
+        fluxo_status: 'FATURADO',
+        etapa_operacional: 'FATURADO',
+        conta_receber_nf_enviada_em: '2026-05-18T10:00:00Z',
+      })
+    ).toBe(true)
+  })
+
+  it('exclui FATURADO / ENVIADO_FINANCEIRO sem finalizar esteira', () => {
+    expect(
+      coletaVisivelListaFinanceiro({
+        fluxo_status: 'FATURADO',
+        etapa_operacional: 'FATURADO',
+        liberado_financeiro: false,
+      })
+    ).toBe(false)
+    expect(
+      coletaVisivelListaFinanceiro({
+        fluxo_status: 'ENVIADO_FINANCEIRO',
+        etapa_operacional: 'ENVIADO_FINANCEIRO',
+        liberado_financeiro: true,
+        faturamento_esteira_status: 'LIBERADO_FINANCEIRO',
+      })
+    ).toBe(false)
   })
 })
 
