@@ -56,11 +56,7 @@ export const COLETAS_OR_FINANCEIRO_QUERY = [
   'coleta_observacoes.ilike.%FLUXO-20%',
 ].join(',')
 
-/**
- * Teto de páginas ao carregar `vw_faturamento_resumo` no Financeiro (filtro `.or` já restringe no servidor).
- * Evita varrer o escopo «completo» (20×1000 linhas).
- */
-export const FINANCEIRO_VW_RESUMO_MAX_PAGES = 8
+export { FINANCEIRO_VW_RESUMO_MAX_PAGES } from './supabaseCargaLimites'
 
 /** Vencimento já passou e pagamento não está «Pago» (Dashboard / Financeiro). */
 export function isVencidoFinanceiro(

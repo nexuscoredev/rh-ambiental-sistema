@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { CONTAS_RECEBER_FINANCEIRO_IDS_MAX_LINHAS, REST_PAGE_SIZE } from './supabaseCargaLimites'
 
 const DEFAULT_CHUNK = 250
 
@@ -33,8 +34,8 @@ export async function fetchColetaIdsComContaReceber(
   supabase: SupabaseClient,
   opts?: { dataEmissaoDesde?: string | null; maxLinhas?: number }
 ): Promise<string[]> {
-  const max = opts?.maxLinhas ?? 10_000
-  const PAGE = 1000
+  const max = opts?.maxLinhas ?? CONTAS_RECEBER_FINANCEIRO_IDS_MAX_LINHAS
+  const PAGE = REST_PAGE_SIZE
   const ids = new Set<string>()
   const desde = (opts?.dataEmissaoDesde ?? '').trim().slice(0, 10)
 

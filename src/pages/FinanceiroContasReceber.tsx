@@ -3,6 +3,7 @@ import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
 import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
+import { CONTAS_RECEBER_LISTA_MAX_LINHAS, REST_PAGE_SIZE } from '../lib/supabaseCargaLimites'
 import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
@@ -64,11 +65,11 @@ export default function FinanceiroContasReceber() {
       const selectCr =
         'id, valor, valor_pago, valor_travado, status_pagamento, data_vencimento, data_emissao, nf_enviada_em, referencia_coleta_id, cliente_id'
 
-      const PAGE_SIZE = 1000
-      const MAX_PAGES = 10
+      const PAGE_SIZE = REST_PAGE_SIZE
+      const maxPages = Math.max(1, Math.ceil(CONTAS_RECEBER_LISTA_MAX_LINHAS / PAGE_SIZE))
       const list: Record<string, unknown>[] = []
 
-      for (let page = 0; page < MAX_PAGES; page++) {
+      for (let page = 0; page < maxPages; page++) {
         const from = page * PAGE_SIZE
         const to = from + PAGE_SIZE - 1
         const { data: chunk, error: e1 } = await supabase
@@ -84,9 +85,9 @@ export default function FinanceiroContasReceber() {
         if (rows.length < PAGE_SIZE) break
       }
 
-      if (list.length >= PAGE_SIZE * MAX_PAGES) {
+      if (list.length >= PAGE_SIZE * maxPages) {
         console.warn(
-          `[FinanceiroContasReceber] Cap de ${PAGE_SIZE * MAX_PAGES} linhas atingido; resultados podem estar truncados.`
+          `[FinanceiroContasReceber] Cap de ${PAGE_SIZE * maxPages} linhas atingido; resultados podem estar truncados.`
         )
       }
 

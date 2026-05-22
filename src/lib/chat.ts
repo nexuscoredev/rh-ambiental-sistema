@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { CHAT_USUARIOS_MAX_PAGES, REST_PAGE_SIZE } from './supabaseCargaLimites'
 import {
   emailSuporteTecnicoConfig,
   resolverIdContactoSuporteTecnico,
@@ -84,11 +85,11 @@ export function sanitizarNomeFicheiro(nome: string): string {
   return nome.replace(/[^\w.\-()\s\u00C0-\u024F]/gi, '_').slice(0, 180) || 'ficheiro'
 }
 
-const USUARIOS_CHAT_PAGE = 1000
-const USUARIOS_CHAT_MAX_PAGES = 100
+const USUARIOS_CHAT_PAGE = REST_PAGE_SIZE
+const USUARIOS_CHAT_MAX_PAGES = CHAT_USUARIOS_MAX_PAGES
 
 /**
- * Todos os utilizadores com status ativo (exceto o próprio), em páginas — sem teto artificial de 400 linhas.
+ * Utilizadores com status ativo (exceto o próprio), paginado até {@link CHAT_USUARIOS_MAX_PAGES}.
  */
 export async function chatListarUsuariosAtivos(meuId: string): Promise<ChatUsuarioLista[]> {
   const out: ChatUsuarioLista[] = []
