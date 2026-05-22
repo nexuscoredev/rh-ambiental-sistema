@@ -26,12 +26,10 @@ import {
   parseContratoClienteMtr,
   residuosContratoParaLinhasPesagem,
   residuosContratoParaListaDetalhesMtr,
-  snapshotContratoFromDetalhesMtr,
   syncResiduoPrincipalComLista,
   tipoResiduoResumoContrato,
   type MtrResiduoDetalhesCampos,
 } from '../lib/mtrClienteContratoAutofill'
-import { MtrContratoClientePainel } from '../components/mtr/MtrContratoClientePainel'
 import { MtrVeiculosEquipamentosForm } from '../components/mtr/MtrVeiculosEquipamentosForm'
 import { sincronizarColetasProgramacaoDesdeMtr } from '../lib/faturamentoOperacionalSync'
 import type { ResiduoPesagemItem } from '../lib/residuosPesagem'
@@ -676,11 +674,6 @@ export default function MTR() {
   })
 
   const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo)
-
-  const contratoClientePainel = useMemo(
-    () => snapshotContratoFromDetalhesMtr(form.detalhes),
-    [form.detalhes]
-  )
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
@@ -3551,7 +3544,6 @@ export default function MTR() {
                             : ' — abre ao criar/editar MTR'}
                         . Abra o calendário, escolha o dia (verde) e a programação. Se já existir MTR, abre a existente.
                       </span>
-                      <MtrContratoClientePainel contrato={contratoClientePainel} />
                     </div>
 
                     <div className="field">
