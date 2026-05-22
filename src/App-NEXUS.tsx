@@ -63,6 +63,7 @@ type ProtectedRouteProps = {
   session: Session | null
   usuario: UsuarioPerfilApp | null
   carregandoUsuario: boolean
+  erroPerfil: string
   allowedRoles: string[]
   /** Só sessão + perfil ativo; não valida cargo (página inicial Nexus para todos). */
   apenasAutenticado?: boolean
@@ -73,6 +74,7 @@ function ProtectedRoute({
   session,
   usuario,
   carregandoUsuario,
+  erroPerfil,
   allowedRoles,
   apenasAutenticado,
   children,
@@ -103,6 +105,51 @@ function ProtectedRoute({
   }
 
   if (!usuario) {
+    if (erroPerfil.trim()) {
+      return (
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f1f5f9',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 520,
+              background: '#fff',
+              border: '1px solid #fecaca',
+              borderRadius: 12,
+              padding: 20,
+              color: '#334155',
+            }}
+          >
+            <p style={{ margin: '0 0 12px', fontWeight: 700, color: '#991b1b' }}>
+              Não foi possível carregar as permissões
+            </p>
+            <p style={{ margin: '0 0 16px', fontSize: 15 }}>{erroPerfil}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#0f766e',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      )
+    }
     return <Navigate to="/" replace />
   }
 
@@ -137,10 +184,35 @@ function RedirectConferenciaOperacionalParaControleMassa() {
   return <Navigate to={`/controle-massa${search}`} replace />
 }
 
+const PERFIL_CARGA_TIMEOUT_MS = 20_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, rotulo: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error(`Tempo esgotado ao ${rotulo} (${Math.round(ms / 1000)}s).`))
+    }, ms)
+    promise
+      .then((v) => {
+        window.clearTimeout(timer)
+        resolve(v)
+      })
+      .catch((e) => {
+        window.clearTimeout(timer)
+        reject(e)
+      })
+  })
+}
+
+function erroColunaPaginasPermitidas(msg: string): boolean {
+  const m = msg.toLowerCase()
+  return m.includes('paginas_permitidas') && (m.includes('column') || m.includes('schema cache'))
+}
+
 function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [usuario, setUsuario] = useState<UsuarioPerfilApp | null>(null)
   const [carregandoUsuario, setCarregandoUsuario] = useState(true)
+  const [erroPerfil, setErroPerfil] = useState('')
 
   /** Evita `Carregando permissões…` (e desmontar a página) em cada refresh de token ao voltar ao separador. */
   const perfilJaExibidoParaUserIdRef = useRef<string | null>(null)
@@ -172,9 +244,12 @@ function App() {
     const runId = ++cargaPerfilRunRef.current
 
     async function carregarUsuario() {
+      const aindaAtual = () => runId === cargaPerfilRunRef.current
+
       if (!session) {
-        if (runId !== cargaPerfilRunRef.current) return
+        if (!aindaAtual()) return
         perfilJaExibidoParaUserIdRef.current = null
+        setErroPerfil('')
         setUsuario(null)
         setCarregandoUsuario(false)
         return
@@ -187,49 +262,95 @@ function App() {
 
       if (!atualizacaoSilenciosa) {
         setCarregandoUsuario(true)
+        setErroPerfil('')
       }
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
+      try {
+        let userId = session.user?.id?.trim() || ''
+        if (!userId) {
+          const {
+            data: { user },
+            error: userError,
+          } = await withTimeout(supabase.auth.getUser(), PERFIL_CARGA_TIMEOUT_MS, 'validar sessão')
 
-      if (runId !== cargaPerfilRunRef.current) return
+          if (!aindaAtual()) return
 
-      if (userError || !user) {
-        console.error('Erro ao buscar usuário autenticado:', userError?.message)
+          if (userError || !user?.id) {
+            console.error('Erro ao buscar usuário autenticado:', userError?.message)
+            perfilJaExibidoParaUserIdRef.current = null
+            setUsuario(null)
+            setErroPerfil(
+              userError?.message ||
+                'Não foi possível validar a sessão. Saia e entre novamente.'
+            )
+            return
+          }
+          userId = user.id
+        }
+
+        const selectComPaginas =
+          'id, nome, email, cargo, status, foto_url, paginas_permitidas'
+        const selectSemPaginas = 'id, nome, email, cargo, status, foto_url'
+
+        const buscarPerfil = async (select: string) => {
+          const res = await supabase.from('usuarios').select(select).eq('id', userId).maybeSingle()
+          return res
+        }
+
+        let resultado = await withTimeout(
+          buscarPerfil(selectComPaginas),
+          PERFIL_CARGA_TIMEOUT_MS,
+          'carregar perfil'
+        )
+
+        if (!aindaAtual()) return
+
+        if (resultado.error && erroColunaPaginasPermitidas(resultado.error.message)) {
+          resultado = await withTimeout(
+            buscarPerfil(selectSemPaginas),
+            PERFIL_CARGA_TIMEOUT_MS,
+            'carregar perfil'
+          )
+          if (!aindaAtual()) return
+        }
+
+        const { data, error } = resultado
+
+        if (error) {
+          console.error('Erro ao carregar perfil do usuário:', error.message)
+          perfilJaExibidoParaUserIdRef.current = null
+          setUsuario(null)
+          setErroPerfil(
+            error.message ||
+              'Não foi possível ler o perfil (tabela usuarios / permissões no Supabase).'
+          )
+          return
+        }
+
+        if (!data) {
+          perfilJaExibidoParaUserIdRef.current = null
+          setUsuario(null)
+          setErroPerfil(
+            'Utilizador autenticado sem registo em «usuarios». Peça a um administrador para criar o acesso.'
+          )
+          return
+        }
+
+        setUsuario(data as unknown as UsuarioPerfilApp)
+        perfilJaExibidoParaUserIdRef.current = userId
+        setErroPerfil('')
+      } catch (e) {
+        if (!aindaAtual()) return
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error('Falha ao carregar perfil:', msg)
         perfilJaExibidoParaUserIdRef.current = null
         setUsuario(null)
-        setCarregandoUsuario(false)
-        return
+        setErroPerfil(msg)
+      } finally {
+        if (aindaAtual()) {
+          setCarregandoUsuario(false)
+        }
       }
-
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nome, email, cargo, status, foto_url, paginas_permitidas')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (runId !== cargaPerfilRunRef.current) return
-
-      if (error) {
-        console.error('Erro ao carregar perfil do usuário:', error.message)
-        perfilJaExibidoParaUserIdRef.current = null
-        setUsuario(null)
-        setCarregandoUsuario(false)
-        return
-      }
-
-      if (!data) {
-        perfilJaExibidoParaUserIdRef.current = null
-        setUsuario(null)
-        setCarregandoUsuario(false)
-        return
-      }
-
-      setUsuario(data)
-      perfilJaExibidoParaUserIdRef.current = user.id
-      setCarregandoUsuario(false)
     }
 
     void carregarUsuario()
@@ -278,6 +399,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[]}
                   apenasAutenticado
                 >
@@ -293,6 +415,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/dashboard']]}
                 >
                   <Dashboard />
@@ -307,6 +430,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/clientes']]}
                 >
                   <Clientes />
@@ -321,6 +445,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/pos-venda']]}
                 >
                   <PosVenda />
@@ -335,6 +460,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/motoristas']]}
                 >
                   <Motoristas />
@@ -349,6 +475,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/representantes-rg']]}
                 >
                   <RepresentantesRG />
@@ -363,6 +490,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/caminhoes']]}
                 >
                   <Caminhoes />
@@ -377,6 +505,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/programacao']]}
                 >
                   <Programacao />
@@ -391,6 +520,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/controle-massa']]}
                 >
                   <RedirectColetasParaControleMassa />
@@ -405,6 +535,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/mtr']]}
                 >
                   <MTR />
@@ -419,6 +550,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/mtr']]}
                 >
                   <MTR />
@@ -433,6 +565,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/controle-massa']]}
                 >
                   <ControleMassa />
@@ -447,6 +580,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/controle-massa']]}
                 >
                   <ControleMassa />
@@ -461,6 +595,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/comprovantes-descarte']]}
                 >
                   <ComprovantesDescarte />
@@ -475,6 +610,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/comprovantes-descarte']]}
                 >
                   <ComprovanteDescarteForm />
@@ -489,6 +625,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/comprovantes-descarte']]}
                 >
                   <ComprovanteDescarteForm />
@@ -503,6 +640,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/comprovantes-descarte']]}
                 >
                   <ComprovanteDescarteForm />
@@ -517,6 +655,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/checklist-transporte']]}
                 >
                   <ChecklistTransporte />
@@ -531,6 +670,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/conferencia-transporte']]}
                 >
                   <ConferenciaTransporte />
@@ -545,6 +685,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/controle-massa']]}
                 >
                   <RedirectConferenciaOperacionalParaControleMassa />
@@ -559,6 +700,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/ticket-operacional']]}
                 >
                   <TicketOperacional />
@@ -573,6 +715,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento']]}
                 >
                   <RedirectAprovacaoParaFaturamento />
@@ -587,6 +730,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento']]}
                 >
                   <FaturamentoOperacional />
@@ -606,6 +750,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro']]}
                 >
                   <Financeiro />
@@ -620,6 +765,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro/contas-receber']]}
                 >
                   <FinanceiroContasReceber />
@@ -634,6 +780,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro/contas-pagar']]}
                 >
                   <FinanceiroContasPagar />
@@ -648,6 +795,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/envio-nf']]}
                 >
                   <EnvioNF />
@@ -662,6 +810,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/usuarios']]}
                 >
                   <Usuarios />
@@ -676,6 +825,7 @@ function App() {
                   session={session}
                   usuario={usuario}
                   carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/chat']]}
                 >
                   <Chat />
