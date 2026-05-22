@@ -4,6 +4,7 @@ import {
   agruparGruposMedicaoPorMtr,
   agruparGruposNfBoletoPorMtr,
   coletaAguardandoConfirmacaoNfBoleto,
+  coletasMesmoGrupoMedicaoCliente,
   coletaLiberadaParaFaturarEsteira,
   coletaNaFilaRelatorioMedicao,
   coletaPertenceGrupoMedicaoMtr,
@@ -189,6 +190,16 @@ describe('coletaPertenceGrupoMedicaoMtr / fila faturar', () => {
   })
 })
 
+describe('coletasMesmoGrupoMedicaoCliente', () => {
+  it('agrupa lançamentos do mesmo cliente até 30 dias', () => {
+    const a = row({ data_execucao: '2026-04-01' })
+    const b = row({ coleta_id: 'c2', data_execucao: '2026-04-25' })
+    expect(coletasMesmoGrupoMedicaoCliente(a, b)).toBe(true)
+    const c = row({ coleta_id: 'c3', data_execucao: '2026-05-10' })
+    expect(coletasMesmoGrupoMedicaoCliente(a, c)).toBe(false)
+  })
+})
+
 describe('agruparGruposMedicaoPorMtr', () => {
   it('consolida vários tickets da mesma MTR num único grupo', () => {
     const grupos = agruparGruposMedicaoPorMtr([
@@ -196,6 +207,7 @@ describe('agruparGruposMedicaoPorMtr', () => {
         coleta_id: 'c1',
         numero_coleta: 90001,
         faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        data_execucao: '2026-05-10',
         tipo_residuo: 'Resíduo 1',
       }),
       row({
@@ -203,12 +215,53 @@ describe('agruparGruposMedicaoPorMtr', () => {
         numero_coleta: 90002,
         faturamento_esteira_status: 'MEDICAO_EMAIL_PENDENTE',
         medicao_relatorio_gerado_em: '2026-05-20T00:00:00Z',
+        data_execucao: '2026-05-12',
         tipo_residuo: 'Resíduo 2',
       }),
     ])
     expect(grupos).toHaveLength(1)
     expect(grupos[0]?.linhas).toHaveLength(2)
     expect(etapaUnificadaGrupoMedicao(grupos[0]!.linhas)).toBe('relatorio')
+  })
+
+  it('consolida MTRs distintas do mesmo cliente dentro de 30 dias', () => {
+    const grupos = agruparGruposMedicaoPorMtr([
+      row({
+        coleta_id: 'c1',
+        mtr_id: 'm1',
+        mtr_numero: '100/2026',
+        faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        data_execucao: '2026-05-01',
+      }),
+      row({
+        coleta_id: 'c2',
+        mtr_id: 'm2',
+        mtr_numero: '200/2026',
+        faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        data_execucao: '2026-05-20',
+      }),
+    ])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0]?.linhas).toHaveLength(2)
+    expect(grupos[0]?.mtr_numero).toBe('2 MTRs')
+  })
+
+  it('separa dois lotes quando lançamentos do cliente passam de 30 dias', () => {
+    const grupos = agruparGruposMedicaoPorMtr([
+      row({
+        coleta_id: 'c1',
+        faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        data_execucao: '2026-04-01',
+      }),
+      row({
+        coleta_id: 'c2',
+        faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        data_execucao: '2026-05-10',
+      }),
+    ])
+    expect(grupos).toHaveLength(2)
+    expect(grupos[0]?.linhas).toHaveLength(1)
+    expect(grupos[1]?.linhas).toHaveLength(1)
   })
 })
 

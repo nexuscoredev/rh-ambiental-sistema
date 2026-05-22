@@ -35,7 +35,7 @@ function tituloTipo(t: TipoTicket): string {
 }
 
 function formatPeso(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(Number(n))) return '—'
+  if (n == null || Number.isNaN(Number(n)) || Number(n) === 0) return '—'
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

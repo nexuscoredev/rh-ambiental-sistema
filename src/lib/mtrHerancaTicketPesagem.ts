@@ -85,6 +85,17 @@ function linhasPesagemFromListaMtr(
     }))
     .filter((l) => l.texto.trim());
 
+  const topo = tipoResiduoTopo.trim();
+  if (
+    topo &&
+    linhas.length === 1 &&
+    lista.length === 1 &&
+    !lista[0]!.caracterizacao.trim() &&
+    linhas[0]!.texto.trim() === lista[0]!.estado_fisico.trim()
+  ) {
+    return [{ ...linhaVaziaResiduoPesagem(), texto: topo }];
+  }
+
   return linhas.length > 0 ? linhas : [linhaVaziaResiduoPesagem()];
 }
 

@@ -61,7 +61,7 @@ const cardStyle: CSSProperties = {
 }
 
 function formatPesoBr(n: number | null | undefined): string {
-  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—'
+  if (n === null || n === undefined || Number.isNaN(Number(n)) || Number(n) === 0) return '—'
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

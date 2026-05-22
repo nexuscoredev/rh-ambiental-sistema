@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   coletasComFretePorMtr,
+  diasAbsolutosEntreDatasIso,
   montarLinhasRelatorioMedicao,
   totaisRelatorioMedicao,
   vencimentoRelatorioMedicao,
@@ -73,6 +74,13 @@ const contrato = {
     },
   ],
 }
+
+describe('diasAbsolutosEntreDatasIso', () => {
+  it('calcula diferença em dias de calendário', () => {
+    expect(diasAbsolutosEntreDatasIso('2026-04-01', '2026-05-01')).toBe(30)
+    expect(diasAbsolutosEntreDatasIso('2026-04-01', '2026-05-02')).toBe(31)
+  })
+})
 
 describe('montarLinhasRelatorioMedicao', () => {
   it('calcula total = peso × taxa + frete (modelo impresso)', () => {

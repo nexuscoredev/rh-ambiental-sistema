@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  enriquecerClienteEnderecoAutofill,
+  inferirCidadeEstadoEnderecoTexto,
   montarCidadeUfCliente,
   parseCidadeUfCampoTopo,
   patchCidadeEnderecoGeradorDesdeCliente,
@@ -18,6 +20,32 @@ describe('mtrCadastroClienteAutofill', () => {
       estado: 'SP',
       combinado: 'Campinas — SP',
     })
+  })
+
+  it('infere cidade e UF do endereço de coleta', () => {
+    expect(
+      inferirCidadeEstadoEnderecoTexto(
+        'Rua X, 100 — CEP 18190-000, Bairro Centro, Araçariguama, SP'
+      )
+    ).toEqual({ cidade: 'Araçariguama', estado: 'SP' })
+  })
+
+  it('enriquece cadastro quando cidade/UF só estão no endereço livre', () => {
+    const r = enriquecerClienteEnderecoAutofill({
+      nome: 'A',
+      razao_social: null,
+      cidade: null,
+      estado: null,
+      cep: null,
+      rua: null,
+      numero: null,
+      complemento: null,
+      bairro: null,
+      endereco_coleta: 'Av. Principal, 50, Jundiaí — SP',
+    })
+    expect(r.cidade).toBe('Jundiaí')
+    expect(r.estado).toBe('SP')
+    expect(montarCidadeUfCliente(r)).toBe('Jundiaí — SP')
   })
 
   it('preenche somente campos vazios', () => {

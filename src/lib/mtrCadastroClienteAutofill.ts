@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isMissingClienteContratoColumnsError } from './clienteContratoCadastro'
+import { MTR_PROGRAMACAO_SELECT, type ProgramacaoMtrRow } from './mtrProgramacoesFetch'
 
 export type ClienteEnderecoAutofill = {
   nome: string | null
@@ -14,9 +14,13 @@ export type ClienteEnderecoAutofill = {
   endereco_coleta: string | null
 }
 
-const SEL_ENDERECO_CONTRATO =
+const SEL_CLIENTE_ENDERECO =
   'id, nome, razao_social, cidade, estado, cep, rua, numero, complemento, bairro, endereco_coleta'
-const SEL_ENDERECO_LEGADO = SEL_ENDERECO_CONTRATO
+
+const UFS_BR = new Set([
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB',
+  'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+])
 
 export function montarCidadeUfCliente(row: {
   cidade?: string | null
@@ -26,6 +30,52 @@ export function montarCidadeUfCliente(row: {
   const uf = row.estado?.trim()
   if (c && uf) return `${c} — ${uf}`
   return c || uf || ''
+}
+
+/** Tenta extrair município e UF de `endereco_coleta` (planilha / texto livre). */
+export function inferirCidadeEstadoEnderecoTexto(texto: string): { cidade: string; estado: string } {
+  const t = texto.trim().replace(/\s+/g, ' ')
+  if (!t) return { cidade: '', estado: '' }
+
+  const partes = t
+    .split(/[,;]/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (partes.length >= 2) {
+    const ultimo = partes[partes.length - 1]!
+    const penultimo = partes[partes.length - 2]!
+    const soUf = /^([A-Za-z]{2})$/i.exec(ultimo)
+    if (soUf && UFS_BR.has(soUf[1]!.toUpperCase())) {
+      return { cidade: penultimo, estado: soUf[1]!.toUpperCase() }
+    }
+    const comb = /^(.+?)\s*[—–\-/]\s*([A-Za-z]{2})$/i.exec(ultimo)
+    if (comb && UFS_BR.has(comb[2]!.toUpperCase())) {
+      return { cidade: comb[1]!.trim(), estado: comb[2]!.toUpperCase() }
+    }
+  }
+
+  const fim = /([^,]+?)\s*[—–\-]\s*([A-Za-z]{2})\s*$/i.exec(t)
+  if (fim && UFS_BR.has(fim[2]!.toUpperCase())) {
+    return { cidade: fim[1]!.trim(), estado: fim[2]!.toUpperCase() }
+  }
+
+  return { cidade: '', estado: '' }
+}
+
+/** Preenche `cidade`/`estado` vazios a partir do endereço de coleta. */
+export function enriquecerClienteEnderecoAutofill(
+  row: ClienteEnderecoAutofill
+): ClienteEnderecoAutofill {
+  let cidade = (row.cidade ?? '').trim()
+  let estado = (row.estado ?? '').trim()
+  if (cidade && estado) return { ...row, cidade, estado }
+
+  const inferido = inferirCidadeEstadoEnderecoTexto(row.endereco_coleta ?? '')
+  if (!cidade && inferido.cidade) cidade = inferido.cidade
+  if (!estado && inferido.estado) estado = inferido.estado
+
+  return { ...row, cidade: cidade || row.cidade, estado: estado || row.estado }
 }
 
 /** Interpreta o campo combinado do topo («Município — UF»). */
@@ -38,8 +88,8 @@ export function parseCidadeUfCampoTopo(valor: string): {
   if (!t) return { cidade: '', estado: '', combinado: '' }
   const m = t.match(/^(.+?)\s*[—–-]\s*([A-Za-z]{2})\s*$/u)
   if (m) {
-    const cidade = m[1].trim()
-    const estado = m[2].trim().toUpperCase()
+    const cidade = m[1]!.trim()
+    const estado = m[2]!.trim().toUpperCase()
     return { cidade, estado, combinado: `${cidade} — ${estado}` }
   }
   return { cidade: t, estado: '', combinado: t }
@@ -64,15 +114,41 @@ export async function fetchClienteEnderecoAutofill(
   const id = clienteId.trim()
   if (!id) return null
 
-  let res = await client.from('clientes').select(SEL_ENDERECO_CONTRATO).eq('id', id).maybeSingle()
-  if (res.error && isMissingClienteContratoColumnsError(res.error)) {
-    res = await client.from('clientes').select(SEL_ENDERECO_LEGADO).eq('id', id).maybeSingle()
+  const { data, error } = await client
+    .from('clientes')
+    .select(SEL_CLIENTE_ENDERECO)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !data) {
+    if (error && import.meta.env?.DEV) {
+      console.debug('[MTR] endereço cliente:', error.message)
+    }
+    return null
   }
-  if (res.error || !res.data) return null
-  return res.data as ClienteEnderecoAutofill
+  return enriquecerClienteEnderecoAutofill(data as ClienteEnderecoAutofill)
 }
 
-/** Programação sem `cliente_id` → tenta localizar pelo nome/razão social no cadastro. */
+export async function buscarProgramacaoMtrPorId(
+  client: SupabaseClient,
+  programacaoId: string
+): Promise<ProgramacaoMtrRow | null> {
+  const id = programacaoId.trim()
+  if (!id) return null
+  const { data, error } = await client
+    .from('programacoes')
+    .select(MTR_PROGRAMACAO_SELECT)
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !data) return null
+  return data as ProgramacaoMtrRow
+}
+
+function normalizarNomeBuscaCliente(nome: string): string {
+  return nome.trim().replace(/%/g, '')
+}
+
+/** Programação sem `cliente_id` → localiza pelo nome/razão social no cadastro. */
 export async function resolverClienteIdProgramacaoMtr(
   client: SupabaseClient,
   programacao: { cliente_id?: string | null; cliente?: string | null }
@@ -80,14 +156,28 @@ export async function resolverClienteIdProgramacaoMtr(
   const direto = (programacao.cliente_id ?? '').trim()
   if (direto) return direto
 
-  const nome = (programacao.cliente ?? '').trim()
+  const nome = normalizarNomeBuscaCliente(programacao.cliente ?? '')
   if (!nome) return null
 
   const tentativas = [
     () => client.from('clientes').select('id').eq('nome', nome).limit(1).maybeSingle(),
     () => client.from('clientes').select('id').eq('razao_social', nome).limit(1).maybeSingle(),
+    () => client.from('clientes').select('id').ilike('nome', nome).limit(1).maybeSingle(),
+    () => client.from('clientes').select('id').ilike('razao_social', nome).limit(1).maybeSingle(),
     () =>
-      client.from('clientes').select('id').ilike('nome', nome).limit(1).maybeSingle(),
+      client
+        .from('clientes')
+        .select('id')
+        .ilike('nome', `%${nome}%`)
+        .limit(1)
+        .maybeSingle(),
+    () =>
+      client
+        .from('clientes')
+        .select('id')
+        .ilike('razao_social', `%${nome}%`)
+        .limit(1)
+        .maybeSingle(),
   ]
 
   for (const fn of tentativas) {
@@ -118,8 +208,9 @@ export function patchCidadeEnderecoGeradorDesdeCliente(
   gerador?: GeradorCidadePatch
 } {
   const somenteVazios = opts?.somenteVazios !== false
-  const cidadeCad = montarCidadeUfCliente(row)
-  const enderecoCad = montarEnderecoLinhaCliente(row)
+  const enriquecido = enriquecerClienteEnderecoAutofill(row)
+  const cidadeCad = montarCidadeUfCliente(enriquecido)
+  const enderecoCad = montarEnderecoLinhaCliente(enriquecido)
   const out: {
     cidadeTopo?: string
     endereco?: string
@@ -135,8 +226,8 @@ export function patchCidadeEnderecoGeradorDesdeCliente(
 
   const g: GeradorCidadePatch = { ...atual.gerador }
   let mudou = false
-  const cidadeG = (row.cidade ?? '').trim()
-  const estadoG = (row.estado ?? '').trim()
+  const cidadeG = (enriquecido.cidade ?? '').trim()
+  const estadoG = (enriquecido.estado ?? '').trim()
   if (cidadeG && (!somenteVazios || !(g.cidade ?? '').trim())) {
     g.cidade = cidadeG
     mudou = true
@@ -145,12 +236,12 @@ export function patchCidadeEnderecoGeradorDesdeCliente(
     g.estado = estadoG
     mudou = true
   }
-  const bairroG = (row.bairro ?? '').trim()
+  const bairroG = (enriquecido.bairro ?? '').trim()
   if (bairroG && (!somenteVazios || !(g.bairro ?? '').trim())) {
     g.bairro = bairroG
     mudou = true
   }
-  const cepG = (row.cep ?? '').trim()
+  const cepG = (enriquecido.cep ?? '').trim()
   if (cepG && (!somenteVazios || !(g.cep ?? '').trim())) {
     g.cep = cepG
     mudou = true

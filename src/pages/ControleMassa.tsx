@@ -645,7 +645,12 @@ function resolverColetaContexto(
 }
 
 function formatarNumero(valor?: number | null) {
-  if (valor === null || valor === undefined || Number.isNaN(Number(valor))) {
+  if (
+    valor === null ||
+    valor === undefined ||
+    Number.isNaN(Number(valor)) ||
+    Number(valor) === 0
+  ) {
     return "-";
   }
 

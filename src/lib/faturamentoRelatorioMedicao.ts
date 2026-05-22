@@ -52,16 +52,38 @@ const MESES_PT = [
   'dezembro',
 ]
 
+/** Janela para um único relatório de medição por cliente (dias de calendário). */
+export const JANELA_CONSOLIDACAO_RELATORIO_MEDICAO_DIAS = 30
+
 function isoDataLinha(row: FaturamentoResumoViewRow): string {
   const raw = row.data_execucao || row.data_agendada || row.created_at
   if (!raw) return ''
   return raw.includes('T') ? raw.slice(0, 10) : raw.slice(0, 10)
 }
 
-function parseIso(iso: string): Date | null {
+/** Data de lançamento operacional da coleta (pesagem / execução). */
+export function dataLancamentoColetaMedicao(
+  row: Pick<FaturamentoResumoViewRow, 'data_execucao' | 'data_agendada' | 'created_at'>
+): string {
+  return isoDataLinha(row as FaturamentoResumoViewRow)
+}
+
+export function parseIsoDataMedicao(iso: string): Date | null {
   if (iso.length < 10) return null
   const d = new Date(`${iso.slice(0, 10)}T12:00:00`)
   return Number.isFinite(d.getTime()) ? d : null
+}
+
+function parseIso(iso: string): Date | null {
+  return parseIsoDataMedicao(iso)
+}
+
+/** Diferença em dias de calendário entre duas datas ISO (YYYY-MM-DD). */
+export function diasAbsolutosEntreDatasIso(isoA: string, isoB: string): number {
+  const a = parseIsoDataMedicao(isoA)
+  const b = parseIsoDataMedicao(isoB)
+  if (!a || !b) return Number.MAX_SAFE_INTEGER
+  return Math.abs(Math.round((b.getTime() - a.getTime()) / 86_400_000))
 }
 
 /** Primeira coleta de cada MTR (por data) recebe frete + equipamentos no relatório. */

@@ -1,7 +1,9 @@
 /**
  * Preenche MTR a partir do cadastro do cliente (veículos, equipamentos, resíduos de contrato).
  */
+import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  isMissingClienteContratoColumnsError,
   parseEquipamentosContratoJsonb,
   parseResiduosContratoJsonb,
   parseVeiculosContratoJsonb,
@@ -14,6 +16,8 @@ import {
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from './clienteContratoCadastro'
+import { resolverClienteIdProgramacaoMtr } from './mtrCadastroClienteAutofill'
+import type { ProgramacaoMtrRow } from './mtrProgramacoesFetch'
 import {
   linhaVaziaResiduoPesagem,
   SEPARADOR_RESIDUOS_TEXTO,
@@ -121,6 +125,89 @@ export function residuoDetalhesLimpo(): MtrResiduoDetalhesCampos {
     quantidade_aproximada: '',
     onu: '',
   }
+}
+
+const MTR_SEL_CLIENTE_CONTRATO =
+  'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, veiculos_contrato, equipamentos_contrato, residuos_contrato, frequencia_coleta'
+
+const MTR_SEL_CLIENTE_CONTRATO_LEGADO =
+  'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, frequencia_coleta'
+
+/** Carrega linha do cliente com colunas de contrato (resíduos, veículos, equipamentos). */
+export async function fetchClienteRowContratoMtr(
+  client: SupabaseClient,
+  clienteId: string
+): Promise<{ row: ClienteRowContratoMtr | null; error: string | null }> {
+  const id = clienteId.trim()
+  if (!id) return { row: null, error: null }
+
+  let res = await client.from('clientes').select(MTR_SEL_CLIENTE_CONTRATO).eq('id', id).maybeSingle()
+  if (res.error && isMissingClienteContratoColumnsError(res.error)) {
+    res = await client.from('clientes').select(MTR_SEL_CLIENTE_CONTRATO_LEGADO).eq('id', id).maybeSingle()
+  }
+  if (res.error) return { row: null, error: res.error.message }
+  return { row: (res.data as ClienteRowContratoMtr) ?? null, error: null }
+}
+
+function linhaResiduoMtrTemDadosPreenchidos(l: MtrResiduoDetalhesCampos): boolean {
+  return Boolean(
+    l.caracterizacao.trim() ||
+      l.estado_fisico.trim() ||
+      l.acondicionamento.trim() ||
+      l.quantidade_aproximada.trim() ||
+      (l.fonte_origem.trim() && l.fonte_origem.trim() !== 'Industrial') ||
+      l.onu.trim()
+  )
+}
+
+function mesclarLinhaResiduoMtrComModelo(
+  existente: MtrResiduoDetalhesCampos | undefined,
+  modelo: MtrResiduoDetalhesCampos
+): MtrResiduoDetalhesCampos {
+  if (!existente || !linhaResiduoMtrTemDadosPreenchidos(existente)) return modelo
+  return {
+    fonte_origem: existente.fonte_origem.trim() || modelo.fonte_origem,
+    caracterizacao: existente.caracterizacao.trim() || modelo.caracterizacao,
+    estado_fisico: existente.estado_fisico.trim() || modelo.estado_fisico,
+    acondicionamento: existente.acondicionamento.trim() || modelo.acondicionamento,
+    quantidade_aproximada: existente.quantidade_aproximada.trim() || modelo.quantidade_aproximada,
+    onu: existente.onu.trim() || modelo.onu,
+  }
+}
+
+/**
+ * Garante uma linha de descrição por resíduo cadastrado no cliente (secção 2 da MTR).
+ * Preserva dados já preenchidos na MTR; completa linhas em falta a partir do contrato.
+ */
+export function expandirListaResiduosMtrParaContrato(
+  listaAtual: MtrResiduoDetalhesCampos[],
+  residuosContrato: ResiduoContratoItem[],
+  acondicionamentoPadrao: string
+): MtrResiduoDetalhesCampos[] {
+  const validos = residuosContrato.filter(residuoContratoTemConteudo)
+  if (validos.length === 0) {
+    return listaAtual.length > 0 ? listaAtual : [residuoDetalhesVazio()]
+  }
+
+  const modelo = residuosContratoParaListaDetalhesMtr(validos, acondicionamentoPadrao)
+  if (modelo.length <= 1) {
+    const unica = mesclarLinhaResiduoMtrComModelo(listaAtual[0], modelo[0]!)
+    return [unica]
+  }
+
+  return modelo.map((mod, i) => mesclarLinhaResiduoMtrComModelo(listaAtual[i], mod))
+}
+
+/** Resolve cliente da programação e devolve snapshot de contrato. */
+export async function fetchContratoClienteMtrPorProgramacao(
+  client: SupabaseClient,
+  programacao: ProgramacaoMtrRow | { cliente_id?: string | null; cliente?: string | null }
+): Promise<MtrContratoClienteSnapshot | null> {
+  const clienteId = await resolverClienteIdProgramacaoMtr(client, programacao)
+  if (!clienteId) return null
+  const { row, error } = await fetchClienteRowContratoMtr(client, clienteId)
+  if (error || !row) return null
+  return parseContratoClienteMtr(row)
 }
 
 /** Todos os resíduos do contrato → linhas da secção 2 do manifesto. */

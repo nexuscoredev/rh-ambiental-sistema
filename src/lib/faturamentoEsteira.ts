@@ -1,6 +1,12 @@
 import { supabase } from './supabase'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import {
+  dataLancamentoColetaMedicao,
+  diasAbsolutosEntreDatasIso,
+  formatarDataCurta,
+  JANELA_CONSOLIDACAO_RELATORIO_MEDICAO_DIAS,
+} from './faturamentoRelatorioMedicao'
+import {
   coletaAguardandoImpressaoTicketFaturamento,
   coletaHistoricoFaturamentoEmitido,
   coletaNaFilaAprovacaoTicketFaturamento,
@@ -166,24 +172,34 @@ export function irmaosMesmaMtrNaLista(
   return linhas.filter((r) => (r.mtr_id ?? '').trim() === mid)
 }
 
-/** Algum ticket da mesma MTR ainda está nas etapas 3–5 da esteira de medição. */
+/** Algum ticket do mesmo cliente (janela 30 dias) ainda está nas etapas 3–5 da esteira de medição. */
 export function mtrComIrmaNaEsteiraMedicao(
   row: FaturamentoResumoViewRow,
   linhas: FaturamentoResumoViewRow[]
 ): boolean {
-  return irmaosMesmaMtrNaLista(row, linhas).some(
-    (r) => r.coleta_id !== row.coleta_id && coletaNaEsteiraMedicao(r)
+  return clienteComIrmaNaEsteiraMedicao(row, linhas)
+}
+
+export function clienteComIrmaNaEsteiraMedicao(
+  row: FaturamentoResumoViewRow,
+  linhas: FaturamentoResumoViewRow[]
+): boolean {
+  return linhas.some(
+    (r) =>
+      r.coleta_id !== row.coleta_id &&
+      coletasMesmoGrupoMedicaoCliente(row, r) &&
+      coletaNaEsteiraMedicao(r)
   )
 }
 
-/** Inclui tickets da MTR que ainda não iniciaram medição mas têm irmão na esteira (evita separar filas). */
+/** Inclui tickets do mesmo lote (cliente + 30 dias) que ainda não iniciaram medição mas têm irmão na esteira. */
 export function coletaPertenceGrupoMedicaoMtr(
   row: FaturamentoResumoViewRow,
   linhas: FaturamentoResumoViewRow[]
 ): boolean {
   if (coletaNaEsteiraMedicao(row)) return true
   if (!row.faturamento_ticket_aprovado_em || coletaHistoricoFaturamentoEmitido(row)) return false
-  return mtrComIrmaNaEsteiraMedicao(row, linhas)
+  return clienteComIrmaNaEsteiraMedicao(row, linhas)
 }
 
 export function coletaLiberadaParaFaturarEsteira(
@@ -240,6 +256,12 @@ export type GrupoMedicaoCliente = {
   cliente_email_nf: string | null
   mtr_id: string | null
   mtr_numero: string
+  /** Primeira data de lançamento do lote (ISO). */
+  periodo_inicio: string
+  /** Última data de lançamento do lote (ISO). */
+  periodo_fim: string
+  /** Ex.: «20/04/2026 a 15/05/2026» ou mês único. */
+  rotulo_periodo: string
   linhas: FaturamentoResumoViewRow[]
 }
 
@@ -249,6 +271,87 @@ export function chaveGrupoMedicaoMtr(row: FaturamentoResumoViewRow): string {
   const cid = row.cliente_id?.trim() || '_'
   const mtr = (row.mtr_id ?? row.mtr_numero ?? row.coleta_id).trim()
   return `${cid}|${mtr}`
+}
+
+/** Mesmo cliente e lançamentos a ≤30 dias de intervalo (mesmo relatório consolidado). */
+export function coletasMesmoGrupoMedicaoCliente(
+  a: FaturamentoResumoViewRow,
+  b: FaturamentoResumoViewRow
+): boolean {
+  const ca = (a.cliente_id ?? '').trim()
+  const cb = (b.cliente_id ?? '').trim()
+  if (!ca || ca !== cb) return false
+  const da = dataLancamentoColetaMedicao(a)
+  const db = dataLancamentoColetaMedicao(b)
+  if (!da || !db) return false
+  return diasAbsolutosEntreDatasIso(da, db) <= JANELA_CONSOLIDACAO_RELATORIO_MEDICAO_DIAS
+}
+
+function rotuloPeriodoGrupoMedicao(inicio: string, fim: string): string {
+  if (!inicio && !fim) return '—'
+  if (!fim || inicio === fim) return formatarDataCurta(inicio)
+  return `${formatarDataCurta(inicio)} a ${formatarDataCurta(fim)}`
+}
+
+function resumoMtrsGrupoMedicao(linhas: FaturamentoResumoViewRow[]): {
+  mtr_id: string | null
+  mtr_numero: string
+} {
+  const numeros = [
+    ...new Set(
+      linhas
+        .map((r) => (r.mtr_numero ?? '').trim())
+        .filter((n) => n && n !== '—')
+    ),
+  ]
+  if (numeros.length === 0) {
+    return { mtr_id: linhas[0]?.mtr_id ?? null, mtr_numero: '—' }
+  }
+  if (numeros.length === 1) {
+    const linha = linhas.find((r) => (r.mtr_numero ?? '').trim() === numeros[0])
+    return {
+      mtr_id: linha?.mtr_id ?? linhas[0]?.mtr_id ?? null,
+      mtr_numero: numeros[0]!,
+    }
+  }
+  return {
+    mtr_id: null,
+    mtr_numero: `${numeros.length} MTRs`,
+  }
+}
+
+function clusterizarLinhasCliente30Dias(
+  linhasCliente: FaturamentoResumoViewRow[]
+): FaturamentoResumoViewRow[][] {
+  const ordenada = [...linhasCliente].sort((a, b) => {
+    const da = dataLancamentoColetaMedicao(a)
+    const db = dataLancamentoColetaMedicao(b)
+    if (da !== db) return da.localeCompare(db)
+    return String(a.numero_coleta ?? a.numero).localeCompare(String(b.numero_coleta ?? b.numero))
+  })
+
+  const lotes: FaturamentoResumoViewRow[][] = []
+  let lote: FaturamentoResumoViewRow[] = []
+  let ancora = ''
+
+  for (const row of ordenada) {
+    const d = dataLancamentoColetaMedicao(row)
+    if (!lote.length) {
+      lote = [row]
+      ancora = d
+      continue
+    }
+    const diasDesdeAncora = diasAbsolutosEntreDatasIso(ancora, d)
+    if (diasDesdeAncora > JANELA_CONSOLIDACAO_RELATORIO_MEDICAO_DIAS) {
+      lotes.push(lote)
+      lote = [row]
+      ancora = d
+    } else {
+      lote.push(row)
+    }
+  }
+  if (lote.length) lotes.push(lote)
+  return lotes
 }
 
 /** Etapa única do grupo: todos os tickets da mesma MTR avançam juntos (relatório consolidado). */
@@ -269,37 +372,51 @@ function ordenarLinhasGrupoMedicao(a: FaturamentoResumoViewRow, b: FaturamentoRe
   return na.localeCompare(nb, 'pt-BR', { numeric: true })
 }
 
-/** Um relatório por MTR (vários tickets/resíduos na mesma tabela e PDF). */
+/**
+ * Relatório de medição consolidado: mesmo cliente e lançamentos num intervalo de até 30 dias.
+ * Várias MTRs/tickets entram na mesma tabela e no mesmo PDF.
+ */
 export function agruparGruposMedicaoPorMtr(
   linhas: FaturamentoResumoViewRow[]
 ): GrupoMedicaoCliente[] {
-  const map = new Map<string, GrupoMedicaoCliente>()
-  for (const row of linhas) {
-    if (!coletaPertenceGrupoMedicaoMtr(row, linhas)) continue
+  const elegiveis = linhas.filter((r) => coletaPertenceGrupoMedicaoMtr(r, linhas))
+  const porCliente = new Map<string, FaturamentoResumoViewRow[]>()
+  for (const row of elegiveis) {
     const cid = row.cliente_id?.trim()
     if (!cid) continue
-    const k = chaveGrupoMedicaoMtr(row)
-    let g = map.get(k)
-    if (!g) {
-      g = {
+    const lista = porCliente.get(cid) ?? []
+    lista.push(row)
+    porCliente.set(cid, lista)
+  }
+
+  const grupos: GrupoMedicaoCliente[] = []
+  for (const [cid, listaCliente] of porCliente) {
+    const lotes = clusterizarLinhasCliente30Dias(listaCliente)
+    for (const lote of lotes) {
+      if (lote.length === 0) continue
+      const datas = lote.map((r) => dataLancamentoColetaMedicao(r)).filter((d) => d.length >= 10)
+      const inicio = [...datas].sort()[0] ?? ''
+      const fim = [...datas].sort().at(-1) ?? inicio
+      const mtrResumo = resumoMtrsGrupoMedicao(lote)
+      const ref = lote[0]!
+      grupos.push({
         cliente_id: cid,
-        cliente_nome: row.cliente_nome || row.cliente_razao_social || '—',
-        cliente_email_nf: row.cliente_email_nf ?? null,
-        mtr_id: row.mtr_id ?? null,
-        mtr_numero: (row.mtr_numero ?? '—').trim() || '—',
-        linhas: [],
-      }
-      map.set(k, g)
+        cliente_nome: ref.cliente_nome || ref.cliente_razao_social || '—',
+        cliente_email_nf: ref.cliente_email_nf ?? null,
+        mtr_id: mtrResumo.mtr_id,
+        mtr_numero: mtrResumo.mtr_numero,
+        periodo_inicio: inicio,
+        periodo_fim: fim,
+        rotulo_periodo: rotuloPeriodoGrupoMedicao(inicio, fim),
+        linhas: [...lote].sort(ordenarLinhasGrupoMedicao),
+      })
     }
-    g.linhas.push(row)
   }
-  for (const g of map.values()) {
-    g.linhas.sort(ordenarLinhasGrupoMedicao)
-  }
-  return [...map.values()].sort((a, b) => {
+
+  return grupos.sort((a, b) => {
     const c = a.cliente_nome.localeCompare(b.cliente_nome, 'pt-BR')
     if (c !== 0) return c
-    return a.mtr_numero.localeCompare(b.mtr_numero, 'pt-BR')
+    return a.periodo_inicio.localeCompare(b.periodo_inicio, 'pt-BR')
   })
 }
 
@@ -344,34 +461,13 @@ export function agruparGruposNfBoletoPorMtr(
   })
 }
 
-/** @deprecated Preferir `agruparGruposMedicaoPorMtr` (consolidado por MTR). */
+/** @deprecated Preferir `agruparGruposMedicaoPorMtr` (consolidado cliente + 30 dias). */
 export function agruparPorClienteMedicao(
   linhas: FaturamentoResumoViewRow[],
   filtro?: (row: FaturamentoResumoViewRow) => boolean
 ): GrupoMedicaoCliente[] {
-  const map = new Map<string, GrupoMedicaoCliente>()
-  for (const row of linhas) {
-    if (filtro && !filtro(row)) continue
-    const cid = row.cliente_id?.trim()
-    if (!cid) continue
-    let g = map.get(cid)
-    if (!g) {
-      g = {
-        cliente_id: cid,
-        cliente_nome: row.cliente_nome || row.cliente_razao_social || '—',
-        cliente_email_nf: row.cliente_email_nf ?? null,
-        mtr_id: row.mtr_id ?? null,
-        mtr_numero: (row.mtr_numero ?? '—').trim() || '—',
-        linhas: [],
-      }
-      map.set(cid, g)
-    }
-    g.linhas.push(row)
-  }
-  for (const g of map.values()) {
-    g.linhas.sort(ordenarLinhasGrupoMedicao)
-  }
-  return [...map.values()].sort((a, b) => a.cliente_nome.localeCompare(b.cliente_nome, 'pt-BR'))
+  const filtradas = filtro ? linhas.filter(filtro) : linhas
+  return agruparGruposMedicaoPorMtr(filtradas)
 }
 
 async function atualizarEsteiraColeta(
@@ -390,43 +486,69 @@ async function atualizarEsteiraColeta(
 
 const ESTEIRA_STATUS_FIM = new Set(['LIBERADO_FINANCEIRO', 'FINALIZADO'])
 
-/** Expande IDs para todos os tickets da mesma MTR ainda na esteira (não finalizados). */
+const VW_EXPANDIR_MEDICAO =
+  'coleta_id, cliente_id, data_execucao, data_agendada, created_at, faturamento_esteira_status, faturamento_registro_status, fluxo_status, etapa_operacional, faturamento_ticket_aprovado_em'
+
+function coletaElegivelExpandirEsteiraMedicao(r: FaturamentoResumoViewRow): boolean {
+  const st = (r.faturamento_esteira_status ?? '').trim().toUpperCase()
+  if (ESTEIRA_STATUS_FIM.has(st)) return false
+  if (coletaHistoricoFaturamentoEmitido(r)) return false
+  if (!r.faturamento_ticket_aprovado_em) return false
+  return true
+}
+
+/** Expande IDs para todos os tickets do mesmo lote de medição (cliente + ≤30 dias de lançamento). */
 export async function expandirColetaIdsEsteiraMesmaMtr(
   coletaIds: string[]
 ): Promise<{ ok: true; ids: string[] } | { ok: false; message: string }> {
   const base = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
   if (base.length === 0) return { ok: false, message: 'Nenhuma coleta selecionada.' }
 
-  const mtrIds = new Set<string>()
-  for (const id of base) {
-    const { data, error } = await supabase.from('coletas').select('mtr_id').eq('id', id).maybeSingle()
-    if (error) {
-      return { ok: false, message: error.message || 'Não foi possível localizar a coleta.' }
-    }
-    const mid = (data?.mtr_id ?? '').trim()
-    if (mid) mtrIds.add(mid)
+  const { data: seeds, error: errSeeds } = await supabase
+    .from('vw_faturamento_resumo')
+    .select(VW_EXPANDIR_MEDICAO)
+    .in('coleta_id', base)
+
+  if (errSeeds) {
+    return { ok: false, message: errSeeds.message || 'Não foi possível localizar as coletas.' }
+  }
+
+  const seedRows = (seeds ?? []) as FaturamentoResumoViewRow[]
+  const clienteIds = [...new Set(seedRows.map((r) => (r.cliente_id ?? '').trim()).filter(Boolean))]
+  if (clienteIds.length === 0) {
+    return { ok: true, ids: base }
+  }
+
+  const { data: todas, error: errTodas } = await supabase
+    .from('vw_faturamento_resumo')
+    .select(VW_EXPANDIR_MEDICAO)
+    .in('cliente_id', clienteIds)
+    .not('faturamento_ticket_aprovado_em', 'is', null)
+
+  if (errTodas) {
+    return { ok: false, message: errTodas.message || 'Não foi possível localizar tickets do cliente.' }
+  }
+
+  const porCliente = new Map<string, FaturamentoResumoViewRow[]>()
+  for (const r of (todas ?? []) as FaturamentoResumoViewRow[]) {
+    if (!coletaElegivelExpandirEsteiraMedicao(r)) continue
+    const cid = (r.cliente_id ?? '').trim()
+    if (!cid) continue
+    const lista = porCliente.get(cid) ?? []
+    lista.push(r)
+    porCliente.set(cid, lista)
   }
 
   const all = new Set(base)
-  for (const mid of mtrIds) {
-    const { data: rows, error } = await supabase
-      .from('vw_faturamento_resumo')
-      .select(
-        'coleta_id, faturamento_esteira_status, faturamento_registro_status, fluxo_status, etapa_operacional'
-      )
-      .eq('mtr_id', mid)
-      .not('faturamento_ticket_aprovado_em', 'is', null)
-
-    if (error) {
-      return { ok: false, message: error.message || 'Não foi possível localizar tickets da MTR.' }
-    }
-    for (const r of rows ?? []) {
-      const rid = (r.coleta_id ?? '').trim()
-      if (!rid) continue
-      const st = (r.faturamento_esteira_status ?? '').trim().toUpperCase()
-      if (ESTEIRA_STATUS_FIM.has(st)) continue
-      if (coletaHistoricoFaturamentoEmitido(r as FaturamentoResumoViewRow)) continue
-      all.add(rid)
+  for (const seed of seedRows) {
+    const cid = (seed.cliente_id ?? '').trim()
+    if (!cid) continue
+    const lista = porCliente.get(cid) ?? []
+    const lotes = clusterizarLinhasCliente30Dias(lista)
+    const loteSeed = lotes.find((l) => l.some((r) => r.coleta_id === seed.coleta_id))
+    if (!loteSeed) continue
+    for (const r of loteSeed) {
+      if (coletaElegivelExpandirEsteiraMedicao(r)) all.add(r.coleta_id)
     }
   }
 

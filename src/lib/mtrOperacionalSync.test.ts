@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  linhasResiduoMtrParaSync,
   montarPatchColetaDesdeMtr,
+  patchDadosComunsColetaDesdeMtr,
   resolverLinhaMtrParaColeta,
 } from './mtrOperacionalSync'
 import { linhaVaziaResiduoPesagem } from './residuosPesagem'
@@ -35,6 +37,29 @@ describe('resolverLinhaMtrParaColeta', () => {
       true
     )
     expect(linha.texto).toContain('Lodo B')
+  })
+})
+
+describe('linhasResiduoMtrParaSync', () => {
+  it('usa tipo_residuo do topo quando detalhes vazios', () => {
+    const linhas = linhasResiduoMtrParaSync({
+      tipo_residuo: 'Lodo industrial',
+      detalhes: {},
+    })
+    expect(linhas[0]?.texto).toBe('Lodo industrial')
+  })
+})
+
+describe('patchDadosComunsColetaDesdeMtr', () => {
+  it('espelha cliente, endereço e cidade', () => {
+    const p = patchDadosComunsColetaDesdeMtr({
+      cliente: 'ACME',
+      endereco: 'Rua 1',
+      cidade: 'Campinas — SP',
+    })
+    expect(p.cliente).toBe('ACME')
+    expect(p.endereco).toBe('Rua 1')
+    expect(p.cidade).toBe('Campinas — SP')
   })
 })
 

@@ -47,19 +47,47 @@ export function unidadeMedidaEhTonelada(unidade: string | null | undefined): boo
 /** Limite: abaixo disso, faturamento mínimo legado com unidade ton era em toneladas (não kg). */
 const FATURAMENTO_MINIMO_LEGADO_TON_MAX = 100
 
+/**
+ * Mínimo legado gravado em toneladas (1, 10, 12…) → kg para exibição/gravação.
+ * Com unidade já em kg, só converte valores típicos de ton (≤ 20) para não confundir 50 kg reais.
+ */
+const FATURAMENTO_MINIMO_TON_LEGADO_COM_UNIDADE_KG_MAX = 20
+
+export function faturamentoMinimoLegadoParaKgCampo(
+  minimoRaw: string,
+  unidadeRaw: string
+): string {
+  const t = minimoRaw.trim()
+  const minimoNum = parseNumeroPeso(t)
+  if (minimoNum == null || minimoNum <= 0) return t
+
+  const unidadeTon = unidadeMedidaEhTonelada(unidadeRaw)
+  const unidadeKg =
+    (unidadeRaw.trim().toLowerCase() === 'kg' || !unidadeRaw.trim()) && !unidadeTon
+
+  if (unidadeTon && minimoNum < FATURAMENTO_MINIMO_LEGADO_TON_MAX) {
+    return pesoParaCampo(minimoNum * 1000)
+  }
+
+  if (
+    unidadeKg &&
+    minimoNum >= 1 &&
+    minimoNum <= FATURAMENTO_MINIMO_TON_LEGADO_COM_UNIDADE_KG_MAX &&
+    minimoNum < 1000
+  ) {
+    return pesoParaCampo(minimoNum * 1000)
+  }
+
+  return t || pesoParaCampo(minimoNum)
+}
+
 /** Converte contrato legado em tonelada para kg (valor R$/ton → R$/kg; mínimo em ton → kg na MTR). */
 export function normalizarResiduoContratoParaKg(item: ResiduoContratoItem): ResiduoContratoItem {
   const unidadeRaw = item.unidade_medida.trim()
-  const minimoNum = parseNumeroPeso(item.faturamento_minimo)
-  let faturamentoMinimo = item.faturamento_minimo
-  if (
-    unidadeMedidaEhTonelada(unidadeRaw) &&
-    minimoNum != null &&
-    minimoNum > 0 &&
-    minimoNum < FATURAMENTO_MINIMO_LEGADO_TON_MAX
-  ) {
-    faturamentoMinimo = pesoParaCampo(minimoNum * 1000)
-  }
+  const faturamentoMinimo = faturamentoMinimoLegadoParaKgCampo(
+    item.faturamento_minimo,
+    unidadeRaw
+  )
 
   if (!unidadeMedidaEhTonelada(unidadeRaw)) {
     return {
@@ -305,13 +333,17 @@ export function parseResiduosContratoJsonb(
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.map((row) => {
       const o = row as Record<string, unknown>
+      const unidadeRaw = asTextoFormulario(o.unidade_medida).trim()
       return normalizarResiduoContratoParaKg({
         tipo_residuo: asTextoFormulario(o.tipo_residuo).trim(),
         classificacao: asTextoFormulario(o.classificacao).trim(),
-        unidade_medida: asTextoFormulario(o.unidade_medida).trim(),
+        unidade_medida: unidadeRaw,
         valor: moedaParaCampo(o.valor),
         frequencia_coleta: asTextoFormulario(o.frequencia_coleta).trim(),
-        faturamento_minimo: pesoParaCampo(o.faturamento_minimo),
+        faturamento_minimo: faturamentoMinimoLegadoParaKgCampo(
+          pesoParaCampo(o.faturamento_minimo),
+          unidadeRaw
+        ),
       })
     })
   }

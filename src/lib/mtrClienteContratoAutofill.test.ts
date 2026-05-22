@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizarResiduoContratoParaKg } from './clienteContratoCadastro'
 import {
   dividirTextoMultiResiduo,
+  expandirListaResiduosMtrParaContrato,
   listaResiduosParaDocumentoMtr,
   parseContratoClienteMtr,
   residuosContratoParaLinhasPesagem,
@@ -46,6 +47,25 @@ describe('mtrClienteContratoAutofill', () => {
     })
     expect(c.residuos).toHaveLength(1)
     expect(residuosContratoParaListaDetalhesMtr(c.residuos, '')[0].caracterizacao).toBe('Classe I')
+  })
+
+  it('expandirListaResiduosMtrParaContrato abre linhas conforme cadastro do cliente', () => {
+    const contrato = parseContratoClienteMtr({
+      residuos_contrato: [
+        { tipo_residuo: 'A', classificacao: 'Sólido', unidade_medida: 'kg' },
+        { tipo_residuo: 'B', classificacao: 'Líquido', unidade_medida: 'kg' },
+        { tipo_residuo: 'C', classificacao: '', unidade_medida: 'kg' },
+      ],
+    }).residuos
+    const expandida = expandirListaResiduosMtrParaContrato(
+      [{ ...residuoDetalhesVazio(), caracterizacao: 'A manual' }],
+      contrato,
+      'BAU'
+    )
+    expect(expandida).toHaveLength(3)
+    expect(expandida[0]?.caracterizacao).toBe('A manual')
+    expect(expandida[1]?.caracterizacao).toBe('B')
+    expect(expandida[2]?.caracterizacao).toBe('C')
   })
 
   it('expande tipo_residuo com pipe em várias linhas na impressão', () => {

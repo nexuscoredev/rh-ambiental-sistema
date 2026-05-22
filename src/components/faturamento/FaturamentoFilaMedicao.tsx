@@ -88,10 +88,7 @@ function GrupoMedicaoCard({
 
   if (linhasColeta.length === 0) return null
 
-  const tituloRelatorio =
-    grupo.mtr_numero && grupo.mtr_numero !== '—'
-      ? `${grupo.cliente_nome} · MTR ${grupo.mtr_numero}`
-      : grupo.cliente_nome
+  const tituloRelatorio = `${grupo.cliente_nome} · ${grupo.rotulo_periodo}`
 
   return (
     <div style={{ ...card, borderLeft: '4px solid #6366f1' }}>
@@ -99,7 +96,8 @@ function GrupoMedicaoCard({
         <div>
           <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>{tituloRelatorio}</div>
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-            {titulo} · {linhasColeta.length} ticket(s) (relatório consolidado)
+            {titulo} · {linhasColeta.length} ticket(s) · até 30 dias de lançamento
+            {grupo.mtr_numero && grupo.mtr_numero !== '—' ? ` · ${grupo.mtr_numero}` : ''}
             {grupo.cliente_email_nf ? ` · ${grupo.cliente_email_nf}` : ''}
           </div>
         </div>
@@ -219,11 +217,11 @@ export function FaturamentoFilaMedicao({
               title: 'Voltar para ajuste de valores',
               message: (
                 <>
-                  MTR <strong>{g.mtr_numero}</strong> · {g.cliente_nome} · {g.linhas.length} ticket(s)
+                  {g.cliente_nome} · {g.rotulo_periodo} · {g.linhas.length} ticket(s)
                 </>
               ),
               details: [
-                'Desfaz relatório de medição, envio por e-mail e aprovação do cliente nesta MTR.',
+                'Desfaz relatório de medição, envio por e-mail e aprovação do cliente neste lote (mesmo cliente, 30 dias).',
                 'A coleta volta para a esteira 2 (Ajuste de valores) para rever os cálculos.',
               ],
               confirmLabel: 'Voltar para ajuste',
@@ -293,7 +291,8 @@ export function FaturamentoFilaMedicao({
           Esteira 3–5 · Medição e aprovação do cliente
         </h2>
         <p style={{ margin: 0, fontSize: '13px', color: '#4c1d95', lineHeight: 1.55 }}>
-          Vários tickets da mesma MTR entram num <strong>único relatório</strong> (tabela e PDF).
+          Tickets do <strong>mesmo cliente</strong> com lançamento em até <strong>30 dias</strong> entram num{' '}
+          <strong>único relatório</strong> (várias MTRs na mesma tabela e PDF).
           Use <strong>Imprimir / PDF</strong> para gerar o documento.
           O envio ao cliente é feito em{' '}
           <Link to="/envio-nf?tipo=medicao">Mala Direta — Medição</Link> (qualquer cliente).
@@ -302,7 +301,7 @@ export function FaturamentoFilaMedicao({
 
       {gruposMedicao.map((g) => (
         <GrupoMedicaoCard
-          key={`med-${g.cliente_id}-${g.mtr_numero}`}
+          key={`med-${g.cliente_id}-${g.periodo_inicio}-${g.periodo_fim}`}
           grupo={g}
           titulo="Relatório de medição pendente"
           esteiraAtiva={esteiraAtiva}
@@ -353,7 +352,7 @@ export function FaturamentoFilaMedicao({
 
       {gruposAprovacao.map((g) => (
         <GrupoMedicaoCard
-          key={`aprov-${g.cliente_id}-${g.mtr_numero}`}
+          key={`aprov-${g.cliente_id}-${g.periodo_inicio}-${g.periodo_fim}`}
           grupo={g}
           titulo="Aguardando aprovação do cliente (e-mail)"
           esteiraAtiva={esteiraAtiva}
@@ -380,8 +379,7 @@ export function FaturamentoFilaMedicao({
                       title: 'Cliente aprovou a medição',
                       message: (
                         <>
-                          {g.cliente_nome} · MTR <strong>{g.mtr_numero}</strong> · {g.linhas.length}{' '}
-                          ticket(s)
+                          {g.cliente_nome} · {g.rotulo_periodo} · {g.linhas.length} ticket(s)
                         </>
                       ),
                       details: [

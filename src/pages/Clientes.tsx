@@ -9,6 +9,7 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../lib/coletasQueryLimits"
 import { sanitizeIlikePattern } from "../lib/sanitizeIlike";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { limparSessionDraftKey, useCadastroFormDraft } from "../lib/useCadastroFormDraft";
+import { buscarEnderecoPorCepBr } from "../lib/cepAutofillBr";
 import { useSessionPersistedState } from "../lib/usePageSessionPersistence";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -1774,6 +1775,32 @@ export default function Clientes() {
     }));
   }
 
+  async function preencherEnderecoPorCep(
+    cep: string,
+    alvo: "coleta" | "faturamento"
+  ): Promise<void> {
+    const end = await buscarEnderecoPorCepBr(cep);
+    if (!end) return;
+    setForm((prev) => {
+      if (alvo === "coleta") {
+        return {
+          ...prev,
+          rua: end.logradouro || prev.rua,
+          bairro: end.bairro || prev.bairro,
+          cidade: end.localidade || prev.cidade,
+          estado: end.uf || prev.estado,
+        };
+      }
+      return {
+        ...prev,
+        rua_faturamento: end.logradouro || prev.rua_faturamento,
+        bairro_faturamento: end.bairro || prev.bairro_faturamento,
+        cidade_faturamento: end.localidade || prev.cidade_faturamento,
+        estado_faturamento: end.uf || prev.estado_faturamento,
+      };
+    });
+  }
+
   function handleResiduoChange(
     index: number,
     campo: keyof ResiduoForm,
@@ -2013,6 +2040,15 @@ export default function Clientes() {
           .maybeSingle();
       }
 
+      if (fullRes.error && contrato && isMissingClienteContratoColumnsError(fullRes.error)) {
+        clienteContratoColDisponivelRef.current = false;
+        fullRes = await supabase
+          .from("clientes")
+          .select(montarClientesSelectPrincipalLegacy(fat, ml, false, statusDatas))
+          .eq("id", cliente.id)
+          .maybeSingle();
+      }
+
       const { data: fullRow, error } = fullRes;
       if (!error && fullRow && typeof fullRow === "object" && fullRow !== null && "id" in fullRow) {
         hydrate(fullRow as Cliente);
@@ -2140,6 +2176,7 @@ export default function Clientes() {
     let usarStatusDatas = clientesStatusDatasColDisponivelRef.current;
     let usarContratoJson = clienteContratoColDisponivelRef.current;
     let statusDatasIgnoradasNoSalvar = false;
+    let contratoJsonIgnoradoNoSalvar = false;
 
     const montarPayloadSalvar = (): Record<string, unknown> => {
       const corpo: Record<string, unknown> = { ...payloadBase };
@@ -2184,9 +2221,12 @@ export default function Clientes() {
     if (response.error && usarContratoJson && isMissingClienteContratoColumnsError(response.error)) {
       clienteContratoColDisponivelRef.current = false;
       usarContratoJson = false;
+      contratoJsonIgnoradoNoSalvar = true;
       response = editingId
         ? await supabase.from("clientes").update(montarPayloadSalvar()).eq("id", editingId)
         : await supabase.from("clientes").insert([montarPayloadSalvar()]);
+    } else if (!response.error && usarContratoJson) {
+      clienteContratoColDisponivelRef.current = true;
     }
 
     const error: PostgrestError | null = response.error;
@@ -2267,6 +2307,21 @@ export default function Clientes() {
           "Cliente salvo, mas as datas «Cliente desde» / «Inativo desde» não foram gravadas.\n\n" +
           "No Supabase (SQL Editor), execute o script:\n" +
           "supabase/sql_editor_clientes_status_datas.sql\n\n" +
+          "Depois recarregue a página e salve novamente.",
+        variant: "warning",
+      });
+    }
+
+    if (
+      contratoJsonIgnoradoNoSalvar &&
+      residuosValidos.some((r) => (r.faturamento_minimo ?? "").trim())
+    ) {
+      await rgAlert({
+        title: "Cliente salvo — contrato/resíduos pendentes",
+        message:
+          "Cliente salvo, mas veículos, equipamentos, resíduos e faturamento mínimo (kg) não foram gravados — falta a coluna residuos_contrato no Supabase.\n\n" +
+          "No SQL Editor, execute a migração:\n" +
+          "supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql\n\n" +
           "Depois recarregue a página e salve novamente.",
         variant: "warning",
       });
@@ -2880,6 +2935,7 @@ export default function Clientes() {
                     name="cep"
                     value={form.cep}
                     onChange={handleInputChange}
+                    onBlur={() => void preencherEnderecoPorCep(form.cep, "coleta")}
                     placeholder="CEP"
                     style={inputStyle}
                   />
@@ -2961,6 +3017,7 @@ export default function Clientes() {
                     name="cep_faturamento"
                     value={form.cep_faturamento}
                     onChange={handleInputChange}
+                    onBlur={() => void preencherEnderecoPorCep(form.cep_faturamento, "faturamento")}
                     placeholder="CEP"
                     style={inputStyle}
                   />

@@ -35,6 +35,18 @@ describe('normalizarResiduoContratoParaKg', () => {
     expect(r.faturamento_minimo).toBe('10.000')
   })
 
+  it('converte mínimo legado 10 com unidade já em kg (ton no JSON antigo)', () => {
+    const r = normalizarResiduoContratoParaKg({
+      tipo_residuo: 'Teste',
+      classificacao: '',
+      unidade_medida: 'kg',
+      valor: '2,50',
+      frequencia_coleta: '',
+      faturamento_minimo: '10',
+    })
+    expect(r.faturamento_minimo).toBe('10.000')
+  })
+
   it('mantém kg e não altera valor', () => {
     const r = normalizarResiduoContratoParaKg({
       tipo_residuo: 'A',

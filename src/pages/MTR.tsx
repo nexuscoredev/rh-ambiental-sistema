@@ -26,12 +26,15 @@ import {
   quantidadeMtrLegadaParaKg,
   unidadeMedidaEhTonelada,
 } from '../lib/clienteContratoCadastro'
+import type { ResiduoContratoItem } from '../lib/clienteContratoCadastro'
 import {
   acondicionamentoFromContratoVeiculoEquipamento,
+  expandirListaResiduosMtrParaContrato,
+  fetchContratoClienteMtrPorProgramacao,
+  listaResiduosFromDetalhesMtr,
   listaResiduosParaDocumentoMtr,
   parseContratoClienteMtr,
   residuosContratoParaLinhasPesagem,
-  residuosContratoParaListaDetalhesMtr,
   syncResiduoPrincipalComLista,
   tipoResiduoResumoContrato,
   type MtrResiduoDetalhesCampos,
@@ -39,6 +42,8 @@ import {
 import { MtrVeiculosEquipamentosForm } from '../components/mtr/MtrVeiculosEquipamentosForm'
 import { sincronizarMtrParaColetasVinculadas } from '../lib/mtrOperacionalSync'
 import {
+  buscarProgramacaoMtrPorId,
+  enriquecerClienteEnderecoAutofill,
   fetchClienteEnderecoAutofill,
   montarCidadeUfCliente,
   montarEnderecoLinhaCliente,
@@ -208,6 +213,8 @@ type MTRDetalhes = {
   }
   residuos_lista?: MtrResiduoDetalhesCampos[]
   residuos_itens?: ResiduoPesagemItem[]
+  /** Cópia dos resíduos do cadastro do cliente (quantidade de linhas na secção 2). */
+  residuos_contrato_catalogo?: ResiduoContratoItem[]
   contrato_veiculos?: { tipo_veiculo: string; sem_custo: boolean; valor: string }[]
   contrato_equipamentos?: { descricao: string; com_custo: boolean; valor: string }[]
 }
@@ -395,6 +402,9 @@ function mergeMtrDetalhesProfundo(raw: MTRDetalhes | null | undefined): MTRDetal
     destinatario: { ...z.destinatario, ...raw.destinatario },
     residuos_lista: Array.isArray(rawAny.residuos_lista) ? rawAny.residuos_lista : undefined,
     residuos_itens: Array.isArray(rawAny.residuos_itens) ? rawAny.residuos_itens : undefined,
+    residuos_contrato_catalogo: Array.isArray(rawAny.residuos_contrato_catalogo)
+      ? (rawAny.residuos_contrato_catalogo as ResiduoContratoItem[])
+      : undefined,
     contrato_veiculos: Array.isArray(rawAny.contrato_veiculos)
       ? veiculosContratoSemValoresMtr(
           parseVeiculosContratoJsonb(rawAny.contrato_veiculos).filter((v) => v.tipo_veiculo.trim())
@@ -869,6 +879,24 @@ export default function MTR() {
     })
   }, [showForm, ensureCatalogoProgramacoes])
 
+  useEffect(() => {
+    if (!showForm || editingId) return
+    const pid = urlProgramacaoId?.trim()
+    if (!pid || form.programacao_id === pid) return
+    void handleProgramacaoChange(pid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só ao abrir com ?programacao=
+  }, [showForm, urlProgramacaoId, editingId])
+
+  const autofillCidadeTentadoRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!showForm || !form.programacao_id?.trim()) return
+    if (form.cidade.trim()) return
+    const pid = form.programacao_id
+    if (autofillCidadeTentadoRef.current === pid) return
+    autofillCidadeTentadoRef.current = pid
+    void preencherCidadeEnderecoDesdeCadastroSeVazio(pid)
+  }, [showForm, form.programacao_id, form.cidade])
+
   const mtrMapByProgramacaoId = useMemo(() => {
     const map = new Map<string, MTR>()
     mtrs.forEach((item) => {
@@ -1066,7 +1094,69 @@ export default function MTR() {
     void ensureCatalogoProgramacoes()
     if (item.programacao_id) {
       void preencherCidadeEnderecoDesdeCadastroSeVazio(item.programacao_id)
+      void expandirResiduosMtrDesdeProgramacao(item.programacao_id)
     }
+  }
+
+  /** Abre linhas de resíduo na MTR conforme `residuos_contrato` do cliente (edição / cadastro incompleto). */
+  async function expandirResiduosMtrDesdeProgramacao(programacaoId: string) {
+    const pid = programacaoId.trim()
+    if (!pid) return
+
+    let programacao =
+      programacoes.find((p) => p.id === pid) ??
+      programacoesVinculadas.find((p) => p.id === pid) ??
+      null
+    if (!programacao) {
+      programacao = (await buscarProgramacaoMtrPorId(supabase, pid)) as Programacao | null
+    }
+    if (!programacao) return
+
+    const contrato = await fetchContratoClienteMtrPorProgramacao(supabase, programacao)
+    if (!contrato) return
+
+    const acondContrato = acondicionamentoFromContratoVeiculoEquipamento(
+      contrato,
+      programacao.tipo_caminhao ?? ''
+    )
+
+    setForm((prev) => {
+      if (prev.programacao_id !== pid) return prev
+      const dz = detalhesVazios()
+      const listaAtual = listaResiduosFromDetalhesMtr(prev.detalhes ?? dz)
+      const listaExp = expandirListaResiduosMtrParaContrato(
+        listaAtual,
+        contrato.residuos,
+        acondContrato
+      )
+      const syncResiduos = syncResiduoPrincipalComLista({
+        residuo: listaExp[0] ?? dz.residuo,
+        residuos_lista: listaExp,
+      })
+      const linhasPesagem = residuosContratoParaLinhasPesagem(contrato.residuos)
+      const itensAtuais = prev.detalhes?.residuos_itens
+      const itensPesagem =
+        Array.isArray(itensAtuais) && itensAtuais.length >= listaExp.length
+          ? itensAtuais
+          : linhasPesagem
+
+      return {
+        ...prev,
+        tipo_residuo: tipoResiduoResumoContrato(contrato.residuos) || prev.tipo_residuo,
+        detalhes: {
+          ...(prev.detalhes ?? dz),
+          ...syncResiduos,
+          residuos_itens: itensPesagem,
+          residuos_contrato_catalogo: contrato.residuos,
+          contrato_veiculos: prev.detalhes?.contrato_veiculos?.length
+            ? prev.detalhes.contrato_veiculos
+            : contrato.veiculos,
+          contrato_equipamentos: prev.detalhes?.contrato_equipamentos?.length
+            ? prev.detalhes.contrato_equipamentos
+            : contrato.equipamentos,
+        },
+      }
+    })
   }
 
   /** Ao editar MTR antiga ou cadastro incompleto: preenche cidade/endereço a partir do cliente. */
@@ -1126,7 +1216,9 @@ export default function MTR() {
   }
 
   async function handleProgramacaoChange(programacaoIdSelecionada: string) {
-    let programacao = programacoes.find((item) => item.id === programacaoIdSelecionada)
+    let programacao =
+      programacoes.find((item) => item.id === programacaoIdSelecionada) ??
+      (await buscarProgramacaoMtrPorId(supabase, programacaoIdSelecionada))
 
     if (!programacao) {
       const { data, error } = await fetchProgramacoesMtrPorIds(supabase, [programacaoIdSelecionada])
@@ -1136,6 +1228,11 @@ export default function MTR() {
         )
         programacao = data[0] as Programacao
       }
+    }
+
+    if (programacao?.cliente_id == null || programacao.cliente_id === '') {
+      const fresh = await buscarProgramacaoMtrPorId(supabase, programacaoIdSelecionada)
+      if (fresh) programacao = fresh as Programacao
     }
 
     if (!programacao) {
@@ -1197,13 +1294,15 @@ export default function MTR() {
       tipo_residuo: programacao.tipo_servico || '',
       observacoes: observacaoProgramacao,
       data_emissao: dataEmissao,
-      endereco: '',
-      cidade: '',
-      detalhes: detalhesVazios(),
     }))
 
     const clienteId = await resolverClienteIdProgramacaoMtr(supabase, programacao)
-    if (!clienteId) return
+    if (!clienteId) {
+      if (import.meta.env.DEV) {
+        console.debug('[MTR] Programação sem cliente_id resolvível:', programacao.cliente)
+      }
+      return
+    }
 
     const selContrato =
       'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, veiculos_contrato, equipamentos_contrato, residuos_contrato, frequencia_coleta'
@@ -1229,7 +1328,11 @@ export default function MTR() {
       return
     }
 
-    const row = clienteRow as ClienteRowAutofill
+    const rowBase = clienteRow as ClienteRowAutofill
+    const row: ClienteRowAutofill = {
+      ...rowBase,
+      ...enriquecerClienteEnderecoAutofill(rowBase),
+    }
     const contrato = parseContratoClienteMtr(row)
     const acondContrato = acondicionamentoFromContratoVeiculoEquipamento(
       contrato,
@@ -1237,14 +1340,21 @@ export default function MTR() {
     )
     const tipoResContrato = tipoResiduoResumoContrato(contrato.residuos)
     const linhasResiduo = residuosContratoParaLinhasPesagem(contrato.residuos)
-    const listaResiduosMtr = residuosContratoParaListaDetalhesMtr(contrato.residuos, acondContrato)
 
     setForm((prev) => {
       if (prev.programacao_id !== programacao.id) return prev
       const dz = detalhesVazios()
       const unidade = 'kg'
       const codigoIbama = (row.codigo_ibama ?? '').trim()
-      const listaResiduosForm = listaResiduosMtr.map((rowRes, i) => {
+      const listaAtual = listaResiduosFromDetalhesMtr({
+        residuo: prev.detalhes?.residuo ?? dz.residuo,
+        residuos_lista: prev.detalhes?.residuos_lista,
+      })
+      const listaResiduosForm = expandirListaResiduosMtrParaContrato(
+        listaAtual,
+        contrato.residuos,
+        acondContrato
+      ).map((rowRes, i) => {
         if (i !== 0) return rowRes
         const prevR = prev.detalhes?.residuo
         if (!prevR) {
@@ -1329,6 +1439,7 @@ export default function MTR() {
           residuos_itens: linhasResiduo,
           contrato_veiculos: contrato.veiculos,
           contrato_equipamentos: contrato.equipamentos,
+          residuos_contrato_catalogo: contrato.residuos,
           ...syncResiduos,
           gerador: {
             ...dz.gerador,
@@ -1646,16 +1757,34 @@ export default function MTR() {
 
     await updateProgramacaoStatusAfterMTR(form.programacao_id)
     await updateColetasStatusAfterMTR(form.programacao_id)
+    let syncTicketsMsg = ''
     if (mtrIdGravada) {
-      await sincronizarMtrParaColetasVinculadas(mtrIdGravada, {
+      const syncRes = await sincronizarMtrParaColetasVinculadas(mtrIdGravada, {
         programacaoId: form.programacao_id,
+        snapshot: {
+          programacao_id: form.programacao_id,
+          cliente: form.cliente.trim(),
+          gerador: form.gerador.trim(),
+          endereco: form.endereco.trim(),
+          cidade: cidadeSalvar,
+          tipo_residuo: form.tipo_residuo.trim(),
+          quantidade: qtd,
+          unidade: form.unidade.trim() || 'kg',
+          detalhes: detalhesGravar,
+        },
       })
+      if (syncRes.coletasAtualizadas > 0) {
+        syncTicketsMsg = `\n\n${syncRes.coletasAtualizadas} ticket(s) atualizado(s) com os dados da MTR.`
+      } else if (syncRes.message) {
+        syncTicketsMsg = `\n\n${syncRes.message}`
+      }
     }
 
     setSaving(false)
     await rgAlert({
       title: 'MTR',
-      message: editingId ? 'MTR atualizada com sucesso.' : 'MTR criada com sucesso.',
+      message:
+        (editingId ? 'MTR atualizada com sucesso.' : 'MTR criada com sucesso.') + syncTicketsMsg,
       variant: 'success',
     })
     setShowForm(false)
@@ -4159,8 +4288,24 @@ export default function MTR() {
                             />
 
                           <MtrResiduosDescricaoForm
+                            key={form.programacao_id ?? 'sem-programacao'}
                             detalhes={form.detalhes ?? detalhesVazios()}
                             disabled={!podeMutarMtr}
+                            residuosContratoCatalogo={
+                              form.detalhes?.residuos_contrato_catalogo ?? []
+                            }
+                            acondicionamentoPadrao={acondicionamentoFromContratoVeiculoEquipamento(
+                              {
+                                veiculos: form.detalhes?.contrato_veiculos ?? [],
+                                equipamentos: form.detalhes?.contrato_equipamentos ?? [],
+                                residuos: form.detalhes?.residuos_contrato_catalogo ?? [],
+                                rotuloVeiculos: '',
+                                rotuloEquipamentos: '',
+                                rotuloResiduos: '',
+                              },
+                              eligibleProgramacoes.find((p) => p.id === form.programacao_id)
+                                ?.tipo_caminhao ?? ''
+                            )}
                             onChange={(next) =>
                               setForm((prev) => {
                                 const base = prev.detalhes ?? detalhesVazios()

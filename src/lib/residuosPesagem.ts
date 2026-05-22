@@ -1,3 +1,5 @@
+import { pesoKgParaCampoInput } from "./pesoKgInput";
+
 /** Separador em `tipo_residuo` / `residuo` quando há vários itens sem JSON estruturado. */
 export const SEPARADOR_RESIDUOS_TEXTO = " · ";
 
@@ -33,8 +35,7 @@ export function calcularPesoLiquidoLinha(pesoBruto: string, pesoTara: string): s
 }
 
 function pesoNumeroParaInput(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(Number(n))) return "";
-  return String(n);
+  return pesoKgParaCampoInput(n);
 }
 
 export function residuoCatalogoIdParaDb(raw?: string): string | null {
@@ -128,13 +129,15 @@ export function agregarPesosDasLinhas(linhas: ResiduoPesagemItem[]): {
     if (liq != null) sumLiquido += liq;
   }
 
+  const fmt = (n: number) => (n > 0 ? String(n) : "");
+
   return {
-    peso_tara: String(sumTara),
-    peso_bruto: String(sumBruto),
-    peso_liquido: String(sumLiquido),
-    pesoTaraNum: sumTara,
-    pesoBrutoNum: sumBruto,
-    pesoLiquidoNum: sumLiquido,
+    peso_tara: fmt(sumTara),
+    peso_bruto: fmt(sumBruto),
+    peso_liquido: fmt(sumLiquido),
+    pesoTaraNum: sumTara > 0 ? sumTara : null,
+    pesoBrutoNum: sumBruto > 0 ? sumBruto : null,
+    pesoLiquidoNum: sumLiquido > 0 ? sumLiquido : null,
   };
 }
 

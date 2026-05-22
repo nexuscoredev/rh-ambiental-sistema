@@ -1,6 +1,9 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
+import type { ResiduoContratoItem } from '../../lib/clienteContratoCadastro'
 import {
+  expandirListaResiduosMtrParaContrato,
   listaResiduosFromDetalhesMtr,
+  residuoContratoTemConteudo,
   residuoDetalhesLimpo,
   residuoDetalhesVazio,
   syncResiduoPrincipalComLista,
@@ -20,6 +23,9 @@ type Props = {
   detalhes: DetalhesComLista
   onChange: (next: DetalhesComLista) => void
   disabled?: boolean
+  /** Resíduos cadastrados no cliente — define quantas linhas abrir na MTR. */
+  residuosContratoCatalogo?: ResiduoContratoItem[]
+  acondicionamentoPadrao?: string
 }
 
 const card: CSSProperties = {
@@ -80,8 +86,39 @@ const btnLimpar: CSSProperties = {
   boxShadow: '0 1px 3px rgba(217, 119, 6, 0.25)',
 }
 
-export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false }: Props) {
+export function MtrResiduosDescricaoForm({
+  detalhes,
+  onChange,
+  disabled = false,
+  residuosContratoCatalogo = [],
+  acondicionamentoPadrao = '',
+}: Props) {
+  const catalogoValidos = residuosContratoCatalogo.filter(residuoContratoTemConteudo)
   const lista = listaResiduosFromDetalhesMtr(detalhes)
+  const faltamLinhasContrato = Math.max(0, catalogoValidos.length - lista.length)
+
+  function abrirLinhasFaltantesDoContrato() {
+    if (disabled || catalogoValidos.length === 0) return
+    const expandida = expandirListaResiduosMtrParaContrato(
+      lista,
+      catalogoValidos,
+      acondicionamentoPadrao
+    )
+    aplicarLista(expandida)
+  }
+
+  const autoExpandiuRef = useRef(false)
+  useEffect(() => {
+    autoExpandiuRef.current = false
+  }, [catalogoValidos.length, detalhes.residuos_lista?.length])
+
+  useEffect(() => {
+    if (disabled || autoExpandiuRef.current || catalogoValidos.length === 0) return
+    if (lista.length >= catalogoValidos.length) return
+    autoExpandiuRef.current = true
+    abrirLinhasFaltantesDoContrato()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- expande uma vez ao carregar catálogo do cliente
+  }, [disabled, catalogoValidos.length, lista.length])
 
   function aplicarLista(novaLista: MtrResiduoDetalhesCampos[]) {
     const sync = syncResiduoPrincipalComLista({ ...detalhes, residuos_lista: novaLista })
@@ -157,9 +194,13 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
           <div>
             <div style={{ fontWeight: 800 }}>2. Descrição dos resíduos</div>
             <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
-              {lista.length > 1
-                ? `${lista.length} resíduos do cadastro do cliente — cada linha gera um ticket na pesagem.`
-                : 'Um resíduo do cadastro do cliente.'}
+              {catalogoValidos.length > 1
+                ? `${catalogoValidos.length} resíduos no cadastro do cliente — cada linha gera um ticket na pesagem.`
+                : catalogoValidos.length === 1
+                  ? 'Um resíduo no cadastro do cliente.'
+                  : lista.length > 1
+                    ? `${lista.length} linhas de resíduo — cada uma pode gerar um ticket na pesagem.`
+                    : 'Informe os resíduos ou vincule uma programação com cliente cadastrado.'}
             </p>
           </div>
           {lista.length > 0 ? (
@@ -277,15 +318,38 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
         </div>
       ))}
 
-      {lista.length === 0 ? (
-        <button
-          type="button"
-          className="mini-btn"
-          onClick={() => aplicarLista([residuoDetalhesVazio()])}
-        >
-          Adicionar linha de resíduo
-        </button>
-      ) : null}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        {faltamLinhasContrato > 0 ? (
+          <button
+            type="button"
+            className="mini-btn"
+            disabled={disabled}
+            onClick={abrirLinhasFaltantesDoContrato}
+          >
+            Abrir {faltamLinhasContrato} resíduo(s) do cadastro do cliente
+          </button>
+        ) : null}
+        {catalogoValidos.length === 0 && lista.length === 0 ? (
+          <button
+            type="button"
+            className="mini-btn"
+            disabled={disabled}
+            onClick={() => aplicarLista([residuoDetalhesVazio()])}
+          >
+            Adicionar linha de resíduo
+          </button>
+        ) : null}
+        {catalogoValidos.length === 0 && lista.length > 0 ? (
+          <button
+            type="button"
+            className="mini-btn"
+            disabled={disabled}
+            onClick={() => aplicarLista([...lista, residuoDetalhesVazio()])}
+          >
+            Adicionar outra linha
+          </button>
+        ) : null}
+      </div>
     </>
   )
 }

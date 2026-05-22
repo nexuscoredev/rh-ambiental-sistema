@@ -1,8 +1,9 @@
 /**
- * Espelha alterações da MTR nas coletas/tickets vinculados (resíduo, placa, motorista, peso estimado).
+ * Espelha alterações da MTR nas coletas/tickets vinculados (resíduo, placa, motorista, peso, cliente, endereço).
  * Direção inversa à `sincronizarColetaParaMtr` em faturamentoOperacionalSync.
  */
 import { parseNumeroCampo } from './faturamentoDesvinculacao'
+import { sincronizarPesoEmResumoPendente } from './faturamentoOperacionalSync'
 import {
   listaResiduosFromDetalhesMtr,
   residuoDetalhesVazio,
@@ -11,12 +12,10 @@ import {
 import {
   extrairHerancaMtrParaPesagem,
   mesclarLinhasResiduoHerancaMtr,
+  type MtrHerancaPesagem,
 } from './mtrHerancaTicketPesagem'
 import { supabase } from './supabase'
-import {
-  coletaCorrespondeResiduo,
-  deveSegmentarTicketsPorMtr,
-} from './ticketCardinalidadeResiduo'
+import { coletaCorrespondeResiduo, deveSegmentarTicketsPorMtr } from './ticketCardinalidadeResiduo'
 import {
   isErroColunaResiduosItens,
   linhaVaziaResiduoPesagem,
@@ -25,6 +24,24 @@ import {
   serializarResiduosItensDb,
   type ResiduoPesagemItem,
 } from './residuosPesagem'
+
+export type MtrSnapshotParaSync = {
+  programacao_id?: string | null
+  cliente?: string | null
+  gerador?: string | null
+  endereco?: string | null
+  cidade?: string | null
+  tipo_residuo?: string | null
+  quantidade?: number | null
+  unidade?: string | null
+  detalhes?: unknown
+}
+
+export type SincronizarMtrParaColetasResult = {
+  ok: boolean
+  coletasAtualizadas: number
+  message?: string
+}
 
 type ColetaSyncRow = {
   id: string
@@ -36,10 +53,13 @@ type ColetaSyncRow = {
   motorista_nome: string | null
   placa: string | null
   mtr_id: string | null
+  cliente?: string | null
+  endereco?: string | null
+  cidade?: string | null
 }
 
 const COLETA_SYNC_SELECT =
-  'id, numero_coleta, tipo_residuo, residuos_itens, peso_liquido, motorista, motorista_nome, placa, mtr_id'
+  'id, numero_coleta, tipo_residuo, residuos_itens, peso_liquido, motorista, motorista_nome, placa, mtr_id, cliente, endereco, cidade'
 
 function ordenarColetas(rows: ColetaSyncRow[]): ColetaSyncRow[] {
   return [...rows].sort((a, b) => (Number(a.numero_coleta) || 0) - (Number(b.numero_coleta) || 0))
@@ -69,6 +89,42 @@ function listaCamposFromMtrRow(mtr: Record<string, unknown>): MtrResiduoDetalhes
       ? (d.residuos_lista as MtrResiduoDetalhesCampos[])
       : undefined,
   })
+}
+
+function mtrRowFromSnapshot(snapshot: MtrSnapshotParaSync): Record<string, unknown> {
+  return {
+    tipo_residuo: snapshot.tipo_residuo,
+    quantidade: snapshot.quantidade,
+    unidade: snapshot.unidade,
+    detalhes: snapshot.detalhes,
+    programacao_id: snapshot.programacao_id,
+  }
+}
+
+/** Garante ao menos uma linha de resíduo (detalhes ou tipo no topo da MTR). */
+export function linhasResiduoMtrParaSync(mtrRow: Record<string, unknown>): ResiduoPesagemItem[] {
+  const heranca = extrairHerancaMtrParaPesagem(mtrRow)
+  const comConteudo = linhasComConteudo(heranca.linhas_residuo)
+  if (comConteudo.length > 0) return comConteudo
+
+  const topo = String(mtrRow.tipo_residuo ?? heranca.tipo_residuo ?? '').trim()
+  if (topo) {
+    return [{ ...linhaVaziaResiduoPesagem(), texto: topo }]
+  }
+  return []
+}
+
+export function patchDadosComunsColetaDesdeMtr(mtrRow: Record<string, unknown>): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  const cliente = String(mtrRow.cliente ?? '').trim()
+  const gerador = String(mtrRow.gerador ?? '').trim()
+  if (cliente) patch.cliente = cliente
+  const endereco = String(mtrRow.endereco ?? '').trim()
+  if (endereco) patch.endereco = endereco
+  const cidade = String(mtrRow.cidade ?? '').trim()
+  if (cidade) patch.cidade = cidade
+  if (gerador && !cliente) patch.cliente = gerador
+  return patch
 }
 
 function pesoKgFromMtrResiduo(
@@ -129,8 +185,8 @@ export function resolverLinhaMtrParaColeta(
     return { linha, campos }
   }
 
-  const linha = comConteudo[0]!
-  return { linha, campos: listaCampos[0] ?? null }
+  const linha = comConteudo[Math.min(indiceFallback, comConteudo.length - 1)]!
+  return { linha, campos: listaCampos[Math.min(indiceFallback, listaCampos.length - 1)] ?? listaCampos[0] ?? null }
 }
 
 export function montarPatchColetaDesdeMtr(
@@ -140,10 +196,11 @@ export function montarPatchColetaDesdeMtr(
   >,
   linhaMtr: ResiduoPesagemItem,
   campos: MtrResiduoDetalhesCampos | null,
-  heranca: { placa: string; motorista: string },
+  heranca: Pick<MtrHerancaPesagem, 'placa' | 'motorista'>,
   quantidadeTopo: number | null,
   segmentar: boolean,
-  totalLinhasMtr: number
+  totalLinhasMtr: number,
+  patchComum?: Record<string, unknown>
 ): Record<string, unknown> {
   const existentes = parseResiduosItensJson(coleta.residuos_itens) ?? []
   const merged = mesclarLinhasResiduoHerancaMtr(
@@ -151,7 +208,7 @@ export function montarPatchColetaDesdeMtr(
     [linhaMtr]
   )
   const texto = linhaMtr.texto.trim()
-  const patch: Record<string, unknown> = {}
+  const patch: Record<string, unknown> = { ...(patchComum ?? {}) }
 
   if (texto) patch.tipo_residuo = texto
 
@@ -235,8 +292,8 @@ async function listarColetasParaSync(
 async function aplicarPatchColetaEControleMassa(
   coletaId: string,
   patch: Record<string, unknown>
-): Promise<void> {
-  if (Object.keys(patch).length === 0) return
+): Promise<boolean> {
+  if (Object.keys(patch).length === 0) return true
 
   let { error: errColeta } = await supabase.from('coletas').update(patch).eq('id', coletaId)
 
@@ -249,17 +306,21 @@ async function aplicarPatchColetaEControleMassa(
 
   if (errColeta) {
     console.warn('[mtr→ticket] coleta:', errColeta.message)
-    return
+    return false
   }
 
   const patchMassa: Record<string, unknown> = {}
+  if (patch.cliente != null) patchMassa.cliente = patch.cliente
+  if (patch.endereco != null) patchMassa.endereco = patch.endereco
+  if (patch.cidade != null) patchMassa.cidade = patch.cidade
   if (patch.peso_liquido != null) patchMassa.peso_liquido = patch.peso_liquido
   if (patch.tipo_residuo != null) patchMassa.tipo_residuo = patch.tipo_residuo
   if (patch.residuos_itens != null) patchMassa.residuos_itens = patch.residuos_itens
   if (patch.motorista != null) patchMassa.motorista = patch.motorista
   if (patch.placa != null) patchMassa.placa = patch.placa
+  if (patch.cliente != null) patchMassa.empresa = patch.cliente
 
-  if (Object.keys(patchMassa).length === 0) return
+  if (Object.keys(patchMassa).length === 0) return true
 
   let { error: errMassa } = await supabase
     .from('controle_massa')
@@ -276,34 +337,59 @@ async function aplicarPatchColetaEControleMassa(
   if (errMassa) {
     console.warn('[mtr→ticket] controle_massa:', errMassa.message)
   }
+
+  return true
 }
 
 /**
- * Após gravar/editar MTR: atualiza coletas com `mtr_id` (ou da mesma programação) com resíduo,
- * transportador e quantidade da ficha, preservando pesos já conferidos na pesagem.
+ * Após gravar/editar MTR: atualiza todas as coletas/tickets com `mtr_id` (ou da mesma programação).
+ * Usa `snapshot` do formulário quando informado (evita ler versão antiga do banco).
  */
 export async function sincronizarMtrParaColetasVinculadas(
   mtrId: string,
-  opts?: { programacaoId?: string | null }
-): Promise<void> {
+  opts?: { programacaoId?: string | null; snapshot?: MtrSnapshotParaSync }
+): Promise<SincronizarMtrParaColetasResult> {
   const mid = (mtrId ?? '').trim()
-  if (!mid) return
-
-  const { data: mtr, error } = await supabase
-    .from('mtrs')
-    .select('id, tipo_residuo, quantidade, programacao_id, detalhes')
-    .eq('id', mid)
-    .maybeSingle()
-
-  if (error || !mtr) {
-    if (error) console.warn('[mtr→ticket] carregar MTR:', error.message)
-    return
+  if (!mid) {
+    return { ok: false, coletasAtualizadas: 0, message: 'MTR sem identificador.' }
   }
 
-  const mtrRow = mtr as Record<string, unknown>
+  let mtrRow: Record<string, unknown>
+
+  if (opts?.snapshot) {
+    mtrRow = {
+      ...mtrRowFromSnapshot(opts.snapshot),
+      cliente: opts.snapshot.cliente,
+      gerador: opts.snapshot.gerador,
+      endereco: opts.snapshot.endereco,
+      cidade: opts.snapshot.cidade,
+    }
+  } else {
+    const { data: mtr, error } = await supabase
+      .from('mtrs')
+      .select(
+        'id, tipo_residuo, quantidade, unidade, programacao_id, cliente, gerador, endereco, cidade, detalhes'
+      )
+      .eq('id', mid)
+      .maybeSingle()
+
+    if (error || !mtr) {
+      const msg = error?.message ?? 'MTR não encontrada.'
+      if (error) console.warn('[mtr→ticket] carregar MTR:', msg)
+      return { ok: false, coletasAtualizadas: 0, message: msg }
+    }
+    mtrRow = mtr as Record<string, unknown>
+  }
+
   const heranca = extrairHerancaMtrParaPesagem(mtrRow)
-  const linhasMtr = linhasComConteudo(heranca.linhas_residuo)
-  if (linhasMtr.length === 0) return
+  const linhasMtr = linhasResiduoMtrParaSync(mtrRow)
+  if (linhasMtr.length === 0) {
+    return {
+      ok: true,
+      coletasAtualizadas: 0,
+      message: 'MTR sem resíduo para espelhar no ticket.',
+    }
+  }
 
   const listaCampos = listaCamposFromMtrRow(mtrRow)
   const segmentar = deveSegmentarTicketsPorMtr(mid, heranca.linhas_residuo)
@@ -313,39 +399,55 @@ export async function sincronizarMtrParaColetasVinculadas(
       : null
 
   const progId =
-    (opts?.programacaoId ?? mtrRow.programacao_id ?? '').toString().trim() || null
+    (opts?.programacaoId ?? opts?.snapshot?.programacao_id ?? mtrRow.programacao_id ?? '')
+      .toString()
+      .trim() || null
   const coletas = await listarColetasParaSync(mid, progId)
-  if (coletas.length === 0) return
 
-  const usadas = new Set<string>()
+  if (coletas.length === 0) {
+    return {
+      ok: true,
+      coletasAtualizadas: 0,
+      message:
+        'Nenhum ticket/coleta vinculado a esta MTR ainda. Gere o ticket no Controle de Massa após a pesagem.',
+    }
+  }
+
+  const patchComum = patchDadosComunsColetaDesdeMtr(mtrRow)
+  let atualizadas = 0
 
   for (let i = 0; i < coletas.length; i++) {
     const coleta = coletas[i]!
     const { linha, campos } = resolverLinhaMtrParaColeta(
       coleta,
-      heranca.linhas_residuo,
+      linhasMtr,
       listaCampos,
       i,
       segmentar
     )
-    if (!linha.texto.trim()) continue
-
-    if (segmentar) {
-      const chave = linha.texto.trim().toLowerCase()
-      if (usadas.has(chave)) continue
-      usadas.add(chave)
-    }
+    if (!linha.texto.trim() && !patchComum.tipo_residuo) continue
 
     const patch = montarPatchColetaDesdeMtr(
       coleta,
-      linha,
+      linha.texto.trim() ? linha : { ...linhaVaziaResiduoPesagem(), texto: String(mtrRow.tipo_residuo ?? '') },
       campos,
       heranca,
       quantidadeTopo,
       segmentar,
-      linhasMtr.length
+      linhasMtr.length,
+      patchComum
     )
 
-    await aplicarPatchColetaEControleMassa(coleta.id, patch)
+    const ok = await aplicarPatchColetaEControleMassa(coleta.id, patch)
+    if (ok) {
+      atualizadas += 1
+      try {
+        await sincronizarPesoEmResumoPendente(coleta.id)
+      } catch (e) {
+        console.warn('[mtr→ticket] resumo pendente:', e)
+      }
+    }
   }
+
+  return { ok: true, coletasAtualizadas: atualizadas }
 }
