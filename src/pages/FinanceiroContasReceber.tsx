@@ -5,6 +5,8 @@ import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
 import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
+import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
+import { gerarRelatorioContasReceberPdf } from '../lib/gerarRelatorioContasReceberPdf'
 import { registrarBaixaContaReceber } from '../services/financeiroReceber'
 
 type ContaRow = {
@@ -259,6 +261,35 @@ export default function FinanceiroContasReceber() {
     }
   }
 
+  function gerarRelatorioPdf() {
+    if (loading) return
+    const linhasPdf = filtradas.map((r) => {
+      const saldo = r.valor - r.valor_pago
+      const vencMs = r.data_vencimento ? inicioDiaMs(r.data_vencimento) : null
+      const vencido = vencMs != null && saldo > 0 && vencMs < hojeMs
+      return {
+        coleta_numero: r.coleta_numero,
+        cliente_nome: r.cliente_nome,
+        valor: r.valor,
+        valor_pago: r.valor_pago,
+        status_pagamento: r.status_pagamento,
+        data_vencimento: r.data_vencimento,
+        data_emissao: r.data_emissao,
+        valor_travado: r.valor_travado,
+        vencido,
+      }
+    })
+    gerarRelatorioContasReceberPdf({
+      resumo,
+      linhas: linhasPdf,
+      filtros: {
+        busca,
+        status: filtroStatus,
+        envelhecimento: filtroFaixa,
+      },
+    })
+  }
+
   function exportarCsv() {
     const header = [
       'coleta',
@@ -336,7 +367,30 @@ export default function FinanceiroContasReceber() {
             </button>
             <button
               type="button"
+              className="rg-btn rg-btn--report"
+              onClick={gerarRelatorioPdf}
+              disabled={loading}
+              title={loading ? 'Aguarde o carregamento dos títulos' : 'Gerar PDF com resumo e tabela filtrada'}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                border: '1px solid #0d9488',
+                background: '#fff',
+                color: '#0f766e',
+                fontWeight: 700,
+                cursor: loading ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <RgReportPdfIcon className="rg-btn__icon" />
+              Gerar relatório
+            </button>
+            <button
+              type="button"
               onClick={exportarCsv}
+              disabled={loading || filtradas.length === 0}
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
@@ -344,7 +398,8 @@ export default function FinanceiroContasReceber() {
                 background: '#0f172a',
                 color: '#fff',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: loading || filtradas.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: loading || filtradas.length === 0 ? 0.6 : 1,
               }}
             >
               Exportar CSV

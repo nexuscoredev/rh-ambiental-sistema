@@ -145,7 +145,22 @@ export type UpsertContaReceberInput = {
 function ignoraErroSchema(err: { message?: string; code?: string } | null): boolean {
   if (!err) return false
   const msg = `${err.message}`.toLowerCase()
-  return msg.includes('relation') || err.code === '42P01' || msg.includes('column')
+  return (
+    msg.includes('relation') ||
+    err.code === '42P01' ||
+    err.code === 'PGRST205' ||
+    msg.includes('schema cache') ||
+    msg.includes('could not find the table') ||
+    msg.includes('does not exist') ||
+    msg.includes('column')
+  )
+}
+
+/** Tabela de histórico de baixas ainda não migrada no Supabase remoto. */
+function erroTabelaContasReceberBaixasAusente(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false
+  const msg = `${err.message}`.toLowerCase()
+  return msg.includes('contas_receber_baixas')
 }
 
 function avisoIgnoraErroSchema(contexto: string, err: { message?: string; code?: string } | null): void {
@@ -653,8 +668,15 @@ export async function registrarBaixaContaReceber(
       created_by: input.usuario_id,
     })
     if (e1) {
-      if (ignoraErroSchema(e1)) avisoIgnoraErroSchema('registrarBaixaContaReceber.insert(baixa)', e1)
-      else return { error: new Error(e1.message) }
+      if (erroTabelaContasReceberBaixasAusente(e1)) {
+        console.warn(
+          '[financeiroReceber] contas_receber_baixas ausente; baixa aplicada só em contas_receber. Execute supabase/sql_editor_contas_receber_baixas.sql no Supabase.'
+        )
+      } else if (ignoraErroSchema(e1)) {
+        avisoIgnoraErroSchema('registrarBaixaContaReceber.insert(baixa)', e1)
+      } else {
+        return { error: new Error(e1.message) }
+      }
     }
 
     const vp1 = vp0 + add

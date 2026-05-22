@@ -133,7 +133,12 @@ export function FinanceiroConferenciaDetalhe({
       if (cancelado) return
       if (error) {
         const msg = `${error.message}`.toLowerCase()
-        if (!msg.includes('relation') && !msg.includes('does not exist')) {
+        if (
+          !msg.includes('relation') &&
+          !msg.includes('does not exist') &&
+          !msg.includes('schema cache') &&
+          !msg.includes('contas_receber_baixas')
+        ) {
           console.warn('Histórico de baixas:', error.message)
         }
         setBaixasHistorico([])
