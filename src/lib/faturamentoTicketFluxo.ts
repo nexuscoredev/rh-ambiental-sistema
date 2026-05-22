@@ -552,6 +552,10 @@ async function gravarPesoConferenciaInterno(
     if (!res.ok) return res
     const sync = await sincronizarAposAlteracaoOperacionalColeta(id)
     if (!sync.ok) {
+      const m = sync.message.toLowerCase()
+      if (m.includes('row-level security') && m.includes('faturamento_registros')) {
+        return res
+      }
       return {
         ok: false,
         message: `Peso gravado na coleta, mas falhou ao sincronizar MTR/ticket: ${sync.message}`,

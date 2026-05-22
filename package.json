@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.65",
+  "version": "1.2.66",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -36,6 +36,7 @@
     "db:apply:ticket-aprovacao": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260518130000_coletas_ticket_aprovacao_faturamento.sql",
     "db:apply:peso-conferencia": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_peso_conferencia_ticket.sql",
     "db:apply:peso-conferencia-fix": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260522180000_peso_conferencia_alinha_bruto.sql",
+    "db:apply:faturamento-registros-rls": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_faturamento_registros_rls_operacional.sql",
     "db:apply:clientes-contrato": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql",
     "db:apply:excluir-mtr-cascata": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260520140000_excluir_mtr_coleta_cascata.sql",
     "db:apply:usuarios-perfil-login": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260622120000_usuarios_select_own_rpc_perfil.sql",

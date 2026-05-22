@@ -145,9 +145,11 @@ export async function sincronizarColetaParaMtr(coletaId: string): Promise<void> 
 }
 
 /** Atualiza pesos no `resumo_financeiro` pendente (mantém valores já editados no faturamento). */
-export async function sincronizarPesoEmResumoPendente(coletaId: string): Promise<void> {
+export async function sincronizarPesoEmResumoPendente(
+  coletaId: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
   const resGrupo = await lerColetasMesmaMtr(coletaId)
-  if (!resGrupo.ok) return
+  if (!resGrupo.ok) return resGrupo
   const grupo = resGrupo.grupo
 
   const pesoTotal = grupo.reduce((s, c) => s + (Number(c.peso_liquido) || 0), 0)
@@ -211,14 +213,23 @@ export async function sincronizarPesoEmResumoPendente(coletaId: string): Promise
           : resumo.mtr,
     }
 
-    await supabase
+    const { error } = await supabase
       .from('faturamento_registros')
       .update({
         resumo_financeiro: resumoFinanceiroParaJsonb(next),
         updated_at: new Date().toISOString(),
       })
       .eq('id', reg.id)
+
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || 'Não foi possível atualizar o resumo de faturamento.',
+      }
+    }
   }
+
+  return { ok: true }
 }
 
 function valorParaCampoContrato(n: number): string {
@@ -444,7 +455,8 @@ export async function sincronizarAposAlteracaoOperacionalColeta(
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     await sincronizarColetaParaMtr(coletaId)
-    await sincronizarPesoEmResumoPendente(coletaId)
+    const resumo = await sincronizarPesoEmResumoPendente(coletaId)
+    if (!resumo.ok) return resumo
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Falha ao sincronizar dados operacionais.'

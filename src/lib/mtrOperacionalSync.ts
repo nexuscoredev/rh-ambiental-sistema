@@ -441,10 +441,9 @@ export async function sincronizarMtrParaColetasVinculadas(
     const ok = await aplicarPatchColetaEControleMassa(coleta.id, patch)
     if (ok) {
       atualizadas += 1
-      try {
-        await sincronizarPesoEmResumoPendente(coleta.id)
-      } catch (e) {
-        console.warn('[mtr→ticket] resumo pendente:', e)
+      const syncResumo = await sincronizarPesoEmResumoPendente(coleta.id)
+      if (!syncResumo.ok) {
+        console.warn('[mtr→ticket] resumo pendente:', syncResumo.message)
       }
     }
   }
