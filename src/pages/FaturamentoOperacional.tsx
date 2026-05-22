@@ -551,7 +551,6 @@ export default function FaturamentoOperacional() {
           carregando={carregandoVista}
           esteiraAtiva={esteiraMedicaoAtiva}
           onAtualizar={() => void recarregarTudo()}
-          clienteIdContexto={clienteIdContextoMedicao}
           coletaIdContexto={coletaIdContextoMedicao}
         />
 

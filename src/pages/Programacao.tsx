@@ -371,7 +371,7 @@ function ProgramacaoRelatorioPrintRoot(p: ProgramacaoRelatorioPrintProps) {
 }
 
 /** Na agenda detalhada: cartões visíveis por dia antes de “Mostrar todas” (menos DOM = página mais leve). */
-const AGENDA_DETALHADA_MAX_VISIVEL_POR_DIA = 6
+const AGENDA_DETALHADA_MAX_VISIVEL_POR_DIA = 3
 
 function textoServicoCalendario(item: ProgramacaoItem): string | null {
   const t = (item.tipoServico || '').trim()

@@ -140,6 +140,8 @@ export default function EnvioNF() {
   const coletaParam = useMemo(() => (searchParams.get('coleta') || '').trim(), [searchParams])
   const urlContextoEnvioRef = useRef({ clienteId: '', coletaId: '' })
   urlContextoEnvioRef.current = { clienteId: clienteParam, coletaId: coletaParam }
+  /** Evita reaplicar o cliente/coleta da URL e apagar seleção manual do utilizador. */
+  const contextoUrlPreselecaoAplicadaRef = useRef(false)
 
   const envioNfDraft = useMemo(
     () => ({
@@ -173,10 +175,7 @@ export default function EnvioNF() {
       setObservacao(d.observacao)
       setEnvioModo(d.envioModo)
       const { clienteId, coletaId } = urlContextoEnvioRef.current
-      if (clienteId) {
-        setSelecionados(new Set([clienteId]))
-        setSomenteComEmail(false)
-      } else if (!coletaId) {
+      if (!clienteId && !coletaId) {
         setSelecionados(new Set(d.selecionados))
       }
       setColetasComContaMarcadas(new Set(d.coletasComContaMarcadas))
@@ -244,20 +243,38 @@ export default function EnvioNF() {
   }, [carregarLogs])
 
   useEffect(() => {
-    if (!clienteParam) return
-    queueMicrotask(() => {
-      setSelecionados(new Set([clienteParam]))
+    contextoUrlPreselecaoAplicadaRef.current = false
+  }, [clienteParam, coletaParam])
+
+  useEffect(() => {
+    if (contextoUrlPreselecaoAplicadaRef.current) return
+
+    function preselecionarCliente(id: string) {
+      const cid = id.trim()
+      if (!cid) return
+      contextoUrlPreselecaoAplicadaRef.current = true
+      setSelecionados((prev) => {
+        const next = new Set(prev)
+        next.add(cid)
+        return next
+      })
       setSomenteComEmail(false)
-      const c = clientes.find((x) => x.id === clienteParam)
+      const c = clientes.find((x) => x.id === cid)
       if (c) {
         setBusca((c.nome || c.razao_social || '').trim())
       }
-    })
-  }, [clienteParam, clientes])
+    }
 
-  useEffect(() => {
-    if (clienteParam) return
-    if (!coletaParam) return
+    if (clienteParam) {
+      preselecionarCliente(clienteParam)
+      return
+    }
+
+    if (!coletaParam) {
+      contextoUrlPreselecaoAplicadaRef.current = true
+      return
+    }
+
     let cancelled = false
     void (async () => {
       try {
@@ -269,22 +286,24 @@ export default function EnvioNF() {
         if (cancelled) return
         if (error) {
           console.error(error)
+          contextoUrlPreselecaoAplicadaRef.current = true
           return
         }
         const id = (data?.cliente_id || '').trim()
-        if (!id) return
-        queueMicrotask(() => {
-          setSelecionados(new Set([id]))
-          setSomenteComEmail(false)
-        })
+        if (!id) {
+          contextoUrlPreselecaoAplicadaRef.current = true
+          return
+        }
+        preselecionarCliente(id)
       } catch (e) {
         console.error(e)
+        contextoUrlPreselecaoAplicadaRef.current = true
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [clienteParam, coletaParam])
+  }, [clienteParam, coletaParam, clientes])
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -837,7 +856,7 @@ export default function EnvioNF() {
                   simulação, o registo fica em <strong>contas a receber</strong> (se já existir linha para esta coleta).
                 </p>
               ) : null}
-              {modoMedicao && clienteParam ? (
+              {clienteParam || coletaParam ? (
                 <p
                   style={{
                     margin: '10px 0 0',
@@ -850,9 +869,24 @@ export default function EnvioNF() {
                     fontWeight: 600,
                   }}
                 >
-                  Cliente da esteira já selecionado abaixo
-                  {clienteContextoMedicao?.nome ? ` (${clienteContextoMedicao.nome})` : ''}. Revise o e-mail e
-                  confirme o envio.
+                  {modoMedicao ? 'Sugestão da esteira' : 'Sugestão do fluxo'}:{' '}
+                  {clienteContextoMedicao?.nome
+                    ? clienteContextoMedicao.nome
+                    : coletaParam
+                      ? `coleta ${coletaParam.slice(0, 8)}…`
+                      : 'cliente em contexto'}
+                  . Pode marcar <strong>outros clientes</strong> na lista abaixo antes de enviar.
+                  {(clienteParam || coletaParam) && (
+                    <>
+                      {' '}
+                      <Link
+                        to={modoMedicao ? '/envio-nf?tipo=medicao' : '/envio-nf'}
+                        style={{ fontWeight: 800, color: '#0d9488' }}
+                      >
+                        Abrir sem sugestão de contexto
+                      </Link>
+                    </>
+                  )}
                 </p>
               ) : null}
               {usuarioCargo ? (

@@ -33,8 +33,7 @@ type Props = {
   carregando?: boolean
   esteiraAtiva: boolean
   onAtualizar: () => void
-  /** Cliente da coleta/MTR em foco na esteira (abre já selecionado na Mala Direta). */
-  clienteIdContexto?: string | null
+  /** Coleta em foco na esteira (sugestão opcional na Mala Direta por MTR). */
   coletaIdContexto?: string | null
 }
 
@@ -141,13 +140,12 @@ export function FaturamentoFilaMedicao({
   carregando,
   esteiraAtiva,
   onAtualizar,
-  clienteIdContexto = null,
   coletaIdContexto = null,
 }: Props) {
-  function urlMalaDiretaMedicao(clienteId?: string | null) {
+  function urlMalaDiretaMedicaoGrupo(clienteId: string, coletaId?: string | null) {
     return buildUrlEnvioNfMedicao({
-      clienteId: (clienteId ?? clienteIdContexto ?? '').trim() || null,
-      coletaId: coletaIdContexto,
+      clienteId: clienteId.trim() || null,
+      coletaId: (coletaId ?? coletaIdContexto ?? '').trim() || null,
     })
   }
   const [processando, setProcessando] = useState(false)
@@ -298,7 +296,7 @@ export function FaturamentoFilaMedicao({
           Vários tickets da mesma MTR entram num <strong>único relatório</strong> (tabela e PDF).
           Use <strong>Imprimir / PDF</strong> para gerar o documento.
           O envio ao cliente é feito em{' '}
-          <Link to={urlMalaDiretaMedicao()}>Mala Direta — Medição</Link>.
+          <Link to="/envio-nf?tipo=medicao">Mala Direta — Medição</Link> (qualquer cliente).
         </p>
       </div>
 
@@ -340,7 +338,10 @@ export function FaturamentoFilaMedicao({
           acao={acoesToolbar(
             g,
             <Link
-              to={urlMalaDiretaMedicao(g.cliente_id)}
+              to={urlMalaDiretaMedicaoGrupo(
+                g.cliente_id,
+                g.linhas[0]?.coleta_id ?? null
+              )}
               className="rg-btn rg-btn--primary"
               style={{ fontSize: '12px', padding: '8px 14px', textDecoration: 'none' }}
             >
