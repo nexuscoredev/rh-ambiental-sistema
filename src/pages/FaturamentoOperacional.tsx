@@ -448,8 +448,8 @@ export default function FaturamentoOperacional() {
         />
 
         <FaturamentoFilaPosFaturamento
-          linhas={linhasOperacional}
-          carregando={carregandoVista}
+          linhas={linhasView}
+          carregando={carregandoVista || carregandoHistorico}
           podeConfirmar={podeConfirmarNfBoleto}
           onAtualizar={() => void recarregarTudo()}
         />

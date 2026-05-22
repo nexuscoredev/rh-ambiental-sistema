@@ -80,10 +80,10 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
 
   const recarregarTudo = useCallback(async () => {
     await carregarOperacional()
-    void fetchContagemHistoricoFaturamentoEmitido(supabase).then(({ count, error }) => {
-      if (!error) setContagemHistorico(count)
-    })
-    if (linhasHistorico !== null) {
+    const { count, error } = await fetchContagemHistoricoFaturamentoEmitido(supabase)
+    if (!error) setContagemHistorico(count)
+    /** Emitidas (Mala Direta / NF) não entram no escopo operacional — é preciso refrescar o histórico. */
+    if ((count ?? 0) > 0 || linhasHistorico !== null) {
       await carregarHistorico()
     }
   }, [carregarOperacional, carregarHistorico, linhasHistorico])
@@ -96,6 +96,21 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
       })
     })
   }, [carregarOperacional])
+
+  /** Coletas emitidas só existem no escopo «historico» — carrega automaticamente para Mala Direta / NF. */
+  useEffect(() => {
+    if (carregandoOperacional) return
+    if (linhasHistorico !== null) return
+    if (carregandoHistorico) return
+    if (contagemHistorico == null || contagemHistorico <= 0) return
+    void carregarHistorico()
+  }, [
+    carregandoOperacional,
+    linhasHistorico,
+    carregandoHistorico,
+    contagemHistorico,
+    carregarHistorico,
+  ])
 
   useEffect(() => {
     const id = (coletaIdUrl ?? '').trim()
