@@ -667,7 +667,7 @@ function montarClientesSelectPrincipalLegacy(
   incluirStatusDatas = true
 ): string {
   const statusPart = incluirStatusDatas ? `${CLIENTES_SELECT_STATUS_DATAS}, ` : "";
-  let tailBase = CLIENTES_SELECT_TAIL_BASE.replace(
+  const tailBase = CLIENTES_SELECT_TAIL_BASE.replace(
     "validade, ",
     `validade, ${statusPart}`
   );

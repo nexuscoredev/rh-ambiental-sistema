@@ -43,7 +43,7 @@ describe('faturamentoPrecoContrato', () => {
     expect(x.linhas.some((l) => l.chave === 'minimo')).toBe(true)
   })
 
-  it('mínimo em kg com unidade ton converte 500 kg para 0,5 ton', () => {
+  it('contrato em ton é normalizado para kg (mínimo 1000 kg, 200 kg pesados)', () => {
     const x = calcularPrecoContratoCliente({
       residuosContratoRaw: [
         {
@@ -56,11 +56,12 @@ describe('faturamentoPrecoContrato', () => {
       tipoResiduoColeta: 'Lodo',
       pesoLiquidoKg: 200,
     })
-    expect(x.quantidadeFaturada).toBe(1)
+    expect(x.unidadeMedida).toBe('kg')
+    expect(x.quantidadeFaturada).toBe(1000)
     expect(x.total).toBe(1000)
   })
 
-  it('calcula por tonelada', () => {
+  it('contrato em ton normalizado: 2000 kg × R$ 1/kg', () => {
     const x = calcularPrecoContratoCliente({
       residuosContratoRaw: [
         { tipo_residuo: 'Lodo', unidade_medida: 'ton', valor: 1000, faturamento_minimo: 0 },
@@ -68,7 +69,8 @@ describe('faturamentoPrecoContrato', () => {
       tipoResiduoColeta: 'Lodo',
       pesoLiquidoKg: 2000,
     })
-    expect(x.quantidadeFaturada).toBe(2)
+    expect(x.unidadeMedida).toBe('kg')
+    expect(x.quantidadeFaturada).toBe(2000)
     expect(x.total).toBe(2000)
   })
 

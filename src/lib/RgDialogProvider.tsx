@@ -7,28 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { RgConfirmDialog, type RgConfirmVariant } from '../components/ui/RgConfirmDialog'
+import { RgConfirmDialog } from '../components/ui/RgConfirmDialog'
 import { RgPromptDialog } from '../components/ui/RgPromptDialog'
+import { bindRgDialogBridge } from './rgDialogBridge'
+import type { RgAlertOptions, RgDialogApi, RgDialogOptions, RgPromptOptions } from './rgDialogTypes'
 
-export type RgDialogOptions = {
-  title: string
-  message?: ReactNode
-  details?: string[]
-  confirmLabel?: string
-  cancelLabel?: string
-  variant?: RgConfirmVariant
-}
-
-export type RgAlertOptions = RgDialogOptions
-
-export type RgPromptOptions = {
-  title: string
-  message?: string
-  defaultValue?: string
-  placeholder?: string
-  confirmLabel?: string
-  cancelLabel?: string
-}
+export type { RgAlertOptions, RgDialogOptions, RgPromptOptions } from './rgDialogTypes'
+export { rgAlert, rgConfirm } from './rgDialogBridge'
 
 type PendingConfirm = RgDialogOptions & { kind: 'confirm'; resolve: (v: boolean) => void }
 type PendingAlert = RgAlertOptions & { kind: 'alert'; resolve: () => void }
@@ -36,13 +21,7 @@ type PendingPrompt = RgPromptOptions & { kind: 'prompt'; resolve: (v: string | n
 
 type Pending = PendingConfirm | PendingAlert | PendingPrompt
 
-type RgDialogContextValue = {
-  confirm: (opts: RgDialogOptions) => Promise<boolean>
-  alert: (opts: RgAlertOptions) => Promise<void>
-  prompt: (opts: RgPromptOptions) => Promise<string | null>
-}
-
-const RgDialogContext = createContext<RgDialogContextValue | null>(null)
+const RgDialogContext = createContext<RgDialogApi | null>(null)
 
 export function RgDialogProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Pending | null>(null)
@@ -86,7 +65,7 @@ export function RgDialogProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const value = useMemo(() => ({ confirm, alert, prompt }), [confirm, alert, prompt])
+  const value = useMemo<RgDialogApi>(() => ({ confirm, alert, prompt }), [confirm, alert, prompt])
 
   useEffect(() => {
     bindRgDialogBridge(value)
@@ -132,28 +111,10 @@ export function RgDialogProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useRgDialog(): RgDialogContextValue {
+export function useRgDialog(): RgDialogApi {
   const ctx = useContext(RgDialogContext)
   if (!ctx) {
     throw new Error('useRgDialog deve ser usado dentro de RgDialogProvider')
   }
   return ctx
-}
-
-/** API imperativa para módulos fora de React (ex.: impressão). */
-let dialogBridge: RgDialogContextValue | null = null
-
-export function bindRgDialogBridge(api: RgDialogContextValue | null) {
-  dialogBridge = api
-}
-
-export async function rgAlert(opts: RgAlertOptions): Promise<void> {
-  if (dialogBridge) return dialogBridge.alert(opts)
-  const msg = typeof opts.message === 'string' ? opts.message : opts.title
-  window.alert(msg)
-}
-
-export async function rgConfirm(opts: RgDialogOptions): Promise<boolean> {
-  if (dialogBridge) return dialogBridge.confirm(opts)
-  return window.confirm(typeof opts.message === 'string' ? opts.message : opts.title)
 }

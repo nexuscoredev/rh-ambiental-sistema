@@ -6,4 +6,4 @@ export function useRgConfirm() {
   return { confirm, alert, dialogElement: null }
 }
 
-export type { RgDialogOptions as RgConfirmOptions } from './RgDialogProvider'
+export type { RgDialogOptions as RgConfirmOptions } from './rgDialogTypes'

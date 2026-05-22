@@ -69,7 +69,12 @@ function filtrarTitulosDuplicadosMtrConsolidada(
 
   return linhas
     .filter((l) => !omitirIds.has(l.id))
-    .map(({ _numero_coleta: _n, _mtr_id: _m, ...row }) => row)
+    .map((linha) => {
+      const { _numero_coleta, _mtr_id, ...row } = linha
+      void _numero_coleta
+      void _mtr_id
+      return row
+    })
 }
 
 export default function FinanceiroContasReceber() {
