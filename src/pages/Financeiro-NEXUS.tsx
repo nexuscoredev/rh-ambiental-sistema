@@ -25,11 +25,17 @@ import {
 } from '../lib/faturamentoResumo'
 import { registrarBaixaContaReceber, upsertContaReceber } from '../services/financeiroReceber'
 import { FinanceiroConferenciaDetalhe } from '../components/financeiro/FinanceiroConferenciaDetalhe'
-import { fetchContasReceberByColetaIds } from '../lib/contasReceberFetch'
+import {
+  fetchColetaIdsComContaReceber,
+  fetchContasReceberByColetaIds,
+} from '../lib/contasReceberFetch'
 import {
   fetchVwFaturamentoResumoPaginated,
+  fetchVwFaturamentoResumoPorColetaIds,
+  faturamentoResumoCreatedAtMinIso,
   faturamentoResumoDesdeDias,
 } from '../lib/faturamentoResumoFetch'
+import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
 
 type StatusPagamento = 'Pendente' | 'Parcial' | 'Pago'
@@ -285,20 +291,47 @@ export default function Financeiro() {
   }
 
   const carregarFinanceiro = useCallback(async () => {
-    const { data: rowsView, error } = await fetchVwFaturamentoResumoPaginated(supabase, {
+    const coletaIdsComCr = new Set(
+      await fetchColetaIdsComContaReceber(supabase, {
+        dataEmissaoDesde: faturamentoResumoCreatedAtMinIso(),
+      })
+    )
+
+    const { data: rowsInicial, error } = await fetchVwFaturamentoResumoPaginated(supabase, {
       orFilter: COLETAS_OR_FINANCEIRO_QUERY,
       maxPages: FINANCEIRO_VW_RESUMO_MAX_PAGES,
     })
 
     if (error) throw error
 
-    const filtradas = rowsView.filter((row) =>
-      coletaVisivelListaFinanceiro({
-        fluxo_status: row.fluxo_status,
-        etapa_operacional: row.etapa_operacional,
-        liberado_financeiro: row.liberado_financeiro,
-        coleta_observacoes: row.coleta_observacoes,
-      })
+    const rowsView: FaturamentoResumoViewRow[] = [...rowsInicial]
+    const loadedIds = new Set(rowsView.map((r) => r.coleta_id))
+    const missingCr = [...coletaIdsComCr].filter((id) => !loadedIds.has(id))
+    if (missingCr.length > 0) {
+      const { data: extra, error: errExtra } = await fetchVwFaturamentoResumoPorColetaIds(
+        supabase,
+        missingCr
+      )
+      if (errExtra) throw errExtra
+      for (const row of extra) {
+        if (!loadedIds.has(row.coleta_id)) {
+          rowsView.push(row)
+          loadedIds.add(row.coleta_id)
+        }
+      }
+    }
+
+    const filtradas = rowsView.filter(
+      (row) =>
+        coletaIdsComCr.has(row.coleta_id) ||
+        coletaVisivelListaFinanceiro({
+          fluxo_status: row.fluxo_status,
+          etapa_operacional: row.etapa_operacional,
+          liberado_financeiro: row.liberado_financeiro,
+          faturamento_esteira_status: row.faturamento_esteira_status,
+          conta_receber_nf_enviada_em: row.conta_receber_nf_enviada_em,
+          coleta_observacoes: row.coleta_observacoes,
+        })
     )
 
     const base = filtradas.map(mapFaturamentoViewRow)

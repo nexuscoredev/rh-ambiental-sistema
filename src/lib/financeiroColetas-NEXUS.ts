@@ -2,15 +2,15 @@ import { normalizarEtapaColeta, type EtapaFluxo } from './fluxoEtapas'
 
 /**
  * Etapas de fluxo que entram na lista de cobrança (Financeiro).
- * Só `FINALIZADO` — após NF / esteira finalizada (não `FATURADO` nem `ENVIADO_FINANCEIRO` sozinhos).
+ * `ENVIADO_FINANCEIRO` e `FINALIZADO`; não `FATURADO` (ainda na mala direta / NF pendente).
  */
 export function etapaVisivelListaFinanceiro(etapa: EtapaFluxo): boolean {
-  return etapa === 'FINALIZADO'
+  return etapa === 'FINALIZADO' || etapa === 'ENVIADO_FINANCEIRO'
 }
 
 /**
- * Mesmo critério da UI: linha entra na lista após esteira Finalizado, NF registada na conta,
- * etapa FINALIZADO no fluxo, ou seeds de teste (observações).
+ * Linha entra na lista após envio ao financeiro: liberado, esteira liberada/finalizada,
+ * NF na conta, etapa ENVIADO_FINANCEIRO/FINALIZADO, ou seeds de teste (observações).
  */
 export function coletaVisivelListaFinanceiro(row: {
   fluxo_status?: string | null
@@ -25,8 +25,10 @@ export function coletaVisivelListaFinanceiro(row: {
   const obs = (row.coleta_observacoes ?? row.observacoes ?? '').toUpperCase()
   if (obs.includes('HIST-200') || obs.includes('SIM-50') || obs.includes('FLUXO-20')) return true
 
+  if (row.liberado_financeiro === true) return true
+
   const esteira = (row.faturamento_esteira_status ?? '').trim().toUpperCase()
-  if (esteira === 'FINALIZADO') return true
+  if (esteira === 'FINALIZADO' || esteira === 'LIBERADO_FINANCEIRO') return true
 
   if (row.conta_receber_nf_enviada_em) return true
 
@@ -39,12 +41,16 @@ export function coletaVisivelListaFinanceiro(row: {
 }
 
 /**
- * Filtro PostgREST para `.or(...)`: esteira finalizada, etapa FINALIZADO ou seeds de teste.
+ * Filtro PostgREST para `.or(...)`: coletas enviadas/liberadas para o Financeiro ou seeds de teste.
  */
 export const COLETAS_OR_FINANCEIRO_QUERY = [
   'faturamento_esteira_status.eq.FINALIZADO',
+  'faturamento_esteira_status.eq.LIBERADO_FINANCEIRO',
+  'liberado_financeiro.eq.true',
   'fluxo_status.eq.FINALIZADO',
+  'fluxo_status.eq.ENVIADO_FINANCEIRO',
   'etapa_operacional.eq.FINALIZADO',
+  'etapa_operacional.eq.ENVIADO_FINANCEIRO',
   'coleta_observacoes.ilike.%HIST-200%',
   'coleta_observacoes.ilike.%SIM-50%',
   'coleta_observacoes.ilike.%FLUXO-20%',

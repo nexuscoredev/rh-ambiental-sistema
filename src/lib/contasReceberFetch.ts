@@ -27,3 +27,34 @@ export async function fetchContasReceberByColetaIds<T extends Record<string, unk
   }
   return map
 }
+
+/** IDs de coletas com título em `contas_receber` (lista Financeiro — complemento à view). */
+export async function fetchColetaIdsComContaReceber(
+  supabase: SupabaseClient,
+  opts?: { dataEmissaoDesde?: string | null; maxLinhas?: number }
+): Promise<string[]> {
+  const max = opts?.maxLinhas ?? 10_000
+  const PAGE = 1000
+  const ids = new Set<string>()
+  const desde = (opts?.dataEmissaoDesde ?? '').trim().slice(0, 10)
+
+  for (let page = 0; page < Math.ceil(max / PAGE); page++) {
+    const from = page * PAGE
+    const to = from + PAGE - 1
+    let qb = supabase
+      .from('contas_receber')
+      .select('referencia_coleta_id')
+      .not('referencia_coleta_id', 'is', null)
+    if (desde) qb = qb.gte('data_emissao', desde)
+    const { data, error } = await qb.range(from, to)
+    if (error) throw new Error(error.message)
+    const chunk = (data || []) as { referencia_coleta_id?: string | null }[]
+    if (chunk.length === 0) break
+    for (const r of chunk) {
+      const id = (r.referencia_coleta_id ?? '').trim()
+      if (id) ids.add(id)
+    }
+    if (chunk.length < PAGE) break
+  }
+  return [...ids]
+}
