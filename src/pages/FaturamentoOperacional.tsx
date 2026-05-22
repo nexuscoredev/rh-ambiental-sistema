@@ -37,6 +37,7 @@ import { FaturamentoFilaAjusteValores } from '../components/faturamento/Faturame
 import { FaturamentoFilaMedicao } from '../components/faturamento/FaturamentoFilaMedicao'
 import { FaturamentoFilaPosFaturamento } from '../components/faturamento/FaturamentoFilaPosFaturamento'
 import { FaturamentoEsteiraFluxo } from '../components/faturamento/FaturamentoEsteiraFluxo'
+import { useRgDialog } from '../lib/RgDialogProvider'
 import {
   MENSAGEM_MIGRACAO_ESTEIRA,
   coletaAguardandoConfirmacaoNfBoleto,
@@ -108,6 +109,7 @@ const cardStyle: CSSProperties = {
 }
 
 export default function FaturamentoOperacional() {
+  const { confirm, alert } = useRgDialog()
   const [searchParams, setSearchParams] = useSearchParams()
   const idsCtx = useMemo(() => idsContextoFromSearchParams(searchParams), [searchParams])
 
@@ -353,7 +355,13 @@ export default function FaturamentoOperacional() {
   async function confirmarFaturarEsteira(coletaId: string) {
     if (!podeConfirmarEmissao) return
     const msg = mensagemConfirmacaoEmitirEsteira(coletaId, fila)
-    if (!window.confirm(msg)) return
+    const okConfirm = await confirm({
+      title: 'Confirmar faturamento',
+      message: msg,
+      confirmLabel: 'Faturar e avançar',
+      variant: 'warning',
+    })
+    if (!okConfirm) return
 
     const grupoEmitir = resolverGrupoFaturamentoNaFila(coletaId, fila)
     const idsEmitir = grupoEmitir.map((c) => c.coleta_id)
@@ -363,7 +371,7 @@ export default function FaturamentoOperacional() {
     setEmitindoFaturamentoId(null)
 
     if (!res.ok) {
-      window.alert(res.message)
+      await alert({ title: 'Faturamento', message: res.message, variant: 'danger' })
       return
     }
 

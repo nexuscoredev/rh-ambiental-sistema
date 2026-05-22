@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../lib/coletasQueryLimits'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
@@ -624,7 +625,15 @@ export default function Financeiro() {
 
   async function removerDocumento(id: string) {
     if (!podeMutarFinanceiro) return
-    if (!window.confirm('Remover este documento da lista?')) return
+    if (
+      !(await rgConfirm({
+        title: 'Remover documento',
+        message: 'Remover este documento da lista?',
+        confirmLabel: 'Remover',
+        variant: 'danger',
+      }))
+    )
+      return
     setErro('')
     try {
       const { error } = await supabase.from('financeiro_documentos').delete().eq('id', id)

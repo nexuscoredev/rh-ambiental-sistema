@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clearSessionPageBlob, useSessionObjectDraft } from '../lib/usePageSessionPersistence'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgAlert } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import type {
   ComprovanteDescarteRow,
@@ -524,7 +525,7 @@ export default function ComprovanteDescarteForm() {
     const anterior = form.foto_entrada_url
     const { publicUrl, error } = await enviarImagemComprovante(supabase, comprovanteId, 'entrada', file)
     if (error) {
-      window.alert(error.message)
+      await rgAlert({ title: 'Comprovante de descarte', message: error.message, variant: 'danger' })
       return
     }
     const pathAnt = pathFromPublicUrlComprovante(anterior)
@@ -543,7 +544,7 @@ export default function ComprovanteDescarteForm() {
     const anterior = form.foto_saida_url
     const { publicUrl, error } = await enviarImagemComprovante(supabase, comprovanteId, 'saida', file)
     if (error) {
-      window.alert(error.message)
+      await rgAlert({ title: 'Comprovante de descarte', message: error.message, variant: 'danger' })
       return
     }
     const pathAnt = pathFromPublicUrlComprovante(anterior)
@@ -561,7 +562,7 @@ export default function ComprovanteDescarteForm() {
     if (!comprovanteId) return
     const { publicUrl, error } = await enviarImagemComprovante(supabase, comprovanteId, 'extras', file)
     if (error) {
-      window.alert(error.message)
+      await rgAlert({ title: 'Comprovante de descarte', message: error.message, variant: 'danger' })
       return
     }
     const next = {

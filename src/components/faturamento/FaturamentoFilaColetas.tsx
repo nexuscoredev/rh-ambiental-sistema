@@ -12,6 +12,7 @@ import {
   rotuloConferenciaResumo,
   statusFaturamentoUi,
 } from '../../lib/faturamentoOperacionalFila'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 
 const R = { sm: '4px', md: '6px', lg: '8px' } as const
 
@@ -311,6 +312,7 @@ export function FaturamentoFilaColetas({
   agruparPorMtr = true,
   emitindoColetaId = null,
 }: Props) {
+  const { confirm, alert, prompt } = useRgDialog()
   const [devolvendoId, setDevolvendoId] = useState<string | null>(null)
 
   const itensFila = useMemo(
@@ -323,31 +325,54 @@ export function FaturamentoFilaColetas({
     const grupo = resolverGrupoFaturamentoNaFila(row.coleta_id, linhas)
     const n = row.numero_coleta ?? row.numero
     const mtr = (row.mtr_numero ?? '').trim()
-    const ok =
+    const ok = await confirm(
       grupo.length > 1
-        ? window.confirm(
-            `Devolver os ${grupo.length} tickets da MTR ${mtr || '—'} à fila de conferência?\n\n` +
-              `Coletas: ${grupo.map((c) => c.numero_coleta ?? c.numero).join(', ')}.\n\n` +
-              'A aprovação do Faturamento será anulada em todas; cada ticket voltará a aguardar validação antes de faturar (consolidam só na fila de faturamento).'
-          )
-        : window.confirm(
-            `Devolver a coleta ${n} à fila de conferência do ticket?\n\nA aprovação do Faturamento será anulada e a coleta voltará a aguardar validação antes de faturar.`
-          )
+        ? {
+            title: 'Devolver tickets à conferência',
+            message: `Devolver os ${grupo.length} tickets da MTR ${mtr || '—'} à fila de conferência?`,
+            details: [
+              `Coletas: ${grupo.map((c) => c.numero_coleta ?? c.numero).join(', ')}.`,
+              'A aprovação do Faturamento será anulada em todas; cada ticket voltará a aguardar validação antes de faturar (consolidam só na fila de faturamento).',
+            ],
+            confirmLabel: 'Devolver',
+            variant: 'warning',
+          }
+        : {
+            title: 'Devolver à conferência do ticket',
+            message: `Devolver a coleta ${n} à fila de conferência do ticket?`,
+            details: [
+              'A aprovação do Faturamento será anulada e a coleta voltará a aguardar validação antes de faturar.',
+            ],
+            confirmLabel: 'Devolver',
+            variant: 'warning',
+          }
+    )
     if (!ok) return
 
-    const motivo = window.prompt('Motivo da devolução (opcional):', '') ?? ''
+    const motivoInput = await prompt({
+      title: 'Motivo da devolução',
+      message: 'Opcional — ficará registado na devolução.',
+      defaultValue: '',
+      placeholder: 'Ex.: peso divergente, ticket incorreto…',
+      confirmLabel: 'Continuar',
+      cancelLabel: 'Cancelar',
+    })
+    if (motivoInput === null) return
+    const motivo = motivoInput
     setDevolvendoId(row.coleta_id)
     const res = await devolverTicketParaFilaConferenciaColeta(row.coleta_id, motivo)
     setDevolvendoId(null)
 
     if (!res.ok) {
-      window.alert(res.message)
+      await alert({ title: 'Devolução à conferência', message: res.message, variant: 'danger' })
       return
     }
     if (res.coletasAfetadas > 1) {
-      window.alert(
-        `${res.coletasAfetadas} tickets da mesma MTR foram devolvidos à fila de conferência.`
-      )
+      await alert({
+        title: 'Devolução concluída',
+        message: `${res.coletasAfetadas} tickets da mesma MTR foram devolvidos à fila de conferência.`,
+        variant: 'success',
+      })
     }
     onDevolvidoConferencia?.()
   }

@@ -9,6 +9,7 @@ import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
 import { PresencaAoVivoProvider } from './contexts/PresencaAoVivoContext'
+import { RgDialogProvider } from './lib/RgDialogProvider'
 import { PwaPremiumShell } from './components/pwa/PwaPremiumShell'
 
 import Login from './pages/Login'
@@ -379,6 +380,7 @@ function App() {
 
   return (
     <PerfilUsuarioProvider value={{ usuario, carregandoUsuario }}>
+      <RgDialogProvider>
       <BrowserRouter>
         <PwaPremiumShell />
         {avisoPerfil.trim() ? (
@@ -863,6 +865,7 @@ function App() {
           </PresencaAoVivoProvider>
         </ChatFloatProvider>
     </BrowserRouter>
+      </RgDialogProvider>
     </PerfilUsuarioProvider>
   )
 }

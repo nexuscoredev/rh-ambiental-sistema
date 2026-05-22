@@ -51,6 +51,7 @@ import {
   recalcularResumoDesdeOperacional,
 } from '../../lib/faturamentoOperacionalSync'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 import { FaturamentoResumoDesvinculado } from './FaturamentoResumoDesvinculado'
 import { FaturamentoMtrRateioPanel } from './FaturamentoMtrRateioPanel'
 
@@ -98,6 +99,7 @@ export function FaturamentoModalRegisto({
   onGravado,
   modoPreparacaoMedicao = false,
 }: Props) {
+  const { confirm } = useRgDialog()
   const podeConfirmarEmissao = podeConfirmarEmissaoProp ?? podeMutar ?? false
   const [registroId, setRegistroId] = useState<string | null>(null)
   const [resumoFinanceiro, setResumoFinanceiro] = useState<ResumoFinanceiroDesvinculado | null>(null)
@@ -612,9 +614,14 @@ export function FaturamentoModalRegisto({
     if (!row || !podeEncerrarTicketDefinitivo || !resumoFinanceiro) return
     if (resumoFinanceiro.ticket_encerrado_definitivo) return
 
-    const confirmar = window.confirm(
-      'Encerrar definitivamente o ticket neste faturamento? Os valores do resumo serão gravados e o ticket será aprovado na conferência. A pesagem operacional não é alterada.'
-    )
+    const confirmar = await confirm({
+      title: 'Encerrar ticket definitivamente',
+      message:
+        'Encerrar definitivamente o ticket neste faturamento? Os valores do resumo serão gravados e o ticket será aprovado na conferência.',
+      details: ['A pesagem operacional não é alterada.'],
+      confirmLabel: 'Encerrar ticket',
+      variant: 'warning',
+    })
     if (!confirmar) return
 
     setEncerrandoTicket(true)

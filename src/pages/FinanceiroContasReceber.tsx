@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
 import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { CONTAS_RECEBER_LISTA_MAX_LINHAS, REST_PAGE_SIZE } from '../lib/supabaseCargaLimites'
 import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
@@ -285,9 +286,13 @@ export default function FinanceiroContasReceber() {
     const saldo = row.valor - row.valor_pago
     if (saldo <= 0 || row.status_pagamento === 'Pago') return
 
-    const ok = window.confirm(
-      `Marcar a coleta ${row.coleta_numero} (${row.cliente_nome}) como Pago?\n\nSaldo: ${formatCurrency(saldo)}`
-    )
+    const ok = await rgConfirm({
+      title: 'Marcar como pago',
+      message: `Marcar a coleta ${row.coleta_numero} (${row.cliente_nome}) como Pago?`,
+      details: [`Saldo: ${formatCurrency(saldo)}`],
+      confirmLabel: 'Marcar pago',
+      variant: 'success',
+    })
     if (!ok) return
 
     setMarcandoPagoId(row.id)

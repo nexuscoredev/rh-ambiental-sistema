@@ -16,7 +16,7 @@ import {
 } from '../../lib/faturamentoEsteira'
 import { imprimirRelatorioMedicaoJanela } from '../../lib/imprimirRelatorioMedicaoJanela'
 import { buildUrlEnvioNfMedicao } from '../../lib/coletaContextoUrl'
-import { useRgConfirm } from '../../lib/useRgConfirm'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 import { FaturamentoTabelaMedicao } from './FaturamentoTabelaMedicao'
 
 const card: CSSProperties = {
@@ -153,7 +153,7 @@ export function FaturamentoFilaMedicao({
   const [processando, setProcessando] = useState(false)
   const [obsCliente, setObsCliente] = useState('')
   const [preparandoPrint, setPreparandoPrint] = useState(false)
-  const { confirm, dialogElement } = useRgConfirm()
+  const { confirm, alert } = useRgDialog()
 
   const gruposPorMtr = useMemo(() => agruparGruposMedicaoPorMtr(linhas), [linhas])
   const gruposMedicao = useMemo(
@@ -190,7 +190,7 @@ export function FaturamentoFilaMedicao({
     const res = await fn()
     setProcessando(false)
     if (!res.ok) {
-      window.alert(res.message ?? 'Erro')
+      await alert({ title: 'Não foi possível concluir', message: res.message ?? 'Erro', variant: 'danger' })
       return
     }
     onAtualizar()
@@ -258,7 +258,7 @@ export function FaturamentoFilaMedicao({
     try {
       const res = await carregarLinhasRelatorioMedicao(linhasColeta)
       if (res.erro) {
-        window.alert(res.erro)
+        await alert({ title: 'Relatório de medição', message: res.erro, variant: 'danger' })
         return
       }
       if (res.linhas.every((l) => l.total <= 0)) {
@@ -290,7 +290,6 @@ export function FaturamentoFilaMedicao({
 
   return (
     <>
-      {dialogElement}
       <div style={{ ...card, background: '#f5f3ff', borderColor: '#c4b5fd' }}>
         <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#312e81' }}>
           Esteira 3–5 · Medição e aprovação do cliente

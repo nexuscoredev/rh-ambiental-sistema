@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } 
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
+import { rgAlert, rgConfirm } from "../lib/RgDialogProvider";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../lib/coletasQueryLimits";
 import { sanitizeIlikePattern } from "../lib/sanitizeIlike";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
@@ -462,7 +463,12 @@ export default function Motoristas() {
   }
 
   async function handleDelete(id: string) {
-    const confirmar = window.confirm("Deseja realmente excluir este motorista?");
+    const confirmar = await rgConfirm({
+      title: "Excluir motorista",
+      message: "Deseja realmente excluir este motorista?",
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     const { data: rowFoto } = await supabase
@@ -533,11 +539,19 @@ export default function Motoristas() {
     if (!file || !fichaMotorista) return;
 
     if (!file.type.startsWith("image/")) {
-      window.alert("Escolha uma imagem (JPEG, PNG, WebP ou GIF).");
+      await rgAlert({
+        title: "Foto da CNH",
+        message: "Escolha uma imagem (JPEG, PNG, WebP ou GIF).",
+        variant: "warning",
+      });
       return;
     }
     if (file.size > MAX_BYTES_FOTO_CNH) {
-      window.alert("A imagem deve ter no máximo 8 MB.");
+      await rgAlert({
+        title: "Foto da CNH",
+        message: "A imagem deve ter no máximo 8 MB.",
+        variant: "warning",
+      });
       return;
     }
 
@@ -554,9 +568,12 @@ export default function Motoristas() {
 
       if (upErr) {
         console.error(upErr);
-        window.alert(
-          "Não foi possível enviar a foto. Aplique a migração do bucket motoristas-cnh no Supabase ou verifique as políticas de Storage."
-        );
+        await rgAlert({
+          title: "Foto da CNH",
+          message:
+            "Não foi possível enviar a foto. Aplique a migração do bucket motoristas-cnh no Supabase ou verifique as políticas de Storage.",
+          variant: "danger",
+        });
         return;
       }
 
@@ -570,9 +587,12 @@ export default function Motoristas() {
 
       if (dbErr) {
         console.error(dbErr);
-        window.alert(
-          "A foto foi enviada, mas falhou ao gravar o endereço no cadastro. Verifique se a coluna cnh_foto_url existe (migração SQL)."
-        );
+        await rgAlert({
+          title: "Foto da CNH",
+          message:
+            "A foto foi enviada, mas falhou ao gravar o endereço no cadastro. Verifique se a coluna cnh_foto_url existe (migração SQL).",
+          variant: "danger",
+        });
         return;
       }
 
@@ -593,7 +613,15 @@ export default function Motoristas() {
 
   async function handleRemoverFotoCnh() {
     if (!fichaMotorista?.cnh_foto_url) return;
-    if (!window.confirm("Remover a foto da CNH deste motorista?")) return;
+    if (
+      !(await rgConfirm({
+        title: "Remover foto da CNH",
+        message: "Remover a foto da CNH deste motorista?",
+        confirmLabel: "Remover",
+        variant: "danger",
+      }))
+    )
+      return;
 
     const p = pathFromSupabasePublicUrl(fichaMotorista.cnh_foto_url, BUCKET_CNH_MOTORISTA);
     if (p) {
@@ -607,7 +635,11 @@ export default function Motoristas() {
       .eq("id", fichaMotorista.id);
 
     if (error) {
-      window.alert("Não foi possível limpar o registo da foto.");
+      await rgAlert({
+        title: "Foto da CNH",
+        message: "Não foi possível limpar o registo da foto.",
+        variant: "danger",
+      });
       return;
     }
 

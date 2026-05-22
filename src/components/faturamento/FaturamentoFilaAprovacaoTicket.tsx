@@ -12,7 +12,7 @@ import {
   pesoLiquidoParaInput,
 } from '../../lib/pesoKgInput'
 import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
-import { useRgConfirm } from '../../lib/useRgConfirm'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 
 const wrap: CSSProperties = {
   background: '#fff',
@@ -73,7 +73,7 @@ export function FaturamentoFilaAprovacaoTicket({
   const [sucessoPeso, setSucessoPeso] = useState('')
   /** Reflete o peso gravado antes do refresh da vista. */
   const [pesoLocal, setPesoLocal] = useState<Record<string, number>>({})
-  const { confirm, dialogElement } = useRgConfirm()
+  const { confirm, alert } = useRgDialog()
 
   const linhaOcupada = (coletaId: string) =>
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
@@ -158,7 +158,13 @@ export function FaturamentoFilaAprovacaoTicket({
     setAbrindoPdfId(row.coleta_id)
     const res = await abrirPdfTicketOperacional(row)
     setAbrindoPdfId(null)
-    if (!res.ok) window.alert(res.message ?? 'Não foi possível abrir o PDF do ticket.')
+    if (!res.ok) {
+      await alert({
+        title: 'Ticket em PDF',
+        message: res.message ?? 'Não foi possível abrir o PDF do ticket.',
+        variant: 'danger',
+      })
+    }
   }
 
   async function handleAprovar(row: FaturamentoResumoViewRow) {
@@ -190,15 +196,13 @@ export function FaturamentoFilaAprovacaoTicket({
     setAprovandoId(null)
 
     if (!res.ok) {
-      window.alert(res.message)
+      await alert({ title: 'Aprovação do ticket', message: res.message, variant: 'danger' })
       return
     }
     onAprovado()
   }
 
   return (
-    <>
-      {dialogElement}
       <section style={wrap} aria-labelledby="fila-aprovacao-ticket-titulo">
       <h2
         id="fila-aprovacao-ticket-titulo"
@@ -419,6 +423,5 @@ export function FaturamentoFilaAprovacaoTicket({
         </div>
       )}
     </section>
-    </>
   )
 }

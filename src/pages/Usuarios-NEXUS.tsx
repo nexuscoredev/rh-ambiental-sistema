@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../lib/coletasQueryLimits'
 import { limparSessionDraftKey, useCadastroFormDraft } from '../lib/useCadastroFormDraft'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
@@ -517,9 +518,13 @@ export default function Usuarios() {
   async function excluirUsuario(usuario: Usuario) {
     if (!podeCriarOuExcluir) return
 
-    const ok = window.confirm(
-      `Excluir permanentemente o usuário "${usuario.nome}" (${usuario.email})?\nEsta ação não pode ser desfeita.`
-    )
+    const ok = await rgConfirm({
+      title: 'Excluir usuário',
+      message: `Excluir permanentemente o usuário "${usuario.nome}" (${usuario.email})?`,
+      details: ['Esta ação não pode ser desfeita.'],
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    })
     if (!ok) return
 
     setExcluindoId(usuario.id)

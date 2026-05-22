@@ -13,6 +13,7 @@ import {
   type FaturamentoResumoViewRow,
 } from '../../lib/faturamentoResumo'
 import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 
 type Props = {
   open: boolean
@@ -106,6 +107,7 @@ export function FaturamentoColetaResumoModal({
   coletasConsolidadas,
   onClose,
 }: Props) {
+  const { alert } = useRgDialog()
   const navigate = useNavigate()
   const [abrindoPdf, setAbrindoPdf] = useState(false)
 
@@ -150,7 +152,13 @@ export function FaturamentoColetaResumoModal({
     setAbrindoPdf(true)
     const res = await abrirPdfTicketOperacional(row!)
     setAbrindoPdf(false)
-    if (!res.ok) window.alert(res.message ?? 'Não foi possível abrir o PDF do ticket.')
+    if (!res.ok) {
+      await alert({
+        title: 'Ticket em PDF',
+        message: res.message ?? 'Não foi possível abrir o PDF do ticket.',
+        variant: 'danger',
+      })
+    }
   }
 
   return (

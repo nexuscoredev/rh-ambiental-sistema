@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
 import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgAlert, rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import type { ComprovanteDescarteFiltros, ComprovanteDescarteRow } from '../lib/comprovantesDescarteTypes'
 import {
@@ -117,17 +118,25 @@ export default function ComprovantesDescarte() {
 
   async function handleExcluir(row: ComprovanteDescarteRow) {
     if (!podeMutar) {
-      window.alert('Seu perfil não pode excluir comprovantes de descarte.')
+      await rgAlert({
+        title: 'Sem permissão',
+        message: 'Seu perfil não pode excluir comprovantes de descarte.',
+        variant: 'warning',
+      })
       return
     }
     const rotulo = (row.codigo_remessa ?? '').trim() || row.id
-    const ok = window.confirm(
-      `Excluir comprovante ${rotulo}? Esta ação não pode ser desfeita (inclui imagens anexadas).`
-    )
+    const ok = await rgConfirm({
+      title: 'Excluir comprovante',
+      message: `Excluir comprovante ${rotulo}?`,
+      details: ['Esta ação não pode ser desfeita (inclui imagens anexadas).'],
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    })
     if (!ok) return
     const { error } = await excluirComprovanteDescarte(supabase, row.id)
     if (error) {
-      window.alert(error.message)
+      await rgAlert({ title: 'Excluir comprovante', message: error.message, variant: 'danger' })
       return
     }
     void carregar()

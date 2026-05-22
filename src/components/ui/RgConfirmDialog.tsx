@@ -2,6 +2,8 @@ import { useEffect, type CSSProperties, type ReactNode } from 'react'
 
 export type RgConfirmVariant = 'default' | 'success' | 'warning' | 'danger'
 
+export type RgConfirmDialogMode = 'confirm' | 'alert'
+
 export type RgConfirmDialogProps = {
   open: boolean
   title: string
@@ -11,6 +13,8 @@ export type RgConfirmDialogProps = {
   confirmLabel?: string
   cancelLabel?: string
   variant?: RgConfirmVariant
+  /** `alert` = só botão OK (substitui `window.alert`). */
+  mode?: RgConfirmDialogMode
   loading?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -62,14 +66,17 @@ export function RgConfirmDialog({
   title,
   message,
   details,
-  confirmLabel = 'Confirmar',
+  confirmLabel,
   cancelLabel = 'Cancelar',
   variant = 'default',
+  mode = 'confirm',
   loading = false,
   onConfirm,
   onCancel,
 }: RgConfirmDialogProps) {
   const v = variantStyles[variant]
+  const isAlert = mode === 'alert'
+  const btnConfirmLabel = confirmLabel ?? (isAlert ? 'OK' : 'Confirmar')
 
   useEffect(() => {
     if (!open) return
@@ -180,7 +187,17 @@ export function RgConfirmDialog({
 
         <div id="rg-confirm-desc" style={{ padding: '16px 22px 20px' }}>
           {message ? (
-            <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#334155', lineHeight: 1.55 }}>{message}</p>
+            <p
+              style={{
+                margin: '0 0 12px',
+                fontSize: '14px',
+                color: '#334155',
+                lineHeight: 1.55,
+                whiteSpace: typeof message === 'string' && message.includes('\n') ? 'pre-line' : undefined,
+              }}
+            >
+              {message}
+            </p>
           ) : null}
           {details && details.length > 0 ? (
             <ul
@@ -215,9 +232,11 @@ export function RgConfirmDialog({
             background: '#fafafa',
           }}
         >
-          <button type="button" onClick={onCancel} disabled={loading} style={btnCancel}>
-            {cancelLabel}
-          </button>
+          {!isAlert ? (
+            <button type="button" onClick={onCancel} disabled={loading} style={btnCancel}>
+              {cancelLabel}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onConfirm}
@@ -235,7 +254,7 @@ export function RgConfirmDialog({
               boxShadow: '0 2px 8px rgba(15, 23, 42, 0.12)',
             }}
           >
-            {loading ? 'A processar…' : confirmLabel}
+            {loading ? 'A processar…' : btnConfirmLabel}
           </button>
         </div>
       </div>

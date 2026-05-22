@@ -11,6 +11,7 @@ import {
 } from '../../lib/faturamentoEsteira'
 import { supabase } from '../../lib/supabase'
 import { registarNumeroNfBoletoEsteiraFaturamentoLote } from '../../services/financeiroReceber'
+import { useRgDialog } from '../../lib/RgDialogProvider'
 
 const card: CSSProperties = {
   background: '#fff',
@@ -107,6 +108,7 @@ export function FaturamentoFilaPosFaturamento({
   onFinalizado,
   onAtualizar,
 }: Props) {
+  const { alert } = useRgDialog()
   const pendentes = useMemo(
     () => linhas.filter(coletaAguardandoConfirmacaoNfBoleto),
     [linhas]
@@ -195,7 +197,11 @@ export function FaturamentoFilaPosFaturamento({
         ? `Enviado a Contas a Receber — NF ${numeroNf} (${grupo.linhas.length} coletas). Processo encerrado aqui; veja o histórico abaixo.`
         : `Enviado a Contas a Receber — NF ${numeroNf}. Processo encerrado aqui; veja o histórico abaixo.`
     )
-    window.alert(textoSucesso)
+    await alert({
+      title: 'Processo encerrado no Faturamento',
+      message: textoSucesso,
+      variant: 'success',
+    })
 
     const ids = grupo.linhas.map((r) => r.coleta_id)
     if (onFinalizado) {

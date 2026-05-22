@@ -22,6 +22,7 @@ import { ChatSidebarPanel } from './ChatSidebarPanel'
 import { ChatThreadPanel } from './ChatThreadPanel'
 import { RgChatLogo } from './RgChatLogo'
 import { BRAND_LOGO_MARK } from '../../lib/brandLogo'
+import { rgConfirm } from '../../lib/RgDialogProvider'
 
 const CHAT_HEAD_THEME_STORAGE_KEY = 'rg-chat-head-theme'
 const CHAT_FAB_POS_STORAGE_KEY = 'rg-chat-fab-pos-v1'
@@ -606,9 +607,13 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
 
   const handleApagarHistoricoConversa = useCallback(async () => {
     if (!conversaId || !podeApagarHistoricoChat) return
-    const ok = window.confirm(
-      'Excluir todo o histórico desta conversa? As mensagens e anexos serão removidos de forma irreversível para todos os participantes.'
-    )
+    const ok = await rgConfirm({
+      title: 'Apagar histórico do chat',
+      message:
+        'Excluir todo o histórico desta conversa? As mensagens e anexos serão removidos de forma irreversível para todos os participantes.',
+      confirmLabel: 'Apagar histórico',
+      variant: 'danger',
+    })
     if (!ok) return
     setApagandoHistorico(true)
     setErro('')

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import {
   formatarEtapaParaUI,
@@ -1097,7 +1098,15 @@ export default function MTR() {
       ? `Remover a MTR ${item.numero} e ${qtdColetas} coleta(s) vinculada(s)?\n\nIsso apaga checklist, ticket, aprovação, faturamento e desvincula programação e controle de massa quando aplicável.`
       : `Deseja realmente remover a MTR ${item.numero}?`
 
-    if (!window.confirm(msgConfirm)) return
+    if (
+      !(await rgConfirm({
+        title: 'Excluir MTR',
+        message: msgConfirm,
+        confirmLabel: 'Excluir',
+        variant: 'danger',
+      }))
+    )
+      return
 
     const res = await excluirMtrPorId(item.id)
     if (!res.ok) {
@@ -1136,9 +1145,13 @@ export default function MTR() {
     }
 
     if (!opts?.skipConfirm) {
-      const ok = window.confirm(
-        `Serão excluídas ${ids.length} coleta(s) vinculada(s) a esta MTR.\n\nDeseja continuar?`
-      )
+      const ok = await rgConfirm({
+        title: 'Excluir coletas da MTR',
+        message: `Serão excluídas ${ids.length} coleta(s) vinculada(s) a esta MTR.`,
+        details: ['Deseja continuar?'],
+        confirmLabel: 'Continuar',
+        variant: 'danger',
+      })
       if (!ok) return false
     }
 

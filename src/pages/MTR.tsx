@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { montarMapNomeExibicaoPorUsuarioId } from '../lib/resolveAutorUsuarioNomes'
 import {
@@ -1087,9 +1088,13 @@ export default function MTR() {
 
     const linked = mtrMapByProgramacaoId.get(programacao.id)
     if (linked && !(editingId && linked.id === editingId)) {
-      const ok = window.confirm(
-        `Esta programação já possui uma MTR vinculada (${linked.numero}).\n\nDeseja abrir a MTR existente?`
-      )
+      const ok = await rgConfirm({
+        title: 'MTR já vinculada',
+        message: `Esta programação já possui uma MTR vinculada (${linked.numero}).`,
+        details: ['Deseja abrir a MTR existente?'],
+        confirmLabel: 'Abrir MTR',
+        variant: 'warning',
+      })
       if (ok) {
         setSelectedMTR(linked)
         setShowForm(false)
@@ -1565,7 +1570,15 @@ export default function MTR() {
       ? `Remover a MTR ${item.numero} e ${qtdColetas} coleta(s) vinculada(s)?\n\nIsso apaga checklist, ticket, aprovação, faturamento e desvincula programação e controle de massa quando aplicável.`
       : `Deseja realmente remover a MTR ${item.numero}?`
 
-    if (!window.confirm(msgConfirm)) return
+    if (
+      !(await rgConfirm({
+        title: 'Excluir MTR',
+        message: msgConfirm,
+        confirmLabel: 'Excluir',
+        variant: 'danger',
+      }))
+    )
+      return
 
     const res = await excluirMtrPorId(item.id)
     if (!res.ok) {
@@ -1604,9 +1617,13 @@ export default function MTR() {
     }
 
     if (!opts?.skipConfirm) {
-      const ok = window.confirm(
-        `Serão excluídas ${ids.length} coleta(s) vinculada(s) a esta MTR.\n\nDeseja continuar?`
-      )
+      const ok = await rgConfirm({
+        title: 'Excluir coletas da MTR',
+        message: `Serão excluídas ${ids.length} coleta(s) vinculada(s) a esta MTR.`,
+        details: ['Deseja continuar?'],
+        confirmLabel: 'Continuar',
+        variant: 'danger',
+      })
       if (!ok) return false
     }
 
@@ -1643,12 +1660,16 @@ export default function MTR() {
     [coletaMapByMtrId, programacaoMap]
   )
 
-  function confirmarEImprimirMtr(mtr: MTR, detalhes: MTRDetalhes) {
+  async function confirmarEImprimirMtr(mtr: MTR, detalhes: MTRDetalhes) {
     const avisos = avisosImpressaoMtr(mtr, detalhes)
     if (avisos.length > 0) {
-      const ok = window.confirm(
-        `O manifesto ainda não está completo para impressão ideal. Itens a rever: ${avisos.join('; ')}.\n\nDeseja imprimir mesmo assim?`
-      )
+      const ok = await rgConfirm({
+        title: 'Imprimir MTR incompleto',
+        message: `O manifesto ainda não está completo para impressão ideal.`,
+        details: [`Itens a rever: ${avisos.join('; ')}.`, 'Deseja imprimir mesmo assim?'],
+        confirmLabel: 'Imprimir mesmo assim',
+        variant: 'warning',
+      })
       if (!ok) return
     }
     window.print()
@@ -1663,14 +1684,14 @@ export default function MTR() {
           behavior: 'smooth',
           block: 'start',
         })
-        confirmarEImprimirMtr(item, detalhes)
+        void confirmarEImprimirMtr(item, detalhes)
       }, 220)
     })
   }
 
   function handlePrint() {
     if (!mtrSelecionadaValida || !detalhesMtrSelecionada) return
-    confirmarEImprimirMtr(mtrSelecionadaValida, detalhesMtrSelecionada)
+    void confirmarEImprimirMtr(mtrSelecionadaValida, detalhesMtrSelecionada)
   }
 
   const totalVinculadas = mtrs.filter((item) => !!item.programacao_id).length

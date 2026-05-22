@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
 import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
@@ -370,7 +371,15 @@ export default function FinanceiroContasPagar() {
 
   async function handleExcluir(row: ContaPagarRow) {
     if (!podeMutar) return
-    if (!window.confirm(`Remover lançamento «${row.descricao.slice(0, 60)}»?`)) return
+    if (
+      !(await rgConfirm({
+        title: 'Remover lançamento',
+        message: `Remover lançamento «${row.descricao.slice(0, 60)}»?`,
+        confirmLabel: 'Remover',
+        variant: 'danger',
+      }))
+    )
+      return
     setErro('')
     try {
       const paths = (row.contas_pagar_anexos || []).map((a) => a.storage_path).filter(Boolean)
@@ -388,7 +397,15 @@ export default function FinanceiroContasPagar() {
 
   async function handleRemoverAnexo(_row: ContaPagarRow, anexo: ContaPagarAnexo) {
     if (!podeMutar) return
-    if (!window.confirm(`Remover anexo «${anexo.nome_arquivo}»?`)) return
+    if (
+      !(await rgConfirm({
+        title: 'Remover anexo',
+        message: `Remover anexo «${anexo.nome_arquivo}»?`,
+        confirmLabel: 'Remover',
+        variant: 'danger',
+      }))
+    )
+      return
     setErro('')
     try {
       const { error: stErr } = await supabase.storage.from(STORAGE_BUCKET).remove([anexo.storage_path])

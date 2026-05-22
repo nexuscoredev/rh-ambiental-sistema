@@ -1,4 +1,5 @@
 import { COLUNAS_RELATORIO_MEDICAO } from './faturamentoRelatorioMedicaoColunas'
+import { rgAlert } from './RgDialogProvider'
 import {
   formatarDataCurta,
   formatarMoedaMedicao,
@@ -129,7 +130,11 @@ export function imprimirRelatorioMedicaoJanela(input: ImprimirRelatorioMedicaoIn
   const doc = iframe.contentDocument ?? win?.document
   if (!doc || !win) {
     iframe.remove()
-    window.alert('Não foi possível abrir a janela de impressão.')
+    void rgAlert({
+      title: 'Impressão',
+      message: 'Não foi possível abrir a janela de impressão.',
+      variant: 'danger',
+    })
     return
   }
 

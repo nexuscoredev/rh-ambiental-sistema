@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } 
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
+import { rgAlert, rgConfirm } from "../lib/RgDialogProvider";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../lib/coletasQueryLimits";
 import { sanitizeIlikePattern } from "../lib/sanitizeIlike";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
@@ -496,9 +497,12 @@ export default function Caminhoes() {
 
     if (upErr) {
       console.error(upErr);
-      window.alert(
-        "Não foi possível enviar a foto. Aplique a migração do bucket caminhoes-fotos no Supabase ou verifique as políticas de Storage."
-      );
+      await rgAlert({
+        title: "Foto do veículo",
+        message:
+          "Não foi possível enviar a foto. Aplique a migração do bucket caminhoes-fotos no Supabase ou verifique as políticas de Storage.",
+        variant: "danger",
+      });
       return { ok: false };
     }
 
@@ -512,9 +516,12 @@ export default function Caminhoes() {
 
     if (dbErr) {
       console.error(dbErr);
-      window.alert(
-        "A foto foi enviada, mas falhou ao gravar o endereço no cadastro. Verifique se a coluna foto_url existe (migração SQL)."
-      );
+      await rgAlert({
+        title: "Foto do veículo",
+        message:
+          "A foto foi enviada, mas falhou ao gravar o endereço no cadastro. Verifique se a coluna foto_url existe (migração SQL).",
+        variant: "danger",
+      });
       return { ok: false };
     }
 
@@ -558,9 +565,12 @@ export default function Caminhoes() {
 
     if (upErr) {
       console.error(upErr);
-      window.alert(
-        "Não foi possível enviar o certificado. Aplique a migração do bucket caminhoes-certificados no Supabase ou verifique as políticas de Storage."
-      );
+      await rgAlert({
+        title: "Certificado",
+        message:
+          "Não foi possível enviar o certificado. Aplique a migração do bucket caminhoes-certificados no Supabase ou verifique as políticas de Storage.",
+        variant: "danger",
+      });
       return { ok: false };
     }
 
@@ -574,9 +584,12 @@ export default function Caminhoes() {
 
     if (dbErr) {
       console.error(dbErr);
-      window.alert(
-        "O arquivo foi enviado, mas falhou ao gravar o endereço no cadastro. Verifique se as colunas civ_arquivo_url / cipp_arquivo_url existem (migração SQL)."
-      );
+      await rgAlert({
+        title: "Certificado",
+        message:
+          "O arquivo foi enviado, mas falhou ao gravar o endereço no cadastro. Verifique se as colunas civ_arquivo_url / cipp_arquivo_url existem (migração SQL).",
+        variant: "danger",
+      });
       return { ok: false };
     }
 
@@ -590,19 +603,27 @@ export default function Caminhoes() {
     return { ok: true, publicUrl };
   }
 
-  function validarArquivoFotoCaminhao(file: File): boolean {
+  async function validarArquivoFotoCaminhao(file: File): Promise<boolean> {
     if (!file.type.startsWith("image/")) {
-      window.alert("Escolha uma imagem (JPEG, PNG, WebP ou GIF).");
+      await rgAlert({
+        title: "Foto do veículo",
+        message: "Escolha uma imagem (JPEG, PNG, WebP ou GIF).",
+        variant: "warning",
+      });
       return false;
     }
     if (file.size > MAX_BYTES_FOTO_CAMINHAO) {
-      window.alert("A imagem deve ter no máximo 8 MB.");
+      await rgAlert({
+        title: "Foto do veículo",
+        message: "A imagem deve ter no máximo 8 MB.",
+        variant: "warning",
+      });
       return false;
     }
     return true;
   }
 
-  function validarArquivoCertificado(file: File): boolean {
+  async function validarArquivoCertificado(file: File): Promise<boolean> {
     const ext = file.name.split(".").pop()?.toLowerCase();
     const extOk = ext && ["pdf", "jpg", "jpeg", "png", "webp", "gif"].includes(ext);
     const okTipo =
@@ -610,11 +631,19 @@ export default function Caminhoes() {
       (file.type.startsWith("image/") && file.type !== "") ||
       Boolean(extOk);
     if (!okTipo) {
-      window.alert("Escolha um PDF ou imagem (JPEG, PNG, WebP ou GIF).");
+      await rgAlert({
+        title: "Certificado",
+        message: "Escolha um PDF ou imagem (JPEG, PNG, WebP ou GIF).",
+        variant: "warning",
+      });
       return false;
     }
     if (file.size > MAX_BYTES_CERT_CAMINHAO) {
-      window.alert("O arquivo deve ter no máximo 10 MB.");
+      await rgAlert({
+        title: "Certificado",
+        message: "O arquivo deve ter no máximo 10 MB.",
+        variant: "warning",
+      });
       return false;
     }
     return true;
@@ -627,7 +656,7 @@ export default function Caminhoes() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!validarArquivoCertificado(file)) return;
+    if (!(await validarArquivoCertificado(file))) return;
 
     const coluna = tipo === "civ" ? "civ_arquivo_url" : "cipp_arquivo_url";
     const prefixo = tipo;
@@ -661,7 +690,15 @@ export default function Caminhoes() {
 
     if (editingId) {
       if (!urlSrv) return;
-      if (!window.confirm("Remover o arquivo deste certificado?")) return;
+      if (
+        !(await rgConfirm({
+          title: "Remover certificado",
+          message: "Remover o arquivo deste certificado?",
+          confirmLabel: "Remover",
+          variant: "danger",
+        }))
+      )
+        return;
       setCadastroCertEnviando(tipo);
       try {
         const p = pathFromSupabasePublicUrl(urlSrv, BUCKET_CERT_CAMINHAO);
@@ -671,7 +708,11 @@ export default function Caminhoes() {
         }
         const { error } = await supabase.from("caminhoes").update({ [coluna]: null }).eq("id", editingId);
         if (error) {
-          window.alert("Não foi possível limpar o registo do arquivo.");
+          await rgAlert({
+            title: "Certificado",
+            message: "Não foi possível limpar o registo do arquivo.",
+            variant: "danger",
+          });
           return;
         }
         if (tipo === "civ") setCadastroCivUrlServidor(null);
@@ -694,7 +735,7 @@ export default function Caminhoes() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!validarArquivoFotoCaminhao(file)) return;
+    if (!(await validarArquivoFotoCaminhao(file))) return;
 
     if (editingId) {
       setCadastroFotoEnviando(true);
@@ -723,7 +764,15 @@ export default function Caminhoes() {
   async function handleCadastroRemoverFoto() {
     if (editingId) {
       if (!cadastroFotoServidor) return;
-      if (!window.confirm("Remover a fotografia deste veículo?")) return;
+      if (
+        !(await rgConfirm({
+          title: "Remover foto",
+          message: "Remover a fotografia deste veículo?",
+          confirmLabel: "Remover",
+          variant: "danger",
+        }))
+      )
+        return;
       setCadastroFotoEnviando(true);
       try {
         const p = pathFromSupabasePublicUrl(cadastroFotoServidor, BUCKET_FOTO_CAMINHAO);
@@ -736,7 +785,11 @@ export default function Caminhoes() {
           .update({ foto_url: null })
           .eq("id", editingId);
         if (error) {
-          window.alert("Não foi possível limpar o registo da foto.");
+          await rgAlert({
+            title: "Foto do veículo",
+            message: "Não foi possível limpar o registo da foto.",
+            variant: "danger",
+          });
           return;
         }
         setCadastroFotoServidor(null);
@@ -850,9 +903,12 @@ export default function Caminhoes() {
     if (!editingId && novoId && cadastroFotoPendente) {
       const fotoRes = await persistirFotoCaminhao(novoId, cadastroFotoPendente, null);
       if (!fotoRes.ok) {
-        window.alert(
-          "O veículo foi guardado, mas a foto não foi enviada. Pode anexá-la ao editar o registo."
-        );
+        await rgAlert({
+          title: "Veículo guardado",
+          message:
+            "O veículo foi guardado, mas a foto não foi enviada. Pode anexá-la ao editar o registo.",
+          variant: "warning",
+        });
       }
     }
 
@@ -865,9 +921,12 @@ export default function Caminhoes() {
         null
       );
       if (!r.ok) {
-        window.alert(
-          "O veículo foi guardado, mas o arquivo CIV não foi enviado. Pode anexá-lo ao editar o registo."
-        );
+        await rgAlert({
+          title: "Veículo guardado",
+          message:
+            "O veículo foi guardado, mas o arquivo CIV não foi enviado. Pode anexá-lo ao editar o registo.",
+          variant: "warning",
+        });
       }
     }
 
@@ -880,9 +939,12 @@ export default function Caminhoes() {
         null
       );
       if (!r.ok) {
-        window.alert(
-          "O veículo foi guardado, mas o arquivo CIPP não foi enviado. Pode anexá-lo ao editar o registo."
-        );
+        await rgAlert({
+          title: "Veículo guardado",
+          message:
+            "O veículo foi guardado, mas o arquivo CIPP não foi enviado. Pode anexá-lo ao editar o registo.",
+          variant: "warning",
+        });
       }
     }
 
@@ -903,7 +965,12 @@ export default function Caminhoes() {
   }
 
   async function handleDelete(id: string) {
-    const confirmar = window.confirm("Deseja realmente excluir este veículo?");
+    const confirmar = await rgConfirm({
+      title: "Excluir veículo",
+      message: "Deseja realmente excluir este veículo?",
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     const { data: rowMidia } = await supabase
@@ -985,7 +1052,7 @@ export default function Caminhoes() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !fichaCaminhao) return;
-    if (!validarArquivoFotoCaminhao(file)) return;
+    if (!(await validarArquivoFotoCaminhao(file))) return;
 
     setEnviandoFotoCaminhao(true);
     try {
@@ -1001,7 +1068,15 @@ export default function Caminhoes() {
 
   async function handleRemoverFotoCaminhao() {
     if (!fichaCaminhao?.foto_url) return;
-    if (!window.confirm("Remover a fotografia deste veículo?")) return;
+    if (
+      !(await rgConfirm({
+        title: "Remover foto",
+        message: "Remover a fotografia deste veículo?",
+        confirmLabel: "Remover",
+        variant: "danger",
+      }))
+    )
+      return;
 
     const p = pathFromSupabasePublicUrl(fichaCaminhao.foto_url, BUCKET_FOTO_CAMINHAO);
     if (p) {
@@ -1015,7 +1090,11 @@ export default function Caminhoes() {
       .eq("id", fichaCaminhao.id);
 
     if (error) {
-      window.alert("Não foi possível limpar o registo da foto.");
+      await rgAlert({
+        title: "Foto do veículo",
+        message: "Não foi possível limpar o registo da foto.",
+        variant: "danger",
+      });
       return;
     }
 

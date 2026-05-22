@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } 
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
+import { rgConfirm } from "../lib/RgDialogProvider";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../lib/coletasQueryLimits";
 import { sanitizeIlikePattern } from "../lib/sanitizeIlike";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
@@ -330,7 +331,12 @@ export default function RepresentantesRG() {
   }
 
   async function handleDelete(id: string) {
-    const confirmar = window.confirm("Deseja realmente excluir este representante?");
+    const confirmar = await rgConfirm({
+      title: 'Excluir representante',
+      message: 'Deseja realmente excluir este representante?',
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    });
     if (!confirmar) return;
 
     const { error } = await supabase.from("representantes_rg").delete().eq("id", id);

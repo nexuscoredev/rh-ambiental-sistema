@@ -11,6 +11,7 @@ import {
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import {
   CHECKLIST_MOTORISTA_ITENS,
@@ -433,9 +434,12 @@ export default function ConferenciaTransporte() {
 
     const todosRespondidos = CHECKLIST_MOTORISTA_ITENS.every((i) => respostasMotorista[i.id] !== null)
     if (!todosRespondidos) {
-      const ok = window.confirm(
-        'Ainda há itens do checklist sem SIM ou NÃO. Deseja gravar mesmo assim?'
-      )
+      const ok = await rgConfirm({
+        title: 'Checklist incompleto',
+        message: 'Ainda há itens do checklist sem SIM ou NÃO. Deseja gravar mesmo assim?',
+        confirmLabel: 'Gravar mesmo assim',
+        variant: 'warning',
+      })
       if (!ok) return
     }
 

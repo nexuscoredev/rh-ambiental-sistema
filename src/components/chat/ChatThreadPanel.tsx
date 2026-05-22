@@ -3,6 +3,7 @@ import { ChatAvatar } from './ChatAvatar'
 import { chatUrlAssinadaAnexo } from '../../lib/chat'
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
 import type { ChatMensagem } from '../../types/chat'
+import { rgAlert } from '../../lib/RgDialogProvider'
 
 type Props = {
   meuId: string
@@ -177,7 +178,11 @@ export function ChatThreadPanel({
             e.target.value = ''
             if (!f || enviando) return
             if (f.size > 15 * 1024 * 1024) {
-              window.alert('Ficheiro demasiado grande (máx. 15 MB).')
+              void rgAlert({
+                title: 'Anexo',
+                message: 'Ficheiro demasiado grande (máx. 15 MB).',
+                variant: 'warning',
+              })
               return
             }
             try {
@@ -185,7 +190,11 @@ export function ChatThreadPanel({
               setTexto('')
             } catch (err) {
               console.error(err)
-              window.alert('Não foi possível enviar o anexo.')
+              void rgAlert({
+                title: 'Anexo',
+                message: 'Não foi possível enviar o anexo.',
+                variant: 'danger',
+              })
             } finally {
               focarComposer()
             }

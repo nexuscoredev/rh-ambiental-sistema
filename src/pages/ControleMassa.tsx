@@ -26,6 +26,7 @@ import {
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
+import { rgConfirm } from "../lib/RgDialogProvider";
 import {
   cargoEhOperadoresTimeR,
   cargoPerfilSomenteLancamentoTicketPadrao,
@@ -1667,9 +1668,13 @@ export default function ControleMassa() {
       );
       return;
     }
-    const ok = window.confirm(
-      `Excluir a coleta ${c.numero} (${c.cliente || "sem cliente"})?\n\nEsta ação não pode ser desfeita.`
-    );
+    const ok = await rgConfirm({
+      title: 'Excluir coleta',
+      message: `Excluir a coleta ${c.numero} (${c.cliente || "sem cliente"})?`,
+      details: ['Esta ação não pode ser desfeita.'],
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    });
     if (!ok) return;
 
     setExcluindoColetaId(c.id);

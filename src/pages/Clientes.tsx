@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
+import { rgAlert, rgConfirm } from "../lib/RgDialogProvider";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../lib/coletasQueryLimits";
 import { sanitizeIlikePattern } from "../lib/sanitizeIlike";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
@@ -2040,9 +2041,14 @@ export default function Clientes() {
     // CNPJ/CPF com tamanho fora do padrão: agora apenas avisa, não trava — assim cadastros
     // parciais (ex.: documento ainda em digitação ou cliente estrangeiro) podem ser salvos.
     if (cnpjTrim && !documentoPossuiTamanhoValido(form.cnpj)) {
-      const seguir = window.confirm(
-        "O CNPJ/CPF informado não tem o tamanho padrão (CNPJ = 14 dígitos, CPF = 11 dígitos).\n\nDeseja salvar mesmo assim?"
-      );
+      const seguir = await rgConfirm({
+        title: "Documento fora do padrão",
+        message:
+          "O CNPJ/CPF informado não tem o tamanho padrão (CNPJ = 14 dígitos, CPF = 11 dígitos).",
+        details: ["Deseja salvar mesmo assim?"],
+        confirmLabel: "Salvar mesmo assim",
+        variant: "warning",
+      });
       if (!seguir) return;
     }
 
@@ -2199,11 +2205,16 @@ export default function Clientes() {
       if (isDuplicateClienteDocumentoError(error)) {
         const docDigitos = normalizarDocumentoParaArmazenar(form.cnpj);
         const docFormatado = formatarCNPJ(form.cnpj) || form.cnpj;
-        const abrirExistente = window.confirm(
-          `Já existe um cliente cadastrado com o CNPJ/CPF ${docFormatado}.\n\n` +
-            `Não é possível duplicar o mesmo documento.\n\n` +
-            `Deseja abrir o cadastro existente para revisar/editar?`
-        );
+        const abrirExistente = await rgConfirm({
+          title: "Cliente já cadastrado",
+          message: `Já existe um cliente cadastrado com o CNPJ/CPF ${docFormatado}.`,
+          details: [
+            "Não é possível duplicar o mesmo documento.",
+            "Deseja abrir o cadastro existente para revisar/editar?",
+          ],
+          confirmLabel: "Abrir cadastro",
+          variant: "warning",
+        });
         if (abrirExistente && docDigitos) {
           try {
             const { data: existente } = await supabase
@@ -2250,12 +2261,15 @@ export default function Clientes() {
       statusDatasIgnoradasNoSalvar &&
       (form.status_ativo_desde.trim() || form.status_inativo_desde.trim())
     ) {
-      window.alert(
-        "Cliente salvo, mas as datas «Cliente desde» / «Inativo desde» não foram gravadas.\n\n" +
+      await rgAlert({
+        title: "Cliente salvo — datas pendentes",
+        message:
+          "Cliente salvo, mas as datas «Cliente desde» / «Inativo desde» não foram gravadas.\n\n" +
           "No Supabase (SQL Editor), execute o script:\n" +
           "supabase/sql_editor_clientes_status_datas.sql\n\n" +
-          "Depois recarregue a página e salve novamente."
-      );
+          "Depois recarregue a página e salve novamente.",
+        variant: "warning",
+      });
     }
 
     limparFormulario();
@@ -2271,7 +2285,12 @@ export default function Clientes() {
   }
 
   async function handleDelete(id: string) {
-    const confirmar = window.confirm("Deseja realmente remover este cliente?");
+    const confirmar = await rgConfirm({
+      title: "Remover cliente",
+      message: "Deseja realmente remover este cliente?",
+      confirmLabel: "Remover",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     const { error } = await supabase.from("clientes").delete().eq("id", id);

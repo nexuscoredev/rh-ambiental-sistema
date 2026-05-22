@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import { rgConfirm } from '../lib/RgDialogProvider'
 import { overlayAreaPrincipal } from '../lib/layoutOverlay'
 import { chunkArray } from '../lib/chunkArray'
 import { montarMapNomeExibicaoPorUsuarioId } from '../lib/resolveAutorUsuarioNomes'
@@ -1180,7 +1181,12 @@ export default function Programacao() {
       setErro('Seu perfil não pode excluir programações. Apenas operacional ou administrador.')
       return
     }
-    const confirmar = window.confirm('Tem certeza que deseja excluir esta programação?')
+    const confirmar = await rgConfirm({
+      title: 'Excluir programação',
+      message: 'Tem certeza que deseja excluir esta programação?',
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    })
     if (!confirmar) return
 
     try {

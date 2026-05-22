@@ -7,6 +7,7 @@ import {
   type MtrResiduoDetalhesCampos,
 } from '../../lib/mtrClienteContratoAutofill'
 import { linhaVaziaResiduoPesagem } from '../../lib/residuosPesagem'
+import { rgConfirm } from '../../lib/RgDialogProvider'
 
 type DetalhesComLista = {
   residuo: MtrResiduoDetalhesCampos
@@ -91,11 +92,17 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
     aplicarLista(patchLista(lista, index, partial))
   }
 
-  function limparDadosPreenchidos() {
+  async function limparDadosPreenchidos() {
     if (disabled) return
-    const ok = window.confirm(
-      'Limpar todos os campos dos resíduos nesta MTR?\n\nOs dados trazidos do cadastro do cliente serão apagados; as linhas permanecem para preenchimento manual.'
-    )
+    const ok = await rgConfirm({
+      title: 'Limpar resíduos da MTR',
+      message: 'Limpar todos os campos dos resíduos nesta MTR?',
+      details: [
+        'Os dados trazidos do cadastro do cliente serão apagados; as linhas permanecem para preenchimento manual.',
+      ],
+      confirmLabel: 'Limpar campos',
+      variant: 'warning',
+    })
     if (!ok) return
 
     const vazios =
@@ -143,7 +150,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
               }}
               disabled={disabled}
               title="Apagar todos os campos dos resíduos (inclui Industrial, SÓLIDO e dados do cadastro)"
-              onClick={limparDadosPreenchidos}
+              onClick={() => void limparDadosPreenchidos()}
             >
               Limpar todos os campos
             </button>

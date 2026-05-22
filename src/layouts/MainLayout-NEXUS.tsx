@@ -23,6 +23,7 @@ import SuporteTecnicoFloat from '../components/SuporteTecnicoFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
+import { useRgDialog } from '../lib/RgDialogProvider'
 
 type MainLayoutProps = {
   children: ReactNode
@@ -242,6 +243,7 @@ function grupoTituloParaPathAtivo(
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  const { alert } = useRgDialog()
   const navigate = useNavigate()
   const location = useLocation()
   const pathnameDebounced = useDebouncedValue(location.pathname, 400)
@@ -422,7 +424,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (error) {
       console.error(error)
       setPresenca(anterior)
-      window.alert('Não foi possível guardar o estado de presença. Tente de novo.')
+      await alert({
+        title: 'Presença',
+        message: 'Não foi possível guardar o estado de presença. Tente de novo.',
+        variant: 'danger',
+      })
       return
     }
 
@@ -439,12 +445,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      window.alert('Escolha um ficheiro de imagem (JPEG, PNG, WebP ou GIF).')
+      await alert({
+        title: 'Foto de perfil',
+        message: 'Escolha um ficheiro de imagem (JPEG, PNG, WebP ou GIF).',
+        variant: 'warning',
+      })
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      window.alert('A imagem deve ter no máximo 5 MB.')
+      await alert({
+        title: 'Foto de perfil',
+        message: 'A imagem deve ter no máximo 5 MB.',
+        variant: 'warning',
+      })
       return
     }
 
@@ -469,9 +483,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       if (uploadError) {
         console.error(uploadError)
-        window.alert(
-          'Não foi possível enviar a foto. Aplique a migração do bucket avatars no Supabase ou tente novamente.'
-        )
+        await alert({
+          title: 'Foto de perfil',
+          message:
+            'Não foi possível enviar a foto. Aplique a migração do bucket avatars no Supabase ou tente novamente.',
+          variant: 'danger',
+        })
         return
       }
 
@@ -485,9 +502,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       if (updateError) {
         console.error(updateError)
-        window.alert(
-          'A foto foi enviada, mas falhou ao gravar o endereço no perfil. Verifique as políticas RLS em usuarios.'
-        )
+        await alert({
+          title: 'Foto de perfil',
+          message:
+            'A foto foi enviada, mas falhou ao gravar o endereço no perfil. Verifique as políticas RLS em usuarios.',
+          variant: 'danger',
+        })
         return
       }
 
