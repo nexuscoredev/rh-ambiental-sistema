@@ -565,6 +565,14 @@ export async function registarNumeroNfBoletoEsteiraFaturamento(
     return { ok: false, message: reg.error.message }
   }
 
+  const fin = await marcarEsteiraFinalizadaPorNf(coletaId)
+  if (!fin.ok) {
+    return {
+      ok: false,
+      message: fin.message || 'NF gravada, mas não foi possível encerrar a esteira de faturamento.',
+    }
+  }
+
   return { ok: true }
 }
 

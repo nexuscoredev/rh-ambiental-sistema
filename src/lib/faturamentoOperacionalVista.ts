@@ -7,7 +7,10 @@ import {
   fetchVwFaturamentoResumoPorColetaIds,
   faturamentoResumoDesdeDias,
 } from './faturamentoResumoFetch'
-import { coletaHistoricoFaturamentoEmitido } from './faturamentoOperacionalFila'
+import {
+  contarGruposHistoricoFaturamentoEmitido,
+  somarValorHistoricoFaturamentoSemDuplicar,
+} from './faturamentoConsolidacaoMtr'
 
 function mergeLinhasPorColetaId(
   operacional: FaturamentoResumoViewRow[],
@@ -113,6 +116,9 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     [incorporarLinhasNaVista, recarregarTudo]
   )
 
+  /** Após «Finalizar processo» (NF/boleto): atualiza vista e remove da fila 7. */
+  const recarregarAposFinalizarNfBoleto = recarregarAposEmitir
+
   useEffect(() => {
     let cancelado = false
     queueMicrotask(() => {
@@ -154,21 +160,17 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     }
   }, [coletaIdUrl, linhasOperacional, linhasHistorico, linhasExtras])
 
-  const historicoEmitidos = useMemo(() => {
-    const base = linhasHistorico ?? []
-    return base.filter((r) => coletaHistoricoFaturamentoEmitido(r))
-  }, [linhasHistorico])
+  const historicoEmitidos = useMemo(() => linhasHistorico ?? [], [linhasHistorico])
 
-  const qtdEmitidasCartao = contagemHistorico ?? historicoEmitidos.length
+  const qtdEmitidasCartao =
+    linhasHistorico !== null
+      ? contarGruposHistoricoFaturamentoEmitido(linhasHistorico)
+      : (contagemHistorico ?? historicoEmitidos.length)
 
   const valorTotalEmitidoBase = useMemo(() => {
-    let s = 0
-    for (const r of historicoEmitidos) {
-      const v = r.faturamento_registro_valor ?? r.valor_coleta
-      if (v != null && Number.isFinite(Number(v))) s += Number(v)
-    }
-    return s
-  }, [historicoEmitidos])
+    if (linhasHistorico === null) return 0
+    return somarValorHistoricoFaturamentoSemDuplicar(linhasHistorico)
+  }, [linhasHistorico])
 
   const valorEmitidasCartao =
     valorTotalEmitidoBase > 0
@@ -195,6 +197,7 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     carregarHistorico,
     recarregarTudo,
     recarregarAposEmitir,
+    recarregarAposFinalizarNfBoleto,
     qtdEmitidasCartao,
     valorEmitidasCartao,
     diasJanela,

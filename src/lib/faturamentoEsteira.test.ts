@@ -104,6 +104,19 @@ describe('coletaAguardandoConfirmacaoNfBoleto', () => {
       )
     ).toBe(false)
   })
+
+  it('emitido com NF registada e liberado financeiro não aguarda', () => {
+    expect(
+      coletaAguardandoConfirmacaoNfBoleto(
+        row({
+          faturamento_esteira_status: 'LIBERADO_FINANCEIRO',
+          faturamento_registro_status: 'emitido',
+          numero_nf_coleta: '12345',
+          liberado_financeiro: true,
+        })
+      )
+    ).toBe(false)
+  })
 })
 
 describe('coletaNaFilaRelatorioMedicao', () => {

@@ -111,6 +111,7 @@ export default function FaturamentoOperacional() {
     esteiraMedicaoAtiva,
     recarregarTudo,
     recarregarAposEmitir,
+    recarregarAposFinalizarNfBoleto,
     carregarHistorico,
     qtdEmitidasCartao,
     valorEmitidasCartao,
@@ -462,7 +463,7 @@ export default function FaturamentoOperacional() {
           carregando={carregandoVista || carregandoHistorico}
           historicoCarregado={historicoCarregado}
           podeConfirmar={podeConfirmarNfBoleto}
-          onAtualizar={() => void recarregarTudo()}
+          onFinalizado={(ids) => void recarregarAposFinalizarNfBoleto(ids)}
         />
 
         {coletaAtiva ? (

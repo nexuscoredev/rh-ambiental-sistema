@@ -19,6 +19,7 @@ import {
   type ResultadoPrecoContrato,
 } from './faturamentoPrecoContrato'
 import { coletaElegivelParaFaturar } from './faturamentoElegibilidade'
+import { coletaHistoricoFaturamentoEmitido } from './faturamentoOperacionalFila'
 import { marcarEsteiraPosFaturamentoEmitido } from './faturamentoEsteira'
 import { aplicarResumoFinanceiroNaOperacional } from './faturamentoOperacionalSync'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
@@ -95,6 +96,105 @@ export function agruparFilaFaturamentoPorMtr(
   })
 
   return itens
+}
+
+export type GrupoHistoricoFaturamento =
+  | { kind: 'unico'; row: FaturamentoResumoViewRow }
+  | {
+      kind: 'mtr'
+      mtr_id: string
+      mtr_numero: string
+      cliente_nome: string
+      coleta_lider: FaturamentoResumoViewRow
+      coletas: FaturamentoResumoViewRow[]
+    }
+
+function itemFilaParaGrupoHistorico(item: ItemFilaFaturamento): GrupoHistoricoFaturamento {
+  if (item.kind === 'unico') return { kind: 'unico', row: item.row }
+  return {
+    kind: 'mtr',
+    mtr_id: item.mtr_id,
+    mtr_numero: item.mtr_numero,
+    cliente_nome: item.cliente_nome,
+    coleta_lider: item.coleta_lider,
+    coletas: item.coletas,
+  }
+}
+
+/** Uma linha por faturamento: tickets da mesma MTR consolidados no histórico emitido. */
+export function agruparHistoricoFaturamentoEmitido(
+  linhas: FaturamentoResumoViewRow[]
+): GrupoHistoricoFaturamento[] {
+  const emitidas = linhas.filter(coletaHistoricoFaturamentoEmitido)
+  return agruparFilaFaturamentoPorMtr(emitidas).map(itemFilaParaGrupoHistorico)
+}
+
+export function chaveGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): string {
+  return g.kind === 'unico' ? g.row.coleta_id : `mtr-${g.mtr_id}`
+}
+
+export function linhaLiderGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): FaturamentoResumoViewRow {
+  return g.kind === 'unico' ? g.row : g.coleta_lider
+}
+
+export function valorFaturamentoLinhaHistorico(row: FaturamentoResumoViewRow): number {
+  const v = row.faturamento_registro_valor ?? row.valor_coleta
+  return v != null && Number.isFinite(Number(v)) ? Number(v) : 0
+}
+
+/** Valor do faturamento consolidado (não soma tickets irmãos com valor repetido na view). */
+export function valorGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): number {
+  if (g.kind === 'unico') return valorFaturamentoLinhaHistorico(g.row)
+  const liderVal = valorFaturamentoLinhaHistorico(g.coleta_lider)
+  if (liderVal > 0) return liderVal
+  for (const c of g.coletas) {
+    const v = valorFaturamentoLinhaHistorico(c)
+    if (v > 0) return v
+  }
+  return 0
+}
+
+export function pesoLiquidoGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): number | null {
+  const rows = g.kind === 'unico' ? [g.row] : g.coletas
+  let s = 0
+  let has = false
+  for (const r of rows) {
+    const p = Number(r.peso_liquido)
+    if (Number.isFinite(p)) {
+      s += p
+      has = true
+    }
+  }
+  return has ? s : null
+}
+
+export function rotuloColetasGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): string {
+  const rows = g.kind === 'unico' ? [g.row] : g.coletas
+  return rows.map((r) => String(r.numero_coleta ?? r.numero)).join(', ')
+}
+
+export function rotuloResiduoGrupoHistoricoFaturamento(g: GrupoHistoricoFaturamento): string {
+  if (g.kind === 'unico') return (g.row.tipo_residuo || '—').trim() || '—'
+  return (
+    g.coletas
+      .map((c) => {
+        const n = String(c.numero_coleta ?? c.numero)
+        const r = (c.tipo_residuo || '—').trim() || '—'
+        return `${n}: ${r}`
+      })
+      .join(' · ') || '—'
+  )
+}
+
+export function somarValorHistoricoFaturamentoSemDuplicar(linhas: FaturamentoResumoViewRow[]): number {
+  return agruparHistoricoFaturamentoEmitido(linhas).reduce(
+    (s, g) => s + valorGrupoHistoricoFaturamento(g),
+    0
+  )
+}
+
+export function contarGruposHistoricoFaturamentoEmitido(linhas: FaturamentoResumoViewRow[]): number {
+  return agruparHistoricoFaturamentoEmitido(linhas).length
 }
 
 export function resolverGrupoFaturamentoNaFila(

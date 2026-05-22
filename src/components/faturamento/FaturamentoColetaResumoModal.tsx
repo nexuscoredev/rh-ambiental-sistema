@@ -15,6 +15,8 @@ import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
 type Props = {
   open: boolean
   row: FaturamentoResumoViewRow | null
+  /** Tickets da mesma MTR num único faturamento. */
+  coletasConsolidadas?: FaturamentoResumoViewRow[]
   onClose: () => void
 }
 
@@ -96,7 +98,12 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   )
 }
 
-export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
+export function FaturamentoColetaResumoModal({
+  open,
+  row,
+  coletasConsolidadas,
+  onClose,
+}: Props) {
   const navigate = useNavigate()
   const [abrindoPdf, setAbrindoPdf] = useState(false)
 
@@ -124,7 +131,16 @@ export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
   if (!open || !row) return null
 
   const params = montarParamsFluxoColeta(row)
-  const valorFat = row.faturamento_registro_valor ?? row.valor_coleta
+  const valorFat =
+    row.faturamento_registro_valor ??
+    row.valor_coleta ??
+    (coletasConsolidadas?.length
+      ? coletasConsolidadas.reduce<number | null>((acc, c) => {
+          const v = c.faturamento_registro_valor ?? c.valor_coleta
+          if (v != null && Number(v) > 0) return Number(v)
+          return acc
+        }, null)
+      : null)
 
   async function handleVisualizarTicket() {
     setAbrindoPdf(true)
@@ -181,7 +197,16 @@ export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
               Resumo do caso
             </h2>
             <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b' }}>
-              Coleta <strong>{row.numero_coleta ?? row.numero}</strong> — {row.cliente_nome || '—'}
+              {coletasConsolidadas && coletasConsolidadas.length > 1 ? (
+                <>
+                  Faturamento consolidado ({coletasConsolidadas.length} tickets) —{' '}
+                  <strong>{row.cliente_nome || '—'}</strong>
+                </>
+              ) : (
+                <>
+                  Coleta <strong>{row.numero_coleta ?? row.numero}</strong> — {row.cliente_nome || '—'}
+                </>
+              )}
             </p>
           </div>
           <button
@@ -205,9 +230,44 @@ export function FaturamentoColetaResumoModal({ open, row, onClose }: Props) {
         </div>
 
         <div style={{ padding: '20px 24px 24px' }}>
+          {coletasConsolidadas && coletasConsolidadas.length > 1 ? (
+            <Secao titulo="Tickets do faturamento (mesma MTR)">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Coleta</th>
+                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Resíduo</th>
+                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Peso líq.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coletasConsolidadas.map((c) => (
+                      <tr key={c.coleta_id}>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9' }}>
+                          {c.numero_coleta ?? c.numero}
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9' }}>
+                          {c.tipo_residuo || '—'}
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9' }}>
+                          {fmtPeso(c.peso_liquido)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Secao>
+          ) : null}
+
           <Secao titulo="Identificação">
             <div style={gridStyle}>
-              <Campo label="Nº coleta">{row.numero_coleta ?? row.numero}</Campo>
+              <Campo label="Nº coleta">
+                {coletasConsolidadas && coletasConsolidadas.length > 1
+                  ? coletasConsolidadas.map((c) => c.numero_coleta ?? c.numero).join(', ')
+                  : (row.numero_coleta ?? row.numero)}
+              </Campo>
               <Campo label="Cliente">{row.cliente_nome || '—'}</Campo>
               <Campo label="Razão social">{row.cliente_razao_social?.trim() || '—'}</Campo>
               <Campo label="Cidade">{row.cidade || '—'}</Campo>

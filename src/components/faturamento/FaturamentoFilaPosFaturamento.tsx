@@ -40,7 +40,29 @@ type Props = {
   /** False enquanto o escopo «histórico» (emitidas) ainda não foi buscado. */
   historicoCarregado?: boolean
   podeConfirmar?: boolean
-  onAtualizar: () => void
+  /** Após gravar NF/boleto e enviar a Contas a Receber (recarrega vista + histórico). */
+  onFinalizado?: (coletaIds: string[]) => void | Promise<void>
+  /** @deprecated Preferir `onFinalizado`. */
+  onAtualizar?: () => void
+}
+
+function montarAvisoFinalizarProcesso(
+  numeroNf: string,
+  numeroBoleto: string,
+  grupo: GrupoNfBoletoEsteira
+): string {
+  const tickets = rotuloTicketsGrupo(grupo)
+  const plural = grupo.linhas.length > 1
+  const boletoLinha = numeroBoleto ? `\nBoleto/ref.: ${numeroBoleto}` : ''
+  const detalheTickets = plural
+    ? `Tickets ${tickets} (${grupo.linhas.length} coletas, mesma MTR).`
+    : `Coleta ${tickets}.`
+  return (
+    `Processo encerrado no Faturamento.\n\n` +
+    `NF ${numeroNf} registada para ${detalheTickets}${boletoLinha}\n\n` +
+    `A cobrança foi enviada para a fila de Contas a Receber do Financeiro.\n` +
+    `Consulte o histórico «Coletas faturadas» nesta página ou em Financeiro → Contas a Receber.`
+  )
 }
 
 function valorExibicao(row: FaturamentoResumoViewRow): string {
@@ -82,6 +104,7 @@ export function FaturamentoFilaPosFaturamento({
   carregando,
   historicoCarregado = true,
   podeConfirmar = false,
+  onFinalizado,
   onAtualizar,
 }: Props) {
   const pendentes = useMemo(
@@ -164,18 +187,36 @@ export function FaturamentoFilaPosFaturamento({
       return
     }
 
+    const numeroBoleto = (c?.numeroBoleto ?? '').trim()
     const tickets = rotuloTicketsGrupo(grupo)
     const plural = grupo.linhas.length > 1
-    const textoSucesso = plural
-      ? `Processo finalizado.\n\nNF ${numeroNf} registada para os tickets ${tickets} (${grupo.linhas.length} coletas). Todas passaram para Finalizado e estão em Financeiro → Contas a Receber.`
-      : `Processo finalizado.\n\nNF ${numeroNf} registada para a coleta ${tickets}. A cobrança está em Financeiro → Contas a Receber.`
+    const textoSucesso = montarAvisoFinalizarProcesso(numeroNf, numeroBoleto, grupo)
     setMensagem(
       plural
-        ? `Processo finalizado — NF ${numeroNf} (${grupo.linhas.length} coletas) em Contas a Receber.`
-        : `Processo finalizado — NF ${numeroNf} em Contas a Receber.`
+        ? `Enviado a Contas a Receber — NF ${numeroNf} (${grupo.linhas.length} coletas). Processo encerrado aqui; veja o histórico abaixo.`
+        : `Enviado a Contas a Receber — NF ${numeroNf}. Processo encerrado aqui; veja o histórico abaixo.`
     )
     window.alert(textoSucesso)
-    onAtualizar()
+
+    const ids = grupo.linhas.map((r) => r.coleta_id)
+    if (onFinalizado) {
+      await onFinalizado(ids)
+    } else {
+      onAtualizar?.()
+    }
+
+    setCampos((prev) => {
+      const next = { ...prev }
+      delete next[chave]
+      return next
+    })
+
+    requestAnimationFrame(() => {
+      document.getElementById('faturamento-historico-coletas')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
   }
 
   const busy = salvandoChave !== null
@@ -188,8 +229,9 @@ export function FaturamentoFilaPosFaturamento({
       <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
         Após <strong>confirmar o faturamento</strong>, informe o <strong>número da NF</strong> (e, se quiser, a
         referência do boleto). Vários tickets da <strong>mesma MTR</strong> partilham <strong>uma única NF/boleto</strong>.
-        Ao <strong>guardar</strong>, todas as coletas do grupo passam para <strong>Finalizado</strong> e entram na fila{' '}
-        <Link to="/financeiro/contas-receber">Financeiro → Contas a Receber</Link>. O envio por e-mail continua
+        Ao <strong>finalizar o processo</strong>, o caso sai desta esteira e passa para a fila{' '}
+        <Link to="/financeiro/contas-receber">Financeiro → Contas a Receber</Link>; aqui fica apenas no{' '}
+        <a href="#faturamento-historico-coletas">histórico de coletas faturadas</a>. O envio por e-mail continua
         disponível em <Link to="/envio-nf">Mala Direta</Link> (opcional).
       </p>
 
@@ -324,10 +366,10 @@ export function FaturamentoFilaPosFaturamento({
                   onClick={() => void guardarGrupo(grupo)}
                 >
                   {salvando
-                    ? 'A guardar…'
+                    ? 'A finalizar…'
                     : multiplos
-                      ? `Guardar NF para ${grupo.linhas.length} coletas`
-                      : 'Guardar e enviar ao Financeiro'}
+                      ? `Finalizar processo (${grupo.linhas.length} coletas)`
+                      : 'Finalizar processo'}
                 </button>
               </div>
             </li>

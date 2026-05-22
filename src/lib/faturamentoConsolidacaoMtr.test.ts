@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   agruparFilaFaturamentoPorMtr,
+  agruparHistoricoFaturamentoEmitido,
   calcularPrecoContratoMtrConsolidado,
+  contarGruposHistoricoFaturamentoEmitido,
+  somarValorHistoricoFaturamentoSemDuplicar,
+  valorGrupoHistoricoFaturamento,
 } from './faturamentoConsolidacaoMtr'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
@@ -34,11 +38,11 @@ function linha(partial: Partial<FaturamentoResumoViewRow> & { coleta_id: string 
     referencia_nf: null,
     numero_nf_coleta: null,
     faturamento_referencia_nf: null,
-    faturamento_registro_status: null,
-    faturamento_registro_valor: null,
+    faturamento_registro_status: partial.faturamento_registro_status ?? null,
+    faturamento_registro_valor: partial.faturamento_registro_valor ?? null,
     confirmacao_recebimento: null,
-    fluxo_status: null,
-    etapa_operacional: null,
+    fluxo_status: partial.fluxo_status ?? null,
+    etapa_operacional: partial.etapa_operacional ?? null,
     status_processo: null,
     liberado_financeiro: null,
     coleta_observacoes: null,
@@ -67,6 +71,38 @@ describe('agruparFilaFaturamentoPorMtr', () => {
     if (itens[0]?.kind === 'mtr') {
       expect(itens[0].coletas).toHaveLength(2)
       expect(itens[0].coleta_lider.coleta_id).toBe('a')
+    }
+  })
+})
+
+describe('agruparHistoricoFaturamentoEmitido', () => {
+  it('exibe um faturamento por MTR e não duplica valor', () => {
+    const a = linha({
+      coleta_id: 'a',
+      mtr_id: 'm1',
+      mtr_numero: 'MTR-1',
+      numero_coleta: 90001,
+      faturamento_registro_status: 'emitido',
+      faturamento_registro_valor: 11650,
+      fluxo_status: 'ENVIADO_FINANCEIRO',
+    })
+    const b = linha({
+      coleta_id: 'b',
+      mtr_id: 'm1',
+      mtr_numero: 'MTR-1',
+      numero_coleta: 90002,
+      tipo_residuo: 'B',
+      faturamento_registro_status: 'emitido',
+      faturamento_registro_valor: 11650,
+      fluxo_status: 'ENVIADO_FINANCEIRO',
+    })
+    const grupos = agruparHistoricoFaturamentoEmitido([a, b])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0]?.kind).toBe('mtr')
+    expect(contarGruposHistoricoFaturamentoEmitido([a, b])).toBe(1)
+    expect(somarValorHistoricoFaturamentoSemDuplicar([a, b])).toBe(11650)
+    if (grupos[0]?.kind === 'mtr') {
+      expect(valorGrupoHistoricoFaturamento(grupos[0])).toBe(11650)
     }
   })
 })

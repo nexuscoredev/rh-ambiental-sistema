@@ -177,10 +177,18 @@ export function coletaAguardandoConfirmacaoNfBoleto(row: FaturamentoResumoViewRo
   if (!coletaHistoricoFaturamentoEmitido(row)) return false
   if (coletaFinalizadaEsteira(row)) return false
   if (row.conta_receber_nf_enviada_em) return false
+  const nfRegistada = (row.numero_nf_coleta ?? row.faturamento_referencia_nf ?? '').trim()
+  if (nfRegistada && row.liberado_financeiro === true) return false
   const e = esteiraDaLinha(row)
   if (e === 'LIBERADO_FINANCEIRO') return true
   if (!row.faturamento_esteira_status?.trim()) return true
   return false
+}
+
+/** Encerrada na esteira operacional — só permanece no histórico de faturadas. */
+export function coletaEncerradaNaEsteiraFaturamento(row: FaturamentoResumoViewRow): boolean {
+  if (!coletaHistoricoFaturamentoEmitido(row)) return false
+  return !coletaAguardandoConfirmacaoNfBoleto(row)
 }
 
 /** @deprecated Use `coletaAguardandoConfirmacaoNfBoleto`. */
