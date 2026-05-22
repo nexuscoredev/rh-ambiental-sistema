@@ -846,9 +846,9 @@ export default function Clientes() {
       if (rid) {
         const hit = representantesRg.find((r) => r.id === rid);
         if (hit) return hit.nome;
-        return "Representante (indisponível na lista)";
+        return "Representante RG (indisponível na lista)";
       }
-      return c.responsavel_nome?.trim() || "—";
+      return "—";
     },
     [representantesRg]
   );
@@ -1135,7 +1135,7 @@ export default function Clientes() {
           "Cidade",
           "Endereço de Coleta",
           "Endereço de Faturamento",
-          "Responsável",
+          "Rep. faturamento",
           "Telefone",
           "E-mail",
           "E-mail NF",
@@ -1675,10 +1675,7 @@ export default function Clientes() {
     const rawValue = name === "cnpj" ? formatarCNPJ(value) : value;
 
     if (name === "representante_rg_id") {
-      const nomeRep = rawValue
-        ? representantesRg.find((r) => r.id === rawValue)?.nome ?? ""
-        : "";
-      setForm((prev) => ({ ...prev, representante_rg_id: rawValue, responsavel_nome: nomeRep }));
+      setForm((prev) => ({ ...prev, representante_rg_id: rawValue }));
       return;
     }
 
@@ -1844,11 +1841,7 @@ export default function Clientes() {
         email_nf: row.email_nf || "",
         margem_lucro_percentual: margemLucroDbParaCampo(row.margem_lucro_percentual),
 
-        responsavel_nome:
-          row.responsavel_nome ||
-          (row.representante_rg_id
-            ? representantesRg.find((r) => r.id === row.representante_rg_id)?.nome ?? ""
-            : ""),
+        responsavel_nome: row.responsavel_nome || "",
         telefone: row.telefone || "",
         email: row.email || "",
 
@@ -2863,7 +2856,8 @@ export default function Clientes() {
                     name="responsavel_nome"
                     value={form.responsavel_nome}
                     onChange={handleInputChange}
-                    placeholder="Nome do responsável"
+                    placeholder="Representante do Faturamento"
+                    aria-label="Representante do Faturamento"
                     style={inputStyle}
                   />
 
@@ -2935,8 +2929,8 @@ export default function Clientes() {
                 </select>
 
                 <p style={{ margin: "10px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
-                  Cadastro em <strong>Cadastros → Representantes RG</strong>. O nome selecionado é
-                  copiado para o campo "Responsável" automaticamente.
+                  Cadastro em <strong>Cadastros → Representantes RG</strong>. Independente do{' '}
+                  <strong>Representante do Faturamento</strong> acima (contacto / NF).
                 </p>
 
                 <ClienteContratoCadastroSecoes
@@ -4230,7 +4224,7 @@ function ClienteDetalheModal({
           </DetalheSecao>
 
           <DetalheSecao titulo="Contato">
-            <DetalheCampo rotulo="Responsável" valor={cliente.responsavel_nome} />
+            <DetalheCampo rotulo="Representante do Faturamento" valor={cliente.responsavel_nome} />
             <DetalheCampo rotulo="Representante RG" valor={representanteRotulo} />
             <DetalheCampo rotulo="Telefone" valor={cliente.telefone} />
             <DetalheCampo rotulo="E-mail para NF" valor={cliente.email_nf} />

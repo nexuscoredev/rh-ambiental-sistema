@@ -785,6 +785,9 @@ export default function MTR() {
           null,
       }))
       setMtrs(mtrsRows)
+      if (mtrsRows.length === 0) {
+        setSelectedMTR(null)
+      }
     }
 
     let coletasRows: Coleta[] = []
@@ -898,6 +901,12 @@ export default function MTR() {
     return map
   }, [programacoes])
 
+  /** Evita pré-visualização de MTR removida ou restaurada da sessão quando a lista já não a contém. */
+  const mtrSelecionadaValida = useMemo(() => {
+    if (!selectedMTR) return null
+    return mtrs.find((m) => m.id === selectedMTR.id) ?? null
+  }, [selectedMTR, mtrs])
+
   /** Programações sem MTR (ou a da MTR em edição) — não aparecem no calendário de «Nova MTR». */
   const eligibleProgramacoes = useMemo(() => {
     return programacoes.filter((programacao) => {
@@ -959,6 +968,13 @@ export default function MTR() {
 
     if (!target) {
       prevContextoUrlKeyRef.current = urlKey
+      queueMicrotask(() => {
+        setSelectedMTR((prev) => {
+          if (!prev) return prev
+          if (!mtrs.some((m) => m.id === prev.id)) return null
+          return prev
+        })
+      })
       return
     }
 
@@ -991,6 +1007,14 @@ export default function MTR() {
     urlClienteId,
     selectedMTR?.id,
   ])
+
+  useEffect(() => {
+    if (loading) return
+    if (!selectedMTR) return
+    if (mtrs.length === 0 || !mtrs.some((m) => m.id === selectedMTR.id)) {
+      setSelectedMTR(null)
+    }
+  }, [loading, mtrs, selectedMTR])
 
   function openNewForm() {
     if (!podeMutarMtr) {
@@ -1652,28 +1676,30 @@ export default function MTR() {
   }
 
   function handlePrint() {
-    if (!selectedMTR || !detalhesMtrSelecionada) return
-    confirmarEImprimirMtr(selectedMTR, detalhesMtrSelecionada)
+    if (!mtrSelecionadaValida || !detalhesMtrSelecionada) return
+    confirmarEImprimirMtr(mtrSelecionadaValida, detalhesMtrSelecionada)
   }
 
   const totalVinculadas = mtrs.filter((item) => !!item.programacao_id).length
 
-  const selectedProgramacao = selectedMTR?.programacao_id
-    ? programacaoMap.get(selectedMTR.programacao_id)
+  const selectedProgramacao = mtrSelecionadaValida?.programacao_id
+    ? programacaoMap.get(mtrSelecionadaValida.programacao_id)
     : null
 
-  const selectedColeta = selectedMTR ? coletaMapByMtrId.get(selectedMTR.id) : null
+  const selectedColeta = mtrSelecionadaValida
+    ? coletaMapByMtrId.get(mtrSelecionadaValida.id)
+    : null
   const duplicateMTR = getDuplicateMTRForSelectedProgramacao()
 
   const detalhesMtrSelecionada = useMemo(() => {
-    if (!selectedMTR) return null
-    return detalhesDocumentoMtr(selectedMTR)
-  }, [selectedMTR, detalhesDocumentoMtr])
+    if (!mtrSelecionadaValida) return null
+    return detalhesDocumentoMtr(mtrSelecionadaValida)
+  }, [mtrSelecionadaValida, detalhesDocumentoMtr])
 
   const avisosImpressao = useMemo(() => {
-    if (!selectedMTR || !detalhesMtrSelecionada) return []
-    return avisosImpressaoMtr(selectedMTR, detalhesMtrSelecionada)
-  }, [selectedMTR, detalhesMtrSelecionada])
+    if (!mtrSelecionadaValida || !detalhesMtrSelecionada) return []
+    return avisosImpressaoMtr(mtrSelecionadaValida, detalhesMtrSelecionada)
+  }, [mtrSelecionadaValida, detalhesMtrSelecionada])
 
   return (
     <MainLayout>
@@ -3204,7 +3230,7 @@ export default function MTR() {
             <button className="btn btn-secondary" onClick={loadData}>
               Atualizar lista
             </button>
-            {selectedMTR && (
+            {mtrSelecionadaValida && (
               <button className="btn btn-light" onClick={handlePrint}>
                 Imprimir documento
               </button>
@@ -3288,7 +3314,7 @@ export default function MTR() {
               ) : (
                 <div className="mtr-list">
                   {mtrs.map((item) => {
-                    const isSelected = selectedMTR?.id === item.id
+                    const isSelected = mtrSelecionadaValida?.id === item.id
                     const linkedProgramacao = item.programacao_id ? programacaoMap.get(item.programacao_id) : null
                     const linkedColeta = coletaMapByMtrId.get(item.id)
 
@@ -3396,7 +3422,9 @@ export default function MTR() {
                       <button
                         type="button"
                         className="mini-btn mini-btn-danger"
-                        onClick={() => selectedMTR && void handleDeleteColetasDaMtr(selectedMTR.id)}
+                        onClick={() =>
+                          mtrSelecionadaValida && void handleDeleteColetasDaMtr(mtrSelecionadaValida.id)
+                        }
                         style={{ marginLeft: 10 }}
                       >
                         Excluir coleta(s)
@@ -3406,7 +3434,7 @@ export default function MTR() {
                 </div>
               )}
 
-              {selectedMTR && avisosImpressao.length > 0 ? (
+              {mtrSelecionadaValida && avisosImpressao.length > 0 ? (
                 <div className="alert-box alert-warning" style={{ marginBottom: 12 }}>
                   <strong>Conferência antes de imprimir:</strong> {avisosImpressao.join('; ')}.
                 </div>
@@ -3414,28 +3442,34 @@ export default function MTR() {
 
               <div
                 id="mtr-documento-impressao"
-                className={`document-wrapper print-area${selectedMTR ? ' document-wrapper--mtr-excel' : ''}`}
+                className={`document-wrapper print-area${mtrSelecionadaValida ? ' document-wrapper--mtr-excel' : ''}`}
               >
-                {selectedMTR && detalhesMtrSelecionada ? (
+                {mtrSelecionadaValida && detalhesMtrSelecionada ? (
                   <div className="document-shell mtr-modelo-pdf-shell">
                     <div className="document-content mtr-modelo-pdf">
                       <MtrManifestoPrint
-                        numero={selectedMTR.numero}
-                        gerador={selectedMTR.gerador}
-                        endereco={selectedMTR.endereco}
-                        cidade={selectedMTR.cidade}
-                        tipo_residuo={selectedMTR.tipo_residuo}
-                        transportador={selectedMTR.transportador}
-                        destinador={selectedMTR.destinador}
+                        numero={mtrSelecionadaValida.numero}
+                        gerador={mtrSelecionadaValida.gerador}
+                        endereco={mtrSelecionadaValida.endereco}
+                        cidade={mtrSelecionadaValida.cidade}
+                        tipo_residuo={mtrSelecionadaValida.tipo_residuo}
+                        transportador={mtrSelecionadaValida.transportador}
+                        destinador={mtrSelecionadaValida.destinador}
                         detalhes={detalhesMtrSelecionada}
                         footerExtra={
                           <>
                             <p className="mtr-excel__doc-footer-line">
                               Documento emitido pelo Sistema RG Ambiental · {officialSiteUrl('/mtr')}
                             </p>
-                            {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at) ? (
+                            {formatarLancadoPorResumo(
+                              mtrSelecionadaValida.criado_por_nome,
+                              mtrSelecionadaValida.created_at
+                            ) ? (
                               <p className="mtr-excel__doc-footer-line">
-                                {formatarLancadoPorResumo(selectedMTR.criado_por_nome, selectedMTR.created_at)}
+                                {formatarLancadoPorResumo(
+                                  mtrSelecionadaValida.criado_por_nome,
+                                  mtrSelecionadaValida.created_at
+                                )}
                               </p>
                             ) : null}
                           </>
