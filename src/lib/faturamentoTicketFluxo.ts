@@ -1,5 +1,6 @@
 import { marcarEsteiraAposAprovacaoTicket } from './faturamentoEsteira'
 import { supabase } from './supabase'
+import { sincronizarAposAlteracaoOperacionalColeta } from './faturamentoOperacionalSync'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { indiceEtapaFluxo, normalizarEtapaColeta } from './fluxoEtapas'
 import {
@@ -22,13 +23,13 @@ export function coletaDocumentacaoProntaNaVista(row: FaturamentoResumoViewRow): 
   return row.status_conferencia === 'PRONTO_PARA_FATURAR'
 }
 
-/** Ticket impresso no Controle de Massa e ainda sem validação do Faturamento. */
+/** Ticket gravado/gerado na Pesagem e ainda sem validação do Faturamento. */
 export function coletaNaFilaAprovacaoTicketFaturamento(row: FaturamentoResumoViewRow): boolean {
-  if (!coletaDocumentacaoProntaNaVista(row)) return false
   if (coletaJaFechadaParaFaturamento(row)) return false
+  if (row.ticket_impresso_em && !row.faturamento_ticket_aprovado_em) return true
+  if (!coletaDocumentacaoProntaNaVista(row)) return false
   const pend = (row.pendencias_resumo ?? '').toLowerCase()
   if (/aguardando aprova/.test(pend)) return true
-  if (row.ticket_impresso_em && !row.faturamento_ticket_aprovado_em) return true
   return false
 }
 
@@ -414,6 +415,21 @@ export async function atualizarPesoLiquidoConferenciaTicket(
 
   const itens = patchResiduosItensPesoLiquido(rowAtual.residuos_itens, peso)
 
+  async function finalizarSeGravou(res: { ok: true } | { ok: false; message: string }) {
+    if (!res.ok) return res
+    const sync = await sincronizarAposAlteracaoOperacionalColeta(id)
+    if (!sync.ok) {
+      return {
+        ok: false,
+        message: `Peso gravado na coleta, mas falhou ao sincronizar MTR/ticket: ${sync.message}`,
+      }
+    }
+    return res
+  }
+
+  const direto = await gravarPesoColetaDireto(id, peso, itens)
+  if (direto.ok) return finalizarSeGravou(direto)
+
   const { data: rpcData, error: rpcErr } = await supabase.rpc('atualizar_peso_liquido_conferencia_ticket', {
     p_coleta_id: id,
     p_peso_liquido: peso,
@@ -422,9 +438,7 @@ export async function atualizarPesoLiquidoConferenciaTicket(
 
   if (!rpcErr) {
     const rpcRes = parseRpcPesoConferencia(rpcData)
-    if (rpcRes.ok) return rpcRes
-    const direto = await gravarPesoColetaDireto(id, peso, itens)
-    if (direto.ok) return direto
+    if (rpcRes.ok) return finalizarSeGravou(rpcRes)
     return {
       ok: false,
       message: `${rpcRes.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
@@ -435,12 +449,12 @@ export async function atualizarPesoLiquidoConferenciaTicket(
     return { ok: false, message: rpcErr.message || 'Não foi possível atualizar o peso.' }
   }
 
-  const direto = await gravarPesoColetaDireto(id, peso, itens)
-  if (!direto.ok) {
+  const diretoRetry = await gravarPesoColetaDireto(id, peso, itens)
+  if (!diretoRetry.ok) {
     return {
       ok: false,
-      message: `${direto.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
+      message: `${diretoRetry.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
     }
   }
-  return direto
+  return finalizarSeGravou(diretoRetry)
 }

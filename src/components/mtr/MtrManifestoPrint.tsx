@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { BRAND_LOGO_MARK } from '../../lib/brandLogo'
 import {
+  rotuloEquipamentosContratoResumo,
+  rotuloVeiculosContratoResumo,
+} from '../../lib/clienteContratoCadastro'
+import {
   listaResiduosParaDocumentoMtr,
   type MtrResiduoDetalhesCampos,
 } from '../../lib/mtrClienteContratoAutofill'
@@ -14,6 +18,7 @@ import {
   MTR_TELEFONE_DISCREPANCIA_PADRAO,
   MTR_TEXTO_VIDE_FICHA,
   mtrTextoCelula,
+  sanitizarTextoManifestoMtr,
 } from '../../lib/mtrPrintTexto'
 import './mtrManifestoPrint.css'
 
@@ -40,6 +45,8 @@ export type MtrManifestoPrintDetalhes = {
   conformidade: {
     telefone_discrepancias: string
   }
+  contrato_veiculos?: { tipo_veiculo: string }[]
+  contrato_equipamentos?: { descricao: string }[]
   transportador: {
     razao_social: string
     atividade: string
@@ -133,6 +140,21 @@ export function MtrManifestoPrint({
   const telDisc = textoDiscrepancia(d)
   const descAdic = descricoesAdicionaisExibir(d)
   const instrMan = instrucoesManuseioExibir(d)
+  const ocultarValoresManifesto = { ocultarValores: true as const }
+  const rotuloVeiculos = rotuloVeiculosContratoResumo(
+    d.contrato_veiculos,
+    null,
+    ocultarValoresManifesto
+  )
+  const rotuloEquipamentos = rotuloEquipamentosContratoResumo(
+    d.contrato_equipamentos,
+    null,
+    ocultarValoresManifesto
+  )
+
+  function celulaResiduoManifesto(val: string): string {
+    return mtrTextoCelula(sanitizarTextoManifestoMtr(val))
+  }
 
   return (
     <div className="mtr-excel">
@@ -194,6 +216,24 @@ export function MtrManifestoPrint({
 
           <tr>
             <td className="mtr-excel__sec" colSpan={6}>
+              1B. VEÍCULOS E EQUIPAMENTOS (CONTRATO):
+            </td>
+          </tr>
+          <tr>
+            <td className="mtr-excel__k">Veículos:</td>
+            <td className="mtr-excel__v" colSpan={5}>
+              {mtrTextoCelula(rotuloVeiculos)}
+            </td>
+          </tr>
+          <tr>
+            <td className="mtr-excel__k">Equipamentos:</td>
+            <td className="mtr-excel__v" colSpan={5}>
+              {mtrTextoCelula(rotuloEquipamentos)}
+            </td>
+          </tr>
+
+          <tr>
+            <td className="mtr-excel__sec" colSpan={6}>
               2. DESCRIÇÃO DOS RESÍDUOS:
             </td>
           </tr>
@@ -211,14 +251,14 @@ export function MtrManifestoPrint({
                   </tr>
                   {listaRes.map((rowRes, idx) => (
                     <tr key={`mtr-print-residuo-${idx}`}>
-                      <td className="mtr-excel__v">{mtrTextoCelula(rowRes.fonte_origem)}</td>
+                      <td className="mtr-excel__v">{celulaResiduoManifesto(rowRes.fonte_origem)}</td>
                       <td className="mtr-excel__v mtr-excel__v--carac">
-                        {mtrTextoCelula(rowRes.caracterizacao)}
+                        {celulaResiduoManifesto(rowRes.caracterizacao)}
                       </td>
-                      <td className="mtr-excel__v">{mtrTextoCelula(rowRes.estado_fisico)}</td>
-                      <td className="mtr-excel__v">{mtrTextoCelula(rowRes.acondicionamento)}</td>
-                      <td className="mtr-excel__v">{mtrTextoCelula(rowRes.quantidade_aproximada)}</td>
-                      <td className="mtr-excel__v">{mtrTextoCelula(rowRes.onu)}</td>
+                      <td className="mtr-excel__v">{celulaResiduoManifesto(rowRes.estado_fisico)}</td>
+                      <td className="mtr-excel__v">{celulaResiduoManifesto(rowRes.acondicionamento)}</td>
+                      <td className="mtr-excel__v">{celulaResiduoManifesto(rowRes.quantidade_aproximada)}</td>
+                      <td className="mtr-excel__v">{celulaResiduoManifesto(rowRes.onu)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -335,7 +375,7 @@ export function MtrManifestoPrint({
           </tr>
           <tr>
             <td className="mtr-excel__v" colSpan={6}>
-              {mtrTextoCelula(descAdic)}
+              {mtrTextoCelula(sanitizarTextoManifestoMtr(descAdic))}
             </td>
           </tr>
           <tr className="mtr-excel__banner-light">

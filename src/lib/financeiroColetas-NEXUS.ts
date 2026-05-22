@@ -50,6 +50,8 @@ export const COLETAS_OR_FINANCEIRO_QUERY = [
   'coleta_observacoes.ilike.%FLUXO-20%',
 ].join(',')
 
+export const FINANCEIRO_VW_RESUMO_MAX_PAGES = 8
+
 /** Vencimento já passou e pagamento não está «Pago» (Dashboard / Financeiro). */
 export function isVencidoFinanceiro(
   dataVencimento: string | null | undefined,

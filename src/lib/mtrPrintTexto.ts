@@ -25,3 +25,14 @@ export function mtrTextoCelula(val: string | null | undefined): string {
   const t = String(val ?? '').trim()
   return t.length > 0 ? t : '\u00A0'
 }
+
+/** Remove valores monetários e rótulos de custo do texto exibido no manifesto impresso/PDF. */
+export function sanitizarTextoManifestoMtr(texto: string): string {
+  let t = String(texto ?? '').trim()
+  if (!t) return t
+  t = t.replace(/\s*[—–-]\s*R\$\s*[\d.]+\s*,?\s*[\d]*/gi, '')
+  t = t.replace(/\s*R\$\s*[\d.]+\s*,?\s*[\d]*/gi, '')
+  t = t.replace(/\s*\(sem custo\)/gi, '')
+  t = t.replace(/\s*\(com custo\)/gi, '')
+  return t.trim()
+}

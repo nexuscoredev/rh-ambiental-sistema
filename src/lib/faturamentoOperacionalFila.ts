@@ -30,8 +30,11 @@ function registoFaturamentoEmitido(row: FaturamentoResumoViewRow): boolean {
  * mesmo critério que `status_conferencia = PRONTO_PARA_FATURAR` na vista (peso, MTR, ticket, aprovação),
  * mais cliente e peso válidos; sem emissão ainda.
  */
-export function coletaNaFilaFaturamento(row: FaturamentoResumoViewRow): boolean {
-  return coletaElegivelParaFaturar(row).ok
+export function coletaNaFilaFaturamento(
+  row: FaturamentoResumoViewRow,
+  linhasContexto?: FaturamentoResumoViewRow[]
+): boolean {
+  return coletaElegivelParaFaturar(row, linhasContexto).ok
 }
 
 /** Histórico: já emitido ao financeiro ou etapa já no financeiro. */

@@ -113,8 +113,9 @@ export function FaturamentoHistoricoColetas({
     <div style={wrap}>
       <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#475569' }}>Coletas faturadas</h2>
       <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94a3b8', maxWidth: '820px', lineHeight: 1.5 }}>
-        Coletas já enviadas ao Financeiro. A lista carrega automaticamente ao abrir a página — filtre por período ou
-        busque por cliente / número.
+        {naoCarregado
+          ? 'Coletas já enviadas ao Financeiro. Use «Carregar histórico» nos relatórios abaixo ou aguarde se já pediu a carga.'
+          : 'Coletas já enviadas ao Financeiro — filtre por período ou busque por cliente / número.'}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', alignItems: 'flex-end' }}>
         <div>

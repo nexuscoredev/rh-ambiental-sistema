@@ -95,7 +95,14 @@ const btnSecundario: CSSProperties = {
 function CelulaColetasConsolidadas({
   coletas,
 }: {
-  coletas: { coleta_id: string; numero_coleta: number | null; numero: string; tipo_residuo: string }[]
+  coletas: {
+    coleta_id: string
+    numero_coleta: number | null
+    numero: string
+    tipo_residuo: string
+    ticket_comprovante?: string | null
+    peso_liquido?: number | null
+  }[]
 }) {
   return (
     <div
@@ -134,6 +141,9 @@ function CelulaColetasConsolidadas({
         />
         <span>
           {coletas.length} tickets · 1 faturamento
+        </span>
+        <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: '10px' }}>
+          Lista consolidada
         </span>
       </div>
       <div
@@ -174,19 +184,40 @@ function CelulaColetasConsolidadas({
             >
               {i + 1}
             </span>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 800,
-                color: FAT.ink,
-                fontVariantNumeric: 'tabular-nums',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {c.numero_coleta ?? c.numero}
-            </span>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  color: FAT.ink,
+                  fontVariantNumeric: 'tabular-nums',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {c.numero_coleta ?? c.numero}
+              </div>
+              {(c.ticket_comprovante ?? '').trim() ? (
+                <div
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: FAT.inkMuted,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Ticket {(c.ticket_comprovante ?? '').trim()}
+                </div>
+              ) : null}
+              {c.peso_liquido != null ? (
+                <div style={{ fontSize: '10px', color: FAT.teal, fontWeight: 700 }}>
+                  {fmtPeso(c.peso_liquido)}
+                </div>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
@@ -353,7 +384,7 @@ export function FaturamentoFilaColetas({
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1020px' }}>
             <thead>
               <tr>
-                <th style={{ ...th, minWidth: '120px' }}>Coleta</th>
+                <th style={{ ...th, minWidth: '140px' }}>Faturar (tickets)</th>
                 <th style={th}>Cliente</th>
                 <th style={th}>MTR</th>
                 <th style={th}>Resíduo</th>
@@ -468,19 +499,40 @@ function LinhaFilaFaturamento({
         <td style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }}>
           Caminhão/equip. uma vez · resíduos somados
         </td>
-        <td style={{ ...td, textAlign: 'center' }}>
-          <button
-            type="button"
-            disabled={!!emitindoColetaId}
-            onClick={() => void onFaturar(coleta_lider.coleta_id)}
-            style={{
-              ...btnPrimario,
-              opacity: emitindoColetaId ? 0.65 : 1,
-              cursor: emitindoColetaId ? 'wait' : 'pointer',
-            }}
-          >
-            {emitindoColetaId === coleta_lider.coleta_id ? 'A confirmar…' : rotuloBotao}
-          </button>
+        <td style={{ ...td, textAlign: 'center', minWidth: '200px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+            <div
+              style={{
+                fontSize: '11px',
+                color: FAT.inkMuted,
+                textAlign: 'left',
+                lineHeight: 1.4,
+                padding: '6px 8px',
+                background: '#fff',
+                borderRadius: R.md,
+                border: `1px solid ${FAT.line}`,
+              }}
+            >
+              {coletas.map((c, i) => (
+                <div key={`fat-${c.coleta_id}`}>
+                  <strong style={{ color: FAT.violet }}>{i + 1}.</strong> {c.numero_coleta ?? c.numero}
+                  {(c.ticket_comprovante ?? '').trim() ? ` · ${(c.ticket_comprovante ?? '').trim()}` : ''}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={!!emitindoColetaId}
+              onClick={() => void onFaturar(coleta_lider.coleta_id)}
+              style={{
+                ...btnPrimario,
+                opacity: emitindoColetaId ? 0.65 : 1,
+                cursor: emitindoColetaId ? 'wait' : 'pointer',
+              }}
+            >
+              {emitindoColetaId === coleta_lider.coleta_id ? 'A confirmar…' : rotuloBotao}
+            </button>
+          </div>
         </td>
       </tr>
       {onDevolvidoConferencia && podeDevolverConferencia

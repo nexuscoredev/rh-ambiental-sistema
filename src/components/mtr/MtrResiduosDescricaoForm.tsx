@@ -1,10 +1,12 @@
 import type { CSSProperties } from 'react'
 import {
   listaResiduosFromDetalhesMtr,
+  residuoDetalhesLimpo,
   residuoDetalhesVazio,
   syncResiduoPrincipalComLista,
   type MtrResiduoDetalhesCampos,
 } from '../../lib/mtrClienteContratoAutofill'
+import { linhaVaziaResiduoPesagem } from '../../lib/residuosPesagem'
 
 type DetalhesComLista = {
   residuo: MtrResiduoDetalhesCampos
@@ -16,6 +18,7 @@ type DetalhesComLista = {
 type Props = {
   detalhes: DetalhesComLista
   onChange: (next: DetalhesComLista) => void
+  disabled?: boolean
 }
 
 const card: CSSProperties = {
@@ -63,7 +66,20 @@ function patchLista(
   return lista.map((row, i) => (i === index ? { ...row, ...partial } : row))
 }
 
-export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
+const btnLimpar: CSSProperties = {
+  padding: '8px 14px',
+  borderRadius: '8px',
+  border: '1px solid #d97706',
+  background: 'linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%)',
+  color: '#92400e',
+  fontWeight: 800,
+  fontSize: '12px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  boxShadow: '0 1px 3px rgba(217, 119, 6, 0.25)',
+}
+
+export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false }: Props) {
   const lista = listaResiduosFromDetalhesMtr(detalhes)
 
   function aplicarLista(novaLista: MtrResiduoDetalhesCampos[]) {
@@ -75,15 +91,64 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
     aplicarLista(patchLista(lista, index, partial))
   }
 
+  function limparDadosPreenchidos() {
+    if (disabled) return
+    const ok = window.confirm(
+      'Limpar todos os campos dos resíduos nesta MTR?\n\nOs dados trazidos do cadastro do cliente serão apagados; as linhas permanecem para preenchimento manual.'
+    )
+    if (!ok) return
+
+    const vazios =
+      lista.length > 0 ? lista.map(() => residuoDetalhesLimpo()) : [residuoDetalhesLimpo()]
+    const sync = syncResiduoPrincipalComLista({ ...detalhes, residuos_lista: vazios })
+    const itensPesagem =
+      vazios.length > 1
+        ? vazios.map(() => linhaVaziaResiduoPesagem())
+        : [linhaVaziaResiduoPesagem()]
+
+    onChange({
+      ...detalhes,
+      ...sync,
+      residuos_itens: itensPesagem,
+    })
+  }
+
   return (
     <>
       <div className="field field-full">
-        <div style={{ fontWeight: 800 }}>2. Descrição dos resíduos</div>
-        <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
-          {lista.length > 1
-            ? `${lista.length} resíduos do cadastro do cliente — cada linha gera um ticket na pesagem.`
-            : 'Um resíduo do cadastro do cliente.'}
-        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '10px',
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 800 }}>2. Descrição dos resíduos</div>
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
+              {lista.length > 1
+                ? `${lista.length} resíduos do cadastro do cliente — cada linha gera um ticket na pesagem.`
+                : 'Um resíduo do cadastro do cliente.'}
+            </p>
+          </div>
+          {lista.length > 0 ? (
+            <button
+              type="button"
+              style={{
+                ...btnLimpar,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.55 : 1,
+              }}
+              disabled={disabled}
+              title="Apagar todos os campos dos resíduos (inclui Industrial, SÓLIDO e dados do cadastro)"
+              onClick={limparDadosPreenchidos}
+            >
+              Limpar todos os campos
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {lista.map((row, index) => (
@@ -100,6 +165,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
               <input
                 style={input}
                 value={row.fonte_origem}
+                disabled={disabled}
                 onChange={(e) => patchRow(index, { fonte_origem: e.target.value })}
               />
             </div>
@@ -108,6 +174,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
               <input
                 style={input}
                 value={row.caracterizacao}
+                disabled={disabled}
                 onChange={(e) => patchRow(index, { caracterizacao: e.target.value })}
               />
             </div>
@@ -118,6 +185,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
               <input
                 style={input}
                 value={row.estado_fisico}
+                disabled={disabled}
                 onChange={(e) => patchRow(index, { estado_fisico: e.target.value })}
               />
             </div>
@@ -126,6 +194,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
               <input
                 style={input}
                 value={row.acondicionamento}
+                disabled={disabled}
                 onChange={(e) => patchRow(index, { acondicionamento: e.target.value })}
               />
             </div>
@@ -134,6 +203,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
               <input
                 style={input}
                 value={row.quantidade_aproximada}
+                disabled={disabled}
                 onChange={(e) => patchRow(index, { quantidade_aproximada: e.target.value })}
               />
             </div>
@@ -143,6 +213,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange }: Props) {
             <input
               style={input}
               value={row.onu}
+              disabled={disabled}
               onChange={(e) => patchRow(index, { onu: e.target.value })}
             />
           </div>

@@ -108,6 +108,18 @@ export function residuoDetalhesVazio(): MtrResiduoDetalhesCampos {
   }
 }
 
+/** Todos os campos em branco (ex.: botão «Limpar» na MTR — sem defaults Industrial/SÓLIDO). */
+export function residuoDetalhesLimpo(): MtrResiduoDetalhesCampos {
+  return {
+    fonte_origem: '',
+    caracterizacao: '',
+    estado_fisico: '',
+    acondicionamento: '',
+    quantidade_aproximada: '',
+    onu: '',
+  }
+}
+
 /** Todos os resíduos do contrato → linhas da secção 2 do manifesto. */
 export function residuosContratoParaListaDetalhesMtr(
   residuos: ResiduoContratoItem[],
@@ -309,8 +321,8 @@ export function snapshotContratoFromDetalhesMtr(detalhes: {
     veiculos,
     equipamentos,
     residuos,
-    rotuloVeiculos: veiculos.map((v) => v.tipo_veiculo).join(' · ') || '—',
-    rotuloEquipamentos: equipamentos.map((e) => e.descricao).join(' · ') || '—',
+    rotuloVeiculos: rotuloVeiculosContratoResumo(veiculos, null),
+    rotuloEquipamentos: rotuloEquipamentosContratoResumo(equipamentos, null),
     rotuloResiduos: residuos.map((r) => rotuloResiduoContrato(r)).join(' · ') || '—',
   }
 }

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { coletaNaFilaFaturamento } from './faturamentoOperacionalFila'
 import {
+  agruparGruposMedicaoPorMtr,
+  agruparGruposNfBoletoPorMtr,
   coletaAguardandoConfirmacaoNfBoleto,
   coletaLiberadaParaFaturarEsteira,
   coletaNaFilaRelatorioMedicao,
+  coletaPertenceGrupoMedicaoMtr,
+  etapaUnificadaGrupoMedicao,
   inferirEsteiraStatus,
 } from './faturamentoEsteira'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
@@ -106,6 +111,94 @@ describe('coletaNaFilaRelatorioMedicao', () => {
     expect(coletaNaFilaRelatorioMedicao(row({ faturamento_esteira_status: 'MEDICAO_PENDENTE' }))).toBe(
       true
     )
+  })
+})
+
+describe('coletaPertenceGrupoMedicaoMtr / fila faturar', () => {
+  it('inclui ticket sem medição iniciada quando irmão está na esteira', () => {
+    const linhas = [
+      row({
+        coleta_id: 'c1',
+        numero_coleta: 90001,
+        faturamento_esteira_status: 'MEDICAO_AGUARDANDO_CLIENTE',
+        medicao_email_enviado_em: '2026-05-20T00:00:00Z',
+      }),
+      row({
+        coleta_id: 'c2',
+        numero_coleta: 90002,
+        faturamento_esteira_status: null,
+        medicao_email_enviado_em: null,
+      }),
+    ]
+    expect(coletaPertenceGrupoMedicaoMtr(linhas[1]!, linhas)).toBe(true)
+    const grupos = agruparGruposMedicaoPorMtr(linhas)
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0]?.linhas).toHaveLength(2)
+  })
+
+  it('não libera irmão na fila para faturar enquanto outro está em medição', () => {
+    const linhas = [
+      row({
+        coleta_id: 'c1',
+        numero_coleta: 90001,
+        faturamento_esteira_status: 'MEDICAO_AGUARDANDO_CLIENTE',
+        medicao_email_enviado_em: '2026-05-20T00:00:00Z',
+        fluxo_status: 'TICKET_GERADO',
+        etapa_operacional: 'TICKET_GERADO',
+        faturamento_registro_status: null,
+      }),
+      row({
+        coleta_id: 'c2',
+        numero_coleta: 90002,
+        faturamento_esteira_status: null,
+        fluxo_status: 'TICKET_GERADO',
+        etapa_operacional: 'TICKET_GERADO',
+        faturamento_registro_status: null,
+      }),
+    ]
+    expect(coletaNaFilaFaturamento(linhas[1]!, linhas)).toBe(false)
+    expect(coletaLiberadaParaFaturarEsteira(linhas[1]!, linhas)).toBe(false)
+  })
+})
+
+describe('agruparGruposMedicaoPorMtr', () => {
+  it('consolida vários tickets da mesma MTR num único grupo', () => {
+    const grupos = agruparGruposMedicaoPorMtr([
+      row({
+        coleta_id: 'c1',
+        numero_coleta: 90001,
+        faturamento_esteira_status: 'MEDICAO_PENDENTE',
+        tipo_residuo: 'Resíduo 1',
+      }),
+      row({
+        coleta_id: 'c2',
+        numero_coleta: 90002,
+        faturamento_esteira_status: 'MEDICAO_EMAIL_PENDENTE',
+        medicao_relatorio_gerado_em: '2026-05-20T00:00:00Z',
+        tipo_residuo: 'Resíduo 2',
+      }),
+    ])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0]?.linhas).toHaveLength(2)
+    expect(etapaUnificadaGrupoMedicao(grupos[0]!.linhas)).toBe('relatorio')
+  })
+})
+
+describe('agruparGruposNfBoletoPorMtr', () => {
+  it('consolida tickets da mesma MTR num único registo de NF', () => {
+    const base = {
+      faturamento_esteira_status: 'LIBERADO_FINANCEIRO' as const,
+      faturamento_registro_status: 'emitido' as const,
+      mtr_id: 'm1',
+      mtr_numero: 'MTR-1',
+      cliente_id: 'cli',
+    }
+    const grupos = agruparGruposNfBoletoPorMtr([
+      row({ ...base, coleta_id: 'c1', numero_coleta: 90001 }),
+      row({ ...base, coleta_id: 'c2', numero_coleta: 90002 }),
+    ])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0]?.linhas).toHaveLength(2)
   })
 })
 

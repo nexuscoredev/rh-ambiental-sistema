@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties, type For
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { registrarTicketImpressoColeta } from '../lib/faturamentoTicketFluxo'
 import {
   etapaTicketJaRegistradoNoFluxo,
   formatarEtapaParaUI,
@@ -451,9 +452,15 @@ export function TicketOperacionalPanel({
         }
       }
 
+      const resFila = await registrarTicketImpressoColeta(coletaAtiva.id)
+
       if (jaEmTicketGerado) {
         setEditandoTicketGerado(false)
-        setMensagem('Ticket atualizado.')
+        if (!resFila.ok) {
+          setErro(resFila.message)
+        } else {
+          setMensagem('Ticket atualizado. Coleta na fila de conferência do Faturamento.')
+        }
         await notificarErecarregar()
       } else {
         const { error: errColeta } = await supabase
@@ -470,8 +477,15 @@ export function TicketOperacionalPanel({
             `Ticket gravado, mas a etapa da coleta não atualizou: ${mensagemErroSupabase(errColeta)}`
           )
           await notificarErecarregar()
+        } else if (!resFila.ok) {
+          setErro(
+            `Ticket registado, mas não entrou na fila do Faturamento: ${resFila.message}`
+          )
+          await notificarErecarregar()
         } else {
-          setMensagem('Ticket registado. A coleta avançou para «Ticket gerado». Pode enviar para aprovação.')
+          setMensagem(
+            'Ticket registado. A coleta entrou na fila de conferência do Faturamento.'
+          )
           await notificarErecarregar()
         }
       }

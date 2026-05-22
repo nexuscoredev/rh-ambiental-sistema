@@ -555,6 +555,45 @@ export default function ControleMassa() {
     return pendentes;
   }, [todasColetas, ultimaPesagemPorColeta, filtroOperacao]);
 
+  const ENRIQUECIMENTO_MAX_COLETAS = 150;
+
+  const coletasParaEnriquecer = useMemo(() => {
+    const limitar = (arr: ColetaOpcao[]) => arr.slice(0, ENRIQUECIMENTO_MAX_COLETAS);
+    const urlId = (urlColetaId ?? "").trim();
+    if (urlId) {
+      const c = todasColetas.find((x) => x.id === urlId);
+      return c ? [c] : [];
+    }
+    if (secaoPesagemAberta) {
+      const cid = form.coleta_id.trim();
+      if (cid) {
+        const alvo = todasColetas.find((c) => c.id === cid);
+        if (!alvo) return [];
+        const mid = (alvo.mtr_id ?? "").trim();
+        if (mid) return limitar(todasColetas.filter((c) => c.mtr_id === mid));
+        return [alvo];
+      }
+      const mid = (mtrSemColetaSelecionado ?? "").trim();
+      if (mid) return limitar(todasColetas.filter((c) => c.mtr_id === mid));
+      return [];
+    }
+    if (modoTela === "auditoria") return limitar(listaOperacao);
+    return [];
+  }, [
+    urlColetaId,
+    secaoPesagemAberta,
+    form.coleta_id,
+    mtrSemColetaSelecionado,
+    todasColetas,
+    modoTela,
+    listaOperacao,
+  ]);
+
+  const enriquecimentoKey = useMemo(
+    () => coletasParaEnriquecer.map((c) => c.id).sort().join("|"),
+    [coletasParaEnriquecer]
+  );
+
   const temParametrosContexto = !!(
     urlColetaId ||
     urlMtrId ||
@@ -691,40 +730,20 @@ export default function ControleMassa() {
     }
   }, []);
 
-  const coletaIdsEnriquecimentoKey = useMemo(
-    () => todasColetas.map((c) => c.id).sort().join("|"),
-    [todasColetas]
-  );
-
   useEffect(() => {
-    if (loadingVinculo || !coletaIdsEnriquecimentoKey) return;
-    const precisaEnriquecer =
-      modoTela === "auditoria" ||
-      secaoPesagemAberta ||
-      mtrPickerAberto ||
-      Boolean(urlColetaId);
-    if (!precisaEnriquecer) return;
-    if (ultimoEnriquecimentoKeyRef.current === coletaIdsEnriquecimentoKey) return;
+    if (loadingVinculo || !enriquecimentoKey || coletasParaEnriquecer.length === 0) return;
+    if (ultimoEnriquecimentoKeyRef.current === enriquecimentoKey) return;
 
-    ultimoEnriquecimentoKeyRef.current = coletaIdsEnriquecimentoKey;
+    ultimoEnriquecimentoKeyRef.current = enriquecimentoKey;
     let cancelled = false;
     void (async () => {
-      await enriquecerListaColetas(todasColetas);
+      await enriquecerListaColetas(coletasParaEnriquecer);
       if (cancelled) ultimoEnriquecimentoKeyRef.current = "";
     })();
     return () => {
       cancelled = true;
     };
-  }, [
-    loadingVinculo,
-    coletaIdsEnriquecimentoKey,
-    todasColetas,
-    modoTela,
-    secaoPesagemAberta,
-    mtrPickerAberto,
-    urlColetaId,
-    enriquecerListaColetas,
-  ]);
+  }, [loadingVinculo, enriquecimentoKey, coletasParaEnriquecer, enriquecerListaColetas]);
 
   useEffect(() => {
     queueMicrotask(() => {

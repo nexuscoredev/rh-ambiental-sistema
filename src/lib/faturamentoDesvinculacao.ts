@@ -51,7 +51,7 @@ export type ConsolidacaoMtrResumo = {
 
 export type ResumoFinanceiroDesvinculado = {
   v: 1
-  /** Valores de faturamento independentes da pesagem/MTR operacionais após gravação. */
+  /** Permite edição local; quando sincronizado, espelha também MTR e coletas (ticket). */
   desvinculado_operacional: boolean
   ticket: ResumoTicketFinanceiro
   mtr: ResumoMtrFinanceiro

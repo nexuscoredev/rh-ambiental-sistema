@@ -35,6 +35,7 @@ import {
   calcularPrecoContratoMtrConsolidado,
   criarResumoFinanceiroConsolidado,
   emitirFaturamentoConsolidadoMtr,
+  escolherColetaLiderFaturamento,
 } from '../../lib/faturamentoConsolidacaoMtr'
 import {
   faturamentoRegistrosErroColunasOpcionais,
@@ -43,6 +44,12 @@ import {
   persistirFaturamentoRegistro,
 } from '../../lib/faturamentoRegistrosPersist'
 import { encerrarTicketDefinitivoFaturamento } from '../../lib/faturamentoTicketFluxo'
+import {
+  aplicarResumoFinanceiroNaOperacional,
+  persistirResumoPendenteGrupoMtr,
+  recalcularResumoDesdeOperacional,
+} from '../../lib/faturamentoOperacionalSync'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { FaturamentoResumoDesvinculado } from './FaturamentoResumoDesvinculado'
 import { FaturamentoMtrRateioPanel } from './FaturamentoMtrRateioPanel'
 
@@ -122,8 +129,11 @@ export function FaturamentoModalRegisto({
   /** Evita reaplicar preços do contrato em loop quando o resumo já foi preenchido. */
   const contratoAutoAplicadoRef = useRef<string | null>(null)
   const carregarRegistoGenRef = useRef(0)
+  /** Evita sync na MTR/ticket ao abrir o modal (só após edição do utilizador). */
+  const skipSyncOperacionalRef = useRef(true)
 
   const coletaIdModal = row?.coleta_id ?? null
+  const resumoDebounced = useDebouncedValue(resumoFinanceiro, 1200)
 
   const grupoConsolidado = useMemo(() => {
     if (!coletasConsolidadas || coletasConsolidadas.length <= 1) return null
@@ -410,8 +420,54 @@ export function FaturamentoModalRegisto({
   ])
 
   const onResumoFinanceiroChange = useCallback((next: ResumoFinanceiroDesvinculado) => {
+    skipSyncOperacionalRef.current = false
     setResumoFinanceiro(next)
   }, [])
+
+  useEffect(() => {
+    if (open) skipSyncOperacionalRef.current = true
+  }, [open, coletaIdModal])
+
+  useEffect(() => {
+    if (!open || !coletaIdModal || !resumoDebounced || !podeEditarResumosFinanceiros) return
+    if (skipSyncOperacionalRef.current) return
+    void aplicarResumoFinanceiroNaOperacional(coletaIdModal, resumoDebounced).then((res) => {
+      if (!res.ok) console.warn('[faturamento] sync MTR/ticket:', res.message)
+    })
+  }, [resumoDebounced, open, coletaIdModal, podeEditarResumosFinanceiros])
+
+  async function sincronizarResumoComOperacional(
+    resumo: ResumoFinanceiroDesvinculado
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const refId =
+      grupoConsolidado && grupoConsolidado.length > 1
+        ? escolherColetaLiderFaturamento(grupoConsolidado).coleta_id
+        : (row?.coleta_id ?? '').trim()
+    if (!refId) return { ok: false, message: 'Coleta inválida.' }
+    return aplicarResumoFinanceiroNaOperacional(refId, resumo)
+  }
+
+  function recalcularTudoDoOperacional() {
+    if (!row) return
+    const grupo =
+      grupoConsolidado && grupoConsolidado.length > 1 ? grupoConsolidado : undefined
+    let next = recalcularResumoDesdeOperacional(row, grupo, sugestaoContrato, {
+      tipoCaminhao: contextoMtr?.tipoCaminhao,
+      acondicionamento: contextoMtr?.acondicionamento,
+    })
+    if (sugestaoContrato && resumoMtrPrecosVazios(next.mtr)) {
+      next = aplicarSugestaoContratoNoResumoMtr(next, sugestaoContrato, {
+        tipoCaminhao: contextoMtr?.tipoCaminhao,
+        acondicionamento: contextoMtr?.acondicionamento,
+      })
+    }
+    skipSyncOperacionalRef.current = true
+    setResumoFinanceiro(next)
+    setOkMsg(
+      'Recalculado a partir do ticket, MTR e contrato do cliente (pesos, resíduos, veículos e equipamentos).'
+    )
+    setErro('')
+  }
 
   useEffect(() => {
     if (!open || !row?.cliente_id) {
@@ -512,6 +568,13 @@ export function FaturamentoModalRegisto({
     setOkMsg('')
 
     const next = marcarTicketEncerradoDefinitivoResumo(resumoFinanceiro)
+    const syncOp = await sincronizarResumoComOperacional(resumoFinanceiro)
+    if (!syncOp.ok) {
+      setEncerrandoTicket(false)
+      setErro(syncOp.message)
+      return
+    }
+
     const res = await encerrarTicketDefinitivoFaturamento(
       row.coleta_id,
       resumoFinanceiroParaJsonb(next)
@@ -547,7 +610,7 @@ export function FaturamentoModalRegisto({
     if (!modoPreparacaoMedicao && status === 'emitido') {
       const alvo = grupoConsolidado && grupoConsolidado.length > 1 ? grupoConsolidado : [row]
       for (const c of alvo) {
-        const el = coletaElegivelParaFaturar(c)
+        const el = coletaElegivelParaFaturar(c, alvo)
         if (!el.ok) {
           const msg = el.motivos.map(rotuloMotivoInelegivel).join(' ')
           setErro(
@@ -581,6 +644,13 @@ export function FaturamentoModalRegisto({
     const valorAdicionais = acrescimo > 0 ? acrescimo : null
 
     try {
+      const syncOp = await sincronizarResumoComOperacional(resumoFinanceiro)
+      if (!syncOp.ok) {
+        setErro(syncOp.message)
+        setSalvando(false)
+        return
+      }
+
       if (status === 'emitido' && grupoConsolidado && grupoConsolidado.length > 1) {
         const resCons = await emitirFaturamentoConsolidadoMtr(supabase, {
           coletas: grupoConsolidado,
@@ -629,6 +699,16 @@ export function FaturamentoModalRegisto({
       }
 
       if (modoPreparacaoMedicao) {
+        if (grupoConsolidado && grupoConsolidado.length > 1 && resumoFinanceiro) {
+          const lider = escolherColetaLiderFaturamento(grupoConsolidado)
+          const pers = await persistirResumoPendenteGrupoMtr(lider, grupoConsolidado, resumoFinanceiro)
+          if (!pers.ok) {
+            setErro(pers.message)
+            setSalvando(false)
+            return
+          }
+        }
+
         const ids =
           grupoConsolidado && grupoConsolidado.length > 1
             ? grupoConsolidado.map((c) => c.coleta_id)
@@ -761,12 +841,41 @@ export function FaturamentoModalRegisto({
                 Não foi possível montar o resumo desta coleta (registo antigo sem snapshot ou dados
                 incompletos).
               </p>
-              <button type="button" className="mini-btn" onClick={() => garantirResumoMontado()}>
-                Montar resumo do operacional
-              </button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <button type="button" className="mini-btn" onClick={() => garantirResumoMontado()}>
+                  Montar resumo do operacional
+                </button>
+                <button type="button" className="mini-btn" onClick={recalcularTudoDoOperacional}>
+                  Recalcular tudo (ticket + MTR + contrato)
+                </button>
+              </div>
             </div>
           ) : (
             <>
+              {modoPreparacaoMedicao ? (
+                <div
+                  style={{
+                    marginBottom: '12px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="rg-btn rg-btn--outline"
+                    style={{ fontSize: '12px' }}
+                    onClick={recalcularTudoDoOperacional}
+                    disabled={carregandoContrato}
+                  >
+                    Recalcular do operacional
+                  </button>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Atualiza pesos, resíduos, veículos e valores do contrato nas linhas do resumo.
+                  </span>
+                </div>
+              ) : null}
               <FaturamentoResumoDesvinculado
                 resumo={resumoFinanceiro}
                 onChange={onResumoFinanceiroChange}
@@ -774,10 +883,12 @@ export function FaturamentoModalRegisto({
                 podeEditarAjustes={podeEditarResumosFinanceiros}
                 carregandoSugestao={carregandoContrato || carregandoRegras}
                 onRecarregarTicket={() => {
+                  skipSyncOperacionalRef.current = true
                   const b = montarResumoOperacional()
                   if (b) setResumoFinanceiro((prev) => (prev ? { ...b, ticket: b.ticket, mtr: prev.mtr } : b))
                 }}
                 onRecarregarMtr={() => {
+                  skipSyncOperacionalRef.current = true
                   const b = montarResumoOperacional()
                   if (b) setResumoFinanceiro((prev) => (prev ? { ...prev, mtr: b.mtr } : b))
                 }}

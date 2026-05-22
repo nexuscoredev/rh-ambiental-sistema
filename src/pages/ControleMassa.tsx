@@ -457,7 +457,10 @@ async function persistirPesagemUmSegmento(params: {
   tipoResiduoMtr: string;
   tipoResiduoColeta: string;
   status: string;
-}): Promise<{ ok: true; ticketOk: boolean } | { ok: false; message: string }> {
+}): Promise<
+  | { ok: true; ticketOk: boolean; filaConferenciaOk: boolean }
+  | { ok: false; message: string }
+> {
   const resolvido = resolverResiduosParaGravacao([params.linhaResiduo], {
     tipoResiduoColeta: params.tipoResiduoColeta,
     tipoResiduoMtr: params.tipoResiduoMtr,
@@ -582,7 +585,16 @@ async function persistirPesagemUmSegmento(params: {
     };
   }
 
-  return { ok: true, ticketOk: ticketAuto.ok };
+  if (!ticketAuto.ok) {
+    return { ok: true, ticketOk: false, filaConferenciaOk: false };
+  }
+
+  const resFila = await registrarTicketImpressoColeta(params.coletaId);
+  if (!resFila.ok) {
+    return { ok: false, message: resFila.message };
+  }
+
+  return { ok: true, ticketOk: true, filaConferenciaOk: true };
 }
 
 function coletaOpcaoParaTicketSnapshot(c: ColetaOpcao): TicketColetaSnapshot {
@@ -1052,6 +1064,46 @@ export default function ControleMassa() {
     return pendentes;
   }, [todasColetas, ultimaPesagemPorColeta, filtroOperacao]);
 
+  /** Evita 3 queries auxiliares em todas as 500 coletas — só no contexto visível. */
+  const ENRIQUECIMENTO_MAX_COLETAS = 150;
+
+  const coletasParaEnriquecer = useMemo(() => {
+    const limitar = (arr: ColetaOpcao[]) => arr.slice(0, ENRIQUECIMENTO_MAX_COLETAS);
+    const urlId = (urlColetaId ?? "").trim();
+    if (urlId) {
+      const c = todasColetas.find((x) => x.id === urlId);
+      return c ? [c] : [];
+    }
+    if (secaoPesagemAberta) {
+      const cid = form.coleta_id.trim();
+      if (cid) {
+        const alvo = todasColetas.find((c) => c.id === cid);
+        if (!alvo) return [];
+        const mid = (alvo.mtr_id ?? "").trim();
+        if (mid) return limitar(todasColetas.filter((c) => c.mtr_id === mid));
+        return [alvo];
+      }
+      const mid = (mtrSemColetaSelecionado ?? "").trim();
+      if (mid) return limitar(todasColetas.filter((c) => c.mtr_id === mid));
+      return [];
+    }
+    if (modoTela === "auditoria") return limitar(listaOperacao);
+    return [];
+  }, [
+    urlColetaId,
+    secaoPesagemAberta,
+    form.coleta_id,
+    mtrSemColetaSelecionado,
+    todasColetas,
+    modoTela,
+    listaOperacao,
+  ]);
+
+  const enriquecimentoKey = useMemo(
+    () => coletasParaEnriquecer.map((c) => c.id).sort().join("|"),
+    [coletasParaEnriquecer]
+  );
+
   const temParametrosContexto = !!(
     urlColetaId ||
     urlMtrId ||
@@ -1162,6 +1214,21 @@ export default function ControleMassa() {
     setNumeroTicketPorColeta(ticketPorColeta.numeroPorColeta);
   }, []);
 
+  useEffect(() => {
+    if (loadingVinculo || !enriquecimentoKey || coletasParaEnriquecer.length === 0) return;
+    if (ultimoEnriquecimentoKeyRef.current === enriquecimentoKey) return;
+
+    ultimoEnriquecimentoKeyRef.current = enriquecimentoKey;
+    let cancelled = false;
+    void (async () => {
+      await enriquecerListaColetas(coletasParaEnriquecer);
+      if (cancelled) ultimoEnriquecimentoKeyRef.current = "";
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingVinculo, enriquecimentoKey, coletasParaEnriquecer, enriquecerListaColetas]);
+
   const fetchMtrsEColetas = useCallback(async (opts?: { silent?: boolean; extraColetaIds?: string[] }) => {
     const silent = Boolean(opts?.silent);
     if (!silent) setLoadingVinculo(true);
@@ -1225,40 +1292,6 @@ export default function ControleMassa() {
     }
   }, []);
 
-  const coletaIdsEnriquecimentoKey = useMemo(
-    () => todasColetas.map((c) => c.id).sort().join("|"),
-    [todasColetas]
-  );
-
-  useEffect(() => {
-    if (loadingVinculo || !coletaIdsEnriquecimentoKey) return;
-    const precisaEnriquecer =
-      modoTela === "auditoria" ||
-      secaoPesagemAberta ||
-      mtrPickerAberto ||
-      Boolean(urlColetaId);
-    if (!precisaEnriquecer) return;
-    if (ultimoEnriquecimentoKeyRef.current === coletaIdsEnriquecimentoKey) return;
-
-    ultimoEnriquecimentoKeyRef.current = coletaIdsEnriquecimentoKey;
-    let cancelled = false;
-    void (async () => {
-      await enriquecerListaColetas(todasColetas);
-      if (cancelled) ultimoEnriquecimentoKeyRef.current = "";
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    loadingVinculo,
-    coletaIdsEnriquecimentoKey,
-    todasColetas,
-    modoTela,
-    secaoPesagemAberta,
-    mtrPickerAberto,
-    urlColetaId,
-    enriquecerListaColetas,
-  ]);
 
   /** Atualiza só as coletas gravadas (evita recarregar 500+ coletas após salvar). */
   const atualizarColetasAposSalvar = useCallback(async (coletaIds: string[]) => {
@@ -1906,6 +1939,7 @@ export default function ControleMassa() {
       const coletasUsadas = new Set<string>();
       const coletasGravadas: string[] = [];
       let ticketsOk = 0;
+      let filaConferenciaOk = 0;
 
       setSalvando(true);
 
@@ -2019,6 +2053,9 @@ export default function ControleMassa() {
         if (persist.ticketOk) {
           ticketsOk++;
         }
+        if (persist.filaConferenciaOk) {
+          filaConferenciaOk++;
+        }
 
         coletasGravadas.push(coletaIdSeg);
       }
@@ -2033,9 +2070,11 @@ export default function ControleMassa() {
       setSalvando(false);
 
       setSucesso(
-        ticketsOk === segmentos.length
-          ? `${segmentos.length} tickets gerados (1 resíduo cada), vinculados à mesma MTR.`
-          : `${segmentos.length} pesagens gravadas; verifique avisos sobre tickets ou fila do Faturamento.`
+        ticketsOk === segmentos.length && filaConferenciaOk === segmentos.length
+          ? `${segmentos.length} tickets gerados (1 resíduo cada), vinculados à mesma MTR. Entraram na fila de conferência do Faturamento.`
+          : ticketsOk === segmentos.length
+            ? `${segmentos.length} tickets gerados; verifique aviso sobre a fila do Faturamento.`
+            : `${segmentos.length} pesagens gravadas; verifique avisos sobre tickets ou fila do Faturamento.`
       );
       setTimeout(() => setSucesso(""), 6000);
       return;

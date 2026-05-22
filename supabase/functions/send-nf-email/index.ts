@@ -1,6 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeadersFor, handleCorsOptions } from "../_shared/cors.ts";
+import {
+  formatarMesReferenciaMedicao,
+  montarHtmlCorpoMedicao,
+  textoPlanoParaHtmlCorpoMedicao,
+} from "../_shared/emailCorpoMedicao.ts";
 
 type Destinatario = {
   cliente_id: string;
@@ -285,6 +290,11 @@ Deno.serve(async (req: Request) => {
     observacao?: string | null;
     assunto?: string | null;
     anexos?: AnexoPayload[];
+    /** `medicao` = conferência de medição ao cliente; omitido ou `nf` = nota fiscal. */
+    tipoEnvio?: string | null;
+    mesReferencia?: string | null;
+    /** Texto plano do corpo (Mala Direta — Medição); se vazio, usa template padrão. */
+    corpoMedicao?: string | null;
   };
   try {
     body = await req.json();
@@ -339,8 +349,16 @@ Deno.serve(async (req: Request) => {
   const observacaoUser = body.observacao != null
     ? String(body.observacao).trim()
     : "";
+  const tipoEnvio = String(body.tipoEnvio ?? "").trim().toLowerCase();
+  const envioMedicao = tipoEnvio === "medicao";
+  const mesReferenciaMedicao = (body.mesReferencia != null &&
+      String(body.mesReferencia).trim())
+    ? String(body.mesReferencia).trim()
+    : formatarMesReferenciaMedicao();
   const assunto = (body.assunto != null && String(body.assunto).trim())
     ? String(body.assunto).trim()
+    : envioMedicao
+    ? "Conferência de medição — RG Ambiental"
     : "Nota fiscal — RG Ambiental";
 
   const resultados: {
@@ -410,7 +428,13 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const html = montarHtmlCorpo(nome, observacaoUser);
+      const corpoMedicaoCustom =
+        body.corpoMedicao != null ? String(body.corpoMedicao).trim() : "";
+      const html = envioMedicao
+        ? corpoMedicaoCustom
+          ? textoPlanoParaHtmlCorpoMedicao(corpoMedicaoCustom)
+          : montarHtmlCorpoMedicao(mesReferenciaMedicao)
+        : montarHtmlCorpo(nome, observacaoUser);
 
       if (cfg.provedor === "outlook" && smtp) {
         try {

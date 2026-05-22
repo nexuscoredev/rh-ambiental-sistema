@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
+import { agruparFilaFaturamentoPorMtr } from '../../lib/faturamentoConsolidacaoMtr'
 import {
-  agruparPorClienteMedicao,
   coletaNaFilaAjusteValoresMedicao,
   rotuloEsteiraLinha,
 } from '../../lib/faturamentoEsteira'
@@ -32,10 +32,7 @@ export function FaturamentoFilaAjusteValores({
   onRevisarValores,
 }: Props) {
   const pendentes = useMemo(() => linhas.filter(coletaNaFilaAjusteValoresMedicao), [linhas])
-  const grupos = useMemo(
-    () => agruparPorClienteMedicao(pendentes, coletaNaFilaAjusteValoresMedicao),
-    [pendentes]
-  )
+  const itensMtr = useMemo(() => agruparFilaFaturamentoPorMtr(pendentes), [pendentes])
 
   if (carregando || pendentes.length === 0) {
     return null
@@ -58,13 +55,44 @@ export function FaturamentoFilaAjusteValores({
       ) : null}
 
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {grupos.map((g) => {
-          const linhasG = g.linhas.filter(coletaNaFilaAjusteValoresMedicao)
-          const lider = linhasG[0]
-          if (!lider) return null
+        {itensMtr.map((item) => {
+          if (item.kind === 'unico') {
+            const lider = item.row
+            return (
+              <li
+                key={lider.coleta_id}
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '10px 14px',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: '#f0fdfa',
+                  border: '1px solid #99f6e4',
+                }}
+              >
+                <span style={{ flex: '1 1 200px', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                  {lider.cliente_nome ?? '—'} · coleta {lider.numero_coleta ?? lider.numero} ·{' '}
+                  {rotuloEsteiraLinha(lider)}
+                </span>
+                <button
+                  type="button"
+                  className="rg-btn rg-btn--primary"
+                  style={{ fontSize: '12px', padding: '8px 14px' }}
+                  disabled={!podeRevisar || !esteiraAtiva}
+                  onClick={() => onRevisarValores(lider)}
+                >
+                  Revisar valores do ticket
+                </button>
+              </li>
+            )
+          }
+
+          const { coletas, coleta_lider, mtr_numero } = item
           return (
             <li
-              key={g.cliente_id}
+              key={`ajuste-mtr-${item.mtr_id}`}
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -76,17 +104,19 @@ export function FaturamentoFilaAjusteValores({
                 border: '1px solid #99f6e4',
               }}
             >
-              <span style={{ flex: '1 1 200px', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                {g.cliente_nome} · {linhasG.length} coleta(s) · {rotuloEsteiraLinha(lider)}
+              <span style={{ flex: '1 1 240px', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                {item.cliente_nome} · MTR {mtr_numero} · {coletas.length} tickets (
+                {coletas.map((c) => c.numero_coleta ?? c.numero).join(', ')}) ·{' '}
+                {rotuloEsteiraLinha(coleta_lider)}
               </span>
               <button
                 type="button"
                 className="rg-btn rg-btn--primary"
                 style={{ fontSize: '12px', padding: '8px 14px' }}
                 disabled={!podeRevisar || !esteiraAtiva}
-                onClick={() => onRevisarValores(lider, linhasG.length > 1 ? linhasG : undefined)}
+                onClick={() => onRevisarValores(coleta_lider, coletas)}
               >
-                Revisar valores do ticket
+                Revisar valores (consolidado)
               </button>
             </li>
           )

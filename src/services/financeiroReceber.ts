@@ -8,7 +8,10 @@ import {
   parseResumoFinanceiroJson,
   totalResumoFinanceiro,
 } from '../lib/faturamentoDesvinculacao'
-import { marcarEsteiraFinalizadaPorNf } from '../lib/faturamentoEsteira'
+import {
+  expandirColetaIdsNfBoletoMesmaMtr,
+  marcarEsteiraFinalizadaPorNf,
+} from '../lib/faturamentoEsteira'
 
 type RegistroFaturamentoValor = {
   id: string
@@ -396,6 +399,23 @@ export async function liberarColetaParaFinanceiroContasReceber(
     })
     if (crErr) return { error: crErr }
 
+    const { data: contaCriada, error: errVerifica } = await supabase
+      .from('contas_receber')
+      .select('id')
+      .eq('referencia_coleta_id', coletaId)
+      .maybeSingle()
+
+    if (errVerifica && !ignoraErroSchema(errVerifica)) {
+      return { error: new Error(errVerifica.message) }
+    }
+    if (!contaCriada?.id && !ignoraErroSchema(errVerifica)) {
+      return {
+        error: new Error(
+          'Não foi possível criar a conta a receber. Verifique se a tabela contas_receber está migrada no Supabase.'
+        ),
+      }
+    }
+
     if (!coleta.liberado_financeiro) {
       const { error: updErr } = await supabase
         .from('coletas')
@@ -404,7 +424,8 @@ export async function liberarColetaParaFinanceiroContasReceber(
       if (updErr) return { error: new Error(updErr.message) }
     }
 
-    await marcarEsteiraFinalizadaPorNf(coletaId)
+    const fin = await marcarEsteiraFinalizadaPorNf(coletaId)
+    if (!fin.ok) return { error: new Error(fin.message) }
     return { error: null }
   } catch (e) {
     return { error: e instanceof Error ? e : new Error(String(e)) }
@@ -520,11 +541,6 @@ export async function registarNumeroNfBoletoEsteiraFaturamento(
     }
   }
 
-  const lib = await liberarColetaParaFinanceiroContasReceber(supabase, coletaId)
-  if (lib.error) {
-    return { ok: false, message: lib.error.message }
-  }
-
   const reg = await registrarEnvioNfContaReceber(supabase, {
     referencia_coleta_id: coletaId,
     modo: 'esteira_registo_nf',
@@ -534,6 +550,33 @@ export async function registarNumeroNfBoletoEsteiraFaturamento(
     return { ok: false, message: reg.error.message }
   }
 
+  return { ok: true }
+}
+
+/** Etapa 7: mesma NF/boleto para vários tickets da mesma MTR. */
+export async function registarNumeroNfBoletoEsteiraFaturamentoLote(
+  supabase: SupabaseClient,
+  input: {
+    referencia_coleta_ids: string[]
+    numero_nf: string
+    numero_boleto?: string | null
+    observacao?: string | null
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const exp = await expandirColetaIdsNfBoletoMesmaMtr(input.referencia_coleta_ids)
+  if (!exp.ok) return exp
+  const ids = exp.ids
+  if (ids.length === 0) return { ok: false, message: 'Nenhuma coleta selecionada.' }
+
+  for (const coletaId of ids) {
+    const res = await registarNumeroNfBoletoEsteiraFaturamento(supabase, {
+      referencia_coleta_id: coletaId,
+      numero_nf: input.numero_nf,
+      numero_boleto: input.numero_boleto,
+      observacao: input.observacao,
+    })
+    if (!res.ok) return res
+  }
   return { ok: true }
 }
 

@@ -146,7 +146,7 @@ async function emitirGrupoMtr(
   grupo: FaturamentoResumoViewRow[]
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   for (const c of grupo) {
-    const el = coletaElegivelParaFaturar(c)
+    const el = coletaElegivelParaFaturar(c, grupo)
     if (!el.ok) {
       return {
         ok: false,

@@ -1,6 +1,10 @@
 import { coletaVisivelListaFinanceiro } from './financeiroColetas'
 import { normalizarEtapaColeta, type EtapaFluxo } from './fluxoEtapas'
-import { coletaLiberadaParaFaturarEsteira, inferirEsteiraStatus } from './faturamentoEsteira'
+import {
+  coletaLiberadaParaFaturarEsteira,
+  inferirEsteiraStatus,
+  mtrComIrmaNaEsteiraMedicao,
+} from './faturamentoEsteira'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 export type MotivoInelegivelFaturamento =
@@ -27,7 +31,10 @@ export function etapaDaLinhaFaturamento(row: Pick<FaturamentoResumoViewRow, 'flu
   })
 }
 
-export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): ResultadoElegibilidadeFaturamento {
+export function coletaElegivelParaFaturar(
+  row: FaturamentoResumoViewRow,
+  linhasContexto?: FaturamentoResumoViewRow[]
+): ResultadoElegibilidadeFaturamento {
   const etapa = etapaDaLinhaFaturamento(row)
   const motivos: MotivoInelegivelFaturamento[] = []
 
@@ -58,11 +65,19 @@ export function coletaElegivelParaFaturar(row: FaturamentoResumoViewRow): Result
     }
   }
 
-  if (row.faturamento_ticket_aprovado_em && !coletaLiberadaParaFaturarEsteira(row)) {
+  if (row.faturamento_ticket_aprovado_em && !coletaLiberadaParaFaturarEsteira(row, linhasContexto)) {
     const esteira = inferirEsteiraStatus(row)
     if (esteira && esteira !== 'LIBERADO_FATURAMENTO') {
       motivos.push('medicao_pendente')
     }
+  }
+
+  if (
+    linhasContexto?.length &&
+    mtrComIrmaNaEsteiraMedicao(row, linhasContexto) &&
+    !motivos.includes('medicao_pendente')
+  ) {
+    motivos.push('medicao_pendente')
   }
 
   if (row.faturamento_registro_status === 'emitido') motivos.push('ja_emitido')

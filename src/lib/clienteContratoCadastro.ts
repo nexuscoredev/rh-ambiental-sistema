@@ -278,9 +278,22 @@ export function equipamentosTextoLegadoDeItens(itens: EquipamentoContratoItem[])
   return t || null
 }
 
-export function rotuloVeiculosContratoResumo(raw: unknown, descricaoLegado?: string | null): string {
+export type RotuloContratoResumoOpts = {
+  /** Manifesto impresso/PDF: só tipo/descrição, sem R$ nem «sem/com custo». */
+  ocultarValores?: boolean
+}
+
+export function rotuloVeiculosContratoResumo(
+  raw: unknown,
+  descricaoLegado?: string | null,
+  opts?: RotuloContratoResumoOpts
+): string {
   const itens = parseVeiculosContratoJsonb(raw, descricaoLegado).filter(itemVeiculoValido)
   if (itens.length === 0) return '—'
+  if (opts?.ocultarValores) {
+    const nomes = itens.map((v) => v.tipo_veiculo.trim()).filter(Boolean)
+    return nomes.length > 0 ? nomes.join(' · ') : '—'
+  }
   return itens
     .map((v) => {
       const tipo = v.tipo_veiculo.trim()
@@ -291,9 +304,17 @@ export function rotuloVeiculosContratoResumo(raw: unknown, descricaoLegado?: str
     .join(' · ')
 }
 
-export function rotuloEquipamentosContratoResumo(raw: unknown, textoLegado?: string | null): string {
+export function rotuloEquipamentosContratoResumo(
+  raw: unknown,
+  textoLegado?: string | null,
+  opts?: RotuloContratoResumoOpts
+): string {
   const itens = parseEquipamentosContratoJsonb(raw, textoLegado).filter(itemEquipamentoValido)
   if (itens.length === 0) return '—'
+  if (opts?.ocultarValores) {
+    const nomes = itens.map((e) => e.descricao.trim()).filter(Boolean)
+    return nomes.length > 0 ? nomes.join(' · ') : '—'
+  }
   return itens
     .map((e) => {
       const d = e.descricao.trim()

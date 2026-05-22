@@ -14,6 +14,14 @@ import { cargoPodeEnviarNfEmail, PERFIS_ENVIO_NF_EMAIL } from '../lib/workflowPe
 import { registrarEnvioNfContaReceber } from '../services/financeiroReceber'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
+import {
+  formatarMesReferenciaMedicao,
+  textoCorpoMedicaoCliente,
+} from '../lib/emailCorpoMedicaoCliente'
+
+function corpoMedicaoInicial(): string {
+  return textoCorpoMedicaoCliente(formatarMesReferenciaMedicao())
+}
 
 type ClienteLista = {
   id: string
@@ -43,7 +51,7 @@ const MAX_ANEXOS = 5
 const MAX_TOTAL_ANEXOS_EMAIL = 6
 const MAX_BYTES_ANEXO = 4 * 1024 * 1024 // 4 MiB
 const ASSUNTO_NF_PADRAO = 'Nota fiscal — RG Ambiental'
-const ASSUNTO_MEDICAO_PADRAO = 'Relatório de medição — RG Ambiental'
+const ASSUNTO_MEDICAO_PADRAO = 'Conferência de medição — RG Ambiental'
 
 function formatarTamanho(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -109,6 +117,10 @@ export default function EnvioNF() {
   const [coletasMedicaoPorCliente, setColetasMedicaoPorCliente] = useState<
     { coleta_id: string; numero: string; cliente_id: string }[]
   >([])
+  const [mesReferenciaMedicao, setMesReferenciaMedicao] = useState(() =>
+    formatarMesReferenciaMedicao()
+  )
+  const [corpoMedicaoEmail, setCorpoMedicaoEmail] = useState(corpoMedicaoInicial)
 
   const modoMedicao = useMemo(
     () => (searchParams.get('tipo') || '').trim().toLowerCase() === 'medicao',
@@ -123,8 +135,19 @@ export default function EnvioNF() {
       envioModo,
       selecionados: [...selecionados],
       coletasComContaMarcadas: [...coletasComContaMarcadas],
+      mesReferenciaMedicao,
+      corpoMedicaoEmail,
     }),
-    [busca, somenteComEmail, observacao, envioModo, selecionados, coletasComContaMarcadas]
+    [
+      busca,
+      somenteComEmail,
+      observacao,
+      envioModo,
+      selecionados,
+      coletasComContaMarcadas,
+      mesReferenciaMedicao,
+      corpoMedicaoEmail,
+    ]
   )
 
   useSessionObjectDraft({
@@ -137,6 +160,12 @@ export default function EnvioNF() {
       setEnvioModo(d.envioModo)
       setSelecionados(new Set(d.selecionados))
       setColetasComContaMarcadas(new Set(d.coletasComContaMarcadas))
+      if (typeof d.mesReferenciaMedicao === 'string' && d.mesReferenciaMedicao.trim()) {
+        setMesReferenciaMedicao(d.mesReferenciaMedicao.trim())
+      }
+      if (typeof d.corpoMedicaoEmail === 'string' && d.corpoMedicaoEmail.trim()) {
+        setCorpoMedicaoEmail(d.corpoMedicaoEmail)
+      }
     },
   })
 
@@ -146,7 +175,10 @@ export default function EnvioNF() {
 
   useEffect(() => {
     setAssuntoEmail(modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO)
-    if (modoMedicao) setBoletoFile(null)
+    if (modoMedicao) {
+      setBoletoFile(null)
+      setMesReferenciaMedicao((prev) => prev.trim() || formatarMesReferenciaMedicao())
+    }
   }, [modoMedicao])
 
   const carregarClientes = useCallback(async () => {
@@ -532,12 +564,15 @@ export default function EnvioNF() {
         : []),
       ...(boletoFile ? [`Boleto: ${boletoFile.name}`] : []),
     ]
-    const obsComAnexos =
+    const obsComAnexos = [
+      observacao.trim(),
+      modoMedicao ? `Corpo do e-mail (medição):\n${corpoMedicaoEmail.trim()}` : '',
       nomesSimulacao.length > 0
-        ? [observacao.trim(), `Anexos (simulação, não enviados): ${nomesSimulacao.join(' · ')}`]
-            .filter(Boolean)
-            .join('\n')
-        : observacao.trim()
+        ? `Anexos (simulação, não enviados): ${nomesSimulacao.join(' · ')}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
 
     setEnviando(true)
     setEnvioModo('simulacao')
@@ -640,6 +675,13 @@ export default function EnvioNF() {
           destinatarios,
           observacao: observacao.trim() || null,
           assunto: assuntoEmail.trim() || (modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO),
+          ...(modoMedicao
+            ? {
+                tipoEnvio: 'medicao',
+                mesReferencia: mesReferenciaMedicao.trim() || formatarMesReferenciaMedicao(),
+                corpoMedicao: corpoMedicaoEmail.trim() || corpoMedicaoInicial(),
+              }
+            : {}),
           ...(anexos && anexos.length > 0 ? { anexos } : {}),
         },
         headers: headersJwtSessao(sessao),
@@ -1081,6 +1123,99 @@ export default function EnvioNF() {
                 }}
               />
             </div>
+
+            {modoMedicao ? (
+              <>
+                <div style={{ marginTop: '20px' }}>
+                  <div
+                    style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}
+                  >
+                    Mês de referência no corpo do e-mail
+                  </div>
+                  <input
+                    type="text"
+                    value={mesReferenciaMedicao}
+                    onChange={(e) => setMesReferenciaMedicao(e.target.value.toUpperCase())}
+                    disabled={!podeDisparar}
+                    placeholder="Ex.: ABRIL/26"
+                    style={{
+                      width: '100%',
+                      maxWidth: '220px',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+                    Padrão: mês anterior ({formatarMesReferenciaMedicao()}). Aparece na frase «…serviços prestados no
+                    mês de …».
+                  </p>
+                </div>
+                <div style={{ marginTop: '20px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>
+                      Corpo do e-mail (conferência de medição)
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!podeDisparar}
+                      onClick={() =>
+                        setCorpoMedicaoEmail(
+                          textoCorpoMedicaoCliente(
+                            mesReferenciaMedicao.trim() || formatarMesReferenciaMedicao()
+                          )
+                        )
+                      }
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: podeDisparar ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      Restaurar texto padrão
+                    </button>
+                  </div>
+                  <textarea
+                    value={corpoMedicaoEmail}
+                    onChange={(e) => setCorpoMedicaoEmail(e.target.value)}
+                    disabled={!podeDisparar}
+                    rows={14}
+                    style={{
+                      width: '100%',
+                      maxWidth: '720px',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#fff',
+                      fontSize: '13px',
+                      lineHeight: 1.5,
+                      color: '#334155',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+                    Este texto é o que será enviado no e-mail (não confundir com a observação interna abaixo).
+                  </p>
+                </div>
+              </>
+            ) : null}
 
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>

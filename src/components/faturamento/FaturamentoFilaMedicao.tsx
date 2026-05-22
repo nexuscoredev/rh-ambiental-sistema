@@ -4,12 +4,14 @@ import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { carregarLinhasRelatorioMedicao } from '../../lib/carregarLinhasRelatorioMedicao'
 import type { LinhaRelatorioMedicao } from '../../lib/faturamentoRelatorioMedicao'
 import {
-  agruparPorClienteMedicao,
+  agruparGruposMedicaoPorMtr,
   aprovarMedicaoCliente,
   coletaNaFilaMedicaoAprovacaoCliente,
   coletaNaFilaMedicaoEmail,
   coletaNaFilaRelatorioMedicao,
+  etapaUnificadaGrupoMedicao,
   marcarRelatorioMedicaoGerado,
+  voltarGrupoMedicaoParaAjusteValores,
   type GrupoMedicaoCliente,
 } from '../../lib/faturamentoEsteira'
 import { imprimirRelatorioMedicaoJanela } from '../../lib/imprimirRelatorioMedicaoJanela'
@@ -33,7 +35,6 @@ type Props = {
 
 function GrupoMedicaoCard({
   grupo,
-  filtro,
   titulo,
   acao,
   esteiraAtiva,
@@ -41,14 +42,13 @@ function GrupoMedicaoCard({
   preparandoPrint,
 }: {
   grupo: GrupoMedicaoCliente
-  filtro: (r: FaturamentoResumoViewRow) => boolean
   titulo: string
   acao: ReactNode
   esteiraAtiva: boolean
   onImprimir: (linhas: FaturamentoResumoViewRow[], clienteNome: string) => void
   preparandoPrint?: boolean
 }) {
-  const linhasColeta = grupo.linhas.filter(filtro)
+  const linhasColeta = grupo.linhas
   const [linhasMedicao, setLinhasMedicao] = useState<LinhaRelatorioMedicao[]>([])
   const [carregandoMedicao, setCarregandoMedicao] = useState(false)
   const [erroMedicao, setErroMedicao] = useState('')
@@ -80,17 +80,22 @@ function GrupoMedicaoCard({
     return () => {
       cancel = true
     }
-  }, [idsKey, grupo.cliente_id])
+  }, [idsKey, grupo.cliente_id, grupo.mtr_numero])
 
   if (linhasColeta.length === 0) return null
+
+  const tituloRelatorio =
+    grupo.mtr_numero && grupo.mtr_numero !== '—'
+      ? `${grupo.cliente_nome} · MTR ${grupo.mtr_numero}`
+      : grupo.cliente_nome
 
   return (
     <div style={{ ...card, borderLeft: '4px solid #6366f1' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>{grupo.cliente_nome}</div>
+          <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>{tituloRelatorio}</div>
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-            {titulo} · {linhasColeta.length} ticket(s)
+            {titulo} · {linhasColeta.length} ticket(s) (relatório consolidado)
             {grupo.cliente_email_nf ? ` · ${grupo.cliente_email_nf}` : ''}
           </div>
         </div>
@@ -99,7 +104,7 @@ function GrupoMedicaoCard({
             type="button"
             className="rg-btn rg-btn--report"
             disabled={preparandoPrint || carregandoMedicao}
-            onClick={() => onImprimir(linhasColeta, grupo.cliente_nome)}
+            onClick={() => onImprimir(linhasColeta, tituloRelatorio)}
           >
             {preparandoPrint ? 'A preparar…' : 'Imprimir / PDF'}
           </button>
@@ -131,17 +136,18 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
   const [obsCliente, setObsCliente] = useState('')
   const [preparandoPrint, setPreparandoPrint] = useState(false)
 
+  const gruposPorMtr = useMemo(() => agruparGruposMedicaoPorMtr(linhas), [linhas])
   const gruposMedicao = useMemo(
-    () => agruparPorClienteMedicao(linhas, coletaNaFilaRelatorioMedicao),
-    [linhas]
+    () => gruposPorMtr.filter((g) => etapaUnificadaGrupoMedicao(g.linhas) === 'relatorio'),
+    [gruposPorMtr]
   )
   const gruposEmail = useMemo(
-    () => agruparPorClienteMedicao(linhas, coletaNaFilaMedicaoEmail),
-    [linhas]
+    () => gruposPorMtr.filter((g) => etapaUnificadaGrupoMedicao(g.linhas) === 'email'),
+    [gruposPorMtr]
   )
   const gruposAprovacao = useMemo(
-    () => agruparPorClienteMedicao(linhas, coletaNaFilaMedicaoAprovacaoCliente),
-    [linhas]
+    () => gruposPorMtr.filter((g) => etapaUnificadaGrupoMedicao(g.linhas) === 'aprovacao'),
+    [gruposPorMtr]
   )
 
   const totalMedicao = linhas.filter(coletaNaFilaRelatorioMedicao).length
@@ -169,6 +175,35 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
       return
     }
     onAtualizar()
+  }
+
+  function botaoVoltarAjuste(g: GrupoMedicaoCliente) {
+    return (
+      <button
+        type="button"
+        className="rg-btn rg-btn--outline"
+        disabled={processando || !esteiraAtiva}
+        onClick={() => {
+          const ok = window.confirm(
+            `Voltar ${g.linhas.length} ticket(s) da MTR ${g.mtr_numero} para «Ajuste de valores»?\n\n` +
+              'O relatório de medição, envio por e-mail e aprovação do cliente serão desfeitos nesta MTR. Pode rever os cálculos na esteira 2.'
+          )
+          if (!ok) return
+          void run(() => voltarGrupoMedicaoParaAjusteValores(g.linhas.map((r) => r.coleta_id)))
+        }}
+      >
+        Volte para o ajuste
+      </button>
+    )
+  }
+
+  function acoesToolbar(g: GrupoMedicaoCliente, extra: ReactNode) {
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        {botaoVoltarAjuste(g)}
+        {extra}
+      </div>
+    )
   }
 
   async function imprimirRelatorioMedicao(
@@ -205,49 +240,48 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
           Esteira 3–5 · Medição e aprovação do cliente
         </h2>
         <p style={{ margin: 0, fontSize: '13px', color: '#4c1d95', lineHeight: 1.55 }}>
-          Tabela no modelo do relatório impresso. Use <strong>Imprimir / PDF</strong> para gerar o documento.
+          Vários tickets da mesma MTR entram num <strong>único relatório</strong> (tabela e PDF).
+          Use <strong>Imprimir / PDF</strong> para gerar o documento.
           O envio ao cliente é feito em <Link to="/envio-nf?tipo=medicao">Mala Direta — Medição</Link>.
         </p>
       </div>
 
       {gruposMedicao.map((g) => (
         <GrupoMedicaoCard
-          key={`med-${g.cliente_id}`}
+          key={`med-${g.cliente_id}-${g.mtr_numero}`}
           grupo={g}
-          filtro={coletaNaFilaRelatorioMedicao}
           titulo="Relatório de medição pendente"
           esteiraAtiva={esteiraAtiva}
           onImprimir={(l, nome) => void imprimirRelatorioMedicao(l, nome)}
           preparandoPrint={preparandoPrint}
-          acao={
+          acao={acoesToolbar(
+            g,
             <button
               type="button"
               className="rg-btn rg-btn--outline"
               disabled={processando || !esteiraAtiva}
               onClick={() =>
                 void run(() =>
-                  marcarRelatorioMedicaoGerado(
-                    g.linhas.filter(coletaNaFilaRelatorioMedicao).map((r) => r.coleta_id)
-                  )
+                  marcarRelatorioMedicaoGerado(g.linhas.map((r) => r.coleta_id))
                 )
               }
             >
               Relatório gerado
             </button>
-          }
+          )}
         />
       ))}
 
       {gruposEmail.map((g) => (
         <GrupoMedicaoCard
-          key={`email-${g.cliente_id}`}
+          key={`email-${g.cliente_id}-${g.mtr_numero}`}
           grupo={g}
-          filtro={coletaNaFilaMedicaoEmail}
           titulo="Enviar relatório por e-mail (mala direta)"
           esteiraAtiva={esteiraAtiva}
           onImprimir={(l, nome) => void imprimirRelatorioMedicao(l, nome)}
           preparandoPrint={preparandoPrint}
-          acao={
+          acao={acoesToolbar(
+            g,
             <Link
               to={`/envio-nf?tipo=medicao&cliente=${encodeURIComponent(g.cliente_id)}`}
               className="rg-btn rg-btn--primary"
@@ -255,20 +289,20 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
             >
               Mala Direta — Medição
             </Link>
-          }
+          )}
         />
       ))}
 
       {gruposAprovacao.map((g) => (
         <GrupoMedicaoCard
-          key={`aprov-${g.cliente_id}`}
+          key={`aprov-${g.cliente_id}-${g.mtr_numero}`}
           grupo={g}
-          filtro={coletaNaFilaMedicaoAprovacaoCliente}
           titulo="Aguardando aprovação do cliente (e-mail)"
           esteiraAtiva={esteiraAtiva}
           onImprimir={(l, nome) => void imprimirRelatorioMedicao(l, nome)}
           preparandoPrint={preparandoPrint}
-          acao={
+          acao={acoesToolbar(
+            g,
             <>
               <input
                 type="text"
@@ -284,21 +318,18 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
                 disabled={processando || !esteiraAtiva}
                 onClick={() => {
                   const ok = window.confirm(
-                    `Registrar aprovação do cliente ${g.cliente_nome} e liberar para faturamento?`
+                    `Registrar aprovação do cliente ${g.cliente_nome} (MTR ${g.mtr_numero}) e liberar ${g.linhas.length} ticket(s) para faturamento?`
                   )
                   if (!ok) return
                   void run(() =>
-                    aprovarMedicaoCliente(
-                      g.linhas.filter(coletaNaFilaMedicaoAprovacaoCliente).map((r) => r.coleta_id),
-                      obsCliente
-                    )
+                    aprovarMedicaoCliente(g.linhas.map((r) => r.coleta_id), obsCliente)
                   )
                 }}
               >
                 Cliente aprovou → Liberado faturamento
               </button>
             </>
-          }
+          )}
         />
       ))}
     </>

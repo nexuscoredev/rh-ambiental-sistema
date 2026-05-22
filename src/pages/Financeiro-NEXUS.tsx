@@ -14,6 +14,7 @@ import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { cargoPodeAlterarValorContaTravada, cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import {
   COLETAS_OR_FINANCEIRO_QUERY,
+  FINANCEIRO_VW_RESUMO_MAX_PAGES,
   coletaVisivelListaFinanceiro,
   isVencidoFinanceiro,
 } from '../lib/financeiroColetas'
@@ -286,6 +287,7 @@ export default function Financeiro() {
   const carregarFinanceiro = useCallback(async () => {
     const { data: rowsView, error } = await fetchVwFaturamentoResumoPaginated(supabase, {
       orFilter: COLETAS_OR_FINANCEIRO_QUERY,
+      maxPages: FINANCEIRO_VW_RESUMO_MAX_PAGES,
     })
 
     if (error) throw error
@@ -352,6 +354,7 @@ export default function Financeiro() {
         .from('financeiro_documentos')
         .select('id, nome_documento, data_vencimento, coleta_id, observacoes, created_at')
         .order('data_vencimento', { ascending: true })
+        .limit(800)
 
       if (error) throw error
       setDocumentos((data || []) as DocumentoFinRow[])

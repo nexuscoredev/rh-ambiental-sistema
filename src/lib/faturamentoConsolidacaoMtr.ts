@@ -20,6 +20,7 @@ import {
 } from './faturamentoPrecoContrato'
 import { coletaElegivelParaFaturar } from './faturamentoElegibilidade'
 import { marcarEsteiraPosFaturamentoEmitido } from './faturamentoEsteira'
+import { aplicarResumoFinanceiroNaOperacional } from './faturamentoOperacionalSync'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
 export type ItemFilaFaturamento =
@@ -242,7 +243,7 @@ export async function emitirFaturamentoConsolidadoMtr(
   if (coletas.length === 0) return { ok: false, message: 'Nenhuma coleta no grupo.' }
 
   for (const c of coletas) {
-    const el = coletaElegivelParaFaturar(c)
+    const el = coletaElegivelParaFaturar(c, coletas)
     if (!el.ok) {
       return {
         ok: false,
@@ -340,6 +341,9 @@ export async function emitirFaturamentoConsolidadoMtr(
   for (const c of coletas) {
     await marcarEsteiraPosFaturamentoEmitido(c.coleta_id)
   }
+
+  const syncOp = await aplicarResumoFinanceiroNaOperacional(lider.coleta_id, input.resumoFinanceiro)
+  if (!syncOp.ok) return syncOp
 
   return { ok: true }
 }

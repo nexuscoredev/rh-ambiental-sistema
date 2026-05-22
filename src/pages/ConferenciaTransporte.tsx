@@ -6,7 +6,9 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
+  type KeyboardEvent,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -123,6 +125,30 @@ function hojeBr() {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
+/** Enter em campos de texto não submete nem fecha o painel da folha. */
+function evitarEnterSubmeterForm(e: KeyboardEvent<HTMLFormElement>) {
+  if (e.key !== 'Enter') return
+  const alvo = e.target as HTMLElement
+  if (alvo.tagName === 'TEXTAREA') return
+  if (alvo.tagName === 'BUTTON' && (alvo as HTMLButtonElement).type === 'submit') return
+  e.preventDefault()
+}
+
+const btnFecharPainelStyle: CSSProperties = {
+  background: '#dc2626',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '10px',
+  width: '40px',
+  height: '40px',
+  fontSize: '22px',
+  fontWeight: 800,
+  cursor: 'pointer',
+  lineHeight: 1,
+  flexShrink: 0,
+  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.35)',
+}
+
 export default function ConferenciaTransporte() {
   const [searchParams, setSearchParams] = useSearchParams()
   const idsCtx = useMemo(() => idsContextoFromSearchParams(searchParams), [searchParams])
@@ -199,6 +225,19 @@ export default function ConferenciaTransporte() {
     [coletas, idsCtx]
   )
   const podeEditarMotorista = Boolean(coletaAtiva && podeMutar)
+
+  const fecharPainelConferencia = useCallback(() => {
+    setSecaoChecklistExpandida(false)
+  }, [])
+
+  useEffect(() => {
+    if (!secaoChecklistExpandida || !coletaAtiva) return
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') fecharPainelConferencia()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [secaoChecklistExpandida, coletaAtiva, fecharPainelConferencia])
 
   useEffect(() => {
     const id = coletaAtiva?.id ?? null
@@ -969,53 +1008,130 @@ export default function ConferenciaTransporte() {
         </div>
 
         {coletaAtiva ? (
-          <form onSubmit={handleSubmitMotorista} style={cardStyle}>
-            <div style={{ marginBottom: secaoChecklistExpandida ? 14 : 8 }}>
-              <button
-                type="button"
-                className="conf-trans-acc-trigger"
-                style={{ width: '100%', marginBottom: secaoChecklistExpandida ? 6 : 0 }}
-                aria-expanded={secaoChecklistExpandida}
-                onClick={() => setSecaoChecklistExpandida((v) => !v)}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#fff',
+                  background: ACCENT,
+                  borderRadius: 10,
+                  padding: '5px 11px',
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
               >
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: '#fff',
-                    background: ACCENT,
-                    borderRadius: 10,
-                    padding: '5px 11px',
-                    lineHeight: 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  2
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span
-                    className="conf-trans-acc-title"
-                    style={{ fontWeight: 800, color: '#0f172a', fontSize: 17, display: 'block' }}
-                  >
-                    Folha de conferência (modelo papel)
-                  </span>
-                </span>
-                <span
-                  className="conf-trans-acc-chevron"
-                  style={{ transform: secaoChecklistExpandida ? 'rotate(180deg)' : 'none' }}
-                  aria-hidden
-                >
-                  ▼
-                </span>
-              </button>
-              {!secaoChecklistExpandida ? (
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', paddingLeft: '4px' }}>
-                  Clique para expandir a folha (dados, rotas, checklist SIM/NÃO, avarias e assinaturas).
-                </p>
-              ) : null}
+                2
+              </span>
+              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 17 }}>
+                Folha de conferência (modelo papel)
+              </span>
             </div>
-            {secaoChecklistExpandida ? (
-            <>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              Abra a folha em tela cheia para preencher dados de viagem, rotas, checklist SIM/NÃO, avarias e
+              assinaturas. Use o <strong style={{ color: '#dc2626' }}>× vermelho</strong> no canto superior para
+              fechar — a tecla <strong>Enter</strong> não fecha o painel.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSecaoChecklistExpandida(true)}
+              style={{
+                padding: '11px 22px',
+                borderRadius: '10px',
+                border: 'none',
+                background: ACCENT,
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              Abrir folha de conferência
+            </button>
+          </div>
+        ) : null}
+
+        {coletaAtiva && secaoChecklistExpandida && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                role="dialog"
+                aria-modal
+                aria-labelledby="conf-trans-painel-titulo"
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 12050,
+                  background: 'rgba(15, 23, 42, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    maxWidth: '960px',
+                    maxHeight: 'min(92vh, 900px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: '#fff',
+                    borderRadius: '16px',
+                    boxShadow: '0 24px 60px rgba(15, 23, 42, 0.2)',
+                    border: '1px solid #e2e8f0',
+                    overflow: 'hidden',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div
+                    style={{
+                      padding: '16px 20px',
+                      borderBottom: '1px solid #f1f5f9',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <h2
+                        id="conf-trans-painel-titulo"
+                        style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}
+                      >
+                        Folha de conferência
+                      </h2>
+                      <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                        Coleta <strong>{coletaAtiva.numero}</strong> — {coletaAtiva.cliente || 'Cliente'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fecharPainelConferencia}
+                      aria-label="Fechar folha de conferência"
+                      title="Fechar (Enter não fecha — use este botão ou Escape)"
+                      style={btnFecharPainelStyle}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    onSubmit={handleSubmitMotorista}
+                    onKeyDown={evitarEnterSubmeterForm}
+                    style={{
+                      flex: 1,
+                      overflow: 'auto',
+                      padding: '20px 22px 24px',
+                      borderTop: `4px solid ${ACCENT}`,
+                    }}
+                  >
             <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#334155', lineHeight: 1.5 }}>
               Preencha os campos como no impresso. A placa e o motorista no PDF usam os dados da coleta. Grave ao finalizar.
             </p>
@@ -1363,10 +1479,12 @@ export default function ConferenciaTransporte() {
                 </div>
               </>
             ) : null}
-            </>
-            ) : null}
-          </form>
-        ) : null}
+                  </form>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
 
         {!coletaAtiva ? (
           <div

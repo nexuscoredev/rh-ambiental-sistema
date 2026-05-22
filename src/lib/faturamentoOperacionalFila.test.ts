@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { coletaNaFilaAprovacaoTicketFaturamento } from './faturamentoTicketFluxo'
 import {
   coletaHistoricoFaturamentoEmitido,
   coletaNaFilaFaturamento,
@@ -30,6 +31,23 @@ function linhaBase(
     ...patch,
   } as FaturamentoResumoViewRow
 }
+
+describe('coletaNaFilaAprovacaoTicketFaturamento', () => {
+  it('entra na fila ao gerar ticket (ticket_impresso_em) mesmo antes da vista marcar PRONTO', () => {
+    expect(
+      coletaNaFilaAprovacaoTicketFaturamento(
+        linhaBase({
+          status_conferencia: 'PENDENTE',
+          ticket_impresso_em: '2026-05-20T11:00:00Z',
+          faturamento_ticket_aprovado_em: null,
+          fluxo_status: 'TICKET_GERADO',
+          etapa_operacional: 'TICKET_GERADO',
+          faturamento_registro_status: null,
+        })
+      )
+    ).toBe(true)
+  })
+})
 
 describe('coletaProntaNaVistaExcluindoFluxoTicket', () => {
   it('não conta coleta já emitida ao Financeiro', () => {

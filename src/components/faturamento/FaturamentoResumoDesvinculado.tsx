@@ -160,9 +160,9 @@ function FaturamentoResumoDesvinculadoInner({
           lineHeight: 1.45,
         }}
       >
-        <strong>Desvinculação financeira:</strong> os pesos e valores abaixo valem só para este
-        faturamento. A pesagem operacional (ticket) e a MTR no campo{' '}
-        <strong>não são alteradas</strong>.
+        <strong>Sincronização com operacional:</strong> ao editar, os valores são gravados no
+        registo de faturamento e <strong>espelhados na MTR</strong> (caminhão, equipamento, resíduo) e no{' '}
+        <strong>ticket</strong> (pesos e resíduos nas coletas), após uma breve pausa ou ao guardar.
         {!podeEditarResumos ? (
           <>
             {' '}

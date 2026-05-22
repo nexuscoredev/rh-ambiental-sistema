@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import {
+  agruparGruposNfBoletoPorMtr,
+  chaveGrupoMedicaoMtr,
   coletaAguardandoConfirmacaoNfBoleto,
   rotuloEsteiraLinha,
+  type GrupoNfBoletoEsteira,
 } from '../../lib/faturamentoEsteira'
 import { supabase } from '../../lib/supabase'
-import { registarNumeroNfBoletoEsteiraFaturamento } from '../../services/financeiroReceber'
+import { registarNumeroNfBoletoEsteiraFaturamentoLote } from '../../services/financeiroReceber'
 
 const card: CSSProperties = {
   background: '#fff',
@@ -44,6 +47,34 @@ function valorExibicao(row: FaturamentoResumoViewRow): string {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function nfInicialGrupo(linhas: FaturamentoResumoViewRow[]): string {
+  for (const r of linhas) {
+    const n = (r.numero_nf_coleta ?? r.faturamento_referencia_nf ?? r.referencia_nf ?? '').trim()
+    if (n) return n
+  }
+  return ''
+}
+
+function rotuloTicketsGrupo(grupo: GrupoNfBoletoEsteira): string {
+  const nums = grupo.linhas.map((r) => String(r.numero_coleta ?? r.numero))
+  if (nums.length <= 3) return nums.join(', ')
+  return `${nums.slice(0, 2).join(', ')} +${nums.length - 2}`
+}
+
+function valorTotalGrupo(grupo: GrupoNfBoletoEsteira): string {
+  let soma = 0
+  let temValor = false
+  for (const r of grupo.linhas) {
+    const v = r.faturamento_registro_valor ?? r.valor_coleta
+    if (v != null && Number.isFinite(Number(v))) {
+      soma += Number(v)
+      temValor = true
+    }
+  }
+  if (!temValor) return '—'
+  return soma.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
 export function FaturamentoFilaPosFaturamento({
   linhas,
   carregando,
@@ -55,42 +86,42 @@ export function FaturamentoFilaPosFaturamento({
     [linhas]
   )
 
+  const grupos = useMemo(() => agruparGruposNfBoletoPorMtr(linhas), [linhas])
+
   const [campos, setCampos] = useState<Record<string, CamposNfBoleto>>({})
-  const [salvandoId, setSalvandoId] = useState<string | null>(null)
+  const [salvandoChave, setSalvandoChave] = useState<string | null>(null)
   const [erro, setErro] = useState('')
   const [mensagem, setMensagem] = useState('')
 
   useEffect(() => {
     setCampos((prev) => {
       const next = { ...prev }
-      for (const r of pendentes) {
-        if (!next[r.coleta_id]) {
-          next[r.coleta_id] = {
-            numeroNf: (r.numero_nf_coleta ?? r.faturamento_referencia_nf ?? r.referencia_nf ?? '').trim(),
-            numeroBoleto: '',
-          }
+      for (const g of grupos) {
+        const k = chaveGrupoMedicaoMtr(g.linhas[0]!)
+        if (!next[k]) {
+          next[k] = { numeroNf: nfInicialGrupo(g.linhas), numeroBoleto: '' }
         }
       }
       return next
     })
-  }, [pendentes])
+  }, [grupos])
 
   if (carregando || pendentes.length === 0) {
     return null
   }
 
-  function atualizarCampo(coletaId: string, patch: Partial<CamposNfBoleto>) {
+  function atualizarCampo(chaveGrupo: string, patch: Partial<CamposNfBoleto>) {
     setCampos((prev) => ({
       ...prev,
-      [coletaId]: {
-        numeroNf: prev[coletaId]?.numeroNf ?? '',
-        numeroBoleto: prev[coletaId]?.numeroBoleto ?? '',
+      [chaveGrupo]: {
+        numeroNf: prev[chaveGrupo]?.numeroNf ?? '',
+        numeroBoleto: prev[chaveGrupo]?.numeroBoleto ?? '',
         ...patch,
       },
     }))
   }
 
-  async function guardar(row: FaturamentoResumoViewRow) {
+  async function guardarGrupo(grupo: GrupoNfBoletoEsteira) {
     setErro('')
     setMensagem('')
     if (!podeConfirmar) {
@@ -98,33 +129,39 @@ export function FaturamentoFilaPosFaturamento({
       return
     }
 
-    const c = campos[row.coleta_id]
+    const chave = chaveGrupoMedicaoMtr(grupo.linhas[0]!)
+    const c = campos[chave]
     const numeroNf = (c?.numeroNf ?? '').trim()
     if (!numeroNf) {
-      setErro(`Informe o número da NF da coleta ${row.numero_coleta ?? row.numero}.`)
+      const tickets = rotuloTicketsGrupo(grupo)
+      setErro(`Informe o número da NF (tickets ${tickets}).`)
       return
     }
 
-    setSalvandoId(row.coleta_id)
-    const res = await registarNumeroNfBoletoEsteiraFaturamento(supabase, {
-      referencia_coleta_id: row.coleta_id,
+    setSalvandoChave(chave)
+    const res = await registarNumeroNfBoletoEsteiraFaturamentoLote(supabase, {
+      referencia_coleta_ids: grupo.linhas.map((r) => r.coleta_id),
       numero_nf: numeroNf,
       numero_boleto: (c?.numeroBoleto ?? '').trim() || null,
     })
-    setSalvandoId(null)
+    setSalvandoChave(null)
 
     if (!res.ok) {
       setErro(res.message)
       return
     }
 
+    const tickets = rotuloTicketsGrupo(grupo)
+    const plural = grupo.linhas.length > 1
     setMensagem(
-      `Coleta ${row.numero_coleta ?? row.numero}: NF registada. A cobrança está em Financeiro → Contas a Receber.`
+      plural
+        ? `NF ${numeroNf} registada para os tickets ${tickets} (${grupo.linhas.length} coletas). Contas a Receber atualizadas.`
+        : `Coleta ${tickets}: NF registada. A cobrança está em Financeiro → Contas a Receber.`
     )
     onAtualizar()
   }
 
-  const busy = salvandoId !== null
+  const busy = salvandoChave !== null
 
   return (
     <div style={card}>
@@ -133,13 +170,19 @@ export function FaturamentoFilaPosFaturamento({
       </h2>
       <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
         Após <strong>confirmar o faturamento</strong>, informe o <strong>número da NF</strong> (e, se quiser, a
-        referência do boleto). Ao <strong>guardar</strong>, a coleta passa para <strong>Finalizado</strong> e entra na
-        fila <Link to="/financeiro/contas-receber">Financeiro → Contas a Receber</Link>. O envio por e-mail continua
+        referência do boleto). Vários tickets da <strong>mesma MTR</strong> partilham <strong>uma única NF/boleto</strong>.
+        Ao <strong>guardar</strong>, todas as coletas do grupo passam para <strong>Finalizado</strong> e entram na fila{' '}
+        <Link to="/financeiro/contas-receber">Financeiro → Contas a Receber</Link>. O envio por e-mail continua
         disponível em <Link to="/envio-nf">Mala Direta</Link> (opcional).
       </p>
 
       <div style={{ fontWeight: 700, fontSize: '13px', color: '#b45309', marginBottom: '10px' }}>
-        Aguardando número NF / boleto ({pendentes.length})
+        Aguardando número NF / boleto ({grupos.length}{' '}
+        {grupos.length === 1 ? 'faturamento' : 'faturamentos'}
+        {pendentes.length !== grupos.length
+          ? ` · ${pendentes.length} ticket${pendentes.length !== 1 ? 's' : ''}`
+          : ''}
+        )
       </div>
 
       <ul
@@ -152,16 +195,19 @@ export function FaturamentoFilaPosFaturamento({
           gap: '12px',
         }}
       >
-        {pendentes.slice(0, 30).map((r) => {
-          const c = campos[r.coleta_id] ?? { numeroNf: '', numeroBoleto: '' }
-          const salvando = salvandoId === r.coleta_id
-          const envioUrl = `/envio-nf?coleta=${encodeURIComponent(r.coleta_id)}${
-            r.cliente_id ? `&cliente=${encodeURIComponent(r.cliente_id)}` : ''
+        {grupos.slice(0, 30).map((grupo) => {
+          const chave = chaveGrupoMedicaoMtr(grupo.linhas[0]!)
+          const c = campos[chave] ?? { numeroNf: '', numeroBoleto: '' }
+          const salvando = salvandoChave === chave
+          const primeira = grupo.linhas[0]!
+          const envioUrl = `/envio-nf?coleta=${encodeURIComponent(primeira.coleta_id)}${
+            grupo.cliente_id ? `&cliente=${encodeURIComponent(grupo.cliente_id)}` : ''
           }`
+          const multiplos = grupo.linhas.length > 1
 
           return (
             <li
-              key={r.coleta_id}
+              key={chave}
               style={{
                 padding: '14px 14px',
                 borderRadius: '12px',
@@ -181,10 +227,20 @@ export function FaturamentoFilaPosFaturamento({
                 }}
               >
                 <span style={{ fontWeight: 700 }}>
-                  Coleta {r.numero_coleta ?? r.numero} · {r.cliente_nome}
+                  {multiplos ? (
+                    <>
+                      MTR {grupo.mtr_numero} · {grupo.cliente_nome} · Tickets {rotuloTicketsGrupo(grupo)}
+                    </>
+                  ) : (
+                    <>
+                      Coleta {grupo.linhas[0]!.numero_coleta ?? grupo.linhas[0]!.numero} · {grupo.cliente_nome}
+                    </>
+                  )}
                 </span>
-                <span style={{ color: '#64748b' }}>{rotuloEsteiraLinha(r)}</span>
-                <span style={{ color: '#047857', fontWeight: 700 }}>{valorExibicao(r)}</span>
+                <span style={{ color: '#64748b' }}>{rotuloEsteiraLinha(primeira)}</span>
+                <span style={{ color: '#047857', fontWeight: 700 }}>
+                  {multiplos ? `Total ${valorTotalGrupo(grupo)}` : valorExibicao(primeira)}
+                </span>
                 <Link
                   to={envioUrl}
                   className="rg-btn rg-btn--outline"
@@ -193,6 +249,25 @@ export function FaturamentoFilaPosFaturamento({
                   Mala Direta (e-mail)
                 </Link>
               </div>
+
+              {multiplos ? (
+                <ul
+                  style={{
+                    margin: '0 0 12px',
+                    padding: '0 0 0 18px',
+                    fontSize: '12px',
+                    color: '#64748b',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {grupo.linhas.map((r) => (
+                    <li key={r.coleta_id}>
+                      Ticket {r.numero_coleta ?? r.numero}
+                      {r.tipo_residuo ? ` · ${r.tipo_residuo}` : ''} — {valorExibicao(r)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
               <div
                 style={{
@@ -207,7 +282,7 @@ export function FaturamentoFilaPosFaturamento({
                   <input
                     type="text"
                     value={c.numeroNf}
-                    onChange={(e) => atualizarCampo(r.coleta_id, { numeroNf: e.target.value })}
+                    onChange={(e) => atualizarCampo(chave, { numeroNf: e.target.value })}
                     placeholder="Ex.: 12345"
                     disabled={!podeConfirmar || busy}
                     style={inputStyle}
@@ -218,7 +293,7 @@ export function FaturamentoFilaPosFaturamento({
                   <input
                     type="text"
                     value={c.numeroBoleto}
-                    onChange={(e) => atualizarCampo(r.coleta_id, { numeroBoleto: e.target.value })}
+                    onChange={(e) => atualizarCampo(chave, { numeroBoleto: e.target.value })}
                     placeholder="Nº boleto ou linha digitável"
                     disabled={!podeConfirmar || busy}
                     style={inputStyle}
@@ -229,16 +304,20 @@ export function FaturamentoFilaPosFaturamento({
                   className="rg-btn rg-btn--primary"
                   style={{ fontSize: '13px', padding: '10px 16px', fontWeight: 800 }}
                   disabled={!podeConfirmar || busy}
-                  onClick={() => void guardar(r)}
+                  onClick={() => void guardarGrupo(grupo)}
                 >
-                  {salvando ? 'A guardar…' : 'Guardar e enviar ao Financeiro'}
+                  {salvando
+                    ? 'A guardar…'
+                    : multiplos
+                      ? `Guardar NF para ${grupo.linhas.length} coletas`
+                      : 'Guardar e enviar ao Financeiro'}
                 </button>
               </div>
             </li>
           )
         })}
-        {pendentes.length > 30 ? (
-          <li style={{ fontSize: '12px', color: '#94a3b8' }}>+ {pendentes.length - 30} coleta(s)…</li>
+        {grupos.length > 30 ? (
+          <li style={{ fontSize: '12px', color: '#94a3b8' }}>+ {grupos.length - 30} faturamento(s)…</li>
         ) : null}
       </ul>
 

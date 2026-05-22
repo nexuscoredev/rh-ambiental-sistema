@@ -70,7 +70,10 @@ export function FaturamentoRelatoriosPanel({
     [linhasHistorico]
   )
 
-  const fila = useMemo(() => linhasOperacional.filter((r) => coletaNaFilaFaturamento(r)), [linhasOperacional])
+  const fila = useMemo(
+    () => linhasOperacional.filter((r) => coletaNaFilaFaturamento(r, linhasOperacional)),
+    [linhasOperacional]
+  )
 
   const historicoPeriodo = useMemo(() => {
     const t0 = de ? inicioDiaMs(de) : null

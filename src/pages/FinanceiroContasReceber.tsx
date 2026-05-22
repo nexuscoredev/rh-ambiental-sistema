@@ -5,6 +5,7 @@ import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
 import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
+import { registrarBaixaContaReceber } from '../services/financeiroReceber'
 
 type ContaRow = {
   id: string
@@ -50,6 +51,7 @@ export default function FinanceiroContasReceber() {
     'todos' | 'vencido' | '7d' | 'sem_venc'
   >('filtro-faixa', 'todos')
   const [busca, setBusca] = useSessionPersistedState('busca', '')
+  const [marcandoPagoId, setMarcandoPagoId] = useState<string | null>(null)
 
   const podeMutar = cargoPodeEditarCobranca(cargo)
 
@@ -225,6 +227,37 @@ export default function FinanceiroContasReceber() {
     }
     return { saldoAberto, saldoVencido, qtd: linhas.length }
   }, [linhas, hojeMs])
+
+  async function marcarTituloComoPago(row: ContaRow) {
+    if (!podeMutar) return
+    const saldo = row.valor - row.valor_pago
+    if (saldo <= 0 || row.status_pagamento === 'Pago') return
+
+    const ok = window.confirm(
+      `Marcar a coleta ${row.coleta_numero} (${row.cliente_nome}) como Pago?\n\nSaldo: ${formatCurrency(saldo)}`
+    )
+    if (!ok) return
+
+    setMarcandoPagoId(row.id)
+    setErro('')
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const { error } = await registrarBaixaContaReceber(supabase, {
+        referencia_coleta_id: row.referencia_coleta_id,
+        valor_baixa: saldo,
+        observacao: 'Marcado como Pago na lista de títulos (Contas a Receber).',
+        usuario_id: user?.id ?? null,
+      })
+      if (error) throw error
+      await carregar()
+    } catch (e) {
+      setErro(mensagemErroSupabase(e, 'Erro ao marcar título como pago.'))
+    } finally {
+      setMarcandoPagoId(null)
+    }
+  }
 
   function exportarCsv() {
     const header = [
@@ -492,12 +525,56 @@ export default function FinanceiroContasReceber() {
                         </td>
                         <td style={{ padding: '10px 8px' }}>{r.valor_travado ? 'sim' : '—'}</td>
                         <td style={{ padding: '10px 8px' }}>
-                          <Link
-                            to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
-                            style={{ fontWeight: 700, color: '#0d9488' }}
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                              gap: '10px 14px',
+                            }}
                           >
-                            Cobrança
-                          </Link>
+                            <label
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#334155',
+                                cursor:
+                                  podeMutar && saldo > 0 && marcandoPagoId !== r.id
+                                    ? 'pointer'
+                                    : 'default',
+                                userSelect: 'none',
+                              }}
+                              title={
+                                !podeMutar
+                                  ? 'Sem permissão para alterar cobrança'
+                                  : saldo <= 0
+                                    ? 'Título já quitado'
+                                    : 'Registar baixa do saldo em aberto'
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                checked={r.status_pagamento === 'Pago' || saldo <= 0}
+                                disabled={
+                                  !podeMutar || marcandoPagoId === r.id || saldo <= 0
+                                }
+                                onChange={(e) => {
+                                  if (e.target.checked) void marcarTituloComoPago(r)
+                                }}
+                                style={{ width: '18px', height: '18px', accentColor: '#15803d' }}
+                              />
+                              Pago
+                            </label>
+                            <Link
+                              to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
+                              style={{ fontWeight: 700, color: '#0d9488' }}
+                            >
+                              Cobrança
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     )

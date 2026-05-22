@@ -32,7 +32,7 @@ import { FaturamentoFilaAjusteValores } from '../components/faturamento/Faturame
 import { FaturamentoFilaMedicao } from '../components/faturamento/FaturamentoFilaMedicao'
 import { FaturamentoFilaPosFaturamento } from '../components/faturamento/FaturamentoFilaPosFaturamento'
 import { FaturamentoEsteiraFluxo } from '../components/faturamento/FaturamentoEsteiraFluxo'
-import { MENSAGEM_MIGRACAO_ESTEIRA } from '../lib/faturamentoEsteira'
+import { MENSAGEM_MIGRACAO_ESTEIRA, coletaNaFilaAjusteValoresMedicao } from '../lib/faturamentoEsteira'
 import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
 import {
   escolherColetaLiderFaturamento,
@@ -173,41 +173,41 @@ export default function FaturamentoOperacional() {
   )
 
   const filaAprovacao = useMemo(() => {
-    const f = linhasView.filter((r) => coletaNaFilaAprovacaoTicketFaturamento(r))
+    const f = linhasOperacional.filter((r) => coletaNaFilaAprovacaoTicketFaturamento(r))
     return f.sort((a, b) => {
       const ta = new Date(a.ticket_impresso_em ?? a.created_at).getTime()
       const tb = new Date(b.ticket_impresso_em ?? b.created_at).getTime()
       return tb - ta
     })
-  }, [linhasView])
+  }, [linhasOperacional])
 
   const filaAguardandoImpressao = useMemo(
-    () => linhasView.filter((r) => coletaAguardandoImpressaoTicketFaturamento(r)),
-    [linhasView]
+    () => linhasOperacional.filter((r) => coletaAguardandoImpressaoTicketFaturamento(r)),
+    [linhasOperacional]
   )
 
   const fila = useMemo(() => {
-    const f = linhasView.filter((r) => coletaNaFilaFaturamento(r))
+    const f = linhasOperacional.filter((r) => coletaNaFilaFaturamento(r, linhasOperacional))
     return f.sort((a, b) => {
       const ta = new Date(a.created_at).getTime()
       const tb = new Date(b.created_at).getTime()
       return tb - ta
     })
-  }, [linhasView])
+  }, [linhasOperacional])
 
   const qtdProntoConferencia = useMemo(
-    () => linhasView.filter((r) => coletaProntaNaVistaExcluindoFluxoTicket(r)).length,
-    [linhasView]
+    () => linhasOperacional.filter((r) => coletaProntaNaVistaExcluindoFluxoTicket(r)).length,
+    [linhasOperacional]
   )
 
   const qtdPendenteConferencia = useMemo(
-    () => linhasView.filter((r) => coletaConferenciaPendente(r)).length,
-    [linhasView]
+    () => linhasOperacional.filter((r) => coletaConferenciaPendente(r)).length,
+    [linhasOperacional]
   )
 
   const valorSomaProntoConferencia = useMemo(() => {
     let s = 0
-    for (const r of linhasView) {
+    for (const r of linhasOperacional) {
       if (!coletaProntaNaVistaExcluindoFluxoTicket(r)) continue
       const v = r.valor_coleta
       if (v != null && Number.isFinite(Number(v))) s += Number(v)
@@ -215,7 +215,7 @@ export default function FaturamentoOperacional() {
     return s > 0
       ? s.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
       : '—'
-  }, [linhasView])
+  }, [linhasOperacional])
 
   const valorEstimadoFila = useMemo(() => {
     let s = 0
@@ -269,8 +269,11 @@ export default function FaturamentoOperacional() {
   }
 
   function abrirModalAjusteValores(row: FaturamentoResumoViewRow, grupo?: FaturamentoResumoViewRow[]) {
+    const pendentesAjuste = linhasView.filter(coletaNaFilaAjusteValoresMedicao)
+    const grupoMtr =
+      grupo && grupo.length > 1 ? grupo : resolverGrupoFaturamentoNaFila(row.coleta_id, pendentesAjuste)
     setModalPreparacaoMedicao(true)
-    setModalGrupoConsolidado(grupo)
+    setModalGrupoConsolidado(grupoMtr.length > 1 ? grupoMtr : undefined)
     aoEscolherColetaUrl(row.coleta_id)
     setModalColetaId(row.coleta_id)
     setModalAberto(true)
@@ -421,7 +424,7 @@ export default function FaturamentoOperacional() {
         />
 
         <FaturamentoFilaAjusteValores
-          linhas={linhasView}
+          linhas={linhasOperacional}
           carregando={carregandoVista}
           esteiraAtiva={esteiraMedicaoAtiva}
           podeRevisar={podeConfirmarEmissao}
@@ -429,7 +432,7 @@ export default function FaturamentoOperacional() {
         />
 
         <FaturamentoFilaMedicao
-          linhas={linhasView}
+          linhas={linhasOperacional}
           carregando={carregandoVista}
           esteiraAtiva={esteiraMedicaoAtiva}
           onAtualizar={() => void recarregarTudo()}
@@ -445,7 +448,7 @@ export default function FaturamentoOperacional() {
         />
 
         <FaturamentoFilaPosFaturamento
-          linhas={linhasView}
+          linhas={linhasOperacional}
           carregando={carregandoVista}
           podeConfirmar={podeConfirmarNfBoleto}
           onAtualizar={() => void recarregarTudo()}
