@@ -36,6 +36,41 @@ export const UNIDADES_MEDIDA_RESIDUO = [
   { value: 'litros', label: 'litros' },
 ] as const
 
+/** Cadastro de clientes: faturamento por peso sempre em kg (sem tonelada). */
+export const UNIDADES_MEDIDA_RESIDUO_CLIENTES = UNIDADES_MEDIDA_RESIDUO.filter((u) => u.value !== 'ton')
+
+export function unidadeMedidaEhTonelada(unidade: string | null | undefined): boolean {
+  const u = (unidade ?? '').trim().toLowerCase()
+  return u === 'ton' || u === 'tonelada' || u === 't' || u === 'ton.'
+}
+
+/** Converte contrato legado em tonelada para kg (valor R$/ton → R$/kg). */
+export function normalizarResiduoContratoParaKg(item: ResiduoContratoItem): ResiduoContratoItem {
+  const unidadeRaw = item.unidade_medida.trim()
+  if (!unidadeMedidaEhTonelada(unidadeRaw)) {
+    return {
+      ...item,
+      unidade_medida: unidadeRaw || 'kg',
+    }
+  }
+  const valorNum = parseNumeroMoeda(item.valor)
+  const valorKg =
+    valorNum != null && valorNum > 0
+      ? valorNum / 1000
+      : null
+  return {
+    ...item,
+    unidade_medida: 'kg',
+    valor:
+      valorKg != null
+        ? valorKg.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4,
+          })
+        : item.valor,
+  }
+}
+
 export type VeiculoContratoItem = {
   tipo_veiculo: string
   sem_custo: boolean
@@ -72,7 +107,7 @@ export const equipamentoContratoInicial = (): EquipamentoContratoItem => ({
 export const residuoContratoInicial = (): ResiduoContratoItem => ({
   tipo_residuo: '',
   classificacao: '',
-  unidade_medida: '',
+  unidade_medida: 'kg',
   valor: '',
   frequencia_coleta: '',
   faturamento_minimo: '',
@@ -140,14 +175,17 @@ export function equipamentosContratoParaJsonb(itens: EquipamentoContratoItem[]):
 }
 
 export function residuosContratoParaJsonb(itens: ResiduoContratoItem[]): unknown {
-  return itens.filter(itemResiduoValido).map((item) => ({
-    tipo_residuo: item.tipo_residuo.trim(),
-    classificacao: item.classificacao.trim() || null,
-    unidade_medida: item.unidade_medida.trim() || null,
-    valor: formatarMoedaBanco(item.valor),
-    frequencia_coleta: item.frequencia_coleta.trim() || null,
-    faturamento_minimo: formatarPesoKgBanco(item.faturamento_minimo),
-  }))
+  return itens
+    .filter(itemResiduoValido)
+    .map((item) => normalizarResiduoContratoParaKg(item))
+    .map((item) => ({
+      tipo_residuo: item.tipo_residuo.trim(),
+      classificacao: item.classificacao.trim() || null,
+      unidade_medida: item.unidade_medida.trim() || 'kg',
+      valor: formatarMoedaBanco(item.valor),
+      frequencia_coleta: item.frequencia_coleta.trim() || null,
+      faturamento_minimo: formatarPesoKgBanco(item.faturamento_minimo),
+    }))
 }
 
 function moedaParaCampo(v: unknown): string {
@@ -221,14 +259,14 @@ export function parseResiduosContratoJsonb(
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.map((row) => {
       const o = row as Record<string, unknown>
-      return {
+      return normalizarResiduoContratoParaKg({
         tipo_residuo: asTextoFormulario(o.tipo_residuo).trim(),
         classificacao: asTextoFormulario(o.classificacao).trim(),
         unidade_medida: asTextoFormulario(o.unidade_medida).trim(),
         valor: moedaParaCampo(o.valor),
         frequencia_coleta: asTextoFormulario(o.frequencia_coleta).trim(),
         faturamento_minimo: pesoParaCampo(o.faturamento_minimo),
-      }
+      })
     })
   }
   const tipos = dividirListaPipe(legado?.tipo_residuo)
@@ -236,14 +274,16 @@ export function parseResiduosContratoJsonb(
   const unidades = dividirListaPipe(legado?.unidade_medida)
   const frequencias = dividirListaPipe(legado?.frequencia_coleta)
   const total = Math.max(tipos.length, classes.length, unidades.length, frequencias.length, 1)
-  return Array.from({ length: total }).map((_, i) => ({
-    tipo_residuo: tipos[i] || '',
-    classificacao: classes[i] || '',
-    unidade_medida: unidades[i] || '',
-    valor: '',
-    frequencia_coleta: frequencias[i] || '',
-    faturamento_minimo: '',
-  }))
+  return Array.from({ length: total }).map((_, i) =>
+    normalizarResiduoContratoParaKg({
+      tipo_residuo: tipos[i] || '',
+      classificacao: classes[i] || '',
+      unidade_medida: unidades[i] || '',
+      valor: '',
+      frequencia_coleta: frequencias[i] || '',
+      faturamento_minimo: '',
+    })
+  )
 }
 
 /** Sincroniza colunas legadas (planilha / MTR) a partir dos itens de resíduo. */

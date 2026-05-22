@@ -43,6 +43,12 @@ import {
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
 import { normalizarEmailNfLista } from "../lib/emailNfLista";
+import {
+  normalizarMtrSigorValor,
+  parseMtrSigorImport,
+  rotuloMtrSigor,
+  type MtrSigorOpcao,
+} from "../lib/mtrSigorCliente";
 
 type Cliente = {
   id: string;
@@ -95,7 +101,7 @@ type Cliente = {
   ajudante: string | null;
   solicitante: string | null;
   origem_planilha_cliente: string | null;
-  mtr_sigor: boolean | null;
+  mtr_sigor: MtrSigorOpcao | null;
   cnpj_raiz: string | null;
   tipo_unidade_cliente: string | null;
   status_ativo_desde: string | null;
@@ -165,7 +171,7 @@ type FormCliente = {
   ajudante: string;
   solicitante: string;
   origem_planilha_cliente: string;
-  mtr_sigor: boolean | null;
+  mtr_sigor: MtrSigorOpcao | null;
   cnpj_raiz: string;
   tipo_unidade_cliente: string;
   status_ativo_desde: string;
@@ -244,6 +250,14 @@ const formInicial: FormCliente = {
 function limparOuNull(valor: string) {
   const texto = valor.trim();
   return texto === "" ? null : texto;
+}
+
+/** Valor `type="date"` exige YYYY-MM-DD (Postgres pode devolver ISO com hora). */
+function normalizarDataParaInputDate(data?: string | null | unknown): string {
+  const s = asTextoFormulario(data).trim();
+  if (!s) return "";
+  const limpa = s.includes("T") ? s.split("T")[0]! : s;
+  return limpa.length >= 10 ? limpa.slice(0, 10) : limpa;
 }
 
 function formatarData(data?: string | null | unknown) {
@@ -436,7 +450,7 @@ type ImportRow = Partial<{
   ajudante: string;
   solicitante: string;
   origem_planilha_cliente: string;
-  mtr_sigor: boolean | null;
+  mtr_sigor: MtrSigorOpcao | null;
   cnpj_raiz: string;
   tipo_unidade_cliente: string;
   status_ativo_desde: string;
@@ -538,25 +552,30 @@ const IMPORT_HEADER_ALIASES: Record<string, keyof ImportRow> = {
   mtr_sigor: "mtr_sigor",
   cnpj_raiz: "cnpj_raiz",
   tipo_unidade_cliente: "tipo_unidade_cliente",
+  "cliente desde": "status_ativo_desde",
+  "cliente ativo desde": "status_ativo_desde",
   "status ativo desde": "status_ativo_desde",
   status_ativo_desde: "status_ativo_desde",
   "status inativo desde": "status_inativo_desde",
   status_inativo_desde: "status_inativo_desde",
 };
 
-function rotuloMtrSigor(valor: boolean | null | undefined): string {
-  if (valor === true) return "Sim";
-  if (valor === false) return "Não";
-  return "—";
+function alternarMtrSigorOpcao(
+  atual: MtrSigorOpcao | null,
+  opcao: MtrSigorOpcao
+): MtrSigorOpcao | null {
+  return atual === opcao ? null : opcao;
 }
 
-function parseMtrSigorValor(raw: string | undefined | null): boolean | null {
-  const t = (raw ?? "").trim().toLowerCase();
-  if (!t) return null;
-  if (["sim", "s", "yes", "y", "1", "true", "x"].includes(t)) return true;
-  if (["nao", "não", "n", "no", "0", "false"].includes(t)) return false;
-  return null;
-}
+const labelSigorCheckboxStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#334155",
+  cursor: "pointer",
+};
 
 function dividirLista(valor?: string | null) {
   if (!valor) return [];
@@ -638,14 +657,22 @@ const CLIENTES_SELECT_FAT_ENDERECO =
 const CLIENTES_SELECT_TAIL_BASE =
   "endereco_coleta, endereco_faturamento, email_nf, responsavel_nome, telefone, email, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, licenca_numero, validade, codigo_ibama, descricao_veiculo, mtr_coleta, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, ajudante, solicitante, origem_planilha_cliente, mtr_sigor, cnpj_raiz, tipo_unidade_cliente, representante_rg_id, caminhao_id, equipamentos";
 
+const CLIENTES_SELECT_STATUS_DATAS = "status_ativo_desde, status_inativo_desde";
+
 function montarClientesSelectPrincipalLegacy(
   incluirFatEstruturado: boolean,
   incluirMargemLucro: boolean,
-  incluirContratoJson = true
+  incluirContratoJson = true,
+  incluirStatusDatas = true
 ): string {
+  const statusPart = incluirStatusDatas ? `${CLIENTES_SELECT_STATUS_DATAS}, ` : "";
+  let tailBase = CLIENTES_SELECT_TAIL_BASE.replace(
+    "validade, ",
+    `validade, ${statusPart}`
+  );
   let tail = incluirMargemLucro
-    ? `${CLIENTES_SELECT_TAIL_BASE}, margem_lucro_percentual`
-    : CLIENTES_SELECT_TAIL_BASE;
+    ? `${tailBase}, margem_lucro_percentual`
+    : tailBase;
   if (incluirContratoJson) tail += CLIENTES_SELECT_CONTRATO_JSON;
   return incluirFatEstruturado
     ? `${CLIENTES_SELECT_CORE}, ${CLIENTES_SELECT_FAT_ENDERECO}, ${tail}`
@@ -662,13 +689,20 @@ function montarOrFilterBuscaClientesLegacy(s: string, incluirColunasFat: boolean
 
 /** Migração `20260427140000_clientes_status_datas.sql` ainda não aplicada no Supabase. */
 function isMissingClientesStatusDateColumnsError(
-  error: { message?: string } | null | undefined
+  error: { message?: string; code?: string } | null | undefined
 ): boolean {
   const msg = (error?.message ?? "").toLowerCase();
+  const code = String(error?.code ?? "");
   if (!msg) return false;
+  const col =
+    msg.includes("status_ativo_desde") || msg.includes("status_inativo_desde");
+  if (!col) return false;
+  if (code === "PGRST204") return true;
   return (
-    (msg.includes("status_ativo_desde") || msg.includes("status_inativo_desde")) &&
-    (msg.includes("schema cache") || msg.includes("could not find"))
+    msg.includes("schema cache") ||
+    msg.includes("could not find") ||
+    msg.includes("does not exist") ||
+    msg.includes("unknown column")
   );
 }
 
@@ -853,6 +887,7 @@ export default function Clientes() {
   const faturamentoEstruturadoColDisponivelRef = useRef(true);
   const margemLucroColDisponivelRef = useRef(true);
   const clienteContratoColDisponivelRef = useRef(true);
+  const clientesStatusDatasColDisponivelRef = useRef(true);
 
   const [modoTabela, setModoTabela] = useState<ModoTabelaClientes>(() => lerModoTabelaPersistido());
   const [filtroVencCadri, setFiltroVencCadri] = useSessionPersistedState<FiltroVencCadri>(
@@ -977,9 +1012,10 @@ export default function Clientes() {
     let fat = faturamentoEstruturadoColDisponivelRef.current;
     let ml = margemLucroColDisponivelRef.current;
     let contrato = clienteContratoColDisponivelRef.current;
+    let statusDatas = clientesStatusDatasColDisponivelRef.current;
 
     const executarFetch = () => {
-      const listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
+      const listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato, statusDatas);
       return montarQueries(listStr, fat);
     };
 
@@ -1014,6 +1050,16 @@ export default function Clientes() {
       if (contrato && isMissingClienteContratoColumnsError(error)) {
         clienteContratoColDisponivelRef.current = false;
         contrato = false;
+        ({ countQ, dataQ } = executarFetch());
+        [{ count, error: errCount }, { data, error }] = await Promise.all([
+          countQ,
+          dataQ.range(from, to),
+        ]);
+        continue;
+      }
+      if (statusDatas && isMissingClientesStatusDateColumnsError(error)) {
+        clientesStatusDatasColDisponivelRef.current = false;
+        statusDatas = false;
         ({ countQ, dataQ } = executarFetch());
         [{ count, error: errCount }, { data, error }] = await Promise.all([
           countQ,
@@ -1079,11 +1125,12 @@ export default function Clientes() {
     let fat = faturamentoEstruturadoColDisponivelRef.current;
     let ml = margemLucroColDisponivelRef.current;
     let contrato = clienteContratoColDisponivelRef.current;
+    let statusDatas = clientesStatusDatasColDisponivelRef.current;
 
     const out: Cliente[] = [];
     for (let from = 0; ; from += PAGE) {
       const to = from + PAGE - 1;
-      let listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
+      let listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato, statusDatas);
       let dataQ = montarDataQ(listStr, fat);
       let { data, error } = await dataQ.range(from, to);
       while (error) {
@@ -1106,7 +1153,15 @@ export default function Clientes() {
         if (contrato && isMissingClienteContratoColumnsError(error)) {
           clienteContratoColDisponivelRef.current = false;
           contrato = false;
-          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato);
+          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato, statusDatas);
+          dataQ = montarDataQ(listStr, fat);
+          ({ data, error } = await dataQ.range(from, to));
+          continue;
+        }
+        if (statusDatas && isMissingClientesStatusDateColumnsError(error)) {
+          clientesStatusDatasColDisponivelRef.current = false;
+          statusDatas = false;
+          listStr = montarClientesSelectPrincipalLegacy(fat, ml, contrato, statusDatas);
           dataQ = montarDataQ(listStr, fat);
           ({ data, error } = await dataQ.range(from, to));
           continue;
@@ -1518,7 +1573,7 @@ export default function Clientes() {
                 continue;
               }
               if (key === "mtr_sigor") {
-                const parsed = parseMtrSigorValor(String(v ?? ""));
+                const parsed = parseMtrSigorImport(String(v ?? ""));
                 if (parsed !== null) obj.mtr_sigor = parsed;
                 continue;
               }
@@ -1641,7 +1696,7 @@ export default function Clientes() {
             ajudante: limparOuNull(r.ajudante || ""),
             solicitante: limparOuNull(r.solicitante || ""),
             origem_planilha_cliente: limparOuNull(r.origem_planilha_cliente || ""),
-            mtr_sigor: r.mtr_sigor ?? null,
+            mtr_sigor: normalizarMtrSigorValor(r.mtr_sigor),
             cnpj_raiz: limparOuNull(r.cnpj_raiz || ""),
             tipo_unidade_cliente: limparOuNull(r.tipo_unidade_cliente || ""),
             status_ativo_desde: limparOuNull(r.status_ativo_desde || ""),
@@ -1882,7 +1937,7 @@ export default function Clientes() {
         equipamentos: row.equipamentos ?? "",
 
         licenca_numero: row.licenca_numero || "",
-        validade: row.validade || "",
+        validade: normalizarDataParaInputDate(row.validade),
         codigo_ibama: row.codigo_ibama || "",
         descricao_veiculo: row.descricao_veiculo || "",
         mtr_coleta: row.mtr_coleta || "",
@@ -1895,12 +1950,12 @@ export default function Clientes() {
         ajudante: row.ajudante || "",
         solicitante: row.solicitante || "",
         origem_planilha_cliente: row.origem_planilha_cliente || "",
-        mtr_sigor: row.mtr_sigor ?? null,
+        mtr_sigor: normalizarMtrSigorValor(row.mtr_sigor),
         cnpj_raiz: row.cnpj_raiz || derivarDadosUnidadeDocumento(row.cnpj || "").cnpj_raiz,
         tipo_unidade_cliente:
           row.tipo_unidade_cliente || derivarDadosUnidadeDocumento(row.cnpj || "").tipo_unidade_cliente,
-        status_ativo_desde: row.status_ativo_desde ?? "",
-        status_inativo_desde: row.status_inativo_desde ?? "",
+        status_ativo_desde: normalizarDataParaInputDate(row.status_ativo_desde),
+        status_inativo_desde: normalizarDataParaInputDate(row.status_inativo_desde),
 
         veiculos_contrato: parseVeiculosContratoJsonb(row.veiculos_contrato, row.descricao_veiculo),
         equipamentos_contrato: parseEquipamentosContratoJsonb(
@@ -1918,12 +1973,12 @@ export default function Clientes() {
       let fat = faturamentoEstruturadoColDisponivelRef.current;
       let ml = margemLucroColDisponivelRef.current;
       const contrato = clienteContratoColDisponivelRef.current;
-      const lista = () => montarClientesSelectPrincipalLegacy(fat, ml, contrato);
-      const completa = () => `${lista()}, status_ativo_desde, status_inativo_desde`;
+      let statusDatas = clientesStatusDatasColDisponivelRef.current;
+      const lista = () => montarClientesSelectPrincipalLegacy(fat, ml, contrato, statusDatas);
 
       let fullRes = await supabase
         .from("clientes")
-        .select(completa())
+        .select(lista())
         .eq("id", cliente.id)
         .maybeSingle();
 
@@ -1932,7 +1987,7 @@ export default function Clientes() {
         fat = false;
         fullRes = await supabase
           .from("clientes")
-          .select(completa())
+          .select(lista())
           .eq("id", cliente.id)
           .maybeSingle();
       }
@@ -1942,12 +1997,14 @@ export default function Clientes() {
         ml = false;
         fullRes = await supabase
           .from("clientes")
-          .select(completa())
+          .select(lista())
           .eq("id", cliente.id)
           .maybeSingle();
       }
 
       if (fullRes.error && isMissingClientesStatusDateColumnsError(fullRes.error)) {
+        clientesStatusDatasColDisponivelRef.current = false;
+        statusDatas = false;
         fullRes = await supabase
           .from("clientes")
           .select(lista())
@@ -2074,8 +2131,9 @@ export default function Clientes() {
 
     let usarMargemLucro =
       margemLucroColDisponivelRef.current || form.margem_lucro_percentual.trim() !== "";
-    let usarStatusDatas = true;
+    let usarStatusDatas = clientesStatusDatasColDisponivelRef.current;
     let usarContratoJson = clienteContratoColDisponivelRef.current;
+    let statusDatasIgnoradasNoSalvar = false;
 
     const montarPayloadSalvar = (): Record<string, unknown> => {
       const corpo: Record<string, unknown> = { ...payloadBase };
@@ -2099,7 +2157,9 @@ export default function Clientes() {
       : await supabase.from("clientes").insert([montarPayloadSalvar()]);
 
     if (response.error && usarStatusDatas && isMissingClientesStatusDateColumnsError(response.error)) {
+      clientesStatusDatasColDisponivelRef.current = false;
       usarStatusDatas = false;
+      statusDatasIgnoradasNoSalvar = true;
       usarMargemLucro =
         margemLucroColDisponivelRef.current || form.margem_lucro_percentual.trim() !== "";
       response = editingId
@@ -2185,6 +2245,18 @@ export default function Clientes() {
     const mensagem = editingId
       ? "Cliente atualizado com sucesso!"
       : "Cliente cadastrado com sucesso!";
+
+    if (
+      statusDatasIgnoradasNoSalvar &&
+      (form.status_ativo_desde.trim() || form.status_inativo_desde.trim())
+    ) {
+      window.alert(
+        "Cliente salvo, mas as datas «Cliente desde» / «Inativo desde» não foram gravadas.\n\n" +
+          "No Supabase (SQL Editor), execute o script:\n" +
+          "supabase/sql_editor_clientes_status_datas.sql\n\n" +
+          "Depois recarregue a página e salve novamente."
+      );
+    }
 
     limparFormulario();
     setSalvando(false);
@@ -2479,19 +2551,17 @@ export default function Clientes() {
                   }}
                 >
                   <label style={fieldLabelStackStyle}>
-                    <span style={fieldLabelTextStyle}>
-                      Cliente ativo desde
-                    </span>
+                    <span style={fieldLabelTextStyle}>Cliente desde</span>
                     <input
                       type="date"
                       name="status_ativo_desde"
                       value={form.status_ativo_desde}
                       onChange={handleInputChange}
-                      title="Data em que o cliente passou a estar ativo (opcional)"
+                      title="Data em que o cliente passou a ser cliente (opcional)"
                       style={inputStyle}
                     />
                     <span style={fieldLabelHelpStyle}>
-                      Data em que o cliente passou a estar ativo.
+                      Data em que o cliente passou a ser cliente.
                     </span>
                   </label>
 
@@ -2653,76 +2723,65 @@ export default function Clientes() {
                   />
                   <div
                     style={{
+                      gridColumn: "1 / -1",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 6,
-                      padding: "8px 10px",
+                      gap: 8,
+                      padding: "10px 12px",
                       borderRadius: "10px",
                       border: "1px solid #cbd5e1",
                       background: "#fff",
-                      minHeight: 42,
-                      justifyContent: "center",
                     }}
-                    title="MTR — SIGOR (sim ou não)"
+                    title="SIGOR: Cliente, RG ou Não tem"
                   >
                     <span
                       style={{
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        color: "#64748b",
-                        letterSpacing: "0.02em",
+                        fontSize: "12px",
+                        fontWeight: 800,
+                        color: "#334155",
                       }}
                     >
-                      MTR — SIGOR
+                      SIGOR:
                     </span>
-                    <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: "#334155",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.mtr_sigor === true}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              mtr_sigor: prev.mtr_sigor === true ? null : true,
-                            }))
-                          }
-                        />
-                        Sim
-                      </label>
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: "#334155",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.mtr_sigor === false}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              mtr_sigor: prev.mtr_sigor === false ? null : false,
-                            }))
-                          }
-                        />
-                        Não
-                      </label>
-                    </div>
+                    <label style={labelSigorCheckboxStyle}>
+                      <input
+                        type="checkbox"
+                        checked={form.mtr_sigor === "cliente"}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            mtr_sigor: alternarMtrSigorOpcao(prev.mtr_sigor, "cliente"),
+                          }))
+                        }
+                      />
+                      Cliente
+                    </label>
+                    <label style={labelSigorCheckboxStyle}>
+                      <input
+                        type="checkbox"
+                        checked={form.mtr_sigor === "rg"}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            mtr_sigor: alternarMtrSigorOpcao(prev.mtr_sigor, "rg"),
+                          }))
+                        }
+                      />
+                      RG
+                    </label>
+                    <label style={labelSigorCheckboxStyle}>
+                      <input
+                        type="checkbox"
+                        checked={form.mtr_sigor === "nao_tem"}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            mtr_sigor: alternarMtrSigorOpcao(prev.mtr_sigor, "nao_tem"),
+                          }))
+                        }
+                      />
+                      Não tem
+                    </label>
                   </div>
                 </div>
 
@@ -3793,7 +3852,7 @@ export default function Clientes() {
                                   { rotulo: "Ajudante", valor: cliente.ajudante },
                                   { rotulo: "Solicitante", valor: cliente.solicitante },
                                   { rotulo: "Origem (planilha)", valor: cliente.origem_planilha_cliente },
-                                  { rotulo: "MTR — SIGOR", valor: rotuloMtrSigor(cliente.mtr_sigor) },
+                                  { rotulo: "SIGOR", valor: rotuloMtrSigor(cliente.mtr_sigor) },
                                   { rotulo: "E-mail NF", valor: cliente.email_nf },
                                 ].map((item) => (
                                   <div key={item.rotulo}>
@@ -4321,7 +4380,7 @@ function ClienteDetalheModal({
             <DetalheCampo rotulo="Raiz CNPJ" valor={cliente.cnpj_raiz} />
             <DetalheCampo rotulo="Status" valor={cliente.status} />
             <DetalheCampo
-              rotulo="Ativo desde"
+              rotulo="Cliente desde"
               valor={cliente.status_ativo_desde ? formatarData(cliente.status_ativo_desde) : null}
             />
             <DetalheCampo
@@ -4329,7 +4388,7 @@ function ClienteDetalheModal({
               valor={cliente.status_inativo_desde ? formatarData(cliente.status_inativo_desde) : null}
             />
             <DetalheCampo rotulo="Origem (planilha)" valor={cliente.origem_planilha_cliente} />
-            <DetalheCampo rotulo="MTR — SIGOR" valor={rotuloMtrSigor(cliente.mtr_sigor)} />
+            <DetalheCampo rotulo="SIGOR" valor={rotuloMtrSigor(cliente.mtr_sigor)} />
           </DetalheSecao>
 
           <DetalheSecao titulo="Contato">

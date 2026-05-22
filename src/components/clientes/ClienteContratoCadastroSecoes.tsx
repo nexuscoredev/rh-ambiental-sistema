@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import {
   asTextoFormulario,
-  UNIDADES_MEDIDA_RESIDUO,
+  UNIDADES_MEDIDA_RESIDUO_CLIENTES,
   type EquipamentoContratoItem,
   type ResiduoContratoItem,
   type VeiculoContratoItem,
@@ -282,7 +282,7 @@ export function ClienteContratoCadastroSecoes({
               Resíduos <span style={{ color: '#64748b', fontWeight: 500 }}>(opcional)</span>
             </div>
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
-              Tipo de resíduo (texto livre), classe, unidade, valor, frequência e peso mínimo (kg) por linha.
+              Tipo de resíduo (texto livre), classe, valor por kg, frequência e faturamento mínimo em kg por linha.
             </p>
           </div>
           <button type="button" onClick={onAdicionarResiduo} style={{ ...btnAdicionar, height: '40px' }}>
@@ -342,7 +342,7 @@ export function ClienteContratoCadastroSecoes({
                     style={inputStyle}
                   >
                     <option value="">Unidade</option>
-                    {UNIDADES_MEDIDA_RESIDUO.map((u) => (
+                    {UNIDADES_MEDIDA_RESIDUO_CLIENTES.map((u) => (
                       <option key={u.value} value={u.value}>
                         {u.label}
                       </option>
@@ -350,7 +350,10 @@ export function ClienteContratoCadastroSecoes({
                   </select>
                 </div>
                 <div>
-                  <label style={labelCampo}>Valor (R$)</label>
+                  <label style={labelCampo}>
+                    Valor (R$/
+                    {(residuo.unidade_medida || 'kg').trim() || 'kg'})
+                  </label>
                   <input
                     value={asTextoFormulario(residuo.valor)}
                     onChange={(e) => onResiduoChange(index, 'valor', e.target.value)}

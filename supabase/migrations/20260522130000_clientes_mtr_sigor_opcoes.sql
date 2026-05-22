@@ -1,5 +1,4 @@
--- SIGOR no cadastro de clientes (execute no Supabase → SQL Editor).
--- Valores: cliente | rg | nao_tem
+-- SIGOR no cadastro de clientes: cliente | rg | nao_tem (texto; migra boolean legado se existir).
 
 DO $$
 BEGIN
