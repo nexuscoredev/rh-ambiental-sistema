@@ -19,6 +19,20 @@ describe('normalizarResiduoContratoParaKg', () => {
     expect(r.valor).toContain('1')
     const n = Number(r.valor.replace(/\./g, '').replace(',', '.'))
     expect(n).toBeCloseTo(1, 2)
+    expect(r.faturamento_minimo).toBe('500')
+  })
+
+  it('converte faturamento mínimo legado em ton (ex.: 10) para kg na MTR', () => {
+    const r = normalizarResiduoContratoParaKg({
+      tipo_residuo: 'Teste',
+      classificacao: '',
+      unidade_medida: 'ton',
+      valor: '',
+      frequencia_coleta: '',
+      faturamento_minimo: '10',
+    })
+    expect(r.unidade_medida).toBe('kg')
+    expect(r.faturamento_minimo).toBe('10.000')
   })
 
   it('mantém kg e não altera valor', () => {

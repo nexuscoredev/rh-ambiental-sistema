@@ -92,6 +92,28 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
     aplicarLista(patchLista(lista, index, partial))
   }
 
+  function limparResiduoNoIndex(index: number) {
+    if (disabled) return
+    const novaLista = patchLista(lista, index, residuoDetalhesLimpo())
+    const sync = syncResiduoPrincipalComLista({ ...detalhes, residuos_lista: novaLista })
+
+    const itensRaw = detalhes.residuos_itens
+    let itensPesagem: ReturnType<typeof linhaVaziaResiduoPesagem>[] | undefined
+    if (Array.isArray(itensRaw) && itensRaw.length > 0) {
+      const base = [...itensRaw]
+      while (base.length < novaLista.length) base.push(linhaVaziaResiduoPesagem())
+      itensPesagem = base.map((item, i) => (i === index ? linhaVaziaResiduoPesagem() : item))
+    } else if (novaLista.length === 1 && index === 0) {
+      itensPesagem = [linhaVaziaResiduoPesagem()]
+    }
+
+    onChange({
+      ...detalhes,
+      ...sync,
+      ...(itensPesagem ? { residuos_itens: itensPesagem } : {}),
+    })
+  }
+
   async function limparDadosPreenchidos() {
     if (disabled) return
     const ok = await rgConfirm({
@@ -160,11 +182,39 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
 
       {lista.map((row, index) => (
         <div key={`mtr-residuo-desc-${index}`} style={card}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>
-            Resíduo {index + 1}
-            {index === 0 ? (
-              <span style={{ fontWeight: 500, color: '#64748b', marginLeft: '6px' }}>(principal no manifesto)</span>
-            ) : null}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              marginBottom: '10px',
+            }}
+          >
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+              Resíduo {index + 1}
+              {index === 0 ? (
+                <span style={{ fontWeight: 500, color: '#64748b', marginLeft: '6px' }}>
+                  (principal no manifesto)
+                </span>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              style={{
+                ...btnLimpar,
+                padding: '6px 12px',
+                fontSize: '11px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.55 : 1,
+              }}
+              disabled={disabled}
+              title={`Zerar os campos do resíduo ${index + 1}`}
+              onClick={() => limparResiduoNoIndex(index)}
+            >
+              Limpar
+            </button>
           </div>
           <div style={grid2}>
             <div>
@@ -206,7 +256,7 @@ export function MtrResiduosDescricaoForm({ detalhes, onChange, disabled = false 
               />
             </div>
             <div>
-              <label style={label}>Qtde aproximada</label>
+              <label style={label}>Qtde aproximada (kg)</label>
               <input
                 style={input}
                 value={row.quantidade_aproximada}

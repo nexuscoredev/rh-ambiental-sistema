@@ -20,6 +20,11 @@ import {
   isMissingClienteContratoColumnsError,
   parseEquipamentosContratoJsonb,
   parseVeiculosContratoJsonb,
+  equipamentosContratoSemValoresMtr,
+  veiculosContratoSemValoresMtr,
+  formatarPesoKgCampoContrato,
+  quantidadeMtrLegadaParaKg,
+  unidadeMedidaEhTonelada,
 } from '../lib/clienteContratoCadastro'
 import {
   acondicionamentoFromContratoVeiculoEquipamento,
@@ -32,7 +37,15 @@ import {
   type MtrResiduoDetalhesCampos,
 } from '../lib/mtrClienteContratoAutofill'
 import { MtrVeiculosEquipamentosForm } from '../components/mtr/MtrVeiculosEquipamentosForm'
-import { sincronizarColetasProgramacaoDesdeMtr } from '../lib/faturamentoOperacionalSync'
+import { sincronizarMtrParaColetasVinculadas } from '../lib/mtrOperacionalSync'
+import {
+  fetchClienteEnderecoAutofill,
+  montarCidadeUfCliente,
+  montarEnderecoLinhaCliente,
+  parseCidadeUfCampoTopo,
+  patchCidadeEnderecoGeradorDesdeCliente,
+  resolverClienteIdProgramacaoMtr,
+} from '../lib/mtrCadastroClienteAutofill'
 import type { ResiduoPesagemItem } from '../lib/residuosPesagem'
 import {
   nomeIndicaRgAmbiental,
@@ -315,27 +328,8 @@ type ClienteRowAutofill = {
   frequencia_coleta?: string | null
 }
 
-function montarEnderecoLinhaCliente(row: ClienteRowAutofill): string {
-  const logradouro = [row.rua?.trim(), row.numero?.trim()].filter(Boolean).join(', ')
-  const parts: string[] = []
-  if (logradouro) parts.push(logradouro)
-  if (row.complemento?.trim()) parts.push(row.complemento.trim())
-  if (row.bairro?.trim()) parts.push(row.bairro.trim())
-  if (row.cep?.trim()) parts.push(`CEP ${row.cep.trim()}`)
-  const estruturado = parts.join(' — ')
-  const livre = row.endereco_coleta?.trim()
-  return estruturado || livre || ''
-}
-
 function nomeGeradorParaMtr(row: ClienteRowAutofill, fallbackCliente: string): string {
   return row.razao_social?.trim() || row.nome?.trim() || fallbackCliente.trim() || ''
-}
-
-function montarCidadeUfCliente(row: ClienteRowAutofill): string {
-  const c = row.cidade?.trim()
-  const uf = row.estado?.trim()
-  if (c && uf) return `${c} — ${uf}`
-  return c || uf || ''
 }
 
 /** Coluna `mtrs.cidade` (combinado ou legado); prioriza o campo de topo do formulário. */
@@ -402,10 +396,14 @@ function mergeMtrDetalhesProfundo(raw: MTRDetalhes | null | undefined): MTRDetal
     residuos_lista: Array.isArray(rawAny.residuos_lista) ? rawAny.residuos_lista : undefined,
     residuos_itens: Array.isArray(rawAny.residuos_itens) ? rawAny.residuos_itens : undefined,
     contrato_veiculos: Array.isArray(rawAny.contrato_veiculos)
-      ? parseVeiculosContratoJsonb(rawAny.contrato_veiculos).filter((v) => v.tipo_veiculo.trim())
+      ? veiculosContratoSemValoresMtr(
+          parseVeiculosContratoJsonb(rawAny.contrato_veiculos).filter((v) => v.tipo_veiculo.trim())
+        )
       : undefined,
     contrato_equipamentos: Array.isArray(rawAny.contrato_equipamentos)
-      ? parseEquipamentosContratoJsonb(rawAny.contrato_equipamentos).filter((e) => e.descricao.trim())
+      ? equipamentosContratoSemValoresMtr(
+          parseEquipamentosContratoJsonb(rawAny.contrato_equipamentos).filter((e) => e.descricao.trim())
+        )
       : undefined,
     blocos: { ...z.blocos, ...(raw.blocos ?? z.blocos) },
     conformidade: { ...z.conformidade, ...(raw.conformidade ?? z.conformidade) },
@@ -420,12 +418,12 @@ function mergeDetalhesParaDocumento(
 ): MTRDetalhes {
   let d = mergeMtrDetalhesProfundo(mtr.detalhes ?? null)
 
-  const qPart =
-    mtr.quantidade !== null && mtr.quantidade !== undefined && !Number.isNaN(Number(mtr.quantidade))
-      ? `${String(mtr.quantidade).replace('.', ',')} ${(mtr.unidade ?? '').trim()}`.trim()
-      : ''
-  if (qPart && !d.residuo.quantidade_aproximada.trim()) {
-    d = { ...d, residuo: { ...d.residuo, quantidade_aproximada: qPart } }
+  const qtdKg = quantidadeMtrLegadaParaKg(mtr.quantidade, mtr.unidade)
+  if (qtdKg != null && qtdKg > 0 && !d.residuo.quantidade_aproximada.trim()) {
+    d = {
+      ...d,
+      residuo: { ...d.residuo, quantidade_aproximada: formatarPesoKgCampoContrato(String(qtdKg)) },
+    }
   }
 
   if (!d.residuo.fonte_origem.trim()) {
@@ -1048,8 +1046,8 @@ export default function MTR() {
       endereco: item.endereco || '',
       cidade: item.cidade || '',
       tipo_residuo: item.tipo_residuo || '',
-      quantidade: item.quantidade ?? null,
-      unidade: item.unidade || 'kg',
+      quantidade: quantidadeMtrLegadaParaKg(item.quantidade, item.unidade),
+      unidade: unidadeMedidaEhTonelada(item.unidade) ? 'kg' : item.unidade || 'kg',
       destinador: item.destinador || '',
       transportador: item.transportador || 'RG Ambiental',
       detalhes: mergeMtrDetalhesProfundo(item.detalhes ?? null),
@@ -1066,6 +1064,65 @@ export default function MTR() {
       })
     }
     void ensureCatalogoProgramacoes()
+    if (item.programacao_id) {
+      void preencherCidadeEnderecoDesdeCadastroSeVazio(item.programacao_id)
+    }
+  }
+
+  /** Ao editar MTR antiga ou cadastro incompleto: preenche cidade/endereço a partir do cliente. */
+  async function preencherCidadeEnderecoDesdeCadastroSeVazio(programacaoId: string) {
+    let programacao = programacoes.find((p) => p.id === programacaoId)
+    if (!programacao) {
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, [programacaoId])
+      if (!error && data.length > 0) {
+        programacao = data[0] as Programacao
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+      }
+    }
+    if (!programacao) return
+
+    const clienteId = await resolverClienteIdProgramacaoMtr(supabase, programacao)
+    if (!clienteId) return
+
+    const row = await fetchClienteEnderecoAutofill(supabase, clienteId)
+    if (!row) return
+
+    setForm((prev) => {
+      if (prev.programacao_id !== programacaoId) return prev
+      const dz = detalhesVazios()
+      const geradorAtual = { ...dz.gerador, ...(prev.detalhes?.gerador || {}) }
+      const patch = patchCidadeEnderecoGeradorDesdeCliente(
+        row,
+        {
+          cidadeTopo: prev.cidade,
+          endereco: prev.endereco,
+          gerador: geradorAtual,
+        },
+        { somenteVazios: true }
+      )
+      if (
+        !patch.cidadeTopo &&
+        !patch.endereco &&
+        !patch.gerador
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        ...(patch.cidadeTopo ? { cidade: patch.cidadeTopo } : {}),
+        ...(patch.endereco ? { endereco: patch.endereco } : {}),
+        ...(patch.gerador
+          ? {
+              detalhes: {
+                ...(prev.detalhes ?? dz),
+                gerador: { ...geradorAtual, ...patch.gerador },
+              },
+            }
+          : {}),
+      }
+    })
   }
 
   async function handleProgramacaoChange(programacaoIdSelecionada: string) {
@@ -1145,7 +1202,7 @@ export default function MTR() {
       detalhes: detalhesVazios(),
     }))
 
-    const clienteId = programacao.cliente_id?.trim()
+    const clienteId = await resolverClienteIdProgramacaoMtr(supabase, programacao)
     if (!clienteId) return
 
     const selContrato =
@@ -1185,7 +1242,7 @@ export default function MTR() {
     setForm((prev) => {
       if (prev.programacao_id !== programacao.id) return prev
       const dz = detalhesVazios()
-      const unidade = (contrato.residuos[0]?.unidade_medida ?? row.unidade_medida ?? '').trim()
+      const unidade = 'kg'
       const codigoIbama = (row.codigo_ibama ?? '').trim()
       const listaResiduosForm = listaResiduosMtr.map((rowRes, i) => {
         if (i !== 0) return rowRes
@@ -1533,6 +1590,7 @@ export default function MTR() {
     }
 
     let error: SupabaseErrorLike | null = null
+    let mtrIdGravada = editingId ?? null
 
     if (editingId) {
       const response = await supabase.from('mtrs').update(payload).eq('id', editingId)
@@ -1552,13 +1610,19 @@ export default function MTR() {
         }
       }
     } else {
-      const response = await supabase.from('mtrs').insert([payload])
+      const response = await supabase.from('mtrs').insert([payload]).select('id').single()
       error = response.error
+      if (!error && response.data?.id) {
+        mtrIdGravada = String(response.data.id)
+      }
       if (error && errorIndicaColunaInexistente(error, 'detalhes')) {
         const { detalhes, ...payloadSemDetalhes } = payload
         void detalhes
-        const retry = await supabase.from('mtrs').insert([payloadSemDetalhes])
+        const retry = await supabase.from('mtrs').insert([payloadSemDetalhes]).select('id').single()
         error = retry.error
+        if (!error && retry.data?.id) {
+          mtrIdGravada = String(retry.data.id)
+        }
         if (!error) {
           await rgAlert({
             title: 'MTR',
@@ -1582,10 +1646,11 @@ export default function MTR() {
 
     await updateProgramacaoStatusAfterMTR(form.programacao_id)
     await updateColetasStatusAfterMTR(form.programacao_id)
-    await sincronizarColetasProgramacaoDesdeMtr(form.programacao_id, {
-      tipo_residuo: form.tipo_residuo,
-      quantidade: form.quantidade,
-    })
+    if (mtrIdGravada) {
+      await sincronizarMtrParaColetasVinculadas(mtrIdGravada, {
+        programacaoId: form.programacao_id,
+      })
+    }
 
     setSaving(false)
     await rgAlert({
@@ -3722,15 +3787,16 @@ export default function MTR() {
                       <input
                         value={form.cidade}
                         onChange={(e) => {
-                          const v = e.target.value
+                          const parsed = parseCidadeUfCampoTopo(e.target.value)
                           setForm((prev) => ({
                             ...prev,
-                            cidade: v,
+                            cidade: parsed.combinado,
                             detalhes: {
                               ...(prev.detalhes ?? detalhesVazios()),
                               gerador: {
                                 ...(prev.detalhes?.gerador ?? detalhesVazios().gerador),
-                                cidade: v,
+                                cidade: parsed.cidade,
+                                estado: parsed.estado || prev.detalhes?.gerador?.estado || '',
                               },
                             },
                           }))
@@ -3765,7 +3831,7 @@ export default function MTR() {
                     </div>
 
                     <div className="field">
-                      <label>Quantidade (opcional)</label>
+                      <label>Quantidade (opcional, kg)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -3788,7 +3854,6 @@ export default function MTR() {
                       >
                         <option value="">—</option>
                         <option value="kg">kg</option>
-                        <option value="ton">ton</option>
                         <option value="m³">m³</option>
                         <option value="un">un</option>
                       </select>

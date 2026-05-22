@@ -44,13 +44,28 @@ export function unidadeMedidaEhTonelada(unidade: string | null | undefined): boo
   return u === 'ton' || u === 'tonelada' || u === 't' || u === 'ton.'
 }
 
-/** Converte contrato legado em tonelada para kg (valor R$/ton → R$/kg). */
+/** Limite: abaixo disso, faturamento mínimo legado com unidade ton era em toneladas (não kg). */
+const FATURAMENTO_MINIMO_LEGADO_TON_MAX = 100
+
+/** Converte contrato legado em tonelada para kg (valor R$/ton → R$/kg; mínimo em ton → kg na MTR). */
 export function normalizarResiduoContratoParaKg(item: ResiduoContratoItem): ResiduoContratoItem {
   const unidadeRaw = item.unidade_medida.trim()
+  const minimoNum = parseNumeroPeso(item.faturamento_minimo)
+  let faturamentoMinimo = item.faturamento_minimo
+  if (
+    unidadeMedidaEhTonelada(unidadeRaw) &&
+    minimoNum != null &&
+    minimoNum > 0 &&
+    minimoNum < FATURAMENTO_MINIMO_LEGADO_TON_MAX
+  ) {
+    faturamentoMinimo = pesoParaCampo(minimoNum * 1000)
+  }
+
   if (!unidadeMedidaEhTonelada(unidadeRaw)) {
     return {
       ...item,
       unidade_medida: unidadeRaw || 'kg',
+      faturamento_minimo: faturamentoMinimo,
     }
   }
   const valorNum = parseNumeroMoeda(item.valor)
@@ -61,6 +76,7 @@ export function normalizarResiduoContratoParaKg(item: ResiduoContratoItem): Resi
   return {
     ...item,
     unidade_medida: 'kg',
+    faturamento_minimo: faturamentoMinimo,
     valor:
       valorKg != null
         ? valorKg.toLocaleString('pt-BR', {
@@ -69,6 +85,25 @@ export function normalizarResiduoContratoParaKg(item: ResiduoContratoItem): Resi
           })
         : item.valor,
   }
+}
+
+/** Formata peso em kg para campos da MTR (ex.: 10000 → 10.000). */
+export function formatarPesoKgCampoContrato(valor: string): string {
+  const n = parseNumeroPeso(valor)
+  if (n == null || n <= 0) return valor.trim()
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+}
+
+/** Quantidade opcional da MTR gravada em ton → kg para exibição e detalhes. */
+export function quantidadeMtrLegadaParaKg(
+  quantidade: number | null | undefined,
+  unidade: string | null | undefined
+): number | null {
+  if (quantidade == null || Number.isNaN(Number(quantidade))) return null
+  const q = Number(quantidade)
+  if (q <= 0) return null
+  if (unidadeMedidaEhTonelada(unidade)) return q * 1000
+  return q
 }
 
 export type VeiculoContratoItem = {
@@ -103,6 +138,17 @@ export const equipamentoContratoInicial = (): EquipamentoContratoItem => ({
   com_custo: false,
   valor: '',
 })
+
+/** Na MTR só se registam tipo/descrição — valores ficam no cadastro do cliente / faturamento. */
+export function veiculosContratoSemValoresMtr(itens: VeiculoContratoItem[]): VeiculoContratoItem[] {
+  return itens.map((v) => ({ ...v, valor: '', sem_custo: true }))
+}
+
+export function equipamentosContratoSemValoresMtr(
+  itens: EquipamentoContratoItem[]
+): EquipamentoContratoItem[] {
+  return itens.map((e) => ({ ...e, valor: '', com_custo: false }))
+}
 
 export const residuoContratoInicial = (): ResiduoContratoItem => ({
   tipo_residuo: '',

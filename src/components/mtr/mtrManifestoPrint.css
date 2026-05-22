@@ -249,6 +249,11 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
   .document-shell.mtr-modelo-pdf-shell {
     border: none !important;
     border-radius: 0 !important;
@@ -259,27 +264,67 @@
     padding: 0 !important;
   }
 
-  .mtr-excel {
+  .mtr-excel.mtr-excel--pagina-unica {
     max-width: 100% !important;
-    font-size: 9.5px !important;
-    line-height: 1.2 !important;
+    width: 100% !important;
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .mtr-excel--pagina-unica .mtr-excel__table {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .mtr-excel--pagina-unica .mtr-excel__doc-footer {
+    page-break-before: avoid !important;
   }
 
   .mtr-excel__logo img {
-    height: 32px !important;
+    height: 30px !important;
   }
 
   .mtr-excel__titlebar {
-    font-size: 10px !important;
-    padding: 4px 6px !important;
+    font-size: 9.5px !important;
+    padding: 3px 6px !important;
+  }
+
+  .mtr-excel__sec {
+    padding: 3px 6px !important;
+    font-size: 9px !important;
   }
 
   .mtr-excel__table td,
   .mtr-excel__inner td {
+    padding: 2px 4px !important;
+    font-size: 8.5px !important;
+  }
+
+  .mtr-excel__k {
+    font-size: 8.5px !important;
+  }
+
+  .mtr-excel__legal td {
+    font-size: 8.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .mtr-excel__banner-dark td,
+  .mtr-excel__banner-light td {
     padding: 3px 5px !important;
+    font-size: 8.5px !important;
+  }
+
+  .mtr-excel__sign-table .mtr-excel__sign-blank {
+    min-height: 22px !important;
   }
 
   .mtr-excel__doc-footer {
-    font-size: 8px !important;
+    font-size: 7.5px !important;
+    margin-top: 4px !important;
   }
 }

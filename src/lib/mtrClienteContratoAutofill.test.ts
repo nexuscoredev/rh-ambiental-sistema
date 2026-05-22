@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { normalizarResiduoContratoParaKg } from './clienteContratoCadastro'
 import {
   dividirTextoMultiResiduo,
   listaResiduosParaDocumentoMtr,
@@ -24,6 +25,19 @@ describe('mtrClienteContratoAutofill', () => {
     expect(residuosContratoParaLinhasPesagem(c.residuos)).toHaveLength(2)
     expect(residuosContratoParaListaDetalhesMtr(c.residuos, 'BAU')).toHaveLength(2)
     expect(c.veiculos[0].tipo_veiculo).toBe('BAU')
+  })
+
+  it('formata quantidade aproximada em kg (10 t legado → 10.000)', () => {
+    const residuo = normalizarResiduoContratoParaKg({
+      tipo_residuo: 'A',
+      classificacao: '',
+      unidade_medida: 'ton',
+      valor: '',
+      frequencia_coleta: '',
+      faturamento_minimo: '10',
+    })
+    const lista = residuosContratoParaListaDetalhesMtr([residuo], '')
+    expect(lista[0]?.quantidade_aproximada).toBe('10.000')
   })
 
   it('aceita resíduo só com classificação (sem tipo)', () => {

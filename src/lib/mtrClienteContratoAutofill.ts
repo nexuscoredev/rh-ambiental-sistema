@@ -7,6 +7,9 @@ import {
   parseVeiculosContratoJsonb,
   rotuloEquipamentosContratoResumo,
   rotuloVeiculosContratoResumo,
+  equipamentosContratoSemValoresMtr,
+  veiculosContratoSemValoresMtr,
+  formatarPesoKgCampoContrato,
   type EquipamentoContratoItem,
   type ResiduoContratoItem,
   type VeiculoContratoItem,
@@ -66,8 +69,8 @@ export function parseContratoClienteMtr(row: ClienteRowContratoMtr): MtrContrato
       : '—'
 
   return {
-    veiculos,
-    equipamentos,
+    veiculos: veiculosContratoSemValoresMtr(veiculos),
+    equipamentos: equipamentosContratoSemValoresMtr(equipamentos),
     residuos,
     rotuloVeiculos: rotuloVeiculosContratoResumo(row.veiculos_contrato, row.descricao_veiculo),
     rotuloEquipamentos: rotuloEquipamentosContratoResumo(row.equipamentos_contrato, row.equipamentos),
@@ -128,7 +131,7 @@ export function residuosContratoParaListaDetalhesMtr(
   const validos = residuos.filter(residuoContratoTemConteudo)
   if (validos.length === 0) return [residuoDetalhesVazio()]
   return validos.map((r, index) => {
-    const qtd = r.faturamento_minimo.trim()
+    const qtd = formatarPesoKgCampoContrato(r.faturamento_minimo.trim())
     const classe = r.classificacao.trim()
     const tipo = r.tipo_residuo.trim()
     return {
@@ -268,7 +271,7 @@ export function residuoDetalhesFromContrato(
       acondicionamento: acondicionamentoExtra.trim() || fallback.acondicionamento,
     }
   }
-  const qtd = primeiro.faturamento_minimo.trim()
+  const qtd = formatarPesoKgCampoContrato(primeiro.faturamento_minimo.trim())
   const tipo = primeiro.tipo_residuo.trim()
   const classe = primeiro.classificacao.trim()
   return {

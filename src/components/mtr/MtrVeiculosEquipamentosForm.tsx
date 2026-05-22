@@ -2,7 +2,9 @@ import type { CSSProperties } from 'react'
 import {
   asTextoFormulario,
   equipamentoContratoInicial,
+  equipamentosContratoSemValoresMtr,
   veiculoContratoInicial,
+  veiculosContratoSemValoresMtr,
   type EquipamentoContratoItem,
   type VeiculoContratoItem,
 } from '../../lib/clienteContratoCadastro'
@@ -71,26 +73,16 @@ export function MtrVeiculosEquipamentosForm({
   const listaEquip = equipamentos.length > 0 ? equipamentos : [equipamentoContratoInicial()]
 
   function emitir(v: VeiculoContratoItem[], e: EquipamentoContratoItem[]) {
-    onChange(v, e)
+    onChange(veiculosContratoSemValoresMtr(v), equipamentosContratoSemValoresMtr(e))
   }
 
-  function patchVeiculo(index: number, campo: keyof VeiculoContratoItem, valor: string | boolean) {
-    const next = listaVeiculos.map((row, i) => {
-      if (i !== index) return row
-      const atual = { ...row, [campo]: valor }
-      if (campo === 'sem_custo' && valor === true) atual.valor = ''
-      return atual
-    })
+  function patchVeiculo(index: number, campo: 'tipo_veiculo', valor: string) {
+    const next = listaVeiculos.map((row, i) => (i === index ? { ...row, [campo]: valor } : row))
     emitir(next, listaEquip)
   }
 
-  function patchEquipamento(index: number, campo: keyof EquipamentoContratoItem, valor: string | boolean) {
-    const next = listaEquip.map((row, i) => {
-      if (i !== index) return row
-      const atual = { ...row, [campo]: valor }
-      if (campo === 'com_custo' && valor === false) atual.valor = ''
-      return atual
-    })
+  function patchEquipamento(index: number, campo: 'descricao', valor: string) {
+    const next = listaEquip.map((row, i) => (i === index ? { ...row, [campo]: valor } : row))
     emitir(listaVeiculos, next)
   }
 
@@ -109,7 +101,7 @@ export function MtrVeiculosEquipamentosForm({
       </div>
       <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
         {listaVeiculos.some((v) => v.tipo_veiculo.trim()) || listaEquip.some((e) => e.descricao.trim())
-          ? 'Dados do cadastro do cliente — edite aqui só para esta MTR (não altera o cadastro).'
+          ? 'Dados do cadastro do cliente — edite aqui só para esta MTR (não altera o cadastro). Valores de frete ficam no faturamento.'
           : 'Selecione a programação para carregar veículos e equipamentos do cadastro do cliente.'}
       </p>
 
@@ -166,54 +158,15 @@ export function MtrVeiculosEquipamentosForm({
                   Remover
                 </button>
               </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr minmax(120px, 160px) auto',
-                  gap: '12px',
-                  alignItems: 'end',
-                }}
-              >
-                <div>
-                  <label style={labelCampo}>Tipo de veículo</label>
-                  <input
-                    style={input}
-                    value={asTextoFormulario(veiculo.tipo_veiculo)}
-                    disabled={disabled}
-                    placeholder="Ex.: truck, carreta, van…"
-                    onChange={(e) => patchVeiculo(index, 'tipo_veiculo', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={labelCampo}>Valor (R$)</label>
-                  <input
-                    style={{ ...input, opacity: veiculo.sem_custo ? 0.55 : 1 }}
-                    value={veiculo.valor}
-                    disabled={disabled || veiculo.sem_custo}
-                    placeholder="0,00"
-                    onChange={(e) => patchVeiculo(index, 'valor', e.target.value)}
-                  />
-                </div>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#334155',
-                    paddingBottom: '10px',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={veiculo.sem_custo}
-                    disabled={disabled}
-                    onChange={(e) => patchVeiculo(index, 'sem_custo', e.target.checked)}
-                  />
-                  Sem custo
-                </label>
+              <div>
+                <label style={labelCampo}>Tipo de veículo</label>
+                <input
+                  style={input}
+                  value={asTextoFormulario(veiculo.tipo_veiculo)}
+                  disabled={disabled}
+                  placeholder="Ex.: truck, carreta, van…"
+                  onChange={(e) => patchVeiculo(index, 'tipo_veiculo', e.target.value)}
+                />
               </div>
             </div>
           ))}
@@ -273,54 +226,15 @@ export function MtrVeiculosEquipamentosForm({
                   Remover
                 </button>
               </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr minmax(120px, 160px) auto',
-                  gap: '12px',
-                  alignItems: 'end',
-                }}
-              >
-                <div>
-                  <label style={labelCampo}>Equipamento</label>
-                  <input
-                    style={input}
-                    value={asTextoFormulario(equip.descricao)}
-                    disabled={disabled}
-                    placeholder="Ex.: caçamba 3 m³, lona…"
-                    onChange={(e) => patchEquipamento(index, 'descricao', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={labelCampo}>Valor (R$)</label>
-                  <input
-                    style={{ ...input, opacity: equip.com_custo ? 1 : 0.55 }}
-                    value={asTextoFormulario(equip.valor)}
-                    disabled={disabled || !equip.com_custo}
-                    placeholder="0,00"
-                    onChange={(e) => patchEquipamento(index, 'valor', e.target.value)}
-                  />
-                </div>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#334155',
-                    paddingBottom: '10px',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={equip.com_custo}
-                    disabled={disabled}
-                    onChange={(e) => patchEquipamento(index, 'com_custo', e.target.checked)}
-                  />
-                  Com custo
-                </label>
+              <div>
+                <label style={labelCampo}>Equipamento</label>
+                <input
+                  style={input}
+                  value={asTextoFormulario(equip.descricao)}
+                  disabled={disabled}
+                  placeholder="Ex.: caçamba 3 m³, lona…"
+                  onChange={(e) => patchEquipamento(index, 'descricao', e.target.value)}
+                />
               </div>
             </div>
           ))}

@@ -1,10 +1,6 @@
 import type { ReactNode } from 'react'
 import { BRAND_LOGO_MARK } from '../../lib/brandLogo'
 import {
-  rotuloEquipamentosContratoResumo,
-  rotuloVeiculosContratoResumo,
-} from '../../lib/clienteContratoCadastro'
-import {
   listaResiduosParaDocumentoMtr,
   type MtrResiduoDetalhesCampos,
 } from '../../lib/mtrClienteContratoAutofill'
@@ -140,24 +136,13 @@ export function MtrManifestoPrint({
   const telDisc = textoDiscrepancia(d)
   const descAdic = descricoesAdicionaisExibir(d)
   const instrMan = instrucoesManuseioExibir(d)
-  const ocultarValoresManifesto = { ocultarValores: true as const }
-  const rotuloVeiculos = rotuloVeiculosContratoResumo(
-    d.contrato_veiculos,
-    null,
-    ocultarValoresManifesto
-  )
-  const rotuloEquipamentos = rotuloEquipamentosContratoResumo(
-    d.contrato_equipamentos,
-    null,
-    ocultarValoresManifesto
-  )
 
   function celulaResiduoManifesto(val: string): string {
     return mtrTextoCelula(sanitizarTextoManifestoMtr(val))
   }
 
   return (
-    <div className="mtr-excel">
+    <div className="mtr-excel mtr-excel--pagina-unica">
       <div className="mtr-excel__top">
         <div className="mtr-excel__logo">
           <img src={BRAND_LOGO_MARK} alt="RG Ambiental" />
@@ -212,24 +197,6 @@ export function MtrManifestoPrint({
             </td>
             <td className="mtr-excel__k">Telefone:</td>
             <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.telefone)}</td>
-          </tr>
-
-          <tr>
-            <td className="mtr-excel__sec" colSpan={6}>
-              1B. VEÍCULOS E EQUIPAMENTOS (CONTRATO):
-            </td>
-          </tr>
-          <tr>
-            <td className="mtr-excel__k">Veículos:</td>
-            <td className="mtr-excel__v" colSpan={5}>
-              {mtrTextoCelula(rotuloVeiculos)}
-            </td>
-          </tr>
-          <tr>
-            <td className="mtr-excel__k">Equipamentos:</td>
-            <td className="mtr-excel__v" colSpan={5}>
-              {mtrTextoCelula(rotuloEquipamentos)}
-            </td>
           </tr>
 
           <tr>
