@@ -346,6 +346,23 @@ function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string }
   )
 }
 
+/** RPC antiga no Supabase pode falhar na verificação pós-gravação — tentar UPDATE direto na coleta. */
+export function rpcPesoConferenciaDeveTentarGravacaoDireta(message: string): boolean {
+  const m = message.toLowerCase()
+  if (m.includes('sem permissão') || m.includes('sem permissao')) return false
+  if (m.includes('coleta inválida') || m.includes('coleta não encontrada') || m.includes('coleta nao encontrada')) {
+    return false
+  }
+  return (
+    m.includes('persistido') ||
+    m.includes('rls') ||
+    m.includes('permiss') ||
+    m.includes('não confere') ||
+    m.includes('nao confere') ||
+    m.includes('resposta inválida')
+  )
+}
+
 export const MENSAGEM_SQL_PESO_CONFERENCIA =
   'A função de editar peso ainda não está no Supabase. Execute: npm run db:apply:peso-conferencia (ou o ficheiro supabase/sql_editor_peso_conferencia_ticket.sql no SQL Editor) e tente de novo.'
 
@@ -546,7 +563,11 @@ async function gravarPesoConferenciaInterno(
   const viaRpc = await gravarPesoViaRpcConferencia(id, peso, itens)
   if (viaRpc.ok) return finalizarSeGravou(viaRpc)
 
-  if (!viaRpc.rpcIndisponivel) {
+  const tentarDireto =
+    viaRpc.rpcIndisponivel === true ||
+    (!viaRpc.ok && rpcPesoConferenciaDeveTentarGravacaoDireta(viaRpc.message))
+
+  if (!tentarDireto) {
     return { ok: false, message: viaRpc.message }
   }
 

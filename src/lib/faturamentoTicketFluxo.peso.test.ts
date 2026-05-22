@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { patchResiduosItensPesoLiquido, pesoGravadoConfere } from './faturamentoTicketFluxo'
+import {
+  patchResiduosItensPesoLiquido,
+  pesoGravadoConfere,
+  rpcPesoConferenciaDeveTentarGravacaoDireta,
+} from './faturamentoTicketFluxo'
 import { parsePesoLiquidoKgInput } from './pesoKgInput'
 
 describe('peso conferência ticket', () => {
@@ -10,6 +14,17 @@ describe('peso conferência ticket', () => {
   it('pesoGravadoConfere tolera arredondamento', () => {
     expect(pesoGravadoConfere({ peso_liquido: 21.005 }, 21)).toBe(true)
     expect(pesoGravadoConfere({ peso_liquido: 20 }, 21)).toBe(false)
+  })
+
+  it('rpcPesoConferenciaDeveTentarGravacaoDireta na mensagem de persistência antiga', () => {
+    expect(
+      rpcPesoConferenciaDeveTentarGravacaoDireta(
+        'O peso não foi persistido na coleta (verifique RLS ou permissões).'
+      )
+    ).toBe(true)
+    expect(rpcPesoConferenciaDeveTentarGravacaoDireta('Sem permissão para alterar o peso')).toBe(
+      false
+    )
   })
 
   it('patchResiduosItensPesoLiquido alinha bruto com tara + líquido manual', () => {
