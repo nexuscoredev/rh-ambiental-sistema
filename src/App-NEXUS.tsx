@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { NEXUS_CARGOS_POR_ROTA } from './lib/nexusCargosPorRota'
 import { usuarioPodeAcessarRota } from './lib/paginasSistema'
+import { carregarPerfilUsuario } from './lib/carregarPerfilUsuario'
 import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
@@ -243,16 +244,12 @@ function withTimeout<T>(promise: Promise<T>, ms: number, rotulo: string): Promis
   })
 }
 
-function erroColunaPaginasPermitidas(msg: string): boolean {
-  const m = msg.toLowerCase()
-  return m.includes('paginas_permitidas') && (m.includes('column') || m.includes('schema cache'))
-}
-
 function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [usuario, setUsuario] = useState<UsuarioPerfilApp | null>(null)
   const [carregandoUsuario, setCarregandoUsuario] = useState(true)
   const [erroPerfil, setErroPerfil] = useState('')
+  const [avisoPerfil, setAvisoPerfil] = useState('')
 
   /** Perfil já exibido — evita overlay em refresh de token (não dispara nova carga). */
   const perfilJaExibidoParaUserIdRef = useRef<string | null>(null)
@@ -304,6 +301,7 @@ function App() {
         if (!cancelado) {
           perfilJaExibidoParaUserIdRef.current = null
           setErroPerfil('')
+          setAvisoPerfil('')
           setUsuario(null)
           setCarregandoUsuario(false)
         }
@@ -315,69 +313,28 @@ function App() {
       if (!cancelado && !atualizacaoSilenciosa) {
         setCarregandoUsuario(true)
         setErroPerfil('')
+        setAvisoPerfil('')
       }
 
       try {
-        const selectComPaginas =
-          'id, nome, email, cargo, status, foto_url, paginas_permitidas'
-        const selectSemPaginas = 'id, nome, email, cargo, status, foto_url'
-
-        const buscarPerfil = async (select: string) => {
-          const res = await supabase
-            .from('usuarios')
-            .select(select)
-            .eq('id', sessionUserId)
-            .maybeSingle()
-          return res
-        }
-
-        let resultado = await withTimeout(
-          buscarPerfil(selectComPaginas),
-          PERFIL_CARGA_TIMEOUT_MS,
-          'carregar perfil'
-        )
+        const resultado = await carregarPerfilUsuario(supabase, sessionUserId, session)
 
         if (cancelado) return
 
-        if (resultado.error && erroColunaPaginasPermitidas(resultado.error.message)) {
-          resultado = await withTimeout(
-            buscarPerfil(selectSemPaginas),
-            PERFIL_CARGA_TIMEOUT_MS,
-            'carregar perfil'
-          )
-          if (cancelado) return
-        }
-
-        const { data, error } = resultado
-
-        if (error) {
-          console.error('Erro ao carregar perfil do usuário:', error.message)
-          if (!cancelado) {
-            perfilJaExibidoParaUserIdRef.current = null
-            setUsuario(null)
-            setErroPerfil(
-              error.message ||
-                'Não foi possível ler o perfil (tabela usuarios / permissões no Supabase).'
-            )
-          }
-          return
-        }
-
-        if (!data) {
-          if (!cancelado) {
-            perfilJaExibidoParaUserIdRef.current = null
-            setUsuario(null)
-            setErroPerfil(
-              'Utilizador autenticado sem registo em «usuarios». Peça a um administrador para criar o acesso.'
-            )
-          }
-          return
-        }
-
-        if (!cancelado) {
-          setUsuario(data as unknown as UsuarioPerfilApp)
+        if (resultado.usuario) {
+          setUsuario(resultado.usuario)
           perfilJaExibidoParaUserIdRef.current = sessionUserId
           setErroPerfil('')
+          setAvisoPerfil(
+            resultado.modo === 'sessao'
+              ? 'Perfil carregado em modo reduzido (ligação lenta ao Supabase). Execute sql_editor_usuarios_perfil_login.sql no projeto se o menu estiver incompleto.'
+              : ''
+          )
+        } else {
+          perfilJaExibidoParaUserIdRef.current = null
+          setUsuario(null)
+          setAvisoPerfil('')
+          setErroPerfil(resultado.erro || 'Não foi possível carregar o perfil.')
         }
       } catch (e) {
         if (cancelado) return
@@ -385,6 +342,7 @@ function App() {
         console.error('Falha ao carregar perfil:', msg)
         perfilJaExibidoParaUserIdRef.current = null
         setUsuario(null)
+        setAvisoPerfil('')
         setErroPerfil(msg)
       } finally {
         if (!cancelado) {
@@ -423,6 +381,26 @@ function App() {
     <PerfilUsuarioProvider value={{ usuario, carregandoUsuario }}>
       <BrowserRouter>
         <PwaPremiumShell />
+        {avisoPerfil.trim() ? (
+          <div
+            role="status"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 9999,
+              background: '#fef3c7',
+              color: '#92400e',
+              padding: '10px 16px',
+              fontSize: 14,
+              textAlign: 'center',
+              borderBottom: '1px solid #fcd34d',
+            }}
+          >
+            {avisoPerfil}
+          </div>
+        ) : null}
         <ChatFloatProvider>
           <PresencaAoVivoProvider>
             <Suspense fallback={routeSuspenseFallback}>
