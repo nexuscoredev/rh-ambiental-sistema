@@ -110,6 +110,7 @@ export default function FaturamentoOperacional() {
     ticketAprovacaoAtivo,
     esteiraMedicaoAtiva,
     recarregarTudo,
+    recarregarAposEmitir,
     carregarHistorico,
     qtdEmitidasCartao,
     valorEmitidasCartao,
@@ -257,6 +258,9 @@ export default function FaturamentoOperacional() {
     const msg = mensagemConfirmacaoEmitirEsteira(coletaId, fila)
     if (!window.confirm(msg)) return
 
+    const grupoEmitir = resolverGrupoFaturamentoNaFila(coletaId, fila)
+    const idsEmitir = grupoEmitir.map((c) => c.coleta_id)
+
     setEmitindoFaturamentoId(coletaId)
     const res = await emitirFaturamentoPelaEsteira(coletaId, fila)
     setEmitindoFaturamentoId(null)
@@ -265,7 +269,12 @@ export default function FaturamentoOperacional() {
       window.alert(res.message)
       return
     }
-    await recarregarTudo()
+
+    await recarregarAposEmitir(idsEmitir)
+
+    requestAnimationFrame(() => {
+      document.getElementById('fila-nf-boleto')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   function abrirModalAjusteValores(row: FaturamentoResumoViewRow, grupo?: FaturamentoResumoViewRow[]) {
@@ -519,7 +528,15 @@ export default function FaturamentoOperacional() {
         podeEncerrarTicketDefinitivo={podeEncerrarTicket}
         usuarioCargo={cargo}
         onClose={fecharModal}
-        onGravado={() => void recarregarTudo()}
+        onGravado={() => {
+          const ids =
+            modalGrupo.length > 0
+              ? modalGrupo.map((c) => c.coleta_id)
+              : modalColetaId?.trim()
+                ? [modalColetaId.trim()]
+                : []
+          void recarregarAposEmitir(ids)
+        }}
       />
     </MainLayout>
   )

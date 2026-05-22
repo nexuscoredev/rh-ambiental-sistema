@@ -78,11 +78,40 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     setLinhasHistorico(data)
   }, [])
 
+  const incorporarLinhasNaVista = useCallback((novas: FaturamentoResumoViewRow[]) => {
+    if (novas.length === 0) return
+    setLinhasHistorico((prev) => {
+      const map = new Map((prev ?? []).map((r) => [r.coleta_id, r]))
+      for (const r of novas) map.set(r.coleta_id, r)
+      return [...map.values()]
+    })
+    setLinhasExtras((prev) => {
+      const map = new Map(prev.map((r) => [r.coleta_id, r]))
+      for (const r of novas) {
+        if (!map.has(r.coleta_id)) map.set(r.coleta_id, r)
+      }
+      return [...map.values()]
+    })
+  }, [])
+
   const recarregarTudo = useCallback(async () => {
     await Promise.all([carregarOperacional(), carregarHistorico()])
     const { count, error } = await fetchContagemHistoricoFaturamentoEmitido(supabase)
     if (!error) setContagemHistorico(count)
   }, [carregarOperacional, carregarHistorico])
+
+  /** Após «Faturar»: traz a coleta emitida para a vista antes do reload completo (secção NF/boleto). */
+  const recarregarAposEmitir = useCallback(
+    async (coletaIds: string[]) => {
+      const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
+      if (uniq.length > 0) {
+        const { data, error } = await fetchVwFaturamentoResumoPorColetaIds(supabase, uniq)
+        if (!error && data.length > 0) incorporarLinhasNaVista(data)
+      }
+      await recarregarTudo()
+    },
+    [incorporarLinhasNaVista, recarregarTudo]
+  )
 
   useEffect(() => {
     let cancelado = false
@@ -165,6 +194,7 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
     carregarOperacional,
     carregarHistorico,
     recarregarTudo,
+    recarregarAposEmitir,
     qtdEmitidasCartao,
     valorEmitidasCartao,
     diasJanela,

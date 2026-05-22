@@ -109,18 +109,17 @@ export function FaturamentoFilaPosFaturamento({
     })
   }, [grupos])
 
-  if (!historicoCarregado || carregando) {
-    return (
-      <section style={card} aria-busy="true">
-        <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
-          7. Mala Direta — Registo de NF / boleto
-        </h2>
-        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>A carregar coletas faturadas…</p>
-      </section>
-    )
-  }
-
   if (pendentes.length === 0) {
+    if (!historicoCarregado || carregando) {
+      return (
+        <section id="fila-nf-boleto" style={card} aria-busy="true">
+          <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+            7. Mala Direta — Registo de NF / boleto
+          </h2>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>A carregar coletas faturadas…</p>
+        </section>
+      )
+    }
     return null
   }
 
@@ -167,18 +166,22 @@ export function FaturamentoFilaPosFaturamento({
 
     const tickets = rotuloTicketsGrupo(grupo)
     const plural = grupo.linhas.length > 1
+    const textoSucesso = plural
+      ? `Processo finalizado.\n\nNF ${numeroNf} registada para os tickets ${tickets} (${grupo.linhas.length} coletas). Todas passaram para Finalizado e estão em Financeiro → Contas a Receber.`
+      : `Processo finalizado.\n\nNF ${numeroNf} registada para a coleta ${tickets}. A cobrança está em Financeiro → Contas a Receber.`
     setMensagem(
       plural
-        ? `NF ${numeroNf} registada para os tickets ${tickets} (${grupo.linhas.length} coletas). Contas a Receber atualizadas.`
-        : `Coleta ${tickets}: NF registada. A cobrança está em Financeiro → Contas a Receber.`
+        ? `Processo finalizado — NF ${numeroNf} (${grupo.linhas.length} coletas) em Contas a Receber.`
+        : `Processo finalizado — NF ${numeroNf} em Contas a Receber.`
     )
+    window.alert(textoSucesso)
     onAtualizar()
   }
 
   const busy = salvandoChave !== null
 
   return (
-    <div style={card}>
+    <div id="fila-nf-boleto" style={card}>
       <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
         7. Mala Direta — Registo de NF / boleto
       </h2>
