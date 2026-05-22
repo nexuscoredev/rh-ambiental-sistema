@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pesoGravadoConfere } from './faturamentoTicketFluxo'
+import { patchResiduosItensPesoLiquido, pesoGravadoConfere } from './faturamentoTicketFluxo'
 import { parsePesoLiquidoKgInput } from './pesoKgInput'
 
 describe('peso conferência ticket', () => {
@@ -10,5 +10,24 @@ describe('peso conferência ticket', () => {
   it('pesoGravadoConfere tolera arredondamento', () => {
     expect(pesoGravadoConfere({ peso_liquido: 21.005 }, 21)).toBe(true)
     expect(pesoGravadoConfere({ peso_liquido: 20 }, 21)).toBe(false)
+  })
+
+  it('patchResiduosItensPesoLiquido alinha bruto com tara + líquido manual', () => {
+    const itens = patchResiduosItensPesoLiquido(
+      [
+        {
+          catalogo_id: null,
+          texto: 'Resíduo A',
+          peso_tara: 3000,
+          peso_bruto: 5000,
+          peso_liquido: 2000,
+        },
+      ],
+      4500
+    )
+    expect(itens).toHaveLength(1)
+    expect(itens![0].peso_liquido).toBe(4500)
+    expect(itens![0].peso_bruto).toBe(7500)
+    expect(itens![0].peso_tara).toBe(3000)
   })
 })

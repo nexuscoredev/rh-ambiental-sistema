@@ -4,6 +4,7 @@ import { sincronizarAposAlteracaoOperacionalColeta } from './faturamentoOperacio
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { indiceEtapaFluxo, normalizarEtapaColeta } from './fluxoEtapas'
 import {
+  alinharLinhaPesoLiquidoManual,
   isErroColunaResiduosItens,
   parseResiduosFromRow,
   serializarResiduosItensDb,
@@ -256,7 +257,7 @@ export async function devolverTicketParaFilaConferenciaColeta(
   return { ok: true, coletasAfetadas: grupo.ids.length }
 }
 
-function patchResiduosItensPesoLiquido(
+export function patchResiduosItensPesoLiquido(
   raw: unknown,
   pesoLiquido: number
 ): ReturnType<typeof serializarResiduosItensDb> | null {
@@ -264,21 +265,46 @@ function patchResiduosItensPesoLiquido(
   const comTexto = linhas.filter((l) => l.texto.trim())
   if (comTexto.length === 0) return null
 
-  const pesoStr = String(pesoLiquido)
   if (comTexto.length === 1) {
     const alvo = comTexto[0]
     const idx = linhas.findIndex((l) => l === alvo)
     const atualizadas = linhas.map((l, i) =>
-      i === idx ? { ...l, peso_liquido: pesoStr } : l
+      i === idx ? alinharLinhaPesoLiquidoManual(l, pesoLiquido) : l
     )
     return serializarResiduosItensDb(atualizadas)
   }
 
   const idxPrincipal = linhas.findIndex((l) => l.texto.trim())
   const atualizadas = linhas.map((l, i) =>
-    i === idxPrincipal ? { ...l, peso_liquido: pesoStr } : l
+    i === idxPrincipal ? alinharLinhaPesoLiquidoManual(l, pesoLiquido) : l
   )
   return serializarResiduosItensDb(atualizadas)
+}
+
+function montarPatchPesoColeta(
+  peso: number,
+  pesoTara: number | null | undefined,
+  itens: ReturnType<typeof serializarResiduosItensDb> | null
+): {
+  peso_liquido: number
+  peso_bruto?: number
+  peso_tara?: number
+  residuos_itens?: ReturnType<typeof serializarResiduosItensDb>
+} {
+  const patch: {
+    peso_liquido: number
+    peso_bruto?: number
+    peso_tara?: number
+    residuos_itens?: ReturnType<typeof serializarResiduosItensDb>
+  } = { peso_liquido: peso }
+  const tara =
+    pesoTara != null && Number.isFinite(Number(pesoTara)) ? Number(pesoTara) : null
+  if (tara != null) {
+    patch.peso_tara = tara
+    patch.peso_bruto = tara + peso
+  }
+  if (itens) patch.residuos_itens = itens
+  return patch
 }
 
 function normalizeRpcPesoPayload(data: unknown): Record<string, unknown> | null {
@@ -334,25 +360,25 @@ export function pesoGravadoConfere(
 async function gravarPesoColetaDireto(
   id: string,
   peso: number,
-  itens: ReturnType<typeof serializarResiduosItensDb> | null
+  itens: ReturnType<typeof serializarResiduosItensDb> | null,
+  pesoTara: number | null | undefined
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const patchColeta: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
-    { peso_liquido: peso }
-  if (itens) patchColeta.residuos_itens = itens
+  const patchColeta = montarPatchPesoColeta(peso, pesoTara, itens)
 
   let { data: coletaAtualizada, error: errColeta } = await supabase
     .from('coletas')
     .update(patchColeta)
     .eq('id', id)
-    .select('peso_liquido')
+    .select('peso_liquido, peso_bruto')
     .maybeSingle()
 
   if (errColeta && itens && isErroColunaResiduosItens(errColeta)) {
+    const retryPatch = montarPatchPesoColeta(peso, pesoTara, null)
     const retry = await supabase
       .from('coletas')
-      .update({ peso_liquido: peso })
+      .update(retryPatch)
       .eq('id', id)
-      .select('peso_liquido')
+      .select('peso_liquido, peso_bruto')
       .maybeSingle()
     coletaAtualizada = retry.data
     errColeta = retry.error
@@ -369,14 +395,15 @@ async function gravarPesoColetaDireto(
     }
   }
 
-  const patchMassa: { peso_liquido: number; residuos_itens?: ReturnType<typeof serializarResiduosItensDb> } =
-    { peso_liquido: peso }
-  if (itens) patchMassa.residuos_itens = itens
+  const patchMassa = montarPatchPesoColeta(peso, pesoTara, itens)
 
   let { error: errMassa } = await supabase.from('controle_massa').update(patchMassa).eq('coleta_id', id)
 
   if (errMassa && itens && isErroColunaResiduosItens(errMassa)) {
-    const retry = await supabase.from('controle_massa').update({ peso_liquido: peso }).eq('coleta_id', id)
+    const retry = await supabase
+      .from('controle_massa')
+      .update(montarPatchPesoColeta(peso, pesoTara, null))
+      .eq('coleta_id', id)
     errMassa = retry.error
   }
 
@@ -462,18 +489,22 @@ export async function atualizarPesoLiquidoConferenciaTicket(
 
   const { data: rowAtual, error: errLeitura } = await supabase
     .from('coletas')
-    .select('id, residuos_itens, faturamento_ticket_aprovado_em')
+    .select('id, residuos_itens, peso_tara, faturamento_ticket_aprovado_em')
     .eq('id', id)
     .maybeSingle()
 
   if (errLeitura) {
     if (erroColunasTicketAprovacaoAusentes(errLeitura)) {
-      const retry = await supabase.from('coletas').select('id, residuos_itens').eq('id', id).maybeSingle()
+      const retry = await supabase
+        .from('coletas')
+        .select('id, residuos_itens, peso_tara')
+        .eq('id', id)
+        .maybeSingle()
       if (retry.error) {
         return { ok: false, message: retry.error.message || 'Não foi possível ler a coleta.' }
       }
       if (!retry.data?.id) return { ok: false, message: 'Coleta não encontrada.' }
-      return gravarPesoConferenciaInterno(id, peso, retry.data.residuos_itens)
+      return gravarPesoConferenciaInterno(id, peso, retry.data.residuos_itens, retry.data.peso_tara)
     }
     return { ok: false, message: errLeitura.message || 'Não foi possível ler a coleta.' }
   }
@@ -489,13 +520,14 @@ export async function atualizarPesoLiquidoConferenciaTicket(
     }
   }
 
-  return gravarPesoConferenciaInterno(id, peso, rowAtual.residuos_itens)
+  return gravarPesoConferenciaInterno(id, peso, rowAtual.residuos_itens, rowAtual.peso_tara)
 }
 
 async function gravarPesoConferenciaInterno(
   id: string,
   peso: number,
-  residuosItensRaw: unknown
+  residuosItensRaw: unknown,
+  pesoTara: number | null | undefined
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const itens = patchResiduosItensPesoLiquido(residuosItensRaw, peso)
 
@@ -518,7 +550,7 @@ async function gravarPesoConferenciaInterno(
     return { ok: false, message: viaRpc.message }
   }
 
-  const direto = await gravarPesoColetaDireto(id, peso, itens)
+  const direto = await gravarPesoColetaDireto(id, peso, itens, pesoTara)
   if (direto.ok) return finalizarSeGravou(direto)
 
   return {

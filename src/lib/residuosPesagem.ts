@@ -34,6 +34,29 @@ export function calcularPesoLiquidoLinha(pesoBruto: string, pesoTara: string): s
   return String(bruto - tara);
 }
 
+/** Bruto coerente com tara + peso líquido manual (conferência do ticket). */
+export function brutoParaPesoLiquidoManual(
+  pesoTara: string,
+  pesoLiquido: number
+): string | null {
+  const tara = converterNumeroPeso(pesoTara);
+  if (tara === null) return null;
+  return String(tara + pesoLiquido);
+}
+
+export function alinharLinhaPesoLiquidoManual(
+  linha: ResiduoPesagemItem,
+  pesoLiquido: number
+): ResiduoPesagemItem {
+  const pesoStr = String(pesoLiquido);
+  const brutoNovo = brutoParaPesoLiquidoManual(linha.peso_tara, pesoLiquido);
+  return {
+    ...linha,
+    peso_liquido: pesoStr,
+    peso_bruto: brutoNovo ?? linha.peso_bruto,
+  };
+}
+
 function pesoNumeroParaInput(n: number | null | undefined): string {
   return pesoKgParaCampoInput(n);
 }
