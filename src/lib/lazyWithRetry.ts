@@ -1,8 +1,8 @@
 import { lazy, type ComponentType } from 'react'
 
-const CHUNK_RELOAD_KEY = 'rg-chunk-reload-once'
+export const CHUNK_RELOAD_KEY = 'rg-chunk-reload-once'
 
-function isChunkOrImportFailure(e: unknown): boolean {
+export function isChunkOrImportFailure(e: unknown): boolean {
   const m = e instanceof Error ? e.message : String(e)
   return (
     /Failed to fetch dynamically imported module/i.test(m) ||
@@ -10,6 +10,21 @@ function isChunkOrImportFailure(e: unknown): boolean {
     /Importing a module script failed/i.test(m) ||
     /error loading dynamically imported module/i.test(m)
   )
+}
+
+/** Recarrega uma vez após deploy (HTML/JS antigo a referenciar chunk que já não existe). */
+export function reloadOnceForChunkDeploy(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return false
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+  } catch {
+    return false
+  }
+  const url = new URL(window.location.href)
+  url.searchParams.set('_rg', String(Date.now()))
+  window.location.replace(url.toString())
+  return true
 }
 
 /**
@@ -25,14 +40,16 @@ export function lazyWithRetry<T extends ComponentType<unknown>>(
       sessionStorage.removeItem(CHUNK_RELOAD_KEY)
       return mod
     } catch (e) {
-      if (isChunkOrImportFailure(e) && !sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-        sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
-        window.location.reload()
+      if (isChunkOrImportFailure(e) && reloadOnceForChunkDeploy()) {
         return {
           default: (() => null) as unknown as T,
         }
       }
-      sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+      try {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+      } catch {
+        /* ignore */
+      }
       throw e
     }
   })

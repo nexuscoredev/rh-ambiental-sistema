@@ -1,6 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { FaltaConfiguracaoSupabase } from "./FaltaConfiguracaoSupabase";
+import {
+  CHUNK_RELOAD_KEY,
+  isChunkOrImportFailure,
+  reloadOnceForChunkDeploy,
+} from "./lib/lazyWithRetry";
 /** Folha completa (inclui `.welcome-nexus`, PWA, etc.) — alinhada ao deploy Vercel. */
 import "./index-NEXUS.css";
 
@@ -187,6 +192,11 @@ if (!supabaseUrl || !supabaseAnon || supabaseEnvPareceSoExemplo(supabaseUrl, sup
 } else {
   void import("./App-NEXUS")
     .then(({ default: App }) => {
+      try {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+      } catch {
+        /* ignore */
+      }
       root.render(
         <ErrorBoundary>
           <App />
@@ -195,8 +205,12 @@ if (!supabaseUrl || !supabaseAnon || supabaseEnvPareceSoExemplo(supabaseUrl, sup
     })
     .catch((reason: unknown) => {
       console.error("Falha ao carregar a aplicação:", reason);
+      if (isChunkOrImportFailure(reason) && reloadOnceForChunkDeploy()) {
+        return;
+      }
       const msg =
         reason instanceof Error ? reason.message : String(reason ?? "Erro desconhecido");
+      const pareceChunkDeploy = isChunkOrImportFailure(reason);
       root.render(
         <div
           style={{
@@ -211,6 +225,13 @@ if (!supabaseUrl || !supabaseAnon || supabaseEnvPareceSoExemplo(supabaseUrl, sup
         >
           <div style={{ maxWidth: 520, color: "#991b1b" }}>
             <h1 style={{ marginTop: 0 }}>Não foi possível carregar o módulo principal</h1>
+            {pareceChunkDeploy ? (
+              <p style={{ color: "#334155", lineHeight: 1.55 }}>
+                Isto costuma acontecer logo após uma atualização na Vercel: o navegador
+                ainda tinha ficheiros antigos em cache. Use o botão abaixo para obter a
+                versão nova.
+              </p>
+            ) : null}
             <pre
               style={{
                 whiteSpace: "pre-wrap",
@@ -223,6 +244,44 @@ if (!supabaseUrl || !supabaseAnon || supabaseEnvPareceSoExemplo(supabaseUrl, sup
             >
               {msg}
             </pre>
+            {pareceChunkDeploy ? (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+                  } catch {
+                    /* ignore */
+                  }
+                  if ("caches" in window) {
+                    void caches.keys().then((keys) =>
+                      Promise.all(keys.map((k) => caches.delete(k)))
+                    );
+                  }
+                  if ("serviceWorker" in navigator) {
+                    void navigator.serviceWorker.getRegistrations().then((regs) => {
+                      for (const r of regs) void r.unregister();
+                      window.location.reload();
+                    });
+                  } else {
+                    window.location.reload();
+                  }
+                }}
+                style={{
+                  marginTop: 16,
+                  padding: "12px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#0f766e",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: 15,
+                }}
+              >
+                Recarregar e limpar cache
+              </button>
+            ) : null}
           </div>
         </div>
       );

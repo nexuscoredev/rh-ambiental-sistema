@@ -132,7 +132,8 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}'],
+        /** Não pré-cachear JS com hash — evita chunk antigo após deploy quando o SW ainda não atualizou. */
+        globPatterns: ['**/*.{css,html,ico,png,svg,webp,woff2,webmanifest}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
@@ -148,6 +149,16 @@ export default defineConfig(({ mode }) => {
         skipWaiting: false,
         runtimeCaching: [
           ...supabaseCaching,
+          {
+            urlPattern: /\/assets\/.*\.js$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'rg-vite-js-chunks',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
