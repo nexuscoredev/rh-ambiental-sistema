@@ -1611,9 +1611,7 @@ export default function ControleMassa() {
 
     if (coletasMtr.length === 0) {
       aplicarHerancaMtrSemColeta(v, m?.cliente ?? "");
-      setErroTela(
-        "Esta MTR ainda não tem coleta no sistema. Ao salvar a pesagem, uma ou mais coletas/tickets serão criados (um resíduo por ticket)."
-      );
+      setErroTela("");
       return;
     }
 

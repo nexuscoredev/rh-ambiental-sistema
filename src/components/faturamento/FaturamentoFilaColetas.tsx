@@ -106,123 +106,69 @@ function CelulaColetasConsolidadas({
   }[]
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        minWidth: '128px',
-        maxWidth: '200px',
-      }}
-    >
-      <div
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '100px' }}>
+      <span
         style={{
           ...chipBase,
-          width: '100%',
-          justifyContent: 'flex-start',
-          gap: '8px',
-          padding: '6px 8px',
+          alignSelf: 'flex-start',
+          padding: '4px 8px',
           background: FAT.violetBg,
           border: `1px solid ${FAT.violetBorder}`,
           color: FAT.violet,
           fontSize: '10px',
-          letterSpacing: '0.06em',
+          letterSpacing: '0.04em',
           textTransform: 'uppercase',
         }}
       >
-        <span
-          style={{
-            width: '3px',
-            alignSelf: 'stretch',
-            minHeight: '14px',
-            background: FAT.violet,
-            borderRadius: R.sm,
-            flexShrink: 0,
-          }}
-        />
-        <span>
-          {coletas.length} tickets · 1 faturamento
-        </span>
-        <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: '10px' }}>
-          Lista consolidada
-        </span>
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
-          gap: '6px',
-          width: '100%',
-        }}
-      >
-        {coletas.map((c, i) => (
-          <div
+        {coletas.length} tickets · 1 faturamento
+      </span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {coletas.map((c) => (
+          <span
             key={c.coleta_id}
-            title={(c.tipo_residuo || '').trim() || undefined}
+            title={(c.ticket_comprovante ?? '').trim() ? `Ticket ${(c.ticket_comprovante ?? '').trim()}` : undefined}
             style={{
-              display: 'grid',
-              gridTemplateColumns: '22px 1fr',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 6px',
-              borderRadius: R.md,
+              ...chipBase,
+              padding: '4px 10px',
               background: FAT.surface,
               border: `1px solid ${FAT.line}`,
-              boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04)',
+              color: FAT.ink,
+              fontSize: '12px',
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
-            <span
-              style={{
-                ...chipBase,
-                width: '22px',
-                height: '22px',
-                padding: 0,
-                background: FAT.violetBg,
-                border: `1px solid ${FAT.violetBorder}`,
-                color: FAT.violet,
-                fontSize: '11px',
-              }}
-            >
-              {i + 1}
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  color: FAT.ink,
-                  fontVariantNumeric: 'tabular-nums',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {c.numero_coleta ?? c.numero}
-              </div>
-              {(c.ticket_comprovante ?? '').trim() ? (
-                <div
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    color: FAT.inkMuted,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Ticket {(c.ticket_comprovante ?? '').trim()}
-                </div>
-              ) : null}
-              {c.peso_liquido != null ? (
-                <div style={{ fontSize: '10px', color: FAT.teal, fontWeight: 700 }}>
-                  {fmtPeso(c.peso_liquido)}
-                </div>
-              ) : null}
-            </div>
-          </div>
+            {c.numero_coleta ?? c.numero}
+          </span>
         ))}
       </div>
     </div>
+  )
+}
+
+function CelulaResiduosConsolidados({
+  coletas,
+}: {
+  coletas: { coleta_id: string; tipo_residuo: string; peso_liquido?: number | null }[]
+}) {
+  return (
+    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {coletas.map((c) => (
+        <li
+          key={c.coleta_id}
+          style={{
+            fontSize: '12px',
+            lineHeight: 1.4,
+            color: FAT.ink,
+            paddingLeft: '10px',
+            borderLeft: `3px solid ${FAT.violetBorder}`,
+          }}
+        >
+          <span style={{ fontWeight: 700, color: FAT.teal }}>{fmtPeso(c.peso_liquido)}</span>
+          <span style={{ color: FAT.inkMuted }}> · </span>
+          {c.tipo_residuo || '—'}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -487,8 +433,6 @@ function LinhaFilaFaturamento({
   const fat = statusFaturamentoUi(coleta_lider)
   const slaCritico =
     coletas.some((c) => coletaFaturamentoSlaVencido(c)) && fat === 'Pendente'
-  const residuos = coletas.map((c) => (c.tipo_residuo || '—').trim()).join(' · ')
-
   return (
     <>
       <tr
@@ -497,119 +441,85 @@ function LinhaFilaFaturamento({
           ...(slaCritico ? { boxShadow: 'inset 4px 0 0 #dc2626' } : { boxShadow: `inset 4px 0 0 ${FAT.teal}` }),
         }}
       >
-        <td style={{ ...td, verticalAlign: 'top', minWidth: '120px' }}>
+        <td style={{ ...td, verticalAlign: 'top', minWidth: '110px' }}>
           <CelulaColetasConsolidadas coletas={coletas} />
         </td>
         <td style={td}>{item.cliente_nome}</td>
         <td style={{ ...td, fontWeight: 700 }}>{mtr_numero}</td>
-        <td style={{ ...td, maxWidth: '240px', lineHeight: 1.45 }} title={residuos}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {coletas.map((c, i) => (
-              <div key={c.coleta_id} style={{ fontSize: '12px', color: FAT.ink }}>
-                <span style={{ fontWeight: 800, color: FAT.violet, marginRight: '6px' }}>
-                  {i + 1}.
-                </span>
-                {c.tipo_residuo || '—'}
-              </div>
-            ))}
+        <td style={{ ...td, maxWidth: '260px', verticalAlign: 'top' }}>
+          <CelulaResiduosConsolidados coletas={coletas} />
+        </td>
+        <td style={{ ...td, fontWeight: 700, color: FAT.teal, whiteSpace: 'nowrap' }}>
+          {fmtPeso(pesoTotal > 0 ? pesoTotal : null)}
+          <div style={{ fontSize: '10px', fontWeight: 600, color: FAT.inkMuted, marginTop: '2px' }}>
+            total consolidado
           </div>
         </td>
-        <td style={td}>{fmtPeso(pesoTotal > 0 ? pesoTotal : null)}</td>
         <td style={td}>{fmtData(coleta_lider.data_execucao || coleta_lider.data_agendada)}</td>
-        <td style={td}>{fmtValor(valorRef > 0 ? valorRef : null)}</td>
+        <td style={{ ...td, fontWeight: 700 }}>{fmtValor(valorRef > 0 ? valorRef : null)}</td>
         <td style={{ ...td, fontWeight: 700, color: '#0f766e' }}>Consolidado</td>
         <td style={td}>
           <ChipFaturamento variant="consolidado">1 faturamento</ChipFaturamento>
         </td>
-        <td style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }}>
-          Caminhão/equip. uma vez · resíduos somados
+        <td style={{ ...td, maxWidth: '200px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+          Caminhão/equip. uma vez
+          <br />
+          Resíduos somados no valor
         </td>
-        <td style={{ ...td, textAlign: 'center', minWidth: '200px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
-            <div
-              style={{
-                fontSize: '11px',
-                color: FAT.inkMuted,
-                textAlign: 'left',
-                lineHeight: 1.4,
-                padding: '6px 8px',
-                background: '#fff',
-                borderRadius: R.md,
-                border: `1px solid ${FAT.line}`,
-              }}
-            >
-              {coletas.map((c, i) => (
-                <div key={`fat-${c.coleta_id}`}>
-                  <strong style={{ color: FAT.violet }}>{i + 1}.</strong> {c.numero_coleta ?? c.numero}
-                  {(c.ticket_comprovante ?? '').trim() ? ` · ${(c.ticket_comprovante ?? '').trim()}` : ''}
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              disabled={!!emitindoColetaId}
-              onClick={() => void onFaturar(coleta_lider.coleta_id)}
-              style={{
-                ...btnPrimario,
-                opacity: emitindoColetaId ? 0.65 : 1,
-                cursor: emitindoColetaId ? 'wait' : 'pointer',
-              }}
-            >
-              {emitindoColetaId === coleta_lider.coleta_id ? 'A confirmar…' : rotuloBotao}
-            </button>
-          </div>
+        <td style={{ ...td, textAlign: 'center', verticalAlign: 'middle', minWidth: '168px' }}>
+          <button
+            type="button"
+            disabled={!!emitindoColetaId}
+            onClick={() => void onFaturar(coleta_lider.coleta_id)}
+            style={{
+              ...btnPrimario,
+              width: '100%',
+              maxWidth: '200px',
+              opacity: emitindoColetaId ? 0.65 : 1,
+              cursor: emitindoColetaId ? 'wait' : 'pointer',
+            }}
+          >
+            {emitindoColetaId === coleta_lider.coleta_id ? 'A confirmar…' : rotuloBotao}
+          </button>
         </td>
       </tr>
       {onDevolvidoConferencia && podeDevolverConferencia
-        ? coletas.map((c, i) => (
-            <tr key={`det-${c.coleta_id}`} style={{ background: '#fafafa' }}>
-              <td style={{ ...td, padding: '8px 12px 8px 20px', borderBottom: '1px solid #f1f5f9' }}>
-                <span
+        ? coletas.map((c) => (
+            <tr key={`det-${c.coleta_id}`} style={{ background: '#f8fafc' }}>
+              <td colSpan={11} style={{ ...td, padding: '8px 14px 8px 28px', borderBottom: '1px solid #eef2f7' }}>
+                <div
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                    color: FAT.inkMuted,
+                    justifyContent: 'space-between',
+                    gap: '10px 14px',
                   }}
                 >
-                  <span
+                  <span style={{ fontSize: '12px', color: FAT.inkMuted }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: FAT.violet, marginRight: '8px' }}>
+                      Devolver ticket
+                    </span>
+                    <strong style={{ color: FAT.ink, fontVariantNumeric: 'tabular-nums' }}>
+                      {c.numero_coleta ?? c.numero}
+                    </strong>
+                    <span style={{ color: FAT.teal, fontWeight: 700 }}> · {fmtPeso(c.peso_liquido)}</span>
+                    <span> · {c.tipo_residuo || '—'}</span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={devolvendoId === c.coleta_id}
+                    onClick={() => void onDevolver(c)}
                     style={{
-                      ...chipBase,
-                      width: '18px',
-                      height: '18px',
-                      padding: 0,
-                      background: FAT.violetBg,
-                      border: `1px solid ${FAT.violetBorder}`,
-                      color: FAT.violet,
-                      fontSize: '10px',
+                      ...btnSecundario,
+                      flexShrink: 0,
+                      cursor: devolvendoId === c.coleta_id ? 'wait' : 'pointer',
+                      opacity: devolvendoId === c.coleta_id ? 0.7 : 1,
                     }}
                   >
-                    {i + 1}
-                  </span>
-                  {c.numero_coleta ?? c.numero}
-                </span>
-              </td>
-              <td style={{ ...td, padding: '8px 12px' }} colSpan={9}>
-                <span style={{ fontSize: '12px', color: FAT.inkMuted }}>
-                  {fmtPeso(c.peso_liquido)}
-                  {c.tipo_residuo ? ` · ${c.tipo_residuo}` : ''}
-                </span>
-              </td>
-              <td style={{ ...td, textAlign: 'center', padding: '8px 12px' }}>
-                <button
-                  type="button"
-                  disabled={devolvendoId === c.coleta_id}
-                  onClick={() => void onDevolver(c)}
-                  style={{
-                    ...btnSecundario,
-                    padding: '5px 10px',
-                    cursor: devolvendoId === c.coleta_id ? 'wait' : 'pointer',
-                    opacity: devolvendoId === c.coleta_id ? 0.7 : 1,
-                  }}
-                >
-                  {devolvendoId === c.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
-                </button>
+                    {devolvendoId === c.coleta_id ? 'A devolver…' : 'Devolver à conferência'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))

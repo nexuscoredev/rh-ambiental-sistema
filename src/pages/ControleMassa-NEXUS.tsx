@@ -1011,9 +1011,7 @@ export default function ControleMassa() {
         peso_bruto: "",
         peso_liquido: "",
       }));
-      setErroTela(
-        "Esta MTR ainda não tem coleta no sistema. Ao salvar a pesagem, uma coleta será criada e vinculada automaticamente a esta MTR."
-      );
+      setErroTela("");
       return;
     }
 
