@@ -59,6 +59,78 @@ const routeSuspenseFallback = (
   </div>
 )
 
+async function sairDoSistema() {
+  await supabase.auth.signOut()
+  window.location.href = '/'
+}
+
+function TelaErroAcesso({
+  titulo,
+  mensagem,
+}: {
+  titulo: string
+  mensagem: string
+}) {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f1f5f9',
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 520,
+          background: '#fff',
+          border: '1px solid #fecaca',
+          borderRadius: 12,
+          padding: 20,
+          color: '#334155',
+        }}
+      >
+        <p style={{ margin: '0 0 12px', fontWeight: 700, color: '#991b1b' }}>{titulo}</p>
+        <p style={{ margin: '0 0 16px', fontSize: 15 }}>{mensagem}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#0f766e',
+              color: '#fff',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Tentar novamente
+          </button>
+          <button
+            type="button"
+            onClick={() => void sairDoSistema()}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              color: '#334155',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Sair e voltar ao login
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type ProtectedRouteProps = {
   session: Session | null
   usuario: UsuarioPerfilApp | null
@@ -105,56 +177,24 @@ function ProtectedRoute({
   }
 
   if (!usuario) {
-    if (erroPerfil.trim()) {
-      return (
-        <div
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f1f5f9',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 520,
-              background: '#fff',
-              border: '1px solid #fecaca',
-              borderRadius: 12,
-              padding: 20,
-              color: '#334155',
-            }}
-          >
-            <p style={{ margin: '0 0 12px', fontWeight: 700, color: '#991b1b' }}>
-              Não foi possível carregar as permissões
-            </p>
-            <p style={{ margin: '0 0 16px', fontSize: 15 }}>{erroPerfil}</p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 8,
-                border: 'none',
-                background: '#0f766e',
-                color: '#fff',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Tentar novamente
-            </button>
-          </div>
-        </div>
-      )
-    }
-    return <Navigate to="/" replace />
+    return (
+      <TelaErroAcesso
+        titulo="Não foi possível carregar as permissões"
+        mensagem={
+          erroPerfil.trim() ||
+          'Sessão ativa, mas o perfil não foi lido. Verifique a ligação ao Supabase ou peça acesso em «usuarios».'
+        }
+      />
+    )
   }
 
   if (usuario.status !== 'ativo') {
-    return <Navigate to="/" replace />
+    return (
+      <TelaErroAcesso
+        titulo="Conta inativa"
+        mensagem="O seu utilizador não está com status «ativo». Contacte um administrador do sistema."
+      />
+    )
   }
 
   if (
@@ -214,86 +254,80 @@ function App() {
   const [carregandoUsuario, setCarregandoUsuario] = useState(true)
   const [erroPerfil, setErroPerfil] = useState('')
 
-  /** Evita `Carregando permissões…` (e desmontar a página) em cada refresh de token ao voltar ao separador. */
+  /** Perfil já exibido — evita overlay em refresh de token (não dispara nova carga). */
   const perfilJaExibidoParaUserIdRef = useRef<string | null>(null)
-  const cargaPerfilRunRef = useRef(0)
+
+  const sessionUserId = session?.user?.id?.trim() || null
 
   useEffect(() => {
-    async function carregarSessao() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    let cancelado = false
 
-      setSession(session)
+    async function carregarSessao() {
+      try {
+        const sessaoAtual = await withTimeout(
+          (async () => {
+            const { data, error } = await supabase.auth.getSession()
+            if (error) throw error
+            return data.session
+          })(),
+          PERFIL_CARGA_TIMEOUT_MS,
+          'iniciar sessão'
+        )
+        if (!cancelado) setSession(sessaoAtual)
+      } catch (e) {
+        console.error('Falha ao ler sessão:', e)
+        if (!cancelado) setSession(null)
+      }
     }
 
-    carregarSessao()
+    void carregarSessao()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, sessionAtual) => {
-      setSession(sessionAtual)
+    } = supabase.auth.onAuthStateChange((event, sessionAtual) => {
+      // Refresh de token não deve cancelar a carga do perfil nem remontar a UI.
+      if (event === 'TOKEN_REFRESHED') return
+      if (!cancelado) setSession(sessionAtual)
     })
 
     return () => {
+      cancelado = true
       subscription.unsubscribe()
     }
   }, [])
 
   useEffect(() => {
-    const runId = ++cargaPerfilRunRef.current
+    let cancelado = false
 
     async function carregarUsuario() {
-      const aindaAtual = () => runId === cargaPerfilRunRef.current
-
-      if (!session) {
-        if (!aindaAtual()) return
-        perfilJaExibidoParaUserIdRef.current = null
-        setErroPerfil('')
-        setUsuario(null)
-        setCarregandoUsuario(false)
+      if (!sessionUserId) {
+        if (!cancelado) {
+          perfilJaExibidoParaUserIdRef.current = null
+          setErroPerfil('')
+          setUsuario(null)
+          setCarregandoUsuario(false)
+        }
         return
       }
 
-      const esperadoUserId = session.user.id
-      const atualizacaoSilenciosa =
-        perfilJaExibidoParaUserIdRef.current != null &&
-        perfilJaExibidoParaUserIdRef.current === esperadoUserId
+      const atualizacaoSilenciosa = perfilJaExibidoParaUserIdRef.current === sessionUserId
 
-      if (!atualizacaoSilenciosa) {
+      if (!cancelado && !atualizacaoSilenciosa) {
         setCarregandoUsuario(true)
         setErroPerfil('')
       }
 
       try {
-        let userId = session.user?.id?.trim() || ''
-        if (!userId) {
-          const {
-            data: { user },
-            error: userError,
-          } = await withTimeout(supabase.auth.getUser(), PERFIL_CARGA_TIMEOUT_MS, 'validar sessão')
-
-          if (!aindaAtual()) return
-
-          if (userError || !user?.id) {
-            console.error('Erro ao buscar usuário autenticado:', userError?.message)
-            perfilJaExibidoParaUserIdRef.current = null
-            setUsuario(null)
-            setErroPerfil(
-              userError?.message ||
-                'Não foi possível validar a sessão. Saia e entre novamente.'
-            )
-            return
-          }
-          userId = user.id
-        }
-
         const selectComPaginas =
           'id, nome, email, cargo, status, foto_url, paginas_permitidas'
         const selectSemPaginas = 'id, nome, email, cargo, status, foto_url'
 
         const buscarPerfil = async (select: string) => {
-          const res = await supabase.from('usuarios').select(select).eq('id', userId).maybeSingle()
+          const res = await supabase
+            .from('usuarios')
+            .select(select)
+            .eq('id', sessionUserId)
+            .maybeSingle()
           return res
         }
 
@@ -303,7 +337,7 @@ function App() {
           'carregar perfil'
         )
 
-        if (!aindaAtual()) return
+        if (cancelado) return
 
         if (resultado.error && erroColunaPaginasPermitidas(resultado.error.message)) {
           resultado = await withTimeout(
@@ -311,50 +345,60 @@ function App() {
             PERFIL_CARGA_TIMEOUT_MS,
             'carregar perfil'
           )
-          if (!aindaAtual()) return
+          if (cancelado) return
         }
 
         const { data, error } = resultado
 
         if (error) {
           console.error('Erro ao carregar perfil do usuário:', error.message)
-          perfilJaExibidoParaUserIdRef.current = null
-          setUsuario(null)
-          setErroPerfil(
-            error.message ||
-              'Não foi possível ler o perfil (tabela usuarios / permissões no Supabase).'
-          )
+          if (!cancelado) {
+            perfilJaExibidoParaUserIdRef.current = null
+            setUsuario(null)
+            setErroPerfil(
+              error.message ||
+                'Não foi possível ler o perfil (tabela usuarios / permissões no Supabase).'
+            )
+          }
           return
         }
 
         if (!data) {
-          perfilJaExibidoParaUserIdRef.current = null
-          setUsuario(null)
-          setErroPerfil(
-            'Utilizador autenticado sem registo em «usuarios». Peça a um administrador para criar o acesso.'
-          )
+          if (!cancelado) {
+            perfilJaExibidoParaUserIdRef.current = null
+            setUsuario(null)
+            setErroPerfil(
+              'Utilizador autenticado sem registo em «usuarios». Peça a um administrador para criar o acesso.'
+            )
+          }
           return
         }
 
-        setUsuario(data as unknown as UsuarioPerfilApp)
-        perfilJaExibidoParaUserIdRef.current = userId
-        setErroPerfil('')
+        if (!cancelado) {
+          setUsuario(data as unknown as UsuarioPerfilApp)
+          perfilJaExibidoParaUserIdRef.current = sessionUserId
+          setErroPerfil('')
+        }
       } catch (e) {
-        if (!aindaAtual()) return
+        if (cancelado) return
         const msg = e instanceof Error ? e.message : String(e)
         console.error('Falha ao carregar perfil:', msg)
         perfilJaExibidoParaUserIdRef.current = null
         setUsuario(null)
         setErroPerfil(msg)
       } finally {
-        if (aindaAtual()) {
+        if (!cancelado) {
           setCarregandoUsuario(false)
         }
       }
     }
 
     void carregarUsuario()
-  }, [session])
+
+    return () => {
+      cancelado = true
+    }
+  }, [sessionUserId])
 
   if (session === undefined) {
     return (
