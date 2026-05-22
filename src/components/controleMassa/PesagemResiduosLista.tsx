@@ -47,6 +47,10 @@ export function PesagemResiduosLista({
     onLinhasChange(linhas.filter((_, i) => i !== index));
   }
 
+  function adicionarLinha() {
+    onLinhasChange([...linhas, linhaVaziaResiduoPesagem()]);
+  }
+
   return (
     <div style={{ gridColumn: "span 12", display: "flex", flexDirection: "column", gap: 12 }}>
       <div
@@ -64,6 +68,24 @@ export function PesagemResiduosLista({
             Um ticket = um resíduo. Informe o tipo e os pesos (texto livre).
           </div>
         </div>
+        <button
+          type="button"
+          onClick={adicionarLinha}
+          style={{
+            height: 38,
+            padding: "0 16px",
+            borderRadius: 10,
+            border: "1px solid #0f766e",
+            background: "linear-gradient(180deg, #14b8a6 0%, #0d9488 100%)",
+            color: "#ffffff",
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(13, 148, 136, 0.35)",
+          }}
+        >
+          + Adicionar resíduo
+        </button>
       </div>
 
       {linhas.map((linha, index) => (

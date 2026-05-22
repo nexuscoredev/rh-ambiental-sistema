@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { useSearchParams } from 'react-router-dom'
@@ -136,6 +136,11 @@ export default function EnvioNF() {
     [searchParams]
   )
 
+  const clienteParam = useMemo(() => (searchParams.get('cliente') || '').trim(), [searchParams])
+  const coletaParam = useMemo(() => (searchParams.get('coleta') || '').trim(), [searchParams])
+  const urlContextoEnvioRef = useRef({ clienteId: '', coletaId: '' })
+  urlContextoEnvioRef.current = { clienteId: clienteParam, coletaId: coletaParam }
+
   const envioNfDraft = useMemo(
     () => ({
       busca,
@@ -167,7 +172,13 @@ export default function EnvioNF() {
       setSomenteComEmail(d.somenteComEmail)
       setObservacao(d.observacao)
       setEnvioModo(d.envioModo)
-      setSelecionados(new Set(d.selecionados))
+      const { clienteId, coletaId } = urlContextoEnvioRef.current
+      if (clienteId) {
+        setSelecionados(new Set([clienteId]))
+        setSomenteComEmail(false)
+      } else if (!coletaId) {
+        setSelecionados(new Set(d.selecionados))
+      }
       setColetasComContaMarcadas(new Set(d.coletasComContaMarcadas))
       if (typeof d.mesReferenciaMedicao === 'string' && d.mesReferenciaMedicao.trim()) {
         setMesReferenciaMedicao(d.mesReferenciaMedicao.trim())
@@ -179,8 +190,6 @@ export default function EnvioNF() {
   })
 
   const podeDisparar = cargoPodeEnviarNfEmail(usuarioCargo)
-  const clienteParam = useMemo(() => (searchParams.get('cliente') || '').trim(), [searchParams])
-  const coletaParam = useMemo(() => (searchParams.get('coleta') || '').trim(), [searchParams])
 
   useEffect(() => {
     setAssuntoEmail(modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO)
@@ -239,8 +248,12 @@ export default function EnvioNF() {
     queueMicrotask(() => {
       setSelecionados(new Set([clienteParam]))
       setSomenteComEmail(false)
+      const c = clientes.find((x) => x.id === clienteParam)
+      if (c) {
+        setBusca((c.nome || c.razao_social || '').trim())
+      }
     })
-  }, [clienteParam])
+  }, [clienteParam, clientes])
 
   useEffect(() => {
     if (clienteParam) return
@@ -443,6 +456,11 @@ export default function EnvioNF() {
   function limparSelecao() {
     setSelecionados(new Set())
   }
+
+  const clienteContextoMedicao = useMemo(() => {
+    if (!clienteParam) return null
+    return clientes.find((c) => c.id === clienteParam) ?? null
+  }, [clientes, clienteParam])
 
   const selecionadosComEmail = useMemo(() => {
     return clientes.filter((c) => selecionados.has(c.id) && emailNfTemAlgum(c.email_nf))
@@ -817,6 +835,24 @@ export default function EnvioNF() {
                 >
                   Contexto: coleta <code style={{ fontWeight: 800 }}>{coletaParam.slice(0, 8)}…</code> — após envio ou
                   simulação, o registo fica em <strong>contas a receber</strong> (se já existir linha para esta coleta).
+                </p>
+              ) : null}
+              {modoMedicao && clienteParam ? (
+                <p
+                  style={{
+                    margin: '10px 0 0',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: '#f0fdfa',
+                    border: '1px solid #99f6e4',
+                    fontSize: '13px',
+                    color: '#0f766e',
+                    fontWeight: 600,
+                  }}
+                >
+                  Cliente da esteira já selecionado abaixo
+                  {clienteContextoMedicao?.nome ? ` (${clienteContextoMedicao.nome})` : ''}. Revise o e-mail e
+                  confirme o envio.
                 </p>
               ) : null}
               {usuarioCargo ? (

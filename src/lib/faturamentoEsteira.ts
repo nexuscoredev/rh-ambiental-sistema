@@ -4,6 +4,7 @@ import {
   coletaAguardandoImpressaoTicketFaturamento,
   coletaHistoricoFaturamentoEmitido,
   coletaNaFilaAprovacaoTicketFaturamento,
+  coletaNaFilaFaturamento,
 } from './faturamentoOperacionalFila'
 
 /** Etapas da esteira pós-conferência do ticket. */
@@ -38,6 +39,45 @@ export const ORDEM_ESTEIRA_UI: FaturamentoEsteiraStatus[] = [
   'LIBERADO_FINANCEIRO',
   'FINALIZADO',
 ]
+
+/** Passos 1–8 do indicador visual em Faturamento operacional. */
+export type PassoUiEsteiraFaturamento = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+
+export const ROTULO_PASSO_UI_ESTEIRA: Record<PassoUiEsteiraFaturamento, string> = {
+  1: 'Conferência ticket',
+  2: 'Ajuste de valores',
+  3: 'Relatório medição',
+  4: 'Mala Direta (medição)',
+  5: 'Aprovação cliente',
+  6: 'Faturar',
+  7: 'Mala Direta (NF / boleto)',
+  8: 'Financeiro (Contas a Receber)',
+}
+
+/** Em que passo da UI (1–8) está esta coleta. */
+export function passoUiEsteiraDaColeta(
+  row: FaturamentoResumoViewRow,
+  linhasContexto?: FaturamentoResumoViewRow[]
+): PassoUiEsteiraFaturamento | null {
+  if (
+    coletaNaFilaAprovacaoTicketFaturamento(row) ||
+    coletaAguardandoImpressaoTicketFaturamento(row)
+  ) {
+    return 1
+  }
+
+  const e = esteiraDaLinha(row)
+  if (e === 'AJUSTE_VALORES_MEDICAO') return 2
+  if (e === 'MEDICAO_PENDENTE') return 3
+  if (e === 'MEDICAO_EMAIL_PENDENTE') return 4
+  if (e === 'MEDICAO_AGUARDANDO_CLIENTE') return 5
+
+  if (coletaAguardandoConfirmacaoNfBoleto(row)) return 7
+  if (coletaLiberadaFinanceiroEsteira(row) || coletaFinalizadaEsteira(row)) return 8
+  if (coletaNaFilaFaturamento(row, linhasContexto) || e === 'LIBERADO_FATURAMENTO') return 6
+
+  return null
+}
 
 function erroColunasEsteiraAusentes(error: { message?: string }): boolean {
   const msg = (error.message ?? '').toLowerCase()

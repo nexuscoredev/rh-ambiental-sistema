@@ -3,7 +3,12 @@ import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
 import { Link, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
-import { resolverColetaPorContextoUrl, idsContextoFromSearchParams } from '../lib/coletaContextoUrl'
+import {
+  buildUrlEnvioNfMedicao,
+  idsContextoFromSearchParams,
+  resolverClienteIdParaEnvioNf,
+  resolverColetaPorContextoUrl,
+} from '../lib/coletaContextoUrl'
 import { formatarEtapaParaUI, normalizarEtapaColeta, type EtapaFluxo } from '../lib/fluxoEtapas'
 import {
   cargoPodeAprovarTicketConferenciaFaturamento,
@@ -32,7 +37,16 @@ import { FaturamentoFilaAjusteValores } from '../components/faturamento/Faturame
 import { FaturamentoFilaMedicao } from '../components/faturamento/FaturamentoFilaMedicao'
 import { FaturamentoFilaPosFaturamento } from '../components/faturamento/FaturamentoFilaPosFaturamento'
 import { FaturamentoEsteiraFluxo } from '../components/faturamento/FaturamentoEsteiraFluxo'
-import { MENSAGEM_MIGRACAO_ESTEIRA, coletaNaFilaAjusteValoresMedicao } from '../lib/faturamentoEsteira'
+import {
+  MENSAGEM_MIGRACAO_ESTEIRA,
+  coletaAguardandoConfirmacaoNfBoleto,
+  coletaNaFilaAjusteValoresMedicao,
+  coletaNaFilaMedicaoAprovacaoCliente,
+  coletaNaFilaMedicaoEmail,
+  coletaNaFilaRelatorioMedicao,
+  passoUiEsteiraDaColeta,
+  type PassoUiEsteiraFaturamento,
+} from '../lib/faturamentoEsteira'
 import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
 import {
   escolherColetaLiderFaturamento,
@@ -117,6 +131,33 @@ export default function FaturamentoOperacional() {
     valorEmitidasCartao,
     diasJanela,
   } = useFaturamentoOperacionalVista(idsCtx.coleta)
+
+  const listaIdsColetaCtx = useMemo(
+    () =>
+      linhasOperacional.map((r) => ({
+        id: r.coleta_id,
+        mtr_id: r.mtr_id,
+        programacao_id: r.programacao_id,
+        cliente_id: r.cliente_id,
+      })),
+    [linhasOperacional]
+  )
+
+  const clienteIdContextoMedicao = useMemo(
+    () => resolverClienteIdParaEnvioNf(listaIdsColetaCtx, idsCtx),
+    [listaIdsColetaCtx, idsCtx]
+  )
+
+  const coletaIdContextoMedicao = (idsCtx.coleta ?? '').trim() || null
+
+  const urlMalaDiretaMedicaoPagina = useMemo(
+    () =>
+      buildUrlEnvioNfMedicao({
+        clienteId: clienteIdContextoMedicao,
+        coletaId: coletaIdContextoMedicao,
+      }),
+    [clienteIdContextoMedicao, coletaIdContextoMedicao]
+  )
 
   const [modalAberto, setModalAberto] = useState(false)
   const [modalColetaId, setModalColetaId] = useState<string | null>(null)
@@ -247,6 +288,61 @@ export default function FaturamentoOperacional() {
     return linhasView.find((r) => r.coleta_id === modalColetaId) ?? null
   }, [linhasView, modalColetaId, modalGrupo])
 
+  const linhaContextoEsteira = useMemo((): FaturamentoResumoViewRow | null => {
+    if (modalColetaId) {
+      return (
+        linhasOperacional.find((r) => r.coleta_id === modalColetaId) ??
+        linhasView.find((r) => r.coleta_id === modalColetaId) ??
+        null
+      )
+    }
+    const idColeta = (idsCtx.coleta ?? '').trim()
+    if (idColeta) {
+      return (
+        linhasOperacional.find((r) => r.coleta_id === idColeta) ??
+        linhasView.find((r) => r.coleta_id === idColeta) ??
+        null
+      )
+    }
+    const mid = (idsCtx.mtr ?? '').trim()
+    if (mid) {
+      return linhasOperacional.find((r) => (r.mtr_id ?? '').trim() === mid) ?? null
+    }
+    const cid = (idsCtx.cliente ?? '').trim()
+    if (cid) {
+      return linhasOperacional.find((r) => r.cliente_id === cid) ?? null
+    }
+    return null
+  }, [modalColetaId, idsCtx, linhasOperacional, linhasView])
+
+  const passoAtivoEsteira = useMemo((): PassoUiEsteiraFaturamento | undefined => {
+    if (modalAberto && modalPreparacaoMedicao) return 2
+    if (modalAberto && modalColetaId) return 6
+
+    if (linhaContextoEsteira) {
+      return passoUiEsteiraDaColeta(linhaContextoEsteira, linhasOperacional) ?? undefined
+    }
+
+    if (linhasOperacional.some(coletaNaFilaMedicaoAprovacaoCliente)) return 5
+    if (linhasOperacional.some(coletaNaFilaMedicaoEmail)) return 4
+    if (linhasOperacional.some(coletaNaFilaRelatorioMedicao)) return 3
+    if (linhasOperacional.some(coletaNaFilaAjusteValoresMedicao)) return 2
+    if (filaAprovacao.length > 0 || filaAguardandoImpressao.length > 0) return 1
+    if (fila.length > 0) return 6
+    if (linhasView.some(coletaAguardandoConfirmacaoNfBoleto)) return 7
+    return undefined
+  }, [
+    modalAberto,
+    modalPreparacaoMedicao,
+    modalColetaId,
+    linhaContextoEsteira,
+    linhasOperacional,
+    filaAprovacao.length,
+    filaAguardandoImpressao.length,
+    fila.length,
+    linhasView,
+  ])
+
   function aoEscolherColetaUrl(id: string) {
     const p = new URLSearchParams(searchParams)
     if (id) p.set('coleta', id)
@@ -305,13 +401,13 @@ export default function FaturamentoOperacional() {
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
           Esteira: <strong>conferência do ticket</strong> → <strong>ajuste de valores</strong> →{' '}
           <strong>relatório de medição</strong> →{' '}
-          <Link to="/envio-nf?tipo=medicao">Mala Direta (medição)</Link> → <strong>aprovação do cliente</strong> →{' '}
+          <Link to={urlMalaDiretaMedicaoPagina}>Mala Direta (medição)</Link> → <strong>aprovação do cliente</strong> →{' '}
           <strong>confirmar faturamento</strong> → <strong>registar n.º NF / boleto</strong> →{' '}
           <strong>Financeiro → Contas a Receber</strong> (envio por e-mail opcional em{' '}
           <Link to="/envio-nf">Mala Direta</Link>).
         </p>
 
-        <FaturamentoEsteiraFluxo />
+        <FaturamentoEsteiraFluxo passoAtivo={passoAtivoEsteira} />
 
         {!carregandoVista && !esteiraMedicaoAtiva ? (
           <div
@@ -447,6 +543,8 @@ export default function FaturamentoOperacional() {
           carregando={carregandoVista}
           esteiraAtiva={esteiraMedicaoAtiva}
           onAtualizar={() => void recarregarTudo()}
+          clienteIdContexto={clienteIdContextoMedicao}
+          coletaIdContexto={coletaIdContextoMedicao}
         />
 
         <FaturamentoFilaColetas

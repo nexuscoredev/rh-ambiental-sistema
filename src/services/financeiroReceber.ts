@@ -8,6 +8,7 @@ import {
   parseResumoFinanceiroJson,
   totalResumoFinanceiro,
 } from '../lib/faturamentoDesvinculacao'
+import { coletaIrmaConsolidadaMtr } from '../lib/faturamentoConsolidacaoMtr'
 import {
   expandirColetaIdsNfBoletoMesmaMtr,
   marcarEsteiraFinalizadaPorNf,
@@ -79,6 +80,14 @@ async function resolverValorCobrancaColeta(
   let jaEmitido = false
   for (const reg of registros ?? []) {
     if (reg.status === 'emitido') jaEmitido = true
+    const liderIrma = coletaIrmaConsolidadaMtr(coletaId, reg)
+    if (liderIrma) {
+      return {
+        valor: 0,
+        regFat: reg as RegistroFaturamentoValor,
+        jaEmitido: true,
+      }
+    }
     const v = valorTotalDoRegistroFaturamento(reg)
     if (v > 0) {
       return { valor: v, regFat: reg as RegistroFaturamentoValor, jaEmitido }
@@ -92,29 +101,6 @@ async function resolverValorCobrancaColeta(
       valor: valorColeta,
       regFat: (emitido ?? registros?.[0] ?? null) as RegistroFaturamentoValor | null,
       jaEmitido: jaEmitido || !!emitido,
-    }
-  }
-
-  const mtrId = (coleta.mtr_id ?? '').trim()
-  if (mtrId) {
-    const { data: coletasMtr } = await supabase.from('coletas').select('id').eq('mtr_id', mtrId)
-    const idsIrmas = (coletasMtr ?? []).map((c) => c.id).filter((id) => id && id !== coletaId)
-    if (idsIrmas.length > 0) {
-      const { data: regsMtr } = await supabase
-        .from('faturamento_registros')
-        .select('id, valor, valor_adicionais, resumo_financeiro, observacoes, status')
-        .in('coleta_id', idsIrmas)
-        .eq('status', 'emitido')
-        .order('updated_at', { ascending: false })
-        .limit(10)
-
-      for (const reg of regsMtr ?? []) {
-        jaEmitido = true
-        const v = valorTotalDoRegistroFaturamento(reg)
-        if (v > 0) {
-          return { valor: v, regFat: reg as RegistroFaturamentoValor, jaEmitido: true }
-        }
-      }
     }
   }
 
@@ -375,6 +361,86 @@ export function sugerirDataVencimentoIso(dias = 7): string {
  * Cria/atualiza conta a receber e libera a coleta para o Financeiro.
  * Chamado ao registar envio de NF (status esteira Finalizado).
  */
+async function resolverColetaLiderCobranca(
+  supabase: SupabaseClient,
+  coletaIds: string[]
+): Promise<string> {
+  const ids = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
+  if (ids.length === 0) return ''
+  if (ids.length === 1) return ids[0]!
+
+  const { data: rows } = await supabase
+    .from('coletas')
+    .select('id, numero_coleta, numero, mtr_id, cliente_id, valor_coleta')
+    .in('id', ids)
+
+  type RowLider = {
+    coleta_id: string
+    numero_coleta: number | null
+    numero: string
+    valor_coleta: number | null
+  }
+
+  const viewRows = (rows ?? []).map((r) => ({
+    coleta_id: String(r.id),
+    numero_coleta: r.numero_coleta as number | null,
+    numero: String(r.numero ?? ''),
+    valor_coleta: r.valor_coleta as number | null,
+  })) as RowLider[]
+
+  if (viewRows.length === 0) return ids[0]!
+
+  const { data: regs } = await supabase
+    .from('faturamento_registros')
+    .select('coleta_id, valor, observacoes, resumo_financeiro, status')
+    .in('coleta_id', ids)
+    .eq('status', 'emitido')
+    .order('updated_at', { ascending: false })
+
+  for (const reg of regs ?? []) {
+    const cid = String(reg.coleta_id ?? '').trim()
+    const lider = coletaIrmaConsolidadaMtr(cid, reg)
+    if (!lider && valorNumericoPositivo(reg.valor) > 0) return cid
+    const resumo = parseResumoFinanceiroJson(reg.resumo_financeiro)
+    const lid = resumo?.consolidacao_mtr?.coleta_lider_id?.trim()
+    if (lid && ids.includes(lid)) return lid
+  }
+
+  const comValor = viewRows.filter((r) => valorNumericoPositivo(r.valor_coleta) > 0)
+  if (comValor.length === 1) return comValor[0]!.coleta_id
+
+  viewRows.sort((a, b) => {
+    const na = a.numero_coleta ?? (Number(a.numero) || 0)
+    const nb = b.numero_coleta ?? (Number(b.numero) || 0)
+    return na - nb
+  })
+  return viewRows[0]!.coleta_id
+}
+
+async function finalizarColetaIrmaConsolidadaMtr(
+  supabase: SupabaseClient,
+  coletaId: string,
+  liderColetaId: string,
+  coleta: {
+    liberado_financeiro: unknown
+  }
+): Promise<{ error: Error | null }> {
+  const libLider = await liberarColetaParaFinanceiroContasReceber(supabase, liderColetaId)
+  if (libLider.error) return libLider
+
+  if (!coleta.liberado_financeiro) {
+    const { error: updErr } = await supabase
+      .from('coletas')
+      .update(payloadFaturamentoEmitidoEnviaAoFinanceiro({ valorColeta: null }))
+      .eq('id', coletaId)
+    if (updErr) return { error: new Error(updErr.message) }
+  }
+
+  const fin = await marcarEsteiraFinalizadaPorNf(coletaId)
+  if (!fin.ok) return { error: new Error(fin.message) }
+  return { error: null }
+}
+
 export async function liberarColetaParaFinanceiroContasReceber(
   supabase: SupabaseClient,
   coletaId: string
@@ -388,6 +454,20 @@ export async function liberarColetaParaFinanceiroContasReceber(
 
     if (errColeta) return { error: new Error(errColeta.message) }
     if (!coleta) return { error: new Error('Coleta não encontrada.') }
+
+    const { data: regEmitido } = await supabase
+      .from('faturamento_registros')
+      .select('valor, observacoes, resumo_financeiro, status')
+      .eq('coleta_id', coletaId)
+      .eq('status', 'emitido')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const liderIrma = coletaIrmaConsolidadaMtr(coletaId, regEmitido)
+    if (liderIrma) {
+      return finalizarColetaIrmaConsolidadaMtr(supabase, coletaId, liderIrma, coleta)
+    }
 
     const { valor, regFat, jaEmitido } = await resolverValorCobrancaColeta(supabase, coletaId, coleta)
 
@@ -577,6 +657,49 @@ export async function registarNumeroNfBoletoEsteiraFaturamento(
 }
 
 /** Etapa 7: mesma NF/boleto para vários tickets da mesma MTR. */
+async function registarNfColetaIrmaConsolidada(
+  supabase: SupabaseClient,
+  input: {
+    coleta_id: string
+    numero_nf: string
+    observacao?: string | null
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const coletaId = input.coleta_id.trim()
+  const numeroNf = input.numero_nf.trim()
+
+  const { error: errColeta } = await supabase
+    .from('coletas')
+    .update({ numero_nf: numeroNf })
+    .eq('id', coletaId)
+
+  if (errColeta) {
+    return { ok: false, message: errColeta.message || 'Não foi possível gravar o número da NF na coleta.' }
+  }
+
+  const { data: regEmitido } = await supabase
+    .from('faturamento_registros')
+    .select('valor, observacoes, resumo_financeiro')
+    .eq('coleta_id', coletaId)
+    .eq('status', 'emitido')
+    .limit(1)
+    .maybeSingle()
+
+  const liderId = coletaIrmaConsolidadaMtr(coletaId, regEmitido)
+  if (!liderId) {
+    return {
+      ok: false,
+      message: 'Coleta consolidada sem referência da líder. Reabra o faturamento da MTR.',
+    }
+  }
+
+  const fin = await finalizarColetaIrmaConsolidadaMtr(supabase, coletaId, liderId, {
+    liberado_financeiro: false,
+  })
+  if (fin.error) return { ok: false, message: fin.error.message }
+  return { ok: true }
+}
+
 export async function registarNumeroNfBoletoEsteiraFaturamentoLote(
   supabase: SupabaseClient,
   input: {
@@ -591,14 +714,25 @@ export async function registarNumeroNfBoletoEsteiraFaturamentoLote(
   const ids = exp.ids
   if (ids.length === 0) return { ok: false, message: 'Nenhuma coleta selecionada.' }
 
+  const liderId = await resolverColetaLiderCobranca(supabase, ids)
+  if (!liderId) return { ok: false, message: 'Não foi possível identificar a coleta líder da MTR.' }
+
+  const resLider = await registarNumeroNfBoletoEsteiraFaturamento(supabase, {
+    referencia_coleta_id: liderId,
+    numero_nf: input.numero_nf,
+    numero_boleto: input.numero_boleto,
+    observacao: input.observacao,
+  })
+  if (!resLider.ok) return resLider
+
   for (const coletaId of ids) {
-    const res = await registarNumeroNfBoletoEsteiraFaturamento(supabase, {
-      referencia_coleta_id: coletaId,
+    if (coletaId === liderId) continue
+    const resIrma = await registarNfColetaIrmaConsolidada(supabase, {
+      coleta_id: coletaId,
       numero_nf: input.numero_nf,
-      numero_boleto: input.numero_boleto,
       observacao: input.observacao,
     })
-    if (!res.ok) return res
+    if (!resIrma.ok) return resIrma
   }
   return { ok: true }
 }
@@ -619,20 +753,34 @@ export async function confirmarNfBoletoEnviadosAoCliente(
 
   const obs = (observacao ?? '').trim() || OBS_NF_BOLETO_PADRAO
 
-  for (const coletaId of ids) {
-    const lib = await liberarColetaParaFinanceiroContasReceber(supabase, coletaId)
-    if (lib.error) {
-      return { ok: false, message: lib.error.message }
-    }
+  const liderId = await resolverColetaLiderCobranca(supabase, ids)
+  if (!liderId) return { ok: false, message: 'Não foi possível identificar a coleta líder.' }
 
-    const reg = await registrarEnvioNfContaReceber(supabase, {
-      referencia_coleta_id: coletaId,
-      modo: 'esteira_confirmacao',
-      observacaoUsuario: obs,
+  const lib = await liberarColetaParaFinanceiroContasReceber(supabase, liderId)
+  if (lib.error) {
+    return { ok: false, message: lib.error.message }
+  }
+
+  const reg = await registrarEnvioNfContaReceber(supabase, {
+    referencia_coleta_id: liderId,
+    modo: 'esteira_confirmacao',
+    observacaoUsuario: obs,
+  })
+  if (reg.error) {
+    return { ok: false, message: reg.error.message }
+  }
+
+  for (const coletaId of ids) {
+    if (coletaId === liderId) continue
+    const { data: coleta } = await supabase
+      .from('coletas')
+      .select('liberado_financeiro')
+      .eq('id', coletaId)
+      .maybeSingle()
+    const fin = await finalizarColetaIrmaConsolidadaMtr(supabase, coletaId, liderId, {
+      liberado_financeiro: coleta?.liberado_financeiro,
     })
-    if (reg.error) {
-      return { ok: false, message: reg.error.message }
-    }
+    if (fin.error) return { ok: false, message: fin.error.message }
   }
 
   return { ok: true }

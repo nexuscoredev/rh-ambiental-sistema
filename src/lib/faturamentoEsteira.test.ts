@@ -9,6 +9,7 @@ import {
   coletaPertenceGrupoMedicaoMtr,
   etapaUnificadaGrupoMedicao,
   inferirEsteiraStatus,
+  passoUiEsteiraDaColeta,
 } from './faturamentoEsteira'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 
@@ -82,6 +83,20 @@ describe('inferirEsteiraStatus', () => {
         row({ faturamento_esteira_status: 'LIBERADO_FATURAMENTO' })
       )
     ).toBe('LIBERADO_FATURAMENTO')
+  })
+})
+
+describe('passoUiEsteiraDaColeta', () => {
+  it('mapeia MEDICAO_AGUARDANDO_CLIENTE para passo 5', () => {
+    expect(
+      passoUiEsteiraDaColeta(
+        row({ faturamento_esteira_status: 'MEDICAO_AGUARDANDO_CLIENTE' })
+      )
+    ).toBe(5)
+  })
+
+  it('mapeia AJUSTE_VALORES_MEDICAO para passo 2', () => {
+    expect(passoUiEsteiraDaColeta(row({}))).toBe(2)
   })
 })
 

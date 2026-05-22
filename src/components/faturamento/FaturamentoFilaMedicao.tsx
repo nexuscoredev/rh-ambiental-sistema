@@ -15,6 +15,8 @@ import {
   type GrupoMedicaoCliente,
 } from '../../lib/faturamentoEsteira'
 import { imprimirRelatorioMedicaoJanela } from '../../lib/imprimirRelatorioMedicaoJanela'
+import { buildUrlEnvioNfMedicao } from '../../lib/coletaContextoUrl'
+import { useRgConfirm } from '../../lib/useRgConfirm'
 import { FaturamentoTabelaMedicao } from './FaturamentoTabelaMedicao'
 
 const card: CSSProperties = {
@@ -31,6 +33,9 @@ type Props = {
   carregando?: boolean
   esteiraAtiva: boolean
   onAtualizar: () => void
+  /** Cliente da coleta/MTR em foco na esteira (abre já selecionado na Mala Direta). */
+  clienteIdContexto?: string | null
+  coletaIdContexto?: string | null
 }
 
 function GrupoMedicaoCard({
@@ -131,10 +136,24 @@ function GrupoMedicaoCard({
   )
 }
 
-export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtualizar }: Props) {
+export function FaturamentoFilaMedicao({
+  linhas,
+  carregando,
+  esteiraAtiva,
+  onAtualizar,
+  clienteIdContexto = null,
+  coletaIdContexto = null,
+}: Props) {
+  function urlMalaDiretaMedicao(clienteId?: string | null) {
+    return buildUrlEnvioNfMedicao({
+      clienteId: (clienteId ?? clienteIdContexto ?? '').trim() || null,
+      coletaId: coletaIdContexto,
+    })
+  }
   const [processando, setProcessando] = useState(false)
   const [obsCliente, setObsCliente] = useState('')
   const [preparandoPrint, setPreparandoPrint] = useState(false)
+  const { confirm, dialogElement } = useRgConfirm()
 
   const gruposPorMtr = useMemo(() => agruparGruposMedicaoPorMtr(linhas), [linhas])
   const gruposMedicao = useMemo(
@@ -177,19 +196,44 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
     onAtualizar()
   }
 
+  const btnVoltarAjusteStyle: CSSProperties = {
+    background: '#fef2f2',
+    borderColor: '#fecaca',
+    color: '#b91c1c',
+  }
+
+  const btnRelatorioGeradoStyle: CSSProperties = {
+    background: '#f0fdf4',
+    borderColor: '#bbf7d0',
+    color: '#15803d',
+  }
+
   function botaoVoltarAjuste(g: GrupoMedicaoCliente) {
     return (
       <button
         type="button"
         className="rg-btn rg-btn--outline"
+        style={btnVoltarAjusteStyle}
         disabled={processando || !esteiraAtiva}
         onClick={() => {
-          const ok = window.confirm(
-            `Voltar ${g.linhas.length} ticket(s) da MTR ${g.mtr_numero} para «Ajuste de valores»?\n\n` +
-              'O relatório de medição, envio por e-mail e aprovação do cliente serão desfeitos nesta MTR. Pode rever os cálculos na esteira 2.'
-          )
-          if (!ok) return
-          void run(() => voltarGrupoMedicaoParaAjusteValores(g.linhas.map((r) => r.coleta_id)))
+          void (async () => {
+            const ok = await confirm({
+              title: 'Voltar para ajuste de valores',
+              message: (
+                <>
+                  MTR <strong>{g.mtr_numero}</strong> · {g.cliente_nome} · {g.linhas.length} ticket(s)
+                </>
+              ),
+              details: [
+                'Desfaz relatório de medição, envio por e-mail e aprovação do cliente nesta MTR.',
+                'A coleta volta para a esteira 2 (Ajuste de valores) para rever os cálculos.',
+              ],
+              confirmLabel: 'Voltar para ajuste',
+              variant: 'danger',
+            })
+            if (!ok) return
+            void run(() => voltarGrupoMedicaoParaAjusteValores(g.linhas.map((r) => r.coleta_id)))
+          })()
         }}
       >
         Volte para o ajuste
@@ -218,9 +262,20 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
         return
       }
       if (res.linhas.every((l) => l.total <= 0)) {
-        const ok = window.confirm(
-          'Não foi possível calcular valores pelo contrato (resíduo/caminhão). Deseja imprimir mesmo assim?'
-        )
+        const ok = await confirm({
+          title: 'Imprimir sem valores do contrato',
+          message: (
+            <>
+              Cliente <strong>{clienteNome}</strong>
+            </>
+          ),
+          details: [
+            'Não foi possível calcular valores pelo contrato (resíduo, caminhão ou equipamento).',
+            'O PDF pode sair com totais zerados ou incompletos.',
+          ],
+          confirmLabel: 'Imprimir mesmo assim',
+          variant: 'warning',
+        })
         if (!ok) return
       }
       imprimirRelatorioMedicaoJanela({
@@ -235,6 +290,7 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
 
   return (
     <>
+      {dialogElement}
       <div style={{ ...card, background: '#f5f3ff', borderColor: '#c4b5fd' }}>
         <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#312e81' }}>
           Esteira 3–5 · Medição e aprovação do cliente
@@ -242,7 +298,8 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
         <p style={{ margin: 0, fontSize: '13px', color: '#4c1d95', lineHeight: 1.55 }}>
           Vários tickets da mesma MTR entram num <strong>único relatório</strong> (tabela e PDF).
           Use <strong>Imprimir / PDF</strong> para gerar o documento.
-          O envio ao cliente é feito em <Link to="/envio-nf?tipo=medicao">Mala Direta — Medição</Link>.
+          O envio ao cliente é feito em{' '}
+          <Link to={urlMalaDiretaMedicao()}>Mala Direta — Medição</Link>.
         </p>
       </div>
 
@@ -259,6 +316,7 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
             <button
               type="button"
               className="rg-btn rg-btn--outline"
+              style={btnRelatorioGeradoStyle}
               disabled={processando || !esteiraAtiva}
               onClick={() =>
                 void run(() =>
@@ -283,7 +341,7 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
           acao={acoesToolbar(
             g,
             <Link
-              to={`/envio-nf?tipo=medicao&cliente=${encodeURIComponent(g.cliente_id)}`}
+              to={urlMalaDiretaMedicao(g.cliente_id)}
               className="rg-btn rg-btn--primary"
               style={{ fontSize: '12px', padding: '8px 14px', textDecoration: 'none' }}
             >
@@ -317,13 +375,27 @@ export function FaturamentoFilaMedicao({ linhas, carregando, esteiraAtiva, onAtu
                 className="rg-btn rg-btn--primary rg-btn--aprovar"
                 disabled={processando || !esteiraAtiva}
                 onClick={() => {
-                  const ok = window.confirm(
-                    `Registrar aprovação do cliente ${g.cliente_nome} (MTR ${g.mtr_numero}) e liberar ${g.linhas.length} ticket(s) para faturamento?`
-                  )
-                  if (!ok) return
-                  void run(() =>
-                    aprovarMedicaoCliente(g.linhas.map((r) => r.coleta_id), obsCliente)
-                  )
+                  void (async () => {
+                    const ok = await confirm({
+                      title: 'Cliente aprovou a medição',
+                      message: (
+                        <>
+                          {g.cliente_nome} · MTR <strong>{g.mtr_numero}</strong> · {g.linhas.length}{' '}
+                          ticket(s)
+                        </>
+                      ),
+                      details: [
+                        'Regista a aprovação do cliente após o envio do relatório por e-mail.',
+                        'Libera os tickets para a fila «Faturar» e emissão ao Financeiro.',
+                      ],
+                      confirmLabel: 'Liberar faturamento',
+                      variant: 'success',
+                    })
+                    if (!ok) return
+                    void run(() =>
+                      aprovarMedicaoCliente(g.linhas.map((r) => r.coleta_id), obsCliente)
+                    )
+                  })()
                 }}
               >
                 Cliente aprovou → Liberado faturamento

@@ -12,6 +12,7 @@ import {
   pesoLiquidoParaInput,
 } from '../../lib/pesoKgInput'
 import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
+import { useRgConfirm } from '../../lib/useRgConfirm'
 
 const wrap: CSSProperties = {
   background: '#fff',
@@ -72,6 +73,7 @@ export function FaturamentoFilaAprovacaoTicket({
   const [sucessoPeso, setSucessoPeso] = useState('')
   /** Reflete o peso gravado antes do refresh da vista. */
   const [pesoLocal, setPesoLocal] = useState<Record<string, number>>({})
+  const { confirm, dialogElement } = useRgConfirm()
 
   const linhaOcupada = (coletaId: string) =>
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
@@ -113,7 +115,7 @@ export function FaturamentoFilaAprovacaoTicket({
     void onAprovado()
   }
 
-  function confirmarESalvarPeso(row: FaturamentoResumoViewRow) {
+  async function confirmarESalvarPeso(row: FaturamentoResumoViewRow) {
     const peso = parsePesoLiquidoKgInput(pesoEditValor)
     if (peso == null || peso <= 0) {
       setErroPeso('Informe um peso líquido válido (ex.: 1250 ou 1250,5).')
@@ -132,9 +134,20 @@ export function FaturamentoFilaAprovacaoTicket({
       minimumFractionDigits: 2,
       maximumFractionDigits: 3,
     })
-    const ok = window.confirm(
-      `Guardar peso líquido ${rotulo} kg na coleta ${row.numero_coleta ?? row.numero} (${row.cliente_nome ?? '—'})?\n\nA coleta, o Controle de Massa e o ticket serão atualizados.`
-    )
+    const ok = await confirm({
+      title: 'Guardar peso líquido',
+      message: (
+        <>
+          Coleta <strong>{row.numero_coleta ?? row.numero}</strong> · {row.cliente_nome ?? '—'}
+        </>
+      ),
+      details: [
+        `Novo peso: ${rotulo} kg`,
+        'Atualiza a coleta, o Controle de Massa e o ticket desta pesagem.',
+      ],
+      confirmLabel: 'Guardar peso',
+      variant: 'default',
+    })
     if (!ok) return
 
     setErroPeso('')
@@ -150,9 +163,26 @@ export function FaturamentoFilaAprovacaoTicket({
 
   async function handleAprovar(row: FaturamentoResumoViewRow) {
     if (!podeAprovar) return
-    const ok = window.confirm(
-      `Validar o ticket da coleta ${row.numero_coleta ?? row.numero} (${row.cliente_nome ?? '—'})?\n\nApós aprovar, a coleta passa para a fila «Faturar» / emissão ao Financeiro.`
-    )
+    const ok = await confirm({
+      title: 'Aprovar ticket na conferência',
+      message: (
+        <>
+          Coleta <strong>{row.numero_coleta ?? row.numero}</strong> · {row.cliente_nome ?? '—'}
+          {row.ticket_comprovante ? (
+            <>
+              {' '}
+              · Ticket <strong>{row.ticket_comprovante}</strong>
+            </>
+          ) : null}
+        </>
+      ),
+      details: [
+        'Valida o ticket impresso e libera a coleta na esteira de faturamento.',
+        'Próximos passos: ajuste de valores → relatório de medição → faturar → Financeiro.',
+      ],
+      confirmLabel: 'Aprovar ticket',
+      variant: 'warning',
+    })
     if (!ok) return
 
     setAprovandoId(row.coleta_id)
@@ -167,7 +197,9 @@ export function FaturamentoFilaAprovacaoTicket({
   }
 
   return (
-    <section style={wrap} aria-labelledby="fila-aprovacao-ticket-titulo">
+    <>
+      {dialogElement}
+      <section style={wrap} aria-labelledby="fila-aprovacao-ticket-titulo">
       <h2
         id="fila-aprovacao-ticket-titulo"
         style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 800, color: '#92400e' }}
@@ -387,5 +419,6 @@ export function FaturamentoFilaAprovacaoTicket({
         </div>
       )}
     </section>
+    </>
   )
 }

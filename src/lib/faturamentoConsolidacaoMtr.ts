@@ -7,6 +7,7 @@ import {
 import {
   criarResumoFinanceiroDoOperacional,
   parseNumeroCampo,
+  parseResumoFinanceiroJson,
   resumoFinanceiroParaJsonb,
   type ResumoFinanceiroDesvinculado,
 } from './faturamentoDesvinculacao'
@@ -47,6 +48,46 @@ export function escolherColetaLiderFaturamento(
   coletas: FaturamentoResumoViewRow[]
 ): FaturamentoResumoViewRow {
   return [...coletas].sort(ordenarColetasFaturamento)[0]!
+}
+
+/** Coleta líder do faturamento consolidado (uma cobrança por MTR). */
+export function liderColetaIdResumoConsolidado(
+  coletaId: string,
+  resumo: ResumoFinanceiroDesvinculado | null
+): string | null {
+  const id = coletaId.trim()
+  const lider = (resumo?.consolidacao_mtr?.coleta_lider_id ?? '').trim()
+  if (!lider || lider === id) return null
+  return lider
+}
+
+type RegistroConsolidacaoRef = {
+  valor: unknown
+  observacoes?: string | null
+  resumo_financeiro?: unknown
+}
+
+function valorRegistroPositivo(valor: unknown): boolean {
+  const v = Number(valor)
+  return Number.isFinite(v) && v > 0
+}
+
+/**
+ * Se a coleta é ticket irmão na MTR consolidada, devolve o id da coleta líder (sem título próprio).
+ */
+export function coletaIrmaConsolidadaMtr(
+  coletaId: string,
+  reg: RegistroConsolidacaoRef | null | undefined
+): string | null {
+  if (!reg) return null
+  const resumo = parseResumoFinanceiroJson(reg.resumo_financeiro) as ResumoFinanceiroDesvinculado | null
+  const lider = liderColetaIdResumoConsolidado(coletaId, resumo)
+  if (lider) return lider
+  if (valorRegistroPositivo(reg.valor)) return null
+  if (/consolidado na coleta/i.test(String(reg.observacoes ?? ''))) {
+    return resumo?.consolidacao_mtr?.coleta_lider_id?.trim() || null
+  }
+  return null
 }
 
 /** Agrupa a fila: uma linha por MTR quando há 2+ coletas elegíveis na mesma MTR. */

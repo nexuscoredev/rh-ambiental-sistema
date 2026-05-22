@@ -41,6 +41,36 @@ function formatDate(iso: string | null) {
   return `${da}/${m}/${y}`
 }
 
+/** Oculta títulos duplicados de MTR consolidada (mesma MTR, cliente e valor). */
+function filtrarTitulosDuplicadosMtrConsolidada(
+  linhas: (ContaRow & { _numero_coleta: number | null; _mtr_id: string | null })[]
+): ContaRow[] {
+  const grupos = new Map<string, typeof linhas>()
+  for (const l of linhas) {
+    const mid = (l._mtr_id ?? '').trim()
+    if (!mid) continue
+    const key = `${mid}|${l.cliente_id ?? ''}|${Math.round(l.valor * 100)}`
+    const g = grupos.get(key) ?? []
+    g.push(l)
+    grupos.set(key, g)
+  }
+
+  const omitirIds = new Set<string>()
+  for (const g of grupos.values()) {
+    if (g.length < 2) continue
+    g.sort((a, b) => {
+      const na = a._numero_coleta ?? (Number(a.coleta_numero) || 0)
+      const nb = b._numero_coleta ?? (Number(b.coleta_numero) || 0)
+      return na - nb
+    })
+    for (let i = 1; i < g.length; i++) omitirIds.add(g[i]!.id)
+  }
+
+  return linhas
+    .filter((l) => !omitirIds.has(l.id))
+    .map(({ _numero_coleta: _n, _mtr_id: _m, ...row }) => row)
+}
+
 export default function FinanceiroContasReceber() {
   const [linhas, setLinhas] = useState<ContaRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,7 +126,10 @@ export default function FinanceiroContasReceber() {
         ...new Set(list.map((r) => r.cliente_id as string | null).filter(Boolean) as string[]),
       ]
 
-      const cmap = new Map<string, { numero: string }>()
+      const cmap = new Map<
+        string,
+        { numero: string; numero_coleta: number | null; mtr_id: string | null }
+      >()
       const IN_CHUNK = 300
       if (refIds.length > 0) {
         const fatias: string[][] = []
@@ -105,13 +138,22 @@ export default function FinanceiroContasReceber() {
         }
         const colunas = await Promise.all(
           fatias.map((slice) =>
-            supabase.from('coletas').select('id, numero').in('id', slice)
+            supabase.from('coletas').select('id, numero, numero_coleta, mtr_id').in('id', slice)
           )
         )
         for (const { data: cols, error: e2 } of colunas) {
           if (!e2 && cols) {
-            for (const c of cols as { id: string; numero: string }[]) {
-              cmap.set(c.id, { numero: c.numero })
+            for (const c of cols as {
+              id: string
+              numero: string
+              numero_coleta: number | null
+              mtr_id: string | null
+            }[]) {
+              cmap.set(c.id, {
+                numero: c.numero,
+                numero_coleta: c.numero_coleta,
+                mtr_id: c.mtr_id,
+              })
             }
           }
         }
@@ -137,9 +179,10 @@ export default function FinanceiroContasReceber() {
         }
       }
 
-      const out: ContaRow[] = list.map((r) => {
+      let out: ContaRow[] = list.map((r) => {
         const ref = String(r.referencia_coleta_id || '')
         const cid = (r.cliente_id as string | null) || null
+        const meta = cmap.get(ref)
         return {
           id: String(r.id),
           valor: Number(r.valor) || 0,
@@ -151,10 +194,16 @@ export default function FinanceiroContasReceber() {
           nf_enviada_em: (r.nf_enviada_em as string | null) || null,
           referencia_coleta_id: ref,
           cliente_id: cid,
-          coleta_numero: cmap.get(ref)?.numero ?? ref.slice(0, 8),
+          coleta_numero: meta?.numero ?? ref.slice(0, 8),
           cliente_nome: cid ? clmap.get(cid) ?? '—' : '—',
-        }
+          _numero_coleta: meta?.numero_coleta ?? null,
+          _mtr_id: meta?.mtr_id ?? null,
+        } as ContaRow & { _numero_coleta: number | null; _mtr_id: string | null }
       })
+
+      out = filtrarTitulosDuplicadosMtrConsolidada(
+        out as (ContaRow & { _numero_coleta: number | null; _mtr_id: string | null })[]
+      )
 
       setLinhas(out)
     } catch (e) {
