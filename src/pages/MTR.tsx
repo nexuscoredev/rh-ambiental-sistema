@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
-import { rgConfirm } from '../lib/RgDialogProvider'
+import { rgAlert, rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { montarMapNomeExibicaoPorUsuarioId } from '../lib/resolveAutorUsuarioNomes'
 import {
@@ -751,7 +751,7 @@ export default function MTR() {
 
     if (gen !== loadDataGenRef.current) return
 
-    const alertarSeCritico = (titulo: string, err: typeof mtrsRes.error) => {
+    const alertarSeCritico = async (titulo: string, err: typeof mtrsRes.error) => {
       if (!err) return
       if (isBenignSupabaseFetchError(err)) {
         if (import.meta.env.DEV) {
@@ -759,12 +759,16 @@ export default function MTR() {
         }
         return
       }
-      alert(`${titulo}\n${buildSupabaseErrorMessage(err)}`)
+      await rgAlert({
+        title: titulo.replace(/:$/, '').trim(),
+        message: buildSupabaseErrorMessage(err),
+        variant: 'danger',
+      })
     }
 
     let mtrsRows: MTR[] = []
     if (mtrsRes.error) {
-      alertarSeCritico('Erro ao carregar MTRs:', mtrsRes.error)
+      await alertarSeCritico('Erro ao carregar MTRs:', mtrsRes.error)
     } else {
       const rawMtrs = (mtrsRes.data || []) as MTR[]
       const idsAutorSemNome = rawMtrs
@@ -786,7 +790,7 @@ export default function MTR() {
 
     let coletasRows: Coleta[] = []
     if (coletasRes.error) {
-      alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
+      await alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
     } else {
       coletasRows = (coletasRes.data || []) as Coleta[]
       setColetas(coletasRows)
@@ -1010,9 +1014,13 @@ export default function MTR() {
     }
   }, [loading, mtrs, selectedMTR])
 
-  function openNewForm() {
+  async function openNewForm() {
     if (!podeMutarMtr) {
-      alert('Seu perfil não pode criar MTR. Apenas operacional ou administrador.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Seu perfil não pode criar MTR. Apenas operacional ou administrador.',
+        variant: 'warning',
+      })
       return
     }
     resetForm()
@@ -1020,9 +1028,13 @@ export default function MTR() {
     void ensureCatalogoProgramacoes()
   }
 
-  function openEditForm(item: MTR) {
+  async function openEditForm(item: MTR) {
     if (!podeMutarMtr) {
-      alert('Seu perfil não pode editar MTR. Apenas operacional ou administrador.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Seu perfil não pode editar MTR. Apenas operacional ou administrador.',
+        variant: 'warning',
+      })
       return
     }
     setEditingId(item.id)
@@ -1382,73 +1394,90 @@ export default function MTR() {
     e.preventDefault()
 
     if (!podeMutarMtr) {
-      alert('Seu perfil não pode salvar MTR. Apenas operacional ou administrador.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Seu perfil não pode salvar MTR. Apenas operacional ou administrador.',
+        variant: 'warning',
+      })
       return
     }
 
     if (!form.numero.trim()) {
-      alert('Preencha o número da MTR.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o número da MTR.', variant: 'warning' })
       return
     }
 
     if (!form.programacao_id) {
-      alert('Selecione a programação vinculada.')
+      await rgAlert({ title: 'MTR', message: 'Selecione a programação vinculada.', variant: 'warning' })
       return
     }
 
     const selectedProgramacao = programacaoMap.get(form.programacao_id)
 
     if (!selectedProgramacao) {
-      alert('A programação selecionada não foi encontrada.')
+      await rgAlert({ title: 'MTR', message: 'A programação selecionada não foi encontrada.', variant: 'warning' })
       return
     }
 
     const duplicateMTR = getDuplicateMTRForSelectedProgramacao()
     if (duplicateMTR) {
-      alert(`Esta programação já possui uma MTR vinculada: ${duplicateMTR.numero}`)
+      await rgAlert({
+        title: 'MTR',
+        message: `Esta programação já possui uma MTR vinculada: ${duplicateMTR.numero}`,
+        variant: 'warning',
+      })
       return
     }
 
     if (!form.cliente.trim()) {
-      alert('Preencha o cliente.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o cliente.', variant: 'warning' })
       return
     }
 
     if (!form.gerador.trim()) {
-      alert('Preencha o gerador.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o gerador.', variant: 'warning' })
       return
     }
 
     if (!form.tipo_residuo.trim()) {
-      alert('Preencha o tipo de resíduo.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o tipo de resíduo.', variant: 'warning' })
       return
     }
 
     if (form.quantidade !== null && form.quantidade !== undefined) {
       if (Number.isNaN(Number(form.quantidade)) || Number(form.quantidade) < 0) {
-        alert('Se informar quantidade, use um valor numérico válido (≥ 0).')
+        await rgAlert({
+          title: 'MTR',
+          message: 'Se informar quantidade, use um valor numérico válido (≥ 0).',
+          variant: 'warning',
+        })
         return
       }
     }
 
     if (!form.destinador.trim()) {
-      alert('Preencha o destinador.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o destinador.', variant: 'warning' })
       return
     }
 
     if (!form.transportador.trim()) {
-      alert('Preencha o transportador.')
+      await rgAlert({ title: 'MTR', message: 'Preencha o transportador.', variant: 'warning' })
       return
     }
 
     const detBasePrev = form.detalhes ?? detalhesVazios()
     if (!cidadeCompletaGeradorParaGravar(form.cidade, detBasePrev.gerador).trim()) {
-      alert('Preencha a cidade do gerador (município e UF nos campos do layout, ou cidade no topo do formulário).')
+      await rgAlert({
+        title: 'MTR',
+        message:
+          'Preencha a cidade do gerador (município e UF nos campos do layout, ou cidade no topo do formulário).',
+        variant: 'warning',
+      })
       return
     }
 
     if (!form.data_emissao) {
-      alert('Preencha a data de emissão.')
+      await rgAlert({ title: 'MTR', message: 'Preencha a data de emissão.', variant: 'warning' })
       return
     }
 
@@ -1514,9 +1543,12 @@ export default function MTR() {
         const retry = await supabase.from('mtrs').update(payloadSemDetalhes).eq('id', editingId)
         error = retry.error
         if (!error) {
-          alert(
-            "MTR salva, mas o Supabase ainda não tem a coluna 'mtrs.detalhes'.\n\nAplique a migração `20260408133000_mtrs_detalhes_jsonb.sql` no Supabase para gravar os campos do modelo (Gerador/Resíduo/Transportador/Destinatário)."
-          )
+          await rgAlert({
+            title: 'MTR',
+            message:
+              "MTR salva, mas o Supabase ainda não tem a coluna 'mtrs.detalhes'.\n\nAplique a migração `20260408133000_mtrs_detalhes_jsonb.sql` no Supabase para gravar os campos do modelo (Gerador/Resíduo/Transportador/Destinatário).",
+            variant: 'warning',
+          })
         }
       }
     } else {
@@ -1528,16 +1560,23 @@ export default function MTR() {
         const retry = await supabase.from('mtrs').insert([payloadSemDetalhes])
         error = retry.error
         if (!error) {
-          alert(
-            "MTR salva, mas o Supabase ainda não tem a coluna 'mtrs.detalhes'.\n\nAplique a migração `20260408133000_mtrs_detalhes_jsonb.sql` no Supabase para gravar os campos do modelo (Gerador/Resíduo/Transportador/Destinatário)."
-          )
+          await rgAlert({
+            title: 'MTR',
+            message:
+              "MTR salva, mas o Supabase ainda não tem a coluna 'mtrs.detalhes'.\n\nAplique a migração `20260408133000_mtrs_detalhes_jsonb.sql` no Supabase para gravar os campos do modelo (Gerador/Resíduo/Transportador/Destinatário).",
+            variant: 'warning',
+          })
         }
       }
     }
 
     if (error) {
       setSaving(false)
-      alert(`Erro ao salvar MTR:\n${buildSupabaseErrorMessage(error)}`)
+      await rgAlert({
+        title: 'Erro ao salvar MTR',
+        message: buildSupabaseErrorMessage(error),
+        variant: 'danger',
+      })
       return
     }
 
@@ -1549,7 +1588,11 @@ export default function MTR() {
     })
 
     setSaving(false)
-    alert(editingId ? 'MTR atualizada com sucesso.' : 'MTR criada com sucesso.')
+    await rgAlert({
+      title: 'MTR',
+      message: editingId ? 'MTR atualizada com sucesso.' : 'MTR criada com sucesso.',
+      variant: 'success',
+    })
     setShowForm(false)
     resetForm()
     await loadData()
@@ -1557,7 +1600,11 @@ export default function MTR() {
 
   async function handleDelete(item: MTR) {
     if (!podeMutarMtr) {
-      alert('Seu perfil não pode remover MTR. Apenas operacional ou administrador.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Seu perfil não pode remover MTR. Apenas operacional ou administrador.',
+        variant: 'warning',
+      })
       return
     }
 
@@ -1582,7 +1629,11 @@ export default function MTR() {
 
     const res = await excluirMtrPorId(item.id)
     if (!res.ok) {
-      alert(`Erro ao remover MTR:\n${res.message}`)
+      await rgAlert({
+        title: 'Erro ao remover MTR',
+        message: res.message,
+        variant: 'danger',
+      })
       return
     }
 
@@ -1590,11 +1641,13 @@ export default function MTR() {
       setSelectedMTR(null)
     }
 
-    alert(
-      temColeta
+    await rgAlert({
+      title: 'MTR',
+      message: temColeta
         ? 'MTR e coleta(s) vinculadas foram removidas com sucesso.'
-        : 'MTR removida com sucesso.'
-    )
+        : 'MTR removida com sucesso.',
+      variant: 'success',
+    })
     await loadData()
   }
 
@@ -1603,7 +1656,11 @@ export default function MTR() {
     opts?: { skipConfirm?: boolean; suppressSuccessAlert?: boolean }
   ): Promise<boolean> {
     if (!podeMutarMtr) {
-      alert('Seu perfil não pode excluir coletas. Apenas operacional ou administrador.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Seu perfil não pode excluir coletas. Apenas operacional ou administrador.',
+        variant: 'warning',
+      })
       return false
     }
 
@@ -1630,7 +1687,11 @@ export default function MTR() {
     for (const coletaId of ids) {
       const res = await excluirColetaPorId(coletaId)
       if (!res.ok) {
-        alert(`Erro ao excluir coleta:\n${res.message}`)
+        await rgAlert({
+          title: 'Erro ao excluir coleta',
+          message: res.message,
+          variant: 'danger',
+        })
         await loadData()
         return false
       }
@@ -1639,7 +1700,11 @@ export default function MTR() {
     setColetas((prev) => prev.filter((c) => c.mtr_id !== mtrId))
     await loadData()
     if (!opts?.suppressSuccessAlert) {
-      alert('Coleta(s) excluída(s) com sucesso.')
+      await rgAlert({
+        title: 'MTR',
+        message: 'Coleta(s) excluída(s) com sucesso.',
+        variant: 'success',
+      })
     }
     return true
   }
@@ -3234,7 +3299,7 @@ export default function MTR() {
           <div className="mtr-topbar-right">
             <button
               className="btn btn-primary"
-              onClick={openNewForm}
+              onClick={() => void openNewForm()}
               disabled={!podeMutarMtr}
               title={!podeMutarMtr ? 'Apenas operacional ou administrador' : undefined}
               style={{ opacity: podeMutarMtr ? 1 : 0.55 }}
@@ -3390,7 +3455,7 @@ export default function MTR() {
                           </button>
                           <button
                             className="mini-btn"
-                            onClick={() => openEditForm(item)}
+                            onClick={() => void openEditForm(item)}
                             disabled={!podeMutarMtr}
                             style={{ opacity: podeMutarMtr ? 1 : 0.5 }}
                           >
