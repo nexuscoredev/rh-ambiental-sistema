@@ -188,7 +188,6 @@ export function FaturamentoFilaPosFaturamento({
     }
 
     const numeroBoleto = (c?.numeroBoleto ?? '').trim()
-    const tickets = rotuloTicketsGrupo(grupo)
     const plural = grupo.linhas.length > 1
     const textoSucesso = montarAvisoFinalizarProcesso(numeroNf, numeroBoleto, grupo)
     setMensagem(
