@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aplicarPesoLiquidoMtrNoResumo,
   aplicarSugestaoContratoNoResumoMtr,
   criarResumoFinanceiroDoOperacional,
+  parseNumeroCampo,
   resumoMtrPrecosVazios,
 } from './faturamentoDesvinculacao'
 import type { ResultadoPrecoContrato } from './faturamentoPrecoContrato'
@@ -26,6 +28,26 @@ describe('resumoMtrPrecosVazios', () => {
   it('detecta MTR sem valores monetários', () => {
     const r = criarResumoFinanceiroDoOperacional(rowMin, null)
     expect(resumoMtrPrecosVazios(r.mtr)).toBe(true)
+  })
+})
+
+describe('aplicarPesoLiquidoMtrNoResumo', () => {
+  it('atualiza qtd. faturada e valor do resíduo (qtd × unitário)', () => {
+    const base = criarResumoFinanceiroDoOperacional(rowMin, null)
+    const comPreco = {
+      ...base,
+      mtr: {
+        ...base.mtr,
+        residuo_quantidade: '5600',
+        residuo_valor_unitario: '300',
+        residuo_valor: '1680000',
+        peso_liquido_kg: '5600',
+      },
+    }
+    const next = aplicarPesoLiquidoMtrNoResumo(comPreco, '234')
+    expect(parseNumeroCampo(next.mtr.peso_liquido_kg)).toBe(234)
+    expect(parseNumeroCampo(next.mtr.residuo_quantidade)).toBe(234)
+    expect(parseNumeroCampo(next.mtr.residuo_valor)).toBe(234 * 300)
   })
 })
 

@@ -21,12 +21,20 @@ function fmtBrl(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function detalheResiduoMtr(mtr: ResumoFinanceiroDesvinculado['mtr']): string | undefined {
+function detalheResiduoMtr(
+  mtr: ResumoFinanceiroDesvinculado['mtr'],
+  residuoValor: number
+): string | undefined {
   const qtd = parseNumeroCampo(mtr.residuo_quantidade)
   const unit = parseNumeroCampo(mtr.residuo_valor_unitario)
   const un = (mtr.residuo_unidade ?? 'kg').trim() || 'kg'
-  if (qtd > 0 && unit > 0) {
+  const esperado = qtd > 0 && unit > 0 ? Math.round(qtd * unit * 100) / 100 : 0
+  const linhaUnica = Math.abs(esperado - residuoValor) < 0.05
+  if (qtd > 0 && unit > 0 && linhaUnica) {
     return `${qtd.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${un} × ${fmtBrl(unit)}/${un}`
+  }
+  if (qtd > 0 && unit > 0 && !linhaUnica) {
+    return `Total ${qtd.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${un} — ver referência (vários resíduos/preços)`
   }
   const peso = parseNumeroCampo(mtr.peso_liquido_kg)
   if (peso > 0) return `Peso líq. MTR: ${peso.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg`
@@ -100,7 +108,7 @@ export function montarDetalheContaFaturamento(resumo: ResumoFinanceiroDesvincula
   linhas.push({
     grupo: 'mtr',
     rotulo: resRot,
-    detalhe: detalheResiduoMtr(resumo.mtr),
+    detalhe: detalheResiduoMtr(resumo.mtr, residuo),
     valor: residuo,
     indent: true,
   })

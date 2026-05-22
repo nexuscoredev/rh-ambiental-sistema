@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, type CSSProperties } from 'react'
 import {
+  aplicarPesoLiquidoMtrNoResumo,
   parseNumeroCampo,
   recalcularResiduoMtr,
   totalResumoMtr,
@@ -85,6 +86,8 @@ type Props = {
     linhas: PrecoBreakdownLinha[]
   } | null
   diferencaConta?: number | null
+  /** Após alterar peso MTR (kg): recalcular valores do contrato no resumo, se fornecido. */
+  onAposPesoMtrAlterado?: (resumo: ResumoFinanceiroDesvinculado) => ResumoFinanceiroDesvinculado
 }
 
 function fmtBrlLocal(v: number) {
@@ -102,6 +105,7 @@ function FaturamentoResumoDesvinculadoInner({
   carregandoSugestao,
   referenciaConta,
   diferencaConta,
+  onAposPesoMtrAlterado,
 }: Props) {
   const podeEditar = podeEditarResumos && !resumo.ticket_encerrado_definitivo
   const podeAjustar = (podeEditarAjustes ?? podeEditarResumos) && !resumo.ticket_encerrado_definitivo
@@ -144,6 +148,15 @@ function FaturamentoResumoDesvinculadoInner({
       onChange({ ...resumo, ajustes: { ...resumo.ajustes, ...partial } })
     },
     [onChange, resumo]
+  )
+
+  const alterarPesoLiquidoMtr = useCallback(
+    (pesoStr: string) => {
+      let next = aplicarPesoLiquidoMtrNoResumo(resumo, pesoStr)
+      if (onAposPesoMtrAlterado) next = onAposPesoMtrAlterado(next)
+      onChange(next)
+    },
+    [onChange, onAposPesoMtrAlterado, resumo]
   )
 
   return (
@@ -472,7 +485,7 @@ function FaturamentoResumoDesvinculadoInner({
               readOnly={!podeEditar}
               inputMode="decimal"
               value={resumo.mtr.peso_liquido_kg}
-              onChange={(e) => patchMtrSemRecalc({ peso_liquido_kg: e.target.value })}
+              onChange={(e) => alterarPesoLiquidoMtr(e.target.value)}
             />
           </div>
           <div>

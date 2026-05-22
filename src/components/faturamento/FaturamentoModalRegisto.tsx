@@ -33,6 +33,7 @@ import {
 } from '../../lib/faturamentoDesvinculacao'
 import {
   calcularPrecoContratoMtrConsolidado,
+  coletasPesoParaContratoFromResumo,
   criarResumoFinanceiroConsolidado,
   emitirFaturamentoConsolidadoMtr,
   escolherColetaLiderFaturamento,
@@ -168,7 +169,12 @@ export function FaturamentoModalRegisto({
     )
   }, [regrasPreco, row, pesoFaturamentoMtrKg])
 
-  /** Sugestão de contrato: usa peso da coleta (não recalcula a cada tecla nos campos MTR). */
+  const coletasPesoContrato = useMemo(() => {
+    if (!grupoConsolidado || grupoConsolidado.length <= 1) return null
+    return coletasPesoParaContratoFromResumo(grupoConsolidado, resumoFinanceiro)
+  }, [grupoConsolidado, resumoFinanceiro])
+
+  /** Referência do contrato usa peso do resumo MTR (inclui edição em kg). */
   const sugestaoContrato: ResultadoPrecoContrato | null = useMemo(() => {
     if (!row || !contratoCliente) return null
     const inputBase = {
@@ -181,22 +187,71 @@ export function FaturamentoModalRegisto({
       tipoCaminhaoMtr: contextoMtr?.tipoCaminhao ?? null,
       acondicionamentoMtr: contextoMtr?.acondicionamento ?? null,
       tipoResiduoColeta: row.tipo_residuo,
-      pesoLiquidoKg: pesoColetaKg,
+      pesoLiquidoKg: pesoFaturamentoMtrKg ?? pesoColetaKg,
     }
-    if (grupoConsolidado && grupoConsolidado.length > 1) {
-      return calcularPrecoContratoMtrConsolidado(inputBase, grupoConsolidado)
+    if (coletasPesoContrato && coletasPesoContrato.length > 1) {
+      return calcularPrecoContratoMtrConsolidado(inputBase, coletasPesoContrato)
     }
-    const qtd =
-      pesoColetaKg != null && pesoColetaKg > 0
-        ? pesoColetaKg
-        : parseValor(mtrQtdStr) ?? parseValor(mtrPesoLiquidoStr)
+    const qtd = pesoFaturamentoMtrKg ?? pesoColetaKg
     return calcularPrecoContratoColetaMtr({
       ...inputBase,
       tipoResiduoColeta: row.tipo_residuo,
-      pesoLiquidoKg: pesoColetaKg,
+      pesoLiquidoKg: pesoFaturamentoMtrKg ?? pesoColetaKg,
       quantidadeFaturada: qtd,
     })
-  }, [row, contratoCliente, contextoMtr, pesoColetaKg, mtrQtdStr, mtrPesoLiquidoStr, grupoConsolidado])
+  }, [
+    row,
+    contratoCliente,
+    contextoMtr,
+    pesoColetaKg,
+    pesoFaturamentoMtrKg,
+    coletasPesoContrato,
+  ])
+
+  const calcularSugestaoContratoParaResumo = useCallback(
+    (resumo: ResumoFinanceiroDesvinculado): ResultadoPrecoContrato | null => {
+      if (!row || !contratoCliente) return null
+      const pesoMtr = parseNumeroCampo(resumo.mtr.peso_liquido_kg || resumo.mtr.residuo_quantidade)
+      const pesoKg = pesoMtr > 0 ? pesoMtr : pesoColetaKg
+      const inputBase = {
+        veiculosContratoRaw: contratoCliente.veiculos_contrato,
+        equipamentosContratoRaw: contratoCliente.equipamentos_contrato,
+        residuosContratoRaw: contratoCliente.residuos_contrato,
+        legadoTipoResiduo: contratoCliente.tipo_residuo_legado,
+        descricaoVeiculoLegado: contratoCliente.descricao_veiculo_legado,
+        equipamentosTextoLegado: contratoCliente.equipamentos_texto_legado,
+        tipoCaminhaoMtr: contextoMtr?.tipoCaminhao ?? null,
+        acondicionamentoMtr: contextoMtr?.acondicionamento ?? null,
+        tipoResiduoColeta: row.tipo_residuo,
+        pesoLiquidoKg: pesoKg,
+      }
+      if (grupoConsolidado && grupoConsolidado.length > 1) {
+        const coletas = coletasPesoParaContratoFromResumo(grupoConsolidado, resumo)
+        if (coletas.length > 1) {
+          return calcularPrecoContratoMtrConsolidado(inputBase, coletas)
+        }
+      }
+      return calcularPrecoContratoColetaMtr({
+        ...inputBase,
+        tipoResiduoColeta: row.tipo_residuo,
+        pesoLiquidoKg: pesoKg,
+        quantidadeFaturada: pesoKg,
+      })
+    },
+    [row, contratoCliente, contextoMtr, grupoConsolidado, pesoColetaKg]
+  )
+
+  const reaplicarContratoNoResumo = useCallback(
+    (resumo: ResumoFinanceiroDesvinculado) => {
+      const sugestao = calcularSugestaoContratoParaResumo(resumo)
+      if (!sugestao || sugestao.total <= 0) return resumo
+      return aplicarSugestaoContratoNoResumoMtr(resumo, sugestao, {
+        tipoCaminhao: contextoMtr?.tipoCaminhao,
+        acondicionamento: contextoMtr?.acondicionamento,
+      })
+    },
+    [calcularSugestaoContratoParaResumo, contextoMtr?.tipoCaminhao, contextoMtr?.acondicionamento]
+  )
 
   const sugestaoAtiva = useMemo(() => {
     if (sugestaoContrato && sugestaoContrato.total > 0) {
@@ -782,9 +837,6 @@ export function FaturamentoModalRegisto({
         justifyContent: 'center',
         padding: '20px',
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
     >
       <div
         style={{
@@ -799,7 +851,18 @@ export function FaturamentoModalRegisto({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: '22px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+        <div
+          style={{
+            padding: '22px 24px 16px',
+            borderBottom: '1px solid #f1f5f9',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
           <h2 id="fat-modal-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
             {modoPreparacaoMedicao
               ? grupoConsolidado && grupoConsolidado.length > 1
@@ -825,6 +888,26 @@ export function FaturamentoModalRegisto({
               </>
             )}
           </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: '#475569',
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px' }}>
@@ -878,6 +961,9 @@ export function FaturamentoModalRegisto({
               <FaturamentoResumoDesvinculado
                 resumo={resumoFinanceiro}
                 onChange={onResumoFinanceiroChange}
+                onAposPesoMtrAlterado={
+                  podeEditarResumosFinanceiros ? reaplicarContratoNoResumo : undefined
+                }
                 podeEditarResumos={podeEditarResumosFinanceiros}
                 podeEditarAjustes={podeEditarResumosFinanceiros}
                 carregandoSugestao={carregandoContrato || carregandoRegras}

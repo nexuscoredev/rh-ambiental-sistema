@@ -311,6 +311,59 @@ export function marcarTicketEncerradoDefinitivoResumo(
   }
 }
 
+/**
+ * Atualiza peso líquido MTR, espelha em qtd. faturada (kg) e, se consolidado, redistribui peso nos tickets.
+ */
+export function aplicarPesoLiquidoMtrNoResumo(
+  resumo: ResumoFinanceiroDesvinculado,
+  pesoStr: string
+): ResumoFinanceiroDesvinculado {
+  const peso = parseNumeroCampo(pesoStr)
+  const linhas = resumo.ticket.linhas_tickets ?? []
+  const consolidado = Boolean(resumo.consolidacao_mtr) || linhas.length > 1
+
+  if (consolidado && linhas.length > 0 && peso > 0) {
+    const pesosAntigos = linhas.map((l) => parseNumeroCampo(l.peso_liquido_kg))
+    const totalAntigo = pesosAntigos.reduce((a, b) => a + b, 0)
+    let restante = peso
+    const novasLinhas = linhas.map((l, i) => {
+      const isLast = i === linhas.length - 1
+      const novoPeso = isLast
+        ? Math.round(restante * 1000) / 1000
+        : totalAntigo > 0
+          ? Math.round(((pesosAntigos[i]! / totalAntigo) * peso) * 1000) / 1000
+          : Math.round((peso / linhas.length) * 1000) / 1000
+      if (!isLast) restante -= novoPeso
+      return { ...l, peso_liquido_kg: pesoParaCampo(novoPeso) }
+    })
+    const mtr = recalcularResiduoMtr({
+      ...resumo.mtr,
+      peso_liquido_kg: pesoStr.trim(),
+      residuo_quantidade: pesoParaCampo(peso),
+    })
+    return {
+      ...resumo,
+      ticket: {
+        ...resumo.ticket,
+        linhas_tickets: novasLinhas,
+        peso_liquido_kg: pesoParaCampo(peso),
+      },
+      mtr,
+    }
+  }
+
+  const mtr = recalcularResiduoMtr({
+    ...resumo.mtr,
+    peso_liquido_kg: pesoStr.trim(),
+    residuo_quantidade: peso > 0 ? pesoParaCampo(peso) : resumo.mtr.residuo_quantidade,
+  })
+  const ticket =
+    peso > 0 && !consolidado
+      ? { ...resumo.ticket, peso_liquido_kg: pesoParaCampo(peso) }
+      : resumo.ticket
+  return { ...resumo, mtr, ticket }
+}
+
 /** Recalcula valor do resíduo na MTR a partir de quantidade × unitário (mínimo contratual já no valor unitário efetivo). */
 export function recalcularResiduoMtr(m: ResumoMtrFinanceiro): ResumoMtrFinanceiro {
   const qtd = parseNumeroCampo(m.residuo_quantidade)

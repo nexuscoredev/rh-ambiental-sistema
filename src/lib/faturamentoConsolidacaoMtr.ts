@@ -6,6 +6,7 @@ import {
 } from './faturamentoRegistrosPersist'
 import {
   criarResumoFinanceiroDoOperacional,
+  parseNumeroCampo,
   resumoFinanceiroParaJsonb,
   type ResumoFinanceiroDesvinculado,
 } from './faturamentoDesvinculacao'
@@ -210,6 +211,36 @@ export function resolverGrupoFaturamentoNaFila(
 }
 
 type InputPrecoContrato = Parameters<typeof calcularPrecoContratoColetaMtr>[0]
+
+export type ColetaPesoContratoRef = Pick<FaturamentoResumoViewRow, 'tipo_residuo' | 'peso_liquido'>
+
+/** Pesos por ticket a partir do resumo (consolidado) ou linhas da view. */
+export function coletasPesoParaContratoFromResumo(
+  grupo: FaturamentoResumoViewRow[],
+  resumo: ResumoFinanceiroDesvinculado | null
+): ColetaPesoContratoRef[] {
+  const linhas = resumo?.ticket.linhas_tickets ?? []
+  if (linhas.length > 1) {
+    return grupo.map((r) => {
+      const num = String(r.numero_coleta ?? r.numero).trim()
+      const lt = linhas.find(
+        (l) =>
+          String(l.coleta_numero).trim() === num ||
+          String(l.ticket_numero).trim() === String(r.ticket_numero ?? '').trim()
+      )
+      const pesoLinha = lt ? parseNumeroCampo(lt.peso_liquido_kg) : 0
+      return {
+        tipo_residuo: (lt?.residuo || r.tipo_residuo) ?? null,
+        peso_liquido: pesoLinha > 0 ? pesoLinha : r.peso_liquido,
+      }
+    })
+  }
+  const pesoMtr = resumo ? parseNumeroCampo(resumo.mtr.peso_liquido_kg || resumo.mtr.residuo_quantidade) : 0
+  if (grupo.length === 1 && pesoMtr > 0) {
+    return [{ tipo_residuo: grupo[0]!.tipo_residuo, peso_liquido: pesoMtr }]
+  }
+  return grupo
+}
 
 /**
  * Um faturamento por MTR: caminhão e equipamento uma vez; soma de cada resíduo/ticket.

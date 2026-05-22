@@ -56,6 +56,6 @@ describe('montarDetalheContaFaturamento', () => {
     expect(total?.valor).toBe(135450)
     const residuo = linhas.find((l) => l.rotulo.includes('resíduos'))
     expect(residuo?.detalhe).toContain('576')
-    expect(residuo?.detalhe).toContain('300')
+    expect(residuo?.detalhe).toContain('referência')
   })
 })
