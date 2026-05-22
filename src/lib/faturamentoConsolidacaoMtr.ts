@@ -226,7 +226,7 @@ export function coletasPesoParaContratoFromResumo(
       const lt = linhas.find(
         (l) =>
           String(l.coleta_numero).trim() === num ||
-          String(l.ticket_numero).trim() === String(r.ticket_numero ?? '').trim()
+          String(l.ticket_numero).trim() === String(r.ticket_comprovante ?? '').trim()
       )
       const pesoLinha = lt ? parseNumeroCampo(lt.peso_liquido_kg) : 0
       return {
