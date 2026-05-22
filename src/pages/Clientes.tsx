@@ -42,6 +42,7 @@ import {
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
+import { normalizarEmailNfLista } from "../lib/emailNfLista";
 
 type Cliente = {
   id: string;
@@ -1583,7 +1584,7 @@ export default function Clientes() {
             estado_faturamento: limparOuNull(r.estado_faturamento || ""),
             endereco_coleta: limparOuNull(r.endereco_coleta || textoColetaImp),
             endereco_faturamento: limparOuNull(r.endereco_faturamento || textoFatImp),
-            email_nf: limparOuNull(r.email_nf || ""),
+            email_nf: normalizarEmailNfLista(r.email_nf || ""),
             margem_lucro_percentual: (() => {
               const p = parseMargemLucroPercentual(String(r.margem_lucro_percentual ?? ""));
               return p.ok ? p.value : null;
@@ -1890,7 +1891,7 @@ export default function Clientes() {
     try {
       let fat = faturamentoEstruturadoColDisponivelRef.current;
       let ml = margemLucroColDisponivelRef.current;
-      let contrato = clienteContratoColDisponivelRef.current;
+      const contrato = clienteContratoColDisponivelRef.current;
       const lista = () => montarClientesSelectPrincipalLegacy(fat, ml, contrato);
       const completa = () => `${lista()}, status_ativo_desde, status_inativo_desde`;
 
@@ -2014,7 +2015,7 @@ export default function Clientes() {
           estado: form.estado_faturamento,
         })
       ),
-      email_nf: limparOuNull(form.email_nf),
+      email_nf: normalizarEmailNfLista(form.email_nf),
       responsavel_nome: limparOuNull(form.responsavel_nome),
       telefone: limparOuNull(form.telefone),
       email: limparOuNull(form.email),
@@ -2854,7 +2855,7 @@ export default function Clientes() {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 2fr 2fr",
+                    gridTemplateColumns: "2fr 1fr",
                     gap: "12px",
                   }}
                 >
@@ -2873,14 +2874,6 @@ export default function Clientes() {
                     placeholder="Telefone"
                     style={inputStyle}
                   />
-
-                  <input
-                    name="email"
-                    value={form.email}
-                    onChange={handleInputChange}
-                    placeholder="E-mail"
-                    style={inputStyle}
-                  />
                 </div>
 
                 <div style={{ marginTop: "12px" }}>
@@ -2888,9 +2881,13 @@ export default function Clientes() {
                     name="email_nf"
                     value={form.email_nf}
                     onChange={handleInputChange}
-                    placeholder="E-mail para envio de NF (notas fiscais)"
+                    placeholder="E-mail(s) para envio de NF — separar vários com ;"
                     style={inputStyle}
                   />
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                    Um ou mais endereços, separados por ponto e vírgula (ex.: financeiro@empresa.com;
+                    contato@empresa.com).
+                  </p>
                 </div>
 
                 <div style={{ marginTop: "10px" }}>
@@ -4236,7 +4233,6 @@ function ClienteDetalheModal({
             <DetalheCampo rotulo="Responsável" valor={cliente.responsavel_nome} />
             <DetalheCampo rotulo="Representante RG" valor={representanteRotulo} />
             <DetalheCampo rotulo="Telefone" valor={cliente.telefone} />
-            <DetalheCampo rotulo="E-mail" valor={cliente.email} />
             <DetalheCampo rotulo="E-mail para NF" valor={cliente.email_nf} />
             <DetalheCampo rotulo="Solicitante" valor={cliente.solicitante} />
             <DetalheCampo rotulo="Margem de lucro" valor={margemRotulo} />

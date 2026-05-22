@@ -37,6 +37,8 @@ type CamposNfBoleto = {
 type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando?: boolean
+  /** False enquanto o escopo «histórico» (emitidas) ainda não foi buscado. */
+  historicoCarregado?: boolean
   podeConfirmar?: boolean
   onAtualizar: () => void
 }
@@ -78,6 +80,7 @@ function valorTotalGrupo(grupo: GrupoNfBoletoEsteira): string {
 export function FaturamentoFilaPosFaturamento({
   linhas,
   carregando,
+  historicoCarregado = true,
   podeConfirmar = false,
   onAtualizar,
 }: Props) {
@@ -106,7 +109,18 @@ export function FaturamentoFilaPosFaturamento({
     })
   }, [grupos])
 
-  if (carregando || pendentes.length === 0) {
+  if (!historicoCarregado || carregando) {
+    return (
+      <section style={card} aria-busy="true">
+        <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+          7. Mala Direta — Registo de NF / boleto
+        </h2>
+        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>A carregar coletas faturadas…</p>
+      </section>
+    )
+  }
+
+  if (pendentes.length === 0) {
     return null
   }
 

@@ -18,6 +18,15 @@ import {
   formatarMesReferenciaMedicao,
   textoCorpoMedicaoCliente,
 } from '../lib/emailCorpoMedicaoCliente'
+import { emailNfTemAlgum, emailsNfValidos } from '../lib/emailNfLista'
+
+function destinatariosDeCliente(c: ClienteLista): DestinatarioPayload[] {
+  return emailsNfValidos(c.email_nf).map((email) => ({
+    cliente_id: c.id,
+    nome: c.nome,
+    email,
+  }))
+}
 
 function corpoMedicaoInicial(): string {
   return textoCorpoMedicaoCliente(formatarMesReferenciaMedicao())
@@ -403,7 +412,7 @@ export default function EnvioNF() {
   const clientesFiltrados = useMemo(() => {
     let lista = clientes
     if (somenteComEmail) {
-      lista = lista.filter((c) => (c.email_nf ?? '').trim() !== '')
+      lista = lista.filter((c) => emailNfTemAlgum(c.email_nf))
     }
     const t = buscaDebounced.trim().toLowerCase()
     if (!t) return lista
@@ -426,7 +435,7 @@ export default function EnvioNF() {
 
   function selecionarTodosVisiveis() {
     const ids = clientesFiltrados
-      .filter((c) => (c.email_nf ?? '').trim() !== '')
+      .filter((c) => emailNfTemAlgum(c.email_nf))
       .map((c) => c.id)
     setSelecionados(new Set(ids))
   }
@@ -436,11 +445,11 @@ export default function EnvioNF() {
   }
 
   const selecionadosComEmail = useMemo(() => {
-    return clientes.filter((c) => selecionados.has(c.id) && (c.email_nf ?? '').trim() !== '')
+    return clientes.filter((c) => selecionados.has(c.id) && emailNfTemAlgum(c.email_nf))
   }, [clientes, selecionados])
 
   const semEmailNaSelecao = useMemo(() => {
-    return clientes.filter((c) => selecionados.has(c.id) && !(c.email_nf ?? '').trim())
+    return clientes.filter((c) => selecionados.has(c.id) && !emailNfTemAlgum(c.email_nf))
   }, [clientes, selecionados])
 
   function onEscolherAnexos(files: FileList | null) {
@@ -552,11 +561,7 @@ export default function EnvioNF() {
       return
     }
 
-    const destinatarios: DestinatarioPayload[] = selecionadosComEmail.map((c) => ({
-      cliente_id: c.id,
-      nome: c.nome,
-      email: (c.email_nf ?? '').trim(),
-    }))
+    const destinatarios: DestinatarioPayload[] = selecionadosComEmail.flatMap(destinatariosDeCliente)
 
     const nomesSimulacao = [
       ...(anexoFiles.length > 0
@@ -638,11 +643,7 @@ export default function EnvioNF() {
       return
     }
 
-    const destinatarios: DestinatarioPayload[] = selecionadosComEmail.map((c) => ({
-      cliente_id: c.id,
-      nome: c.nome,
-      email: (c.email_nf ?? '').trim(),
-    }))
+    const destinatarios: DestinatarioPayload[] = selecionadosComEmail.flatMap(destinatariosDeCliente)
 
     const todosArquivosEmail: File[] = [...anexoFiles]
     if (boletoFile) todosArquivosEmail.push(boletoFile)
@@ -1009,7 +1010,7 @@ export default function EnvioNF() {
                     </tr>
                   ) : (
                     clientesFiltrados.map((c) => {
-                      const temEmail = (c.email_nf ?? '').trim() !== ''
+                      const temEmail = emailNfTemAlgum(c.email_nf)
                       const sel = selecionados.has(c.id)
                       return (
                         <tr key={c.id} style={{ borderBottom: '1px solid #eef2f7' }}>

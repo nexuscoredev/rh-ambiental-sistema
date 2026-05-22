@@ -113,7 +113,7 @@ async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | nu
   if (!numeroTicket && !ticket && !massa) return null
 
   let balanceiro = '—'
-  let empresaTransporte = empresaTicketImpressaoRg()
+  const empresaTransporte = empresaTicketImpressaoRg()
   let horaEntrada = '—'
   let horaSaida = '—'
 

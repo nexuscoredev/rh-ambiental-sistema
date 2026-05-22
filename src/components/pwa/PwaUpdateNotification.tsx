@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   clearPwaUpdateBarHost,
@@ -18,11 +18,7 @@ let activeOwnerId: string | null = null
  * Impede dois avisos quando há registo SW duplicado ou remount do shell.
  */
 export function PwaUpdateNotification({ visible, onApply }: PwaUpdateNotificationProps) {
-  const ownerId = useRef(
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `pwa-update-${Math.random().toString(36).slice(2)}`
-  ).current
+  const ownerId = useId()
 
   useEffect(() => {
     if (!visible) {

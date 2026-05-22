@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import {
@@ -6,6 +6,11 @@ import {
   atualizarPesoLiquidoConferenciaTicket,
 } from '../../lib/faturamentoTicketFluxo'
 import { rotuloConferenciaNaFilaTicket } from '../../lib/faturamentoOperacionalFila'
+import {
+  formatarPesoKg,
+  parsePesoLiquidoKgInput,
+  pesoLiquidoParaInput,
+} from '../../lib/pesoKgInput'
 import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
 
 const wrap: CSSProperties = {
@@ -51,23 +56,6 @@ function fmtData(iso: string | null | undefined) {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR')
 }
 
-function fmtPeso(n: number | null | undefined) {
-  if (n == null || Number.isNaN(Number(n))) return '—'
-  return `${Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg`
-}
-
-function parsePesoInput(raw: string): number | null {
-  const t = raw.trim().replace(/\s/g, '').replace(',', '.')
-  if (!t) return null
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
-}
-
-function pesoParaInput(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(Number(n))) return ''
-  return String(n).replace('.', ',')
-}
-
 export function FaturamentoFilaAprovacaoTicket({
   linhas,
   carregando,
@@ -80,14 +68,10 @@ export function FaturamentoFilaAprovacaoTicket({
   const [editandoPesoId, setEditandoPesoId] = useState<string | null>(null)
   const [pesoEditValor, setPesoEditValor] = useState('')
   const [salvandoPesoId, setSalvandoPesoId] = useState<string | null>(null)
-  const [confirmarPesoId, setConfirmarPesoId] = useState<string | null>(null)
   const [erroPeso, setErroPeso] = useState('')
+  const [sucessoPeso, setSucessoPeso] = useState('')
   /** Reflete o peso gravado antes do refresh da vista. */
   const [pesoLocal, setPesoLocal] = useState<Record<string, number>>({})
-
-  useEffect(() => {
-    setPesoLocal({})
-  }, [linhas])
 
   const linhaOcupada = (coletaId: string) =>
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
@@ -97,22 +81,22 @@ export function FaturamentoFilaAprovacaoTicket({
       setErroPeso('O seu perfil não pode alterar o peso nesta fila.')
       return
     }
+    setSucessoPeso('')
     setErroPeso('')
-    setConfirmarPesoId(null)
     setEditandoPesoId(row.coleta_id)
-    setPesoEditValor(pesoParaInput(pesoLocal[row.coleta_id] ?? row.peso_liquido))
+    setPesoEditValor(pesoLiquidoParaInput(pesoLocal[row.coleta_id] ?? row.peso_liquido))
   }
 
   function cancelarEdicaoPeso() {
     setEditandoPesoId(null)
     setPesoEditValor('')
-    setConfirmarPesoId(null)
     setErroPeso('')
   }
 
   async function executarSalvarPeso(row: FaturamentoResumoViewRow, peso: number) {
     setSalvandoPesoId(row.coleta_id)
     setErroPeso('')
+    setSucessoPeso('')
     const res = await atualizarPesoLiquidoConferenciaTicket(row.coleta_id, peso)
     setSalvandoPesoId(null)
 
@@ -123,11 +107,14 @@ export function FaturamentoFilaAprovacaoTicket({
 
     setPesoLocal((prev) => ({ ...prev, [row.coleta_id]: peso }))
     cancelarEdicaoPeso()
+    setSucessoPeso(
+      `Peso da coleta ${row.numero_coleta ?? row.numero} atualizado para ${formatarPesoKg(peso)}. MTR e ticket sincronizados.`
+    )
     void onAprovado()
   }
 
-  function pedirConfirmacaoSalvar(row: FaturamentoResumoViewRow) {
-    const peso = parsePesoInput(pesoEditValor)
+  function confirmarESalvarPeso(row: FaturamentoResumoViewRow) {
+    const peso = parsePesoLiquidoKgInput(pesoEditValor)
     if (peso == null || peso <= 0) {
       setErroPeso('Informe um peso líquido válido (ex.: 1250 ou 1250,5).')
       return
@@ -141,8 +128,17 @@ export function FaturamentoFilaAprovacaoTicket({
       return
     }
 
+    const rotulo = peso.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 3,
+    })
+    const ok = window.confirm(
+      `Guardar peso líquido ${rotulo} kg na coleta ${row.numero_coleta ?? row.numero} (${row.cliente_nome ?? '—'})?\n\nA coleta, o Controle de Massa e o ticket serão atualizados.`
+    )
+    if (!ok) return
+
     setErroPeso('')
-    setConfirmarPesoId(row.coleta_id)
+    void executarSalvarPeso(row, peso)
   }
 
   async function handleVisualizar(row: FaturamentoResumoViewRow) {
@@ -184,7 +180,7 @@ export function FaturamentoFilaAprovacaoTicket({
         {podeEditarPeso ? (
           <>
             {' '}
-            Clique em <strong>Editar peso</strong>, altere o valor, <strong>Guardar</strong> e confirme.
+            Para corrigir o peso: <strong>Editar peso</strong> → altere o valor (kg) → <strong>Guardar</strong>.
           </>
         ) : podeAprovar ? (
           <>
@@ -198,6 +194,24 @@ export function FaturamentoFilaAprovacaoTicket({
           </>
         )}
       </p>
+
+      {sucessoPeso ? (
+        <p
+          role="status"
+          style={{
+            margin: '0 0 12px',
+            padding: '10px 12px',
+            borderRadius: 8,
+            background: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            color: '#047857',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {sucessoPeso}
+        </p>
+      ) : null}
 
       {erroPeso ? (
         <p
@@ -241,9 +255,7 @@ export function FaturamentoFilaAprovacaoTicket({
             <tbody>
               {linhas.map((r) => {
                 const editando = editandoPesoId === r.coleta_id
-                const confirmando = confirmarPesoId === r.coleta_id
                 const ocupada = linhaOcupada(r.coleta_id)
-                const pesoConfirm = confirmando ? parsePesoInput(pesoEditValor) : null
 
                 return (
                   <tr key={r.coleta_id}>
@@ -259,7 +271,14 @@ export function FaturamentoFilaAprovacaoTicket({
                             inputMode="decimal"
                             value={pesoEditValor}
                             onChange={(e) => setPesoEditValor(e.target.value)}
-                            placeholder="kg"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                confirmarESalvarPeso(r)
+                              }
+                              if (e.key === 'Escape') cancelarEdicaoPeso()
+                            }}
+                            placeholder="Peso em kg"
                             autoFocus
                             disabled={salvandoPesoId === r.coleta_id}
                             aria-label="Peso líquido em kg"
@@ -274,76 +293,33 @@ export function FaturamentoFilaAprovacaoTicket({
                           />
                           {(r.peso_tara != null || r.peso_bruto != null) && (
                             <span style={{ fontSize: 11, color: '#64748b' }}>
-                              Bruto {fmtPeso(r.peso_bruto)} · Tara {fmtPeso(r.peso_tara)}
+                              Bruto {formatarPesoKg(r.peso_bruto)} · Tara {formatarPesoKg(r.peso_tara)}
                             </span>
                           )}
-                          {confirmando && pesoConfirm != null ? (
-                            <div
-                              style={{
-                                padding: '8px 10px',
-                                borderRadius: 8,
-                                background: '#fffbeb',
-                                border: '1px solid #fcd34d',
-                                fontSize: 12,
-                                color: '#92400e',
-                              }}
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="rg-btn rg-btn--primary"
+                              style={{ fontSize: 11, padding: '6px 10px' }}
+                              disabled={salvandoPesoId === r.coleta_id}
+                              onClick={() => confirmarESalvarPeso(r)}
                             >
-                              Confirmar peso{' '}
-                              <strong>
-                                {pesoConfirm.toLocaleString('pt-BR', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 3,
-                                })}{' '}
-                                kg
-                              </strong>
-                              ? O ticket e a coleta serão atualizados.
-                              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                                <button
-                                  type="button"
-                                  className="rg-btn rg-btn--primary"
-                                  style={{ fontSize: 11, padding: '6px 10px' }}
-                                  disabled={salvandoPesoId === r.coleta_id}
-                                  onClick={() => void executarSalvarPeso(r, pesoConfirm)}
-                                >
-                                  {salvandoPesoId === r.coleta_id ? 'A guardar…' : 'Sim, guardar'}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="rg-btn rg-btn--outline"
-                                  style={{ fontSize: 11, padding: '6px 10px' }}
-                                  disabled={salvandoPesoId === r.coleta_id}
-                                  onClick={() => setConfirmarPesoId(null)}
-                                >
-                                  Voltar
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                              <button
-                                type="button"
-                                className="rg-btn rg-btn--primary"
-                                style={{ fontSize: 11, padding: '6px 10px' }}
-                                disabled={salvandoPesoId === r.coleta_id}
-                                onClick={() => pedirConfirmacaoSalvar(r)}
-                              >
-                                Guardar
-                              </button>
-                              <button
-                                type="button"
-                                className="rg-btn rg-btn--outline"
-                                style={{ fontSize: 11, padding: '6px 10px' }}
-                                disabled={salvandoPesoId === r.coleta_id}
-                                onClick={cancelarEdicaoPeso}
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          )}
+                              {salvandoPesoId === r.coleta_id ? 'A guardar…' : 'Guardar'}
+                            </button>
+                            <button
+                              type="button"
+                              className="rg-btn rg-btn--outline"
+                              style={{ fontSize: 11, padding: '6px 10px' }}
+                              disabled={salvandoPesoId === r.coleta_id}
+                              onClick={cancelarEdicaoPeso}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                          <span>{fmtPeso(pesoLocal[r.coleta_id] ?? r.peso_liquido)}</span>
+                          <span>{formatarPesoKg(pesoLocal[r.coleta_id] ?? r.peso_liquido)}</span>
                           {podeEditarPeso ? (
                             <button
                               type="button"

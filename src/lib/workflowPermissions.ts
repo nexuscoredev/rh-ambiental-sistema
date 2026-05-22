@@ -118,8 +118,9 @@ export const cargoEhOperadorMeninos = cargoEhOperadoresTimeR
 
 /** Time R não usa mais perfil «só ticket padrão». */
 export function cargoPerfilSomenteLancamentoTicketPadrao(
-  _cargo: string | null | undefined
+  cargo?: string | null | undefined
 ): boolean {
+  void cargo
   return false
 }
 

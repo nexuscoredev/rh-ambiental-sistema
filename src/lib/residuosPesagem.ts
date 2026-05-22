@@ -37,7 +37,8 @@ function pesoNumeroParaInput(n: number | null | undefined): string {
   return String(n);
 }
 
-export function residuoCatalogoIdParaDb(_raw?: string): string | null {
+export function residuoCatalogoIdParaDb(raw?: string): string | null {
+  void raw;
   return null;
 }
 
@@ -187,7 +188,8 @@ export function combinarResiduosTexto(itens: ResiduoPesagemItem[]): string {
     .join(SEPARADOR_RESIDUOS_TEXTO);
 }
 
-export function catalogoIdPrincipal(_itens: ResiduoPesagemItem[]): string | null {
+export function catalogoIdPrincipal(itens: ResiduoPesagemItem[]): string | null {
+  void itens;
   return null;
 }
 

@@ -95,7 +95,6 @@ export function FaturamentoModalRegisto({
   usuarioCargo = null,
   onClose,
   onGravado,
-  navegarAposEmitir: _navegarAposEmitir = true,
   modoPreparacaoMedicao = false,
 }: Props) {
   const podeConfirmarEmissao = podeConfirmarEmissaoProp ?? podeMutar ?? false

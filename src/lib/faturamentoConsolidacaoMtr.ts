@@ -35,8 +35,8 @@ export type ItemFilaFaturamento =
     }
 
 function ordenarColetasFaturamento(a: FaturamentoResumoViewRow, b: FaturamentoResumoViewRow) {
-  const na = a.numero_coleta ?? Number(a.numero) ?? 0
-  const nb = b.numero_coleta ?? Number(b.numero) ?? 0
+  const na = a.numero_coleta ?? (Number(a.numero) || 0)
+  const nb = b.numero_coleta ?? (Number(b.numero) || 0)
   if (na !== nb) return na - nb
   return String(a.numero).localeCompare(String(b.numero), 'pt-BR', { numeric: true })
 }

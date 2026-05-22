@@ -79,38 +79,29 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
   }, [])
 
   const recarregarTudo = useCallback(async () => {
-    await carregarOperacional()
+    await Promise.all([carregarOperacional(), carregarHistorico()])
     const { count, error } = await fetchContagemHistoricoFaturamentoEmitido(supabase)
     if (!error) setContagemHistorico(count)
-    /** Emitidas (Mala Direta / NF) não entram no escopo operacional — é preciso refrescar o histórico. */
-    if ((count ?? 0) > 0 || linhasHistorico !== null) {
-      await carregarHistorico()
-    }
-  }, [carregarOperacional, carregarHistorico, linhasHistorico])
+  }, [carregarOperacional, carregarHistorico])
 
   useEffect(() => {
+    let cancelado = false
     queueMicrotask(() => {
-      void carregarOperacional()
-      void fetchContagemHistoricoFaturamentoEmitido(supabase).then(({ count, error }) => {
+      void (async () => {
+        /**
+         * Emitidas (etapa 7 — NF/boleto) não entram no escopo «operacional».
+         * Carregar histórico sempre na abertura evita a secção «Mala Direta» só aparecer após outra ação.
+         */
+        await Promise.all([carregarOperacional(), carregarHistorico()])
+        if (cancelado) return
+        const { count, error } = await fetchContagemHistoricoFaturamentoEmitido(supabase)
         if (!error) setContagemHistorico(count)
-      })
+      })()
     })
-  }, [carregarOperacional])
-
-  /** Coletas emitidas só existem no escopo «historico» — carrega automaticamente para Mala Direta / NF. */
-  useEffect(() => {
-    if (carregandoOperacional) return
-    if (linhasHistorico !== null) return
-    if (carregandoHistorico) return
-    if (contagemHistorico == null || contagemHistorico <= 0) return
-    void carregarHistorico()
-  }, [
-    carregandoOperacional,
-    linhasHistorico,
-    carregandoHistorico,
-    contagemHistorico,
-    carregarHistorico,
-  ])
+    return () => {
+      cancelado = true
+    }
+  }, [carregarOperacional, carregarHistorico])
 
   useEffect(() => {
     const id = (coletaIdUrl ?? '').trim()

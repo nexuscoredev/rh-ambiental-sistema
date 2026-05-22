@@ -320,10 +320,10 @@ function rpcPesoConferenciaIndisponivel(err: { message?: string; code?: string }
   )
 }
 
-const MENSAGEM_SQL_PESO_CONFERENCIA =
-  'Execute no Supabase SQL Editor o ficheiro supabase/sql_editor_FATURAMENTO_COMPLETO_EXECUTAR.sql (secção 0 + 6) e volte a tentar.'
+export const MENSAGEM_SQL_PESO_CONFERENCIA =
+  'A função de editar peso ainda não está no Supabase. Execute: npm run db:apply:peso-conferencia (ou o ficheiro supabase/sql_editor_peso_conferencia_ticket.sql no SQL Editor) e tente de novo.'
 
-function pesoGravadoConfere(
+export function pesoGravadoConfere(
   row: { peso_liquido?: number | string | null } | null | undefined,
   peso: number
 ): boolean {
@@ -387,6 +387,66 @@ async function gravarPesoColetaDireto(
   return { ok: true }
 }
 
+async function lerPesoLiquidoColeta(id: string): Promise<
+  { ok: true; peso: number } | { ok: false; message: string }
+> {
+  const { data, error } = await supabase
+    .from('coletas')
+    .select('peso_liquido')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    return { ok: false, message: error.message || 'Não foi possível confirmar o peso gravado.' }
+  }
+  const peso = data?.peso_liquido != null ? Number(data.peso_liquido) : null
+  if (peso == null || !Number.isFinite(peso)) {
+    return { ok: false, message: 'O peso não foi gravado na coleta.' }
+  }
+  return { ok: true, peso }
+}
+
+async function gravarPesoViaRpcConferencia(
+  id: string,
+  peso: number,
+  itens: ReturnType<typeof serializarResiduosItensDb> | null
+): Promise<{ ok: true } | { ok: false; message: string; rpcIndisponivel?: boolean }> {
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('atualizar_peso_liquido_conferencia_ticket', {
+    p_coleta_id: id,
+    p_peso_liquido: peso,
+    p_residuos_itens: itens ?? null,
+  })
+
+  if (rpcErr) {
+    if (rpcPesoConferenciaIndisponivel(rpcErr)) {
+      return { ok: false, message: rpcErr.message || 'RPC indisponível.', rpcIndisponivel: true }
+    }
+    return { ok: false, message: rpcErr.message || 'Não foi possível atualizar o peso.' }
+  }
+
+  const rpcRes = parseRpcPesoConferencia(rpcData)
+  if (!rpcRes.ok) {
+    return { ok: false, message: rpcRes.message }
+  }
+
+  const o = normalizeRpcPesoPayload(rpcData)
+  const pesoRpc = o?.peso_liquido != null ? Number(o.peso_liquido) : null
+  if (pesoRpc != null && pesoGravadoConfere({ peso_liquido: pesoRpc }, peso)) {
+    return { ok: true }
+  }
+
+  const conf = await lerPesoLiquidoColeta(id)
+  if (!conf.ok) return conf
+  if (!pesoGravadoConfere({ peso_liquido: conf.peso }, peso)) {
+    return {
+      ok: false,
+      message: `A RPC respondeu OK, mas o peso na coleta não confere. ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
+    }
+  }
+
+  return { ok: true }
+}
+
 /** Ajuste manual do peso líquido antes da aprovação do ticket (fila de conferência). */
 export async function atualizarPesoLiquidoConferenciaTicket(
   coletaId: string,
@@ -402,18 +462,42 @@ export async function atualizarPesoLiquidoConferenciaTicket(
 
   const { data: rowAtual, error: errLeitura } = await supabase
     .from('coletas')
-    .select('id, residuos_itens')
+    .select('id, residuos_itens, faturamento_ticket_aprovado_em')
     .eq('id', id)
     .maybeSingle()
 
   if (errLeitura) {
+    if (erroColunasTicketAprovacaoAusentes(errLeitura)) {
+      const retry = await supabase.from('coletas').select('id, residuos_itens').eq('id', id).maybeSingle()
+      if (retry.error) {
+        return { ok: false, message: retry.error.message || 'Não foi possível ler a coleta.' }
+      }
+      if (!retry.data?.id) return { ok: false, message: 'Coleta não encontrada.' }
+      return gravarPesoConferenciaInterno(id, peso, retry.data.residuos_itens)
+    }
     return { ok: false, message: errLeitura.message || 'Não foi possível ler a coleta.' }
   }
   if (!rowAtual?.id) {
     return { ok: false, message: 'Coleta não encontrada.' }
   }
 
-  const itens = patchResiduosItensPesoLiquido(rowAtual.residuos_itens, peso)
+  if (rowAtual.faturamento_ticket_aprovado_em) {
+    return {
+      ok: false,
+      message:
+        'Este ticket já foi aprovado. Use «Devolver à conferência» na fila «Faturar» para corrigir o peso.',
+    }
+  }
+
+  return gravarPesoConferenciaInterno(id, peso, rowAtual.residuos_itens)
+}
+
+async function gravarPesoConferenciaInterno(
+  id: string,
+  peso: number,
+  residuosItensRaw: unknown
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const itens = patchResiduosItensPesoLiquido(residuosItensRaw, peso)
 
   async function finalizarSeGravou(res: { ok: true } | { ok: false; message: string }) {
     if (!res.ok) return res
@@ -427,34 +511,18 @@ export async function atualizarPesoLiquidoConferenciaTicket(
     return res
   }
 
+  const viaRpc = await gravarPesoViaRpcConferencia(id, peso, itens)
+  if (viaRpc.ok) return finalizarSeGravou(viaRpc)
+
+  if (!viaRpc.rpcIndisponivel) {
+    return { ok: false, message: viaRpc.message }
+  }
+
   const direto = await gravarPesoColetaDireto(id, peso, itens)
   if (direto.ok) return finalizarSeGravou(direto)
 
-  const { data: rpcData, error: rpcErr } = await supabase.rpc('atualizar_peso_liquido_conferencia_ticket', {
-    p_coleta_id: id,
-    p_peso_liquido: peso,
-    p_residuos_itens: itens ?? null,
-  })
-
-  if (!rpcErr) {
-    const rpcRes = parseRpcPesoConferencia(rpcData)
-    if (rpcRes.ok) return finalizarSeGravou(rpcRes)
-    return {
-      ok: false,
-      message: `${rpcRes.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
-    }
+  return {
+    ok: false,
+    message: `${direto.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
   }
-
-  if (!rpcPesoConferenciaIndisponivel(rpcErr)) {
-    return { ok: false, message: rpcErr.message || 'Não foi possível atualizar o peso.' }
-  }
-
-  const diretoRetry = await gravarPesoColetaDireto(id, peso, itens)
-  if (!diretoRetry.ok) {
-    return {
-      ok: false,
-      message: `${diretoRetry.message} ${MENSAGEM_SQL_PESO_CONFERENCIA}`,
-    }
-  }
-  return finalizarSeGravou(diretoRetry)
 }

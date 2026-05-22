@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.43",
+  "version": "1.2.44",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -33,8 +33,10 @@
     "db:apply:clientes-status-datas": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260427140000_clientes_status_datas.sql",
     "db:apply:faturamento-view": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_vw_faturamento_resumo.sql",
     "db:apply:ticket-aprovacao": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260518130000_coletas_ticket_aprovacao_faturamento.sql",
+    "db:apply:peso-conferencia": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260605120000_coletas_peso_conferencia_rpc.sql",
     "db:apply:clientes-contrato": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql",
     "db:apply:excluir-mtr-cascata": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260520140000_excluir_mtr_coleta_cascata.sql",
+    "db:apply:usuarios-perfil-login": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260622120000_usuarios_select_own_rpc_perfil.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
     "functions:deploy:admin-delete": "supabase functions deploy admin-delete-user",

@@ -416,6 +416,7 @@ export default function FaturamentoOperacional() {
         <FaturamentoFilaAguardandoImpressao linhas={filaAguardandoImpressao} carregando={carregandoVista} />
 
         <FaturamentoFilaAprovacaoTicket
+          key={filaAprovacao.map((r) => r.coleta_id).join(',')}
           linhas={filaAprovacao}
           carregando={carregandoVista}
           podeAprovar={podeAprovarTicketFila}
@@ -450,6 +451,7 @@ export default function FaturamentoOperacional() {
         <FaturamentoFilaPosFaturamento
           linhas={linhasView}
           carregando={carregandoVista || carregandoHistorico}
+          historicoCarregado={historicoCarregado}
           podeConfirmar={podeConfirmarNfBoleto}
           onAtualizar={() => void recarregarTudo()}
         />
