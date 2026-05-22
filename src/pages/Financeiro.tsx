@@ -20,8 +20,10 @@ import {
   isVencidoFinanceiro,
 } from '../lib/financeiroColetas'
 import {
+  boletoDeObsNfEnvio,
   exportarCsvFinanceiro,
   mapFaturamentoViewRow,
+  montarTextoObsNfBoleto,
   type FinanceiroListaItem,
 } from '../lib/faturamentoResumo'
 import { registrarBaixaContaReceber, upsertContaReceber } from '../services/financeiroReceber'
@@ -374,6 +376,11 @@ export default function Financeiro() {
                 observacoesColeta: obs || !obsCr ? item.observacoesColeta : obsCr,
                 nfEnviadaEm: cr.nf_enviada_em ? String(cr.nf_enviada_em) : item.nfEnviadaEm,
                 nfEnvioObs: (cr.nf_envio_observacao ?? '').trim() || item.nfEnvioObs,
+                numeroBoleto:
+                  boletoDeObsNfEnvio(cr.nf_envio_observacao) ||
+                  boletoDeObsNfEnvio(item.nfEnvioObs) ||
+                  item.numeroBoleto ||
+                  '',
               }
             })
           )
@@ -474,6 +481,7 @@ export default function Financeiro() {
       | 'statusPagamento'
       | 'dataVencimento'
       | 'numeroNf'
+      | 'numeroBoleto'
       | 'confirmacaoRecebimento'
       | 'observacoesColeta'
     >,
@@ -545,6 +553,20 @@ export default function Financeiro() {
       const { error } = await supabase.from('coletas').update(payload).eq('id', item.id)
 
       if (error) throw error
+
+      const obsNfBoleto = montarTextoObsNfBoleto(item.numeroNf, item.numeroBoleto)
+      if (obsNfBoleto && (temContaReceber || item.contaReceberId)) {
+        const { error: errObs } = await supabase
+          .from('contas_receber')
+          .update({
+            nf_envio_observacao: obsNfBoleto.slice(0, 500),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('referencia_coleta_id', item.id)
+        if (errObs && !/nf_envio_observacao|schema cache/i.test(String(errObs.message ?? ''))) {
+          console.warn('Financeiro: nf_envio_observacao:', errObs.message)
+        }
+      }
 
       setSucesso(`Financeiro da coleta ${item.numero} atualizado com sucesso.`)
       await carregarFinanceiro()
@@ -690,6 +712,7 @@ export default function Financeiro() {
         item.cidade.toLowerCase().includes(termo) ||
         item.statusPagamento.toLowerCase().includes(termo) ||
         item.numeroNf.toLowerCase().includes(termo) ||
+        item.numeroBoleto.toLowerCase().includes(termo) ||
         item.nfEnvioObs.toLowerCase().includes(termo) ||
         item.pendenciasResumo.toLowerCase().includes(termo)
       )
@@ -1258,6 +1281,7 @@ export default function Financeiro() {
                 <th style={thStyle}>Valor</th>
                 <th style={thStyle}>Venc.</th>
                 <th style={thStyle}>NF</th>
+                <th style={thStyle}>Boleto</th>
                 <th style={thStyle}>Conf. fluxo</th>
                 <th style={thStyle}>Conf. receb.</th>
                 <th style={thStyle}>Pagamento</th>
@@ -1268,13 +1292,13 @@ export default function Financeiro() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={12} style={emptyTdStyle}>
+                  <td colSpan={13} style={emptyTdStyle}>
                     Carregando itens financeiros...
                   </td>
                 </tr>
               ) : itensRelatorio.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={emptyTdStyle}>
+                  <td colSpan={13} style={emptyTdStyle}>
                     {itens.length === 0
                       ? 'Nenhuma coleta na lista de cobrança.'
                       : itensAposBusca.length === 0
@@ -1434,6 +1458,20 @@ export default function Financeiro() {
                             NF enviada: {formatDateTime(item.nfEnviadaEm)}
                           </div>
                         ) : null}
+                      </td>
+
+                      <td style={tdStyle}>
+                        <input
+                          type="text"
+                          value={item.numeroBoleto}
+                          onChange={(e) => handleCampo(item.id, 'numeroBoleto', e.target.value)}
+                          placeholder="Nº boleto"
+                          disabled={!podeMutarFinanceiro}
+                          style={{
+                            ...inputTabelaStyle,
+                            opacity: podeMutarFinanceiro ? 1 : 0.65,
+                          }}
+                        />
                       </td>
 
                       <td style={tdStyle}>

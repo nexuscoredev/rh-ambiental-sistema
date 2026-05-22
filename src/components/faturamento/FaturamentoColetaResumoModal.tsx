@@ -7,7 +7,9 @@ import {
 } from '../../lib/fluxoEtapas'
 import { rotuloConferenciaResumo } from '../../lib/faturamentoOperacionalFila'
 import {
+  boletoDaLinhaResumo,
   montarParamsFluxoColeta,
+  numeroNfDaLinhaResumo,
   type FaturamentoResumoViewRow,
 } from '../../lib/faturamentoResumo'
 import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
@@ -131,6 +133,8 @@ export function FaturamentoColetaResumoModal({
   if (!open || !row) return null
 
   const params = montarParamsFluxoColeta(row)
+  const numeroNf = numeroNfDaLinhaResumo(row)
+  const numeroBoleto = boletoDaLinhaResumo(row)
   const valorFat =
     row.faturamento_registro_valor ??
     row.valor_coleta ??
@@ -379,6 +383,8 @@ export function FaturamentoColetaResumoModal({
 
           <Secao titulo="Faturamento e financeiro">
             <div style={gridStyle}>
+              <Campo label="Número da NF">{numeroNf || '—'}</Campo>
+              <Campo label="Boleto / referência">{numeroBoleto || '—'}</Campo>
               <Campo label="Valor faturado">{fmtValor(valorFat)}</Campo>
               <Campo label="Registo faturamento">{row.faturamento_registro_status?.trim() || '—'}</Campo>
               <Campo label="Liberado financeiro">{row.liberado_financeiro ? 'Sim' : 'Não'}</Campo>

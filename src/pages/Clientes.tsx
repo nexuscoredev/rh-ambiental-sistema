@@ -95,6 +95,7 @@ type Cliente = {
   ajudante: string | null;
   solicitante: string | null;
   origem_planilha_cliente: string | null;
+  mtr_sigor: boolean | null;
   cnpj_raiz: string | null;
   tipo_unidade_cliente: string | null;
   status_ativo_desde: string | null;
@@ -164,6 +165,7 @@ type FormCliente = {
   ajudante: string;
   solicitante: string;
   origem_planilha_cliente: string;
+  mtr_sigor: boolean | null;
   cnpj_raiz: string;
   tipo_unidade_cliente: string;
   status_ativo_desde: string;
@@ -224,6 +226,7 @@ const formInicial: FormCliente = {
   ajudante: "",
   solicitante: "",
   origem_planilha_cliente: "",
+  mtr_sigor: null,
   cnpj_raiz: "",
   tipo_unidade_cliente: "",
   status_ativo_desde: "",
@@ -433,6 +436,7 @@ type ImportRow = Partial<{
   ajudante: string;
   solicitante: string;
   origem_planilha_cliente: string;
+  mtr_sigor: boolean | null;
   cnpj_raiz: string;
   tipo_unidade_cliente: string;
   status_ativo_desde: string;
@@ -529,6 +533,9 @@ const IMPORT_HEADER_ALIASES: Record<string, keyof ImportRow> = {
   ajudante: "ajudante",
   solicitante: "solicitante",
   origem_planilha_cliente: "origem_planilha_cliente",
+  "mtr sigor": "mtr_sigor",
+  "mtr - sigor": "mtr_sigor",
+  mtr_sigor: "mtr_sigor",
   cnpj_raiz: "cnpj_raiz",
   tipo_unidade_cliente: "tipo_unidade_cliente",
   "status ativo desde": "status_ativo_desde",
@@ -536,6 +543,20 @@ const IMPORT_HEADER_ALIASES: Record<string, keyof ImportRow> = {
   "status inativo desde": "status_inativo_desde",
   status_inativo_desde: "status_inativo_desde",
 };
+
+function rotuloMtrSigor(valor: boolean | null | undefined): string {
+  if (valor === true) return "Sim";
+  if (valor === false) return "Não";
+  return "—";
+}
+
+function parseMtrSigorValor(raw: string | undefined | null): boolean | null {
+  const t = (raw ?? "").trim().toLowerCase();
+  if (!t) return null;
+  if (["sim", "s", "yes", "y", "1", "true", "x"].includes(t)) return true;
+  if (["nao", "não", "n", "no", "0", "false"].includes(t)) return false;
+  return null;
+}
 
 function dividirLista(valor?: string | null) {
   if (!valor) return [];
@@ -579,7 +600,12 @@ function consolidarLinhasImportacao(rows: ImportRow[]): ImportRow[] {
       continue;
     }
 
+    if (row.mtr_sigor !== undefined && row.mtr_sigor !== null) {
+      existente.mtr_sigor = row.mtr_sigor;
+    }
+
     for (const [campo, valor] of Object.entries(row) as Array<[keyof ImportRow, string | undefined]>) {
+      if (campo === "mtr_sigor") continue;
       if (!valor) continue;
       if (IMPORT_MERGE_LIST_FIELDS.includes(campo)) {
         existente[campo] = juntarValorLista(existente[campo], valor);
@@ -610,7 +636,7 @@ const CLIENTES_SELECT_FAT_ENDERECO =
   "cep_faturamento, rua_faturamento, numero_faturamento, complemento_faturamento, bairro_faturamento, cidade_faturamento, estado_faturamento";
 
 const CLIENTES_SELECT_TAIL_BASE =
-  "endereco_coleta, endereco_faturamento, email_nf, responsavel_nome, telefone, email, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, licenca_numero, validade, codigo_ibama, descricao_veiculo, mtr_coleta, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, ajudante, solicitante, origem_planilha_cliente, cnpj_raiz, tipo_unidade_cliente, representante_rg_id, caminhao_id, equipamentos";
+  "endereco_coleta, endereco_faturamento, email_nf, responsavel_nome, telefone, email, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, licenca_numero, validade, codigo_ibama, descricao_veiculo, mtr_coleta, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, ajudante, solicitante, origem_planilha_cliente, mtr_sigor, cnpj_raiz, tipo_unidade_cliente, representante_rg_id, caminhao_id, equipamentos";
 
 function montarClientesSelectPrincipalLegacy(
   incluirFatEstruturado: boolean,
@@ -1491,6 +1517,11 @@ export default function Clientes() {
                 if (iso) (obj as Record<keyof ImportRow, string | undefined>)[key] = iso;
                 continue;
               }
+              if (key === "mtr_sigor") {
+                const parsed = parseMtrSigorValor(String(v ?? ""));
+                if (parsed !== null) obj.mtr_sigor = parsed;
+                continue;
+              }
               const s = String(v ?? "").trim();
               if (s && s !== "-") (obj as Record<keyof ImportRow, string | undefined>)[key] = s;
             }
@@ -1610,6 +1641,7 @@ export default function Clientes() {
             ajudante: limparOuNull(r.ajudante || ""),
             solicitante: limparOuNull(r.solicitante || ""),
             origem_planilha_cliente: limparOuNull(r.origem_planilha_cliente || ""),
+            mtr_sigor: r.mtr_sigor ?? null,
             cnpj_raiz: limparOuNull(r.cnpj_raiz || ""),
             tipo_unidade_cliente: limparOuNull(r.tipo_unidade_cliente || ""),
             status_ativo_desde: limparOuNull(r.status_ativo_desde || ""),
@@ -1863,6 +1895,7 @@ export default function Clientes() {
         ajudante: row.ajudante || "",
         solicitante: row.solicitante || "",
         origem_planilha_cliente: row.origem_planilha_cliente || "",
+        mtr_sigor: row.mtr_sigor ?? null,
         cnpj_raiz: row.cnpj_raiz || derivarDadosUnidadeDocumento(row.cnpj || "").cnpj_raiz,
         tipo_unidade_cliente:
           row.tipo_unidade_cliente || derivarDadosUnidadeDocumento(row.cnpj || "").tipo_unidade_cliente,
@@ -2030,6 +2063,7 @@ export default function Clientes() {
       ajudante: limparOuNull(form.ajudante),
       solicitante: limparOuNull(form.solicitante),
       origem_planilha_cliente: limparOuNull(form.origem_planilha_cliente),
+      mtr_sigor: form.mtr_sigor,
       cnpj_raiz: limparOuNull(derivarDadosUnidadeDocumento(form.cnpj).cnpj_raiz),
       tipo_unidade_cliente: limparOuNull(derivarDadosUnidadeDocumento(form.cnpj).tipo_unidade_cliente),
       representante_rg_id: form.representante_rg_id.trim() || null,
@@ -2617,6 +2651,79 @@ export default function Clientes() {
                     placeholder="Origem da planilha"
                     style={inputStyle}
                   />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      padding: "8px 10px",
+                      borderRadius: "10px",
+                      border: "1px solid #cbd5e1",
+                      background: "#fff",
+                      minHeight: 42,
+                      justifyContent: "center",
+                    }}
+                    title="MTR — SIGOR (sim ou não)"
+                  >
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      MTR — SIGOR
+                    </span>
+                    <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#334155",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.mtr_sigor === true}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              mtr_sigor: prev.mtr_sigor === true ? null : true,
+                            }))
+                          }
+                        />
+                        Sim
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#334155",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.mtr_sigor === false}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              mtr_sigor: prev.mtr_sigor === false ? null : false,
+                            }))
+                          }
+                        />
+                        Não
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <textarea
@@ -3686,6 +3793,7 @@ export default function Clientes() {
                                   { rotulo: "Ajudante", valor: cliente.ajudante },
                                   { rotulo: "Solicitante", valor: cliente.solicitante },
                                   { rotulo: "Origem (planilha)", valor: cliente.origem_planilha_cliente },
+                                  { rotulo: "MTR — SIGOR", valor: rotuloMtrSigor(cliente.mtr_sigor) },
                                   { rotulo: "E-mail NF", valor: cliente.email_nf },
                                 ].map((item) => (
                                   <div key={item.rotulo}>
@@ -4221,6 +4329,7 @@ function ClienteDetalheModal({
               valor={cliente.status_inativo_desde ? formatarData(cliente.status_inativo_desde) : null}
             />
             <DetalheCampo rotulo="Origem (planilha)" valor={cliente.origem_planilha_cliente} />
+            <DetalheCampo rotulo="MTR — SIGOR" valor={rotuloMtrSigor(cliente.mtr_sigor)} />
           </DetalheSecao>
 
           <DetalheSecao titulo="Contato">

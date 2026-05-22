@@ -182,6 +182,9 @@ export default function ProgramacaoCalendarPicker<P extends ProgramacaoCalendarO
 
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(monthCursor);
   const programacoesDoDia = selectedDate ? optionsByDate.get(selectedDate) ?? [] : [];
+  const selectedDateLabel = selectedDate
+    ? selectedDate.split("-").reverse().join("/")
+    : "";
 
   function prevMonth() {
     setMonthCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1));
@@ -297,27 +300,39 @@ export default function ProgramacaoCalendarPicker<P extends ProgramacaoCalendarO
           </div>
 
           {selectedDate && (
-            <div style={listSectionStyle}>
-              <div style={listSectionLabelStyle}>
-                {programacoesDoDia.length === 0
-                  ? "Nenhuma programação neste dia."
-                  : `${programacoesDoDia.length} programação(ões) em ${selectedDate
-                      .split("-")
-                      .reverse()
-                      .join("/")}:`}
+            <div style={listSectionStyle} role="region" aria-label={`Programações em ${selectedDateLabel}`}>
+              <div style={listSectionHeaderStyle}>
+                <span style={listSectionDateBadgeStyle} aria-hidden>
+                  {selectedDateLabel}
+                </span>
+                <div style={listSectionTitleWrapStyle}>
+                  <div style={listSectionTitleStyle}>
+                    {programacoesDoDia.length === 0
+                      ? "Nenhuma programação neste dia"
+                      : programacoesDoDia.length === 1
+                        ? "1 programação neste dia"
+                        : `${programacoesDoDia.length} programações neste dia`}
+                  </div>
+                  {programacoesDoDia.length > 0 ? (
+                    <div style={listSectionHintStyle}>Clique numa linha para selecionar</div>
+                  ) : null}
+                </div>
               </div>
-              <div style={listScrollerStyle}>
-                {programacoesDoDia.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => pickProgramacao(p)}
-                    style={listItemStyle(p.id === value)}
-                  >
-                    {getLabel(p)}
-                  </button>
-                ))}
-              </div>
+              {programacoesDoDia.length > 0 ? (
+                <div style={listScrollerStyle}>
+                  {programacoesDoDia.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => pickProgramacao(p)}
+                      style={listItemStyle(p.id === value)}
+                    >
+                      <span style={listItemDotStyle(p.id === value)} aria-hidden />
+                      <span style={listItemTextStyle}>{getLabel(p)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -513,35 +528,97 @@ const ghostBtnDangerStyle: React.CSSProperties = {
 
 const listSectionStyle: React.CSSProperties = {
   marginTop: 12,
-  paddingTop: 10,
-  borderTop: "1px solid #e2e8f0",
+  padding: "12px 12px 10px",
+  borderRadius: 12,
+  border: "2px solid #86efac",
+  background: "linear-gradient(180deg, #ecfdf5 0%, #f8fafc 100%)",
+  boxShadow: "0 4px 14px rgba(22, 163, 74, 0.12), inset 0 1px 0 rgba(255,255,255,0.85)",
 };
 
-const listSectionLabelStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  color: "#334155",
-  marginBottom: 8,
+const listSectionHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  marginBottom: 10,
+};
+
+const listSectionDateBadgeStyle: React.CSSProperties = {
+  flexShrink: 0,
+  padding: "6px 10px",
+  borderRadius: 8,
+  background: "#16a34a",
+  color: "#ffffff",
+  fontSize: 13,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  boxShadow: "0 2px 6px rgba(22, 163, 74, 0.35)",
+};
+
+const listSectionTitleWrapStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+};
+
+const listSectionTitleStyle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: "#14532d",
+  lineHeight: 1.35,
+};
+
+const listSectionHintStyle: React.CSSProperties = {
+  marginTop: 2,
+  fontSize: 11,
+  fontWeight: 600,
+  color: "#15803d",
 };
 
 const listScrollerStyle: React.CSSProperties = {
-  maxHeight: 180,
+  maxHeight: 200,
   overflowY: "auto",
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 6,
+  padding: "4px 2px 2px",
 };
 
 function listItemStyle(isSelected: boolean): React.CSSProperties {
   return {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
     textAlign: "left",
-    padding: "8px 10px",
-    border: `1px solid ${isSelected ? "#16a34a" : "#e2e8f0"}`,
-    borderRadius: 8,
-    background: isSelected ? "#f0fdf4" : "#ffffff",
+    width: "100%",
+    padding: "10px 12px",
+    border: `2px solid ${isSelected ? "#16a34a" : "#cbd5e1"}`,
+    borderRadius: 10,
+    background: isSelected ? "#ffffff" : "#ffffff",
     color: "#0f172a",
     fontSize: 13,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: "pointer",
+    boxShadow: isSelected
+      ? "0 2px 8px rgba(22, 163, 74, 0.2)"
+      : "0 1px 2px rgba(15, 23, 42, 0.06)",
+    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
   };
 }
+
+function listItemDotStyle(isSelected: boolean): React.CSSProperties {
+  return {
+    flexShrink: 0,
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: isSelected ? "#16a34a" : "#94a3b8",
+    boxShadow: isSelected ? "0 0 0 3px rgba(22, 163, 74, 0.25)" : "none",
+  };
+}
+
+const listItemTextStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};

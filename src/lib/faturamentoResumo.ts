@@ -118,6 +118,7 @@ export type FinanceiroListaItem = {
   programacaoId: string
   clienteId: string
   numeroNf: string
+  numeroBoleto: string
   confirmacaoRecebimento: boolean
   statusConferencia: 'PRONTO_PARA_FATURAR' | 'PENDENTE'
   pendenciasResumo: string
@@ -148,6 +149,51 @@ export type FinanceiroListaItem = {
   contaReceberId: string
 }
 
+/** Número da NF registado na coleta ou no faturamento (etapa Mala Direta). */
+export function numeroNfDaLinhaResumo(
+  row: Pick<FaturamentoResumoViewRow, 'numero_nf_coleta' | 'faturamento_referencia_nf' | 'referencia_nf'>
+): string | null {
+  const n = (
+    row.numero_nf_coleta ??
+    row.faturamento_referencia_nf ??
+    row.referencia_nf ??
+    ''
+  )
+    .trim()
+  return n || null
+}
+
+/** Texto unificado NF + boleto (conta a receber / esteira de faturamento). */
+export function montarTextoObsNfBoleto(
+  numeroNf: string,
+  numeroBoleto: string,
+  sufixo?: string | null
+): string {
+  const parts = [
+    numeroNf.trim() ? `NF ${numeroNf.trim()}` : null,
+    numeroBoleto.trim() ? `Boleto/ref. ${numeroBoleto.trim()}` : null,
+    (sufixo ?? '').trim() || null,
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+
+/** Boleto/referência gravado ao finalizar NF (texto em `conta_receber_nf_envio_obs`). */
+export function boletoDaLinhaResumo(
+  row: Pick<FaturamentoResumoViewRow, 'conta_receber_nf_envio_obs'>
+): string | null {
+  const obs = (row.conta_receber_nf_envio_obs ?? '').trim()
+  if (!obs) return null
+  const m = /Boleto\/ref\.\s*([^·]+)/i.exec(obs)
+  if (m?.[1]) return m[1].trim()
+  return null
+}
+
+export function boletoDeObsNfEnvio(obs: string | null | undefined): string | null {
+  if (!obs?.trim()) return null
+  const m = /Boleto\/ref\.\s*([^·]+)/i.exec(obs.trim())
+  return m?.[1]?.trim() || null
+}
+
 export function mapFaturamentoViewRow(row: FaturamentoResumoViewRow): FinanceiroListaItem {
   const etapa = normalizarEtapaColeta({
     fluxo_status: row.fluxo_status,
@@ -160,10 +206,7 @@ export function mapFaturamentoViewRow(row: FaturamentoResumoViewRow): Financeiro
   const sc =
     row.status_conferencia === 'PRONTO_PARA_FATURAR' ? 'PRONTO_PARA_FATURAR' : 'PENDENTE'
 
-  const ref =
-    (row.referencia_nf && String(row.referencia_nf).trim()) ||
-    (row.numero_nf_coleta && String(row.numero_nf_coleta).trim()) ||
-    ''
+  const ref = numeroNfDaLinhaResumo(row) ?? ''
 
   return {
     id: row.coleta_id,
@@ -186,6 +229,7 @@ export function mapFaturamentoViewRow(row: FaturamentoResumoViewRow): Financeiro
     programacaoId: row.programacao_id != null ? String(row.programacao_id) : '',
     clienteId: row.cliente_id != null ? String(row.cliente_id) : '',
     numeroNf: ref,
+    numeroBoleto: boletoDaLinhaResumo(row) ?? '',
     confirmacaoRecebimento: row.confirmacao_recebimento === true,
     statusConferencia: sc,
     pendenciasResumo: (row.pendencias_resumo ?? '').trim(),
@@ -235,6 +279,7 @@ export function exportarCsvFinanceiro(
     'fase_fluxo_oficial',
     'status_conferencia',
     'referencia_nf',
+    'numero_boleto',
     'pendencias',
   ] as const
   const esc = (s: string | number) => {
@@ -254,6 +299,7 @@ export function exportarCsvFinanceiro(
         esc(i.faseFluxoOficial),
         esc(i.statusConferencia),
         esc(i.numeroNf),
+        esc(i.numeroBoleto),
         esc(i.pendenciasResumo),
       ].join(';')
     )
