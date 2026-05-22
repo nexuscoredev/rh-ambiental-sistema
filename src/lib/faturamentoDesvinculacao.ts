@@ -80,6 +80,17 @@ export function pesoParaCampo(v: number | null | undefined): string {
   return String(v)
 }
 
+/**
+ * Peso em kg para cálculo do contrato: prioriza o campo editado na MTR (mesmo vazio durante digitação).
+ * Só usa coleta operacional quando o campo de peso MTR nunca foi preenchido no resumo.
+ */
+export function pesoLiquidoKgDoResumoMtr(mtr: ResumoMtrFinanceiro): number | null {
+  const campo = mtr.peso_liquido_kg.trim()
+  if (campo === '') return null
+  const n = parseNumeroCampo(campo)
+  return n > 0 ? n : 0
+}
+
 export function moedaParaCampo(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(Number(v)) || Number(v) <= 0) return ''
   return String(Math.round(Number(v) * 100) / 100)
@@ -402,9 +413,10 @@ export function aplicarSugestaoContratoNoResumoMtr(
     residuo_unidade: sugestao.unidadeMedida || resumo.mtr.residuo_unidade,
     residuo_valor_unitario: moedaParaCampo(sugestao.valorUnitario) || resumo.mtr.residuo_valor_unitario,
     residuo_valor: moedaParaCampo(sugestao.valorResiduo) || resumo.mtr.residuo_valor,
-    peso_liquido_kg: resumo.mtr.peso_liquido_kg || resumo.ticket.peso_liquido_kg,
+    /** Nunca repõe do ticket — evita travar o peso ao reaplicar contrato durante a edição. */
+    peso_liquido_kg: resumo.mtr.peso_liquido_kg,
   }
-  return { ...resumo, mtr: recalcularResiduoMtr(mtr) }
+  return { ...resumo, mtr }
 }
 
 export { faturamentoRegistrosErroResumoFinanceiro } from './faturamentoRegistrosPersist'

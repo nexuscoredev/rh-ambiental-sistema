@@ -22,6 +22,7 @@ import {
 } from '../../lib/faturamentoPrecoContrato'
 import {
   aplicarSugestaoContratoNoResumoMtr,
+  pesoLiquidoKgDoResumoMtr,
   resumoMtrPrecosVazios,
   criarResumoFinanceiroDoOperacional,
   marcarTicketEncerradoDefinitivoResumo,
@@ -213,8 +214,8 @@ export function FaturamentoModalRegisto({
   const calcularSugestaoContratoParaResumo = useCallback(
     (resumo: ResumoFinanceiroDesvinculado): ResultadoPrecoContrato | null => {
       if (!row || !contratoCliente) return null
-      const pesoMtr = parseNumeroCampo(resumo.mtr.peso_liquido_kg || resumo.mtr.residuo_quantidade)
-      const pesoKg = pesoMtr > 0 ? pesoMtr : pesoColetaKg
+      const pesoKg = pesoLiquidoKgDoResumoMtr(resumo.mtr)
+      if (pesoKg == null || pesoKg <= 0) return null
       const inputBase = {
         veiculosContratoRaw: contratoCliente.veiculos_contrato,
         equipamentosContratoRaw: contratoCliente.equipamentos_contrato,

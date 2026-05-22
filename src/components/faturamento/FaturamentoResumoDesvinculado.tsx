@@ -112,6 +112,18 @@ function FaturamentoResumoDesvinculadoInner({
   const ticketConsolidado = Boolean(resumo.ticket.eh_consolidado_mtr)
   const linhasTickets = resumo.ticket.linhas_tickets ?? []
   const totalMtr = useMemo(() => totalResumoMtr(resumo.mtr), [resumo.mtr])
+  const caminhaoMtrNum = useMemo(
+    () => parseNumeroCampo(resumo.mtr.caminhao_valor),
+    [resumo.mtr.caminhao_valor]
+  )
+  const equipMtrNum = useMemo(
+    () => parseNumeroCampo(resumo.mtr.equipamento_valor),
+    [resumo.mtr.equipamento_valor]
+  )
+  const residuoMtrNum = useMemo(
+    () => parseNumeroCampo(resumo.mtr.residuo_valor),
+    [resumo.mtr.residuo_valor]
+  )
   const acrescimoNum = useMemo(
     () => parseNumeroCampo(resumo.ajustes?.acrescimo ?? ''),
     [resumo.ajustes?.acrescimo]
@@ -153,7 +165,10 @@ function FaturamentoResumoDesvinculadoInner({
   const alterarPesoLiquidoMtr = useCallback(
     (pesoStr: string) => {
       let next = aplicarPesoLiquidoMtrNoResumo(resumo, pesoStr)
-      if (onAposPesoMtrAlterado) next = onAposPesoMtrAlterado(next)
+      const pesoNum = parseNumeroCampo(pesoStr)
+      if (pesoNum > 0 && onAposPesoMtrAlterado) {
+        next = onAposPesoMtrAlterado(next)
+      }
       onChange(next)
     },
     [onChange, onAposPesoMtrAlterado, resumo]
@@ -546,6 +561,10 @@ function FaturamentoResumoDesvinculadoInner({
           }}
         >
           Subtotal MTR: {fmtBrlLocal(totalMtr)}
+          <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 500, color: '#047857' }}>
+            Caminhão {fmtBrlLocal(caminhaoMtrNum)} + Equipamento {fmtBrlLocal(equipMtrNum)} + Resíduo{' '}
+            {fmtBrlLocal(residuoMtrNum)}
+          </div>
         </div>
       </div>
 

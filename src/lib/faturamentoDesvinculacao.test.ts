@@ -4,6 +4,7 @@ import {
   aplicarSugestaoContratoNoResumoMtr,
   criarResumoFinanceiroDoOperacional,
   parseNumeroCampo,
+  pesoLiquidoKgDoResumoMtr,
   resumoMtrPrecosVazios,
 } from './faturamentoDesvinculacao'
 import type { ResultadoPrecoContrato } from './faturamentoPrecoContrato'
@@ -28,6 +29,48 @@ describe('resumoMtrPrecosVazios', () => {
   it('detecta MTR sem valores monetários', () => {
     const r = criarResumoFinanceiroDoOperacional(rowMin, null)
     expect(resumoMtrPrecosVazios(r.mtr)).toBe(true)
+  })
+})
+
+describe('pesoLiquidoKgDoResumoMtr', () => {
+  it('não usa peso da coleta quando o campo MTR está vazio (edição)', () => {
+    const base = criarResumoFinanceiroDoOperacional(rowMin, null)
+    const mtr = { ...base.mtr, peso_liquido_kg: '', residuo_quantidade: '1' }
+    expect(pesoLiquidoKgDoResumoMtr(mtr)).toBeNull()
+  })
+
+  it('usa peso digitado no campo MTR', () => {
+    const base = criarResumoFinanceiroDoOperacional(rowMin, null)
+    const mtr = { ...base.mtr, peso_liquido_kg: '234', residuo_quantidade: '1' }
+    expect(pesoLiquidoKgDoResumoMtr(mtr)).toBe(234)
+  })
+})
+
+describe('aplicarSugestaoContratoNoResumoMtr', () => {
+  it('preserva peso_liquido_kg vazio sem repor do ticket', () => {
+    const base = criarResumoFinanceiroDoOperacional(rowMin, null)
+    const resumo = {
+      ...base,
+      ticket: { ...base.ticket, peso_liquido_kg: '1' },
+      mtr: { ...base.mtr, peso_liquido_kg: '', residuo_valor: '300', residuo_valor_unitario: '300' },
+    }
+    const sugestao = {
+      total: 300,
+      linhas: [],
+      origem: 'contrato_cliente_residuo' as const,
+      residuoContrato: null,
+      veiculoContrato: null,
+      equipamentosContrato: [],
+      unidadeMedida: 'kg',
+      quantidadeFaturada: 1,
+      valorUnitario: 300,
+      faturamentoMinimoKg: 0,
+      valorCaminhao: 0,
+      valorEquipamentos: 0,
+      valorResiduo: 300,
+    }
+    const next = aplicarSugestaoContratoNoResumoMtr(resumo, sugestao)
+    expect(next.mtr.peso_liquido_kg).toBe('')
   })
 })
 
