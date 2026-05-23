@@ -37,6 +37,7 @@ function mensagemErroColetaLegivel(err: PostgrestError | null | undefined): stri
 
 function erroSemLinhasAtualizadas(): PostgrestError {
   return {
+    name: 'PostgrestError',
     message: 'Nenhuma linha da coleta foi atualizada (permissão ou coleta inexistente).',
     details: '',
     hint: '',
