@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, type CSSProperties } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   aplicarPesoLiquidoMtrNoResumo,
   parseNumeroCampo,
@@ -9,6 +9,14 @@ import {
   type ResumoTicketFinanceiro,
 } from '../../lib/faturamentoDesvinculacao'
 import type { PrecoBreakdownLinha } from '../../lib/faturamentoPrecoContrato'
+import {
+  CHAVE_VEICULO_MANUAL,
+  aplicarVeiculoContratoAoResumoMtr,
+  chaveVeiculoSelecionadoNoResumo,
+  listarVeiculosContratoFaturamento,
+  rotuloOpcaoVeiculoContrato,
+  sugerirVeiculoContratoParaHints,
+} from '../../lib/faturamentoVeiculoContratoUi'
 import { FaturamentoDetalheConta } from './FaturamentoDetalheConta'
 
 const card: CSSProperties = {
@@ -88,6 +96,11 @@ type Props = {
   diferencaConta?: number | null
   /** Após alterar peso MTR (kg): recalcular valores do contrato no resumo, se fornecido. */
   onAposPesoMtrAlterado?: (resumo: ResumoFinanceiroDesvinculado) => ResumoFinanceiroDesvinculado
+  /** Lista de veículos do contrato do cliente (dropdown de caminhão a cobrar). */
+  veiculosContratoRaw?: unknown
+  tipoCaminhaoProgramacao?: string | null
+  acondicionamentoMtr?: string | null
+  descricaoVeiculoLegado?: string | null
 }
 
 function fmtBrlLocal(v: number) {
@@ -106,6 +119,10 @@ function FaturamentoResumoDesvinculadoInner({
   referenciaConta,
   diferencaConta,
   onAposPesoMtrAlterado,
+  veiculosContratoRaw,
+  tipoCaminhaoProgramacao,
+  acondicionamentoMtr,
+  descricaoVeiculoLegado,
 }: Props) {
   const podeEditar = podeEditarResumos && !resumo.ticket_encerrado_definitivo
   const podeAjustar = (podeEditarAjustes ?? podeEditarResumos) && !resumo.ticket_encerrado_definitivo
@@ -132,6 +149,33 @@ function FaturamentoResumoDesvinculadoInner({
     () => parseNumeroCampo(resumo.ajustes?.desconto ?? ''),
     [resumo.ajustes?.desconto]
   )
+
+  const veiculosContrato = useMemo(
+    () => listarVeiculosContratoFaturamento(veiculosContratoRaw),
+    [veiculosContratoRaw]
+  )
+  const veiculoSugeridoProgramacao = useMemo(
+    () =>
+      sugerirVeiculoContratoParaHints(veiculosContratoRaw, {
+        tipoCaminhaoProgramacao,
+        acondicionamentoMtr,
+        descricaoVeiculoLegado,
+      }),
+    [veiculosContratoRaw, tipoCaminhaoProgramacao, acondicionamentoMtr, descricaoVeiculoLegado]
+  )
+  const chaveVeiculoDerivada = useMemo(
+    () => chaveVeiculoSelecionadoNoResumo(veiculosContrato, resumo),
+    [veiculosContrato, resumo]
+  )
+  const [chaveVeiculoUi, setChaveVeiculoUi] = useState<string | null>(null)
+  useEffect(() => {
+    if (chaveVeiculoDerivada !== CHAVE_VEICULO_MANUAL) {
+      setChaveVeiculoUi(null)
+    }
+  }, [chaveVeiculoDerivada])
+  const chaveVeiculoExibida = chaveVeiculoUi ?? chaveVeiculoDerivada
+  const modoVeiculoManual =
+    veiculosContrato.length === 0 || chaveVeiculoExibida === CHAVE_VEICULO_MANUAL
 
   const patchTicket = useCallback(
     (partial: Partial<ResumoTicketFinanceiro>) => {
@@ -438,24 +482,119 @@ function FaturamentoResumoDesvinculadoInner({
         </div>
 
         <div style={{ ...grid2, marginBottom: '10px' }}>
-          <div>
-            <label style={label}>Caminhão</label>
-            <input
-              style={{ ...input, marginBottom: '6px' }}
-              disabled={!podeEditar}
-              readOnly={!podeEditar}
-              value={resumo.mtr.caminhao_rotulo}
-              onChange={(e) => patchMtrSemRecalc({ caminhao_rotulo: e.target.value })}
-            />
-            <input
-              style={input}
-              disabled={!podeEditar}
-              readOnly={!podeEditar}
-              inputMode="decimal"
-              value={resumo.mtr.caminhao_valor}
-              onChange={(e) => patchMtrSemRecalc({ caminhao_valor: e.target.value })}
-              placeholder="Valor R$"
-            />
+          <div style={{ gridColumn: veiculosContrato.length > 0 ? '1 / -1' : undefined }}>
+            {veiculosContrato.length > 0 ? (
+              <>
+                <label style={label}>Caminhão a cobrar (contrato)</label>
+                <select
+                  style={{ ...input, marginBottom: '6px', cursor: podeEditar ? 'pointer' : 'not-allowed' }}
+                  disabled={!podeEditar}
+                  value={chaveVeiculoExibida}
+                  onChange={(e) => {
+                    const chave = e.target.value
+                    if (chave === CHAVE_VEICULO_MANUAL) {
+                      setChaveVeiculoUi(CHAVE_VEICULO_MANUAL)
+                      return
+                    }
+                    setChaveVeiculoUi(null)
+                    const idx = Number(chave)
+                    const veiculo = veiculosContrato[idx]
+                    if (veiculo) onChange(aplicarVeiculoContratoAoResumoMtr(resumo, veiculo))
+                  }}
+                >
+                  {veiculosContrato.map((v, i) => (
+                    <option key={`${v.tipo_veiculo}-${i}`} value={String(i)}>
+                      {rotuloOpcaoVeiculoContrato(v)}
+                    </option>
+                  ))}
+                  <option value={CHAVE_VEICULO_MANUAL}>Outro — editar manualmente</option>
+                </select>
+                {(tipoCaminhaoProgramacao?.trim() || veiculoSugeridoProgramacao) && (
+                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', lineHeight: 1.45 }}>
+                    {tipoCaminhaoProgramacao?.trim() ? (
+                      <>
+                        <strong>Programação:</strong> {tipoCaminhaoProgramacao.trim()}
+                      </>
+                    ) : null}
+                    {veiculoSugeridoProgramacao ? (
+                      <>
+                        {tipoCaminhaoProgramacao?.trim() ? ' · ' : ''}
+                        <strong>Sugestão:</strong> {veiculoSugeridoProgramacao.tipo_veiculo.trim()}
+                      </>
+                    ) : null}
+                    {podeEditar && veiculoSugeridoProgramacao && modoVeiculoManual ? (
+                      <>
+                        {' '}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange(aplicarVeiculoContratoAoResumoMtr(resumo, veiculoSugeridoProgramacao))
+                          }
+                          style={{
+                            marginLeft: '4px',
+                            padding: 0,
+                            border: 'none',
+                            background: 'none',
+                            color: '#0f766e',
+                            fontWeight: 700,
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Aplicar sugestão
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+                {!modoVeiculoManual ? (
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#334155',
+                      marginBottom: '8px',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      background: '#fff',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <strong>{resumo.mtr.caminhao_rotulo.trim() || '—'}</strong>
+                    {' · '}
+                    {caminhaoMtrNum > 0 ? fmtBrlLocal(caminhaoMtrNum) : 'Sem custo'}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <label style={label}>Caminhão</label>
+            )}
+            {modoVeiculoManual ? (
+              <>
+                {veiculosContrato.length === 0 ? null : (
+                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>
+                    Sem linha no contrato ou valor personalizado — preencha abaixo.
+                  </div>
+                )}
+                <input
+                  style={{ ...input, marginBottom: '6px' }}
+                  disabled={!podeEditar}
+                  readOnly={!podeEditar}
+                  value={resumo.mtr.caminhao_rotulo}
+                  onChange={(e) => patchMtrSemRecalc({ caminhao_rotulo: e.target.value })}
+                  placeholder="Tipo / descrição"
+                />
+                <input
+                  style={input}
+                  disabled={!podeEditar}
+                  readOnly={!podeEditar}
+                  inputMode="decimal"
+                  value={resumo.mtr.caminhao_valor}
+                  onChange={(e) => patchMtrSemRecalc({ caminhao_valor: e.target.value })}
+                  placeholder="Valor R$"
+                />
+              </>
+            ) : null}
           </div>
           <div>
             <label style={label}>Equipamento</label>

@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.67",
+  "version": "1.2.68",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -12,8 +12,10 @@
     "build:brand": "node scripts/generate-brand-assets.mjs",
     "process:wordmark": "node scripts/process-wordmark-import.mjs",
     "lint": "eslint .",
-    "verify": "npm run lint && npm run build && npm test",
+    "verify": "npm run lint && npm run build && npm test && npm run guard:faturamento",
     "test": "vitest run",
+    "test:faturamento-guard": "vitest run src/lib/faturamentoLogicaCongelada.test.ts src/lib/faturamentoPrecoContrato.test.ts src/lib/faturamentoConsolidacaoMtr.test.ts src/lib/faturamentoRelatorioMedicao.test.ts src/lib/faturamentoDetalheConta.test.ts src/lib/faturamentoDesvinculacao.test.ts src/lib/faturamentoEsteira.test.ts",
+    "guard:faturamento": "node scripts/guard-faturamento-logica.mjs",
     "preview": "vite preview --port 4173 --strictPort",
     "seed:simulacao-coletas": "tsx scripts/seed-simulacao-coletas.ts",
     "seed:fluxo-completo-20": "tsx scripts/seed-fluxo-completo-20.ts",

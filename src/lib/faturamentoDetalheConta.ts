@@ -143,4 +143,34 @@ export function montarDetalheReferenciaContrato(
   return out
 }
 
+/**
+ * Espelha na referência o caminhão escolhido no resumo editável (dropdown).
+ * Só ajusta a linha de caminhão e o total referência; resíduos/mínimos permanecem do contrato.
+ */
+export function referenciaContratoComCaminhaoResumo(
+  linhasContrato: PrecoBreakdownLinha[],
+  total: number,
+  caminhaoRotulo: string,
+  caminhaoValor: number
+): { linhas: PrecoBreakdownLinha[]; total: number } {
+  if (linhasContrato.length === 0 || total <= 0) {
+    return { linhas: linhasContrato, total }
+  }
+  const idx = linhasContrato.findIndex(
+    (l) => l.chave === 'caminhao' || l.rotulo.trim().toLowerCase().startsWith('caminhão')
+  )
+  if (idx < 0) return { linhas: linhasContrato, total }
+
+  const antigo = linhasContrato[idx]!.valor
+  const rotulo = caminhaoRotulo.trim()
+    ? `Caminhão (${caminhaoRotulo.trim()})`
+    : linhasContrato[idx]!.rotulo
+  const valor = Math.round(caminhaoValor * 100) / 100
+  const linhas = linhasContrato.map((l, i) =>
+    i === idx ? { ...l, rotulo, valor } : l
+  )
+  const totalNovo = Math.round((total - antigo + valor) * 100) / 100
+  return { linhas, total: totalNovo }
+}
+
 export { fmtBrl as fmtBrlDetalheConta }

@@ -3,6 +3,7 @@ import type { FaturamentoResumoViewRow } from './faturamentoResumo'
 import { BRAND_LOGO_MARK } from './brandLogo'
 import { supabase } from './supabase'
 import { empresaTicketImpressaoRg } from './rgAmbientalDadosCorporativos'
+import { resolverDataExibicaoTicket } from './ticketOperacionalData'
 
 export type TicketPdfRowInput = Pick<
   FaturamentoResumoViewRow,
@@ -80,6 +81,7 @@ type ExtrasTicket = {
   empresaTransporte: string
   horaEntrada: string
   horaSaida: string
+  dataExibicao: string
 }
 
 async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | null> {
@@ -94,7 +96,7 @@ async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | nu
     supabase
       .from('controle_massa')
       .select(
-        'empresa, cliente, balanceiro, balanceiro_nome, usuario_balanceiro, hora_entrada, hora_saida, created_at, updated_at'
+        'data, empresa, cliente, balanceiro, balanceiro_nome, usuario_balanceiro, hora_entrada, hora_saida, created_at, updated_at'
       )
       .eq('coleta_id', coletaId)
       .order('created_at', { ascending: false })
@@ -134,6 +136,11 @@ async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | nu
     }
   }
 
+  const dataPesagem =
+    massa && typeof (massa as { data?: unknown }).data === 'string'
+      ? String((massa as { data: string }).data).trim().slice(0, 10)
+      : null
+
   return {
     numero: numeroTicket,
     tipo: normalizarTipoTicket(ticket?.tipo_ticket as string | null),
@@ -142,6 +149,10 @@ async function carregarExtrasTicket(coletaId: string): Promise<ExtrasTicket | nu
     empresaTransporte,
     horaEntrada,
     horaSaida,
+    dataExibicao: resolverDataExibicaoTicket({
+      dataPesagem,
+      ticketCriadoEm: typeof ticket?.created_at === 'string' ? ticket.created_at : null,
+    }),
   }
 }
 
@@ -208,7 +219,10 @@ export async function abrirPdfTicketOperacional(
   centerText(tituloTipo(extras?.tipo ?? 'saida'), 13)
   dashedRule()
 
-  const dataBr = formatDataBr(row.ticket_impresso_em ?? row.created_at)
+  const dataBr =
+    extras?.dataExibicao && extras.dataExibicao !== '—'
+      ? extras.dataExibicao
+      : formatDataBr(row.ticket_impresso_em ?? row.created_at)
   linha('Data', dataBr)
   linha('MTR', (row.mtr_numero ?? '').trim() || '—')
   y += 2

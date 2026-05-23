@@ -1,0 +1,35 @@
+---
+description: Lógica de faturamento congelada — não alterar sem aprovação e testes de contrato
+globs: src/lib/faturamento*.ts,src/lib/*faturamento*.ts,src/components/faturamento/**/*
+alwaysApply: true
+---
+
+# Faturamento — lógica congelada (RG Ambiental)
+
+**Versão aprovada:** `2026-05-22.v1` · Documentação: `docs/faturamento-logica-aprovada.md`
+
+## Regra para o agente
+
+1. **Não altere** cálculos, agregação ou esteira de faturamento sem pedido explícito do utilizador para mudar a regra de negócio.
+2. Antes de qualquer mudança em ficheiros listados em `src/lib/faturamentoLogicaCongelada.manifest.ts`:
+   - Leia `docs/faturamento-logica-aprovada.md`.
+   - Avise o utilizador: *"Isto entra em conflito com a lógica de faturamento congelada"* e descreva o impacto (referência MTR vs relatório, frete, mínimos, etc.).
+   - Só prossiga após decisão explícita; atualize manifesto + testes + doc e use `FATURAMENTO_LOGICA_APROVADA=1` no commit/CI se for intencional.
+3. **Nunca** unifique totais de “Total referência (contrato/regra)” com “Relatório de medição” — são visões diferentes por desenho.
+
+## Invariantes (resumo)
+
+| Visão | O quê |
+|--------|--------|
+| **Referência** (`calcularPrecoContratoMtrConsolidado`) | 1 MTR: caminhão+equip. **1×**; soma resíduos de todos os tickets da MTR; mínimo por tipo. |
+| **Relatório** (`montarLinhasRelatorioMedicao`) | Lote cliente (~30d): **1 linha/coleta**; frete só na **primeira coleta de cada MTR**; mínimo **por linha**. |
+| **Ajuste** | “Total a faturar” ≠ “Total referência” quando multi-MTR ou escopos distintos. |
+
+## Verificação automática
+
+```bash
+npm run test:faturamento-guard
+npm run guard:faturamento
+```
+
+Falha de teste ou alteração em ficheiros protegidos sem `FATURAMENTO_LOGICA_APROVADA=1` → **bloqueio/aviso** para decisão humana.

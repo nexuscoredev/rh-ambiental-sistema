@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { montarDetalheContaFaturamento } from './faturamentoDetalheConta'
+import { montarDetalheContaFaturamento, referenciaContratoComCaminhaoResumo } from './faturamentoDetalheConta'
 import { ajustesFinanceirosVazios, type ResumoFinanceiroDesvinculado } from './faturamentoDesvinculacao'
 
 function resumoBase(): ResumoFinanceiroDesvinculado {
@@ -57,5 +57,18 @@ describe('montarDetalheContaFaturamento', () => {
     const residuo = linhas.find((l) => l.rotulo.includes('resíduos'))
     expect(residuo?.detalhe).toContain('576')
     expect(residuo?.detalhe).toContain('referência')
+  })
+})
+
+describe('referenciaContratoComCaminhaoResumo', () => {
+  it('substitui linha de caminhão e ajusta total referência', () => {
+    const linhas = [
+      { chave: 'caminhao', rotulo: 'Caminhão (CAMINHÃO BAU)', valor: 750 },
+      { chave: 'residuo', rotulo: 'Resíduo', valor: 3104 },
+    ]
+    const ajustada = referenciaContratoComCaminhaoResumo(linhas, 3854, 'CAMINHÃO VACUO - EFLUENTE', 0)
+    expect(ajustada.linhas[0]!.rotulo).toContain('VACUO')
+    expect(ajustada.linhas[0]!.valor).toBe(0)
+    expect(ajustada.total).toBe(3104)
   })
 })

@@ -24,6 +24,8 @@ import {
   fetchUltimaPesagemPorColetaIds,
 } from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
+import { isoDataHojeLocal } from "../lib/ticketOperacionalData";
+import { waitForTicketPrintRoot } from "../lib/waitForTicketPrintRoot";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
 import { rgConfirm } from "../lib/RgDialogProvider";
@@ -354,6 +356,18 @@ function formatarTipoTicketLista(raw: string | null | undefined): string {
   return "—";
 }
 
+function mensagemErroTicketOperacionalDb(msg: string): string {
+  const m = msg.trim();
+  if (m.toLowerCase().includes("row-level security")) {
+    return (
+      "Sem permissão para gravar o ticket operacional neste perfil. " +
+      "Peça ao administrador para executar no Supabase o ficheiro " +
+      "supabase/sql_editor_tickets_operacionais_rls.sql (política RLS alinhada à pesagem)."
+    );
+  }
+  return m;
+}
+
 /**
  * Cria ou atualiza o ticket operacional ligado à coleta após pesagem gravada,
  * para o painel poder imprimir de imediato.
@@ -387,7 +401,7 @@ async function garantirTicketAposPesagem(params: {
     .limit(1);
 
   if (errSel) {
-    return { ok: false, message: errSel.message };
+    return { ok: false, message: mensagemErroTicketOperacionalDb(errSel.message) };
   }
 
   const existente = existentes?.[0];
@@ -402,7 +416,7 @@ async function garantirTicketAposPesagem(params: {
       })
       .eq("id", existente.id);
 
-    if (error) return { ok: false, message: error.message };
+    if (error) return { ok: false, message: mensagemErroTicketOperacionalDb(error.message) };
     return { ok: true };
   }
 
@@ -425,7 +439,7 @@ async function garantirTicketAposPesagem(params: {
         .order("created_at", { ascending: false })
         .limit(1);
       if (errRetry || !retryRows?.[0]?.id) {
-        return { ok: false, message: error.message };
+        return { ok: false, message: mensagemErroTicketOperacionalDb(error.message) };
       }
       const { error: upErr } = await supabase
         .from("tickets_operacionais")
@@ -435,10 +449,10 @@ async function garantirTicketAposPesagem(params: {
           tipo_ticket: params.tipoTicket,
         })
         .eq("id", retryRows[0].id);
-      if (upErr) return { ok: false, message: upErr.message };
+      if (upErr) return { ok: false, message: mensagemErroTicketOperacionalDb(upErr.message) };
       return { ok: true };
     }
-    return { ok: false, message: error.message };
+    return { ok: false, message: mensagemErroTicketOperacionalDb(error.message) };
   }
 
   return { ok: true };
@@ -552,6 +566,7 @@ async function persistirPesagemUmSegmento(params: {
 
   const fluxoPosPesagem = ticketAuto.ok ? "TICKET_GERADO" : "CONTROLE_PESAGEM_LANCADO";
 
+  const dataIso = params.data.trim().slice(0, 10)
   const coletaUpdate: Record<string, unknown> = {
     peso_tara: agregado.pesoTaraNum,
     peso_bruto: agregado.pesoBrutoNum,
@@ -562,6 +577,7 @@ async function persistirPesagemUmSegmento(params: {
     placa: limparOuNull(params.placa),
     motorista: limparOuNull(params.motorista),
     motorista_nome: limparOuNull(params.motorista),
+    ...(dataIso ? { data_execucao: dataIso, data_agendada: dataIso } : {}),
     fluxo_status: fluxoPosPesagem,
     etapa_operacional: fluxoPosPesagem,
     status_processo: "EM_CONFERENCIA",
@@ -1166,10 +1182,45 @@ export default function ControleMassa() {
       return;
     }
 
+    const numeroTicket =
+      (form.coleta_id.trim() === coletaId
+        ? form.numero_ticket
+        : numeroTicketPorColeta.get(coletaId))?.trim() ?? "";
+    const tipoRaw =
+      (form.coleta_id.trim() === coletaId
+        ? form.tipo_ticket
+        : tipoTicketPorColeta.get(coletaId)) ?? "saida";
+    const tipoTicket: "entrada" | "saida" | "frete" =
+      tipoRaw === "frete" ? "frete" : tipoRaw === "entrada" ? "entrada" : "saida";
+
     setForm((prev) => ({ ...prev, coleta_id: coletaId }));
     setImprimindoTicketColetaId(coletaId);
 
+    const gt = await garantirTicketAposPesagem({
+      coletaId,
+      numeroTicket,
+      tipoTicket,
+      descricaoExtra:
+        form.coleta_id.trim() === coletaId ? form.descricao_ticket || null : null,
+    });
+    if (!gt.ok) {
+      setErroTela(gt.message);
+      setSucesso("");
+      setImprimindoTicketColetaId(null);
+      return;
+    }
+
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const pronto = await waitForTicketPrintRoot({ timeoutMs: 6000 });
+    if (!pronto) {
+      setErroTela(
+        "Não foi possível preparar o ticket para impressão. Aguarde um instante e tente de novo."
+      );
+      setSucesso("");
+      setImprimindoTicketColetaId(null);
+      return;
+    }
 
     const res = await registrarTicketImpressoColeta(coletaId);
     if (!res.ok) {
@@ -1182,10 +1233,6 @@ export default function ControleMassa() {
     setErroTela("");
     setSucesso(`${rotulo} enviado para impressão.`);
     setTimeout(() => setSucesso(""), 5000);
-    document.getElementById("ticket-operacional-anchor")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
     window.print();
     setImprimindoTicketColetaId(null);
   }
@@ -1501,12 +1548,16 @@ export default function ControleMassa() {
     const mtrNo =
       mtrsLista.find((m) => m.id === coletaSelecionada.mtr_id)?.numero ?? null;
     const ticketEx = numeroTicketPorColeta.get(coletaSelecionada.id);
+    const pesagemPrev = ultimaPesagemPorColeta.get(coletaSelecionada.id);
+    const dataCampo =
+      (pesagemPrev?.data?.trim().slice(0, 10) ?? "") || isoDataHojeLocal();
 
     return preencherNumeroTicketNoForm(
       mergeFormResiduosLinhas(
         {
           ...prev,
           coleta_id: coletaSelecionada.id,
+          data: dataCampo,
           empresa: coletaSelecionada.cliente || prev.empresa,
           placa: campos.placa || prev.placa,
           motorista: campos.motorista || prev.motorista,
@@ -3268,6 +3319,9 @@ export default function ControleMassa() {
                       onChange={handleInputChange}
                       style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
                     />
+                    <div style={{ fontSize: 10, color: "#64748b", marginTop: 4, lineHeight: 1.35 }}>
+                      Data da operação (aparece no ticket impresso).
+                    </div>
                   </div>
 
                   <div style={{ gridColumn: "span 3" }} className="field">
@@ -3634,6 +3688,13 @@ export default function ControleMassa() {
                   variant="embedded"
                   simplifyEmbedded
                   coletaAtiva={coletaTicketSnapshot}
+                  dataPesagemAtual={form.coleta_id.trim() ? form.data : null}
+                  numeroTicketExterno={
+                    form.coleta_id.trim()
+                      ? form.numero_ticket || numeroTicketPorColeta.get(form.coleta_id.trim()) || null
+                      : null
+                  }
+                  impressaoPendenteColetaId={imprimindoTicketColetaId}
                   cargo={usuarioCargo}
                   coletasOpcoes={coletasTicketOpcoes}
                   carregandoColetas={loadingVinculo}

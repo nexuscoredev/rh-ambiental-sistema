@@ -131,7 +131,15 @@ export function FaturamentoDetalheConta({ resumo, referencia, diferenca }: Props
       </p>
 
       {grupos.map(({ grupo, linhas }) => (
-        <div key={grupo} style={{ marginBottom: grupo === 'total' ? '12px' : '14px' }}>
+        <div
+          key={grupo}
+          style={{
+            marginBottom: grupo === 'total' ? '4px' : '14px',
+            marginTop: grupo === 'referencia' ? '16px' : 0,
+            paddingTop: grupo === 'referencia' ? '14px' : 0,
+            borderTop: grupo === 'referencia' ? '2px solid #e2e8f0' : undefined,
+          }}
+        >
           {grupo !== 'total' && grupo !== 'subtotal' ? (
             <div
               style={{
@@ -145,6 +153,21 @@ export function FaturamentoDetalheConta({ resumo, referencia, diferenca }: Props
             >
               {tituloGrupo[grupo] ?? grupo}
               {grupo === 'referencia' && referencia ? ` · ${referencia.origemLabel}` : ''}
+              {grupo === 'referencia' ? (
+                <span
+                  style={{
+                    display: 'block',
+                    marginTop: '4px',
+                    fontWeight: 500,
+                    textTransform: 'none',
+                    letterSpacing: 0,
+                    color: '#94a3b8',
+                  }}
+                >
+                  Conferência automática (resíduos/mínimos pelo contrato). O caminhão segue o
+                  selecionado acima.
+                </span>
+              ) : null}
             </div>
           ) : null}
           {linhas.map((l, i) => (

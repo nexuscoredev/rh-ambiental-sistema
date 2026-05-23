@@ -15,6 +15,7 @@ import {
   marcarEsteiraPosFaturamentoEmitido,
   marcarValoresMedicaoRevisados,
 } from '../../lib/faturamentoEsteira'
+import { referenciaContratoComCaminhaoResumo } from '../../lib/faturamentoDetalheConta'
 import {
   calcularPrecoContratoColetaMtr,
   rotuloOrigemContrato,
@@ -276,11 +277,28 @@ export function FaturamentoModalRegisto({
     return null
   }, [sugestaoContrato, sugestaoRegras])
 
+  /** Referência exibida: caminhão alinhado ao dropdown do resumo editável. */
+  const referenciaContaParaExibicao = useMemo(() => {
+    if (!sugestaoAtiva || sugestaoAtiva.total <= 0 || !resumoFinanceiro) return sugestaoAtiva
+    const camVal = parseNumeroCampo(resumoFinanceiro.mtr.caminhao_valor)
+    const ajustada = referenciaContratoComCaminhaoResumo(
+      sugestaoAtiva.linhas,
+      sugestaoAtiva.total,
+      resumoFinanceiro.mtr.caminhao_rotulo,
+      camVal
+    )
+    return {
+      ...sugestaoAtiva,
+      linhas: ajustada.linhas,
+      total: ajustada.total,
+    }
+  }, [sugestaoAtiva, resumoFinanceiro])
+
   const diferencaConta = useMemo(() => {
-    if (!sugestaoAtiva || sugestaoAtiva.total <= 0) return null
+    if (!referenciaContaParaExibicao || referenciaContaParaExibicao.total <= 0) return null
     const informado = totalNumero
-    return Math.round((informado - sugestaoAtiva.total) * 100) / 100
-  }, [sugestaoAtiva, totalNumero])
+    return Math.round((informado - referenciaContaParaExibicao.total) * 100) / 100
+  }, [referenciaContaParaExibicao, totalNumero])
 
   const carregarRegisto = useCallback(async (coletaId: string) => {
     const gen = ++carregarRegistoGenRef.current
@@ -995,15 +1013,19 @@ export function FaturamentoModalRegisto({
                   )
                 }}
                 referenciaConta={
-                  sugestaoAtiva && sugestaoAtiva.total > 0
+                  referenciaContaParaExibicao && referenciaContaParaExibicao.total > 0
                     ? {
-                        total: sugestaoAtiva.total,
-                        origemLabel: sugestaoAtiva.origemLabel,
-                        linhas: sugestaoAtiva.linhas,
+                        total: referenciaContaParaExibicao.total,
+                        origemLabel: referenciaContaParaExibicao.origemLabel,
+                        linhas: referenciaContaParaExibicao.linhas,
                       }
                     : null
                 }
                 diferencaConta={diferencaConta}
+                veiculosContratoRaw={contratoCliente?.veiculos_contrato}
+                tipoCaminhaoProgramacao={contextoMtr?.tipoCaminhao}
+                acondicionamentoMtr={contextoMtr?.acondicionamento}
+                descricaoVeiculoLegado={contratoCliente?.descricao_veiculo_legado}
               />
 
               <FaturamentoMtrRateioPanel
