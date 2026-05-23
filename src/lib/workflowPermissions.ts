@@ -162,6 +162,7 @@ export function cargoPodeMutarControleMassa(cargo: string | null | undefined): b
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
   if (cargoEhOperadoresTimeR(cargo)) return true
+  if (cargoEhOperacionalTimeT(cargo)) return true
   const c = normalizarTextoCargo(cargo)
   if (!c) return true
   if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
@@ -169,7 +170,8 @@ export function cargoPodeMutarControleMassa(cargo: string | null | undefined): b
     c.includes('balanceiro') ||
     c.includes('pesagem') ||
     cargoEhOperacionalGenerico(cargo) ||
-    c.includes('logistica')
+    c.includes('logistica') ||
+    c.includes('faturamento')
   )
 }
 

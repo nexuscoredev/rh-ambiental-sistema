@@ -26,6 +26,7 @@ import {
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { isoDataHojeLocal } from "../lib/ticketOperacionalData";
 import { waitForTicketPrintRoot } from "../lib/waitForTicketPrintRoot";
+import { atualizarColetaAposPesagemControleMassa } from "../lib/controleMassaAtualizarColeta";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../layouts/MainLayout";
 import { rgConfirm } from "../lib/RgDialogProvider";
@@ -567,7 +568,7 @@ async function persistirPesagemUmSegmento(params: {
   const fluxoPosPesagem = ticketAuto.ok ? "TICKET_GERADO" : "CONTROLE_PESAGEM_LANCADO";
 
   const dataIso = params.data.trim().slice(0, 10)
-  const coletaUpdate: Record<string, unknown> = {
+  const resColeta = await atualizarColetaAposPesagemControleMassa(supabase, params.coletaId, {
     peso_tara: agregado.pesoTaraNum,
     peso_bruto: agregado.pesoBrutoNum,
     peso_liquido: agregado.pesoLiquidoNum,
@@ -577,28 +578,18 @@ async function persistirPesagemUmSegmento(params: {
     placa: limparOuNull(params.placa),
     motorista: limparOuNull(params.motorista),
     motorista_nome: limparOuNull(params.motorista),
-    ...(dataIso ? { data_execucao: dataIso, data_agendada: dataIso } : {}),
+    data_execucao: dataIso || null,
+    data_agendada: dataIso || null,
     fluxo_status: fluxoPosPesagem,
     etapa_operacional: fluxoPosPesagem,
     status_processo: "EM_CONFERENCIA",
     liberado_financeiro: false,
-  };
-  const coletaUpdateSemItens = { ...coletaUpdate };
-  delete coletaUpdateSemItens.residuos_itens;
+  });
 
-  let errorColeta = (await supabase.from("coletas").update(coletaUpdate).eq("id", params.coletaId))
-    .error;
-  if (isErroColunaResiduosItens(errorColeta)) {
-    errorColeta = (
-      await supabase.from("coletas").update(coletaUpdateSemItens).eq("id", params.coletaId)
-    ).error;
-  }
-
-  if (errorColeta) {
+  if (!resColeta.ok) {
     return {
       ok: false,
-      message:
-        "Pesagem gravada, mas a coleta não foi atualizada no fluxo. Tente salvar novamente ou contacte o administrador.",
+      message: `Pesagem gravada, mas a coleta não foi atualizada no fluxo. ${resColeta.message}`,
     };
   }
 
@@ -2292,7 +2283,8 @@ export default function ControleMassa() {
     const tipoResGravar = residuoParaInsert;
     const resCatGravar = catalogIdPersist;
 
-    const coletaUpdate: Record<string, unknown> = {
+    const dataIsoSalvar = form.data.trim().slice(0, 10);
+    const resColeta = await atualizarColetaAposPesagemControleMassa(supabase, coletaId, {
       peso_tara: pesoTaraNumero,
       peso_bruto: pesoBrutoNumero,
       peso_liquido: pesoLiquidoNumero,
@@ -2302,26 +2294,20 @@ export default function ControleMassa() {
       placa: limparOuNull(form.placa),
       motorista: limparOuNull(form.motorista),
       motorista_nome: limparOuNull(form.motorista),
+      data_execucao: dataIsoSalvar || null,
+      data_agendada: dataIsoSalvar || null,
       fluxo_status: fluxoPosPesagem,
       etapa_operacional: fluxoPosPesagem,
       status_processo: "EM_CONFERENCIA",
       liberado_financeiro: false,
-    };
-    const coletaUpdateSemItens = { ...coletaUpdate };
-    delete coletaUpdateSemItens.residuos_itens;
+    });
 
-    let errorColeta = (await supabase.from("coletas").update(coletaUpdate).eq("id", coletaId))
-      .error;
-    if (isErroColunaResiduosItens(errorColeta)) {
-      errorColeta = (
-        await supabase.from("coletas").update(coletaUpdateSemItens).eq("id", coletaId)
-      ).error;
-    }
+    const errorColeta = resColeta.ok ? null : { message: resColeta.message };
 
-    if (errorColeta) {
-      console.error("Erro ao atualizar coleta após controle de massa:", errorColeta);
+    if (!resColeta.ok) {
+      console.error("Erro ao atualizar coleta após controle de massa:", resColeta.message);
       setErroTela(
-        "Registro de massa gravado, mas a coleta não foi atualizada no fluxo. Um administrador pode ajustar a etapa no fluxo (Controle de Massa / permissões) ou tente salvar novamente."
+        `Pesagem gravada, mas a coleta não foi atualizada no fluxo. ${resColeta.message}`
       );
     } else if (!ticketAuto.ok) {
       setErroTela(
