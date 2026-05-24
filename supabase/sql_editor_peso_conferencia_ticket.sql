@@ -18,6 +18,8 @@ AS $$
       public.rg_is_admin()
       OR public.rg_is_desenvolvedor()
       OR public.rg_is_operacional_time_t()
+      OR public.rg_is_comercial_adm()
+      OR public.rg_is_equipe_comercial()
       OR public.rg_cargo_vazio_compat()
       OR public.rg_cargo_like('faturamento')
       OR public.rg_cargo_like('financeiro')
@@ -26,6 +28,7 @@ AS $$
       OR public.rg_cargo_like('logistica')
       OR public.rg_cargo_like('balanceiro')
       OR public.rg_cargo_like('pesagem')
+      OR public.rg_cargo_like('comercial')
     );
 $$;
 

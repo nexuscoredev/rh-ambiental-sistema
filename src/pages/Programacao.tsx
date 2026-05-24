@@ -7,7 +7,11 @@ import { overlayAreaPrincipal } from '../lib/layoutOverlay'
 import { chunkArray } from '../lib/chunkArray'
 import { montarMapNomeExibicaoPorUsuarioId } from '../lib/resolveAutorUsuarioNomes'
 import { supabase } from '../lib/supabase'
-import { cargoEhDesenvolvedor, cargoPodeEditarProgramacao } from '../lib/workflowPermissions'
+import {
+  cargoEhDesenvolvedor,
+  cargoPodeEditarProgramacao,
+  cargoPodeExcluirProgramacao,
+} from '../lib/workflowPermissions'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
@@ -751,7 +755,8 @@ export default function Programacao() {
     },
   })
 
-  const podeMutarProgramacao = cargoPodeEditarProgramacao(usuarioCargo)
+  const podeMutarProgramacao = cargoPodeEditarProgramacao(usuarioCargo, usuarioNome)
+  const podeExcluirProgramacao = cargoPodeExcluirProgramacao(usuarioCargo, usuarioNome)
 
   useEffect(() => {
     if (!sucesso) return
@@ -1177,8 +1182,8 @@ export default function Programacao() {
   }
 
   async function excluirProgramacao(id: string) {
-    if (!podeMutarProgramacao) {
-      setErro('Seu perfil não pode excluir programações. Apenas operacional ou administrador.')
+    if (!podeExcluirProgramacao) {
+      setErro('Seu perfil não pode excluir programações. Apenas equipe Comercial ou Desenvolvedor.')
       return
     }
     const confirmar = await rgConfirm({
@@ -2216,11 +2221,11 @@ export default function Programacao() {
                                 type="button"
                                 style={{
                                   ...botaoExcluirListaCompactStyle,
-                                  opacity: podeMutarProgramacao ? 1 : 0.5,
-                                  cursor: podeMutarProgramacao ? 'pointer' : 'not-allowed',
+                                  opacity: podeExcluirProgramacao ? 1 : 0.5,
+                                  cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
                                 }}
                                 onClick={() => excluirProgramacao(item.id)}
-                                disabled={!podeMutarProgramacao}
+                                disabled={!podeExcluirProgramacao}
                               >
                                 Excluir
                               </button>
@@ -2542,11 +2547,11 @@ export default function Programacao() {
                           type="button"
                           style={{
                             ...botaoExcluirListaStyle,
-                            opacity: podeMutarProgramacao ? 1 : 0.5,
-                            cursor: podeMutarProgramacao ? 'pointer' : 'not-allowed',
+                            opacity: podeExcluirProgramacao ? 1 : 0.5,
+                            cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
                           }}
                           onClick={() => void excluirProgramacao(item.id)}
-                          disabled={!podeMutarProgramacao}
+                          disabled={!podeExcluirProgramacao}
                         >
                           Excluir
                         </button>

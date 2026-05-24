@@ -119,6 +119,7 @@ export default function EnvioNF() {
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null)
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
   const [contasAbertasOpts, setContasAbertasOpts] = useState<
     { referencia_coleta_id: string; numero: string; saldoFmt: string }[]
   >([])
@@ -188,7 +189,7 @@ export default function EnvioNF() {
     },
   })
 
-  const podeDisparar = cargoPodeEnviarNfEmail(usuarioCargo)
+  const podeDisparar = cargoPodeEnviarNfEmail(usuarioCargo, usuarioNome)
 
   useEffect(() => {
     setAssuntoEmail(modoMedicao ? ASSUNTO_MEDICAO_PADRAO : ASSUNTO_NF_PADRAO)
@@ -433,10 +434,16 @@ export default function EnvioNF() {
       } = await supabase.auth.getUser()
       if (!user) {
         setUsuarioCargo(null)
+        setUsuarioNome(null)
         return
       }
-      const { data } = await supabase.from('usuarios').select('cargo').eq('id', user.id).maybeSingle()
+      const { data } = await supabase
+        .from('usuarios')
+        .select('cargo, nome')
+        .eq('id', user.id)
+        .maybeSingle()
       setUsuarioCargo(data?.cargo ?? null)
+      setUsuarioNome(data?.nome ?? null)
     }
     void c()
   }, [])

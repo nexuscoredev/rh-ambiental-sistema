@@ -34,7 +34,7 @@ import {
   cargoEhOperadoresTimeR,
   cargoPerfilSomenteLancamentoTicketPadrao,
   cargoPodeLancarPesagem,
-  cargoPodeExcluirMtr,
+  cargoPodeExcluirTicketPesagem,
 } from "../lib/workflowPermissions";
 import { excluirColetaPorId } from "../lib/excluirOperacionalCascata";
 import {
@@ -848,6 +848,7 @@ export default function ControleMassa() {
   const placaInputRef = useRef<HTMLInputElement | null>(null);
   const tipoTicketRef = useRef<HTMLSelectElement | null>(null);
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null);
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null);
   const [excluindoColetaId, setExcluindoColetaId] = useState<string | null>(null);
 
   const controleMassaDraft = useMemo(
@@ -896,8 +897,10 @@ export default function ControleMassa() {
   const ehOperadoresTimeR = cargoEhOperadoresTimeR(usuarioCargo);
   const somenteTicketPadrao = cargoPerfilSomenteLancamentoTicketPadrao(usuarioCargo);
   const podeMutarMassa = cargoPodeLancarPesagem(usuarioCargo);
-  const podeEditarOuExcluirColeta =
-    cargoPodeExcluirMtr(usuarioCargo);
+  const podeEditarOuExcluirColeta = cargoPodeExcluirTicketPesagem(
+    usuarioCargo,
+    usuarioNome,
+  );
 
   const coletaSelecionada = useMemo(() => {
     const id = form.coleta_id.trim();
@@ -1456,14 +1459,16 @@ export default function ControleMassa() {
       } = await supabase.auth.getUser();
       if (!user) {
         setUsuarioCargo(null);
+        setUsuarioNome(null);
         return;
       }
       const { data } = await supabase
         .from("usuarios")
-        .select("cargo")
+        .select("cargo, nome")
         .eq("id", user.id)
         .maybeSingle();
       setUsuarioCargo(data?.cargo ?? null);
+      setUsuarioNome(data?.nome ?? null);
     }
     void carregarCargo();
   }, []);

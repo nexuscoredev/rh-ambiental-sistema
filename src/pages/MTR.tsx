@@ -11,7 +11,11 @@ import {
   normalizarEtapaColeta,
 } from '../lib/fluxoEtapas'
 import { isBenignSupabaseFetchError } from '../lib/supabaseErrors'
-import { cargoEhDesenvolvedor, cargoPodeEditarMtr } from '../lib/workflowPermissions'
+import {
+  cargoEhDesenvolvedor,
+  cargoPodeEditarMtr,
+  cargoPodeExcluirMtr,
+} from '../lib/workflowPermissions'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { MtrManifestoPrint } from '../components/mtr/MtrManifestoPrint'
 import { MtrResiduosDescricaoForm } from '../components/mtr/MtrResiduosDescricaoForm'
@@ -682,7 +686,8 @@ export default function MTR() {
     },
   })
 
-  const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo)
+  const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo, usuarioNome)
+  const podeExcluirMtr = cargoPodeExcluirMtr(usuarioCargo, usuarioNome)
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
@@ -1795,10 +1800,10 @@ export default function MTR() {
   }
 
   async function handleDelete(item: MTR) {
-    if (!podeMutarMtr) {
+    if (!podeExcluirMtr) {
       await rgAlert({
         title: 'MTR',
-        message: 'Seu perfil não pode remover MTR. Apenas operacional ou administrador.',
+        message: 'Seu perfil não pode remover MTR. Apenas equipe Comercial ou Desenvolvedor.',
         variant: 'warning',
       })
       return
@@ -1851,10 +1856,10 @@ export default function MTR() {
     mtrId: string,
     opts?: { skipConfirm?: boolean; suppressSuccessAlert?: boolean }
   ): Promise<boolean> {
-    if (!podeMutarMtr) {
+    if (!podeExcluirMtr) {
       await rgAlert({
         title: 'MTR',
-        message: 'Seu perfil não pode excluir coletas. Apenas operacional ou administrador.',
+        message: 'Seu perfil não pode excluir coletas. Apenas equipe Comercial ou Desenvolvedor.',
         variant: 'warning',
       })
       return false

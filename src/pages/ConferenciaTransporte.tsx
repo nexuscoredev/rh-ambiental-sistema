@@ -30,7 +30,7 @@ import {
 } from '../lib/fluxoEtapas'
 import { COLETAS_DROPDOWN_MAX_ROWS } from '../lib/coletasQueryLimits'
 import { queryColetasListaResumoFluxo } from '../lib/coletasSelectSeguimento'
-import { cargoPodeEditarChecklistTransporte } from '../lib/workflowPermissions'
+import { cargoPodeMutarConferenciaTransporte } from '../lib/workflowPermissions'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import ChecklistTransporte from '../components/ChecklistTransporte'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
@@ -157,6 +157,7 @@ export default function ConferenciaTransporte() {
   const [coletas, setColetas] = useState<ColetaResumo[]>([])
   const [carregandoColetas, setCarregandoColetas] = useState(true)
   const [cargo, setCargo] = useState<string | null>(null)
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
   const [erroListaColetas, setErroListaColetas] = useState('')
   const [pesquisaColeta, setPesquisaColeta] = useState('')
   const pickerColetaRef = useRef<HTMLDivElement | null>(null)
@@ -220,7 +221,7 @@ export default function ConferenciaTransporte() {
     },
   })
 
-  const podeMutar = cargoPodeEditarChecklistTransporte(cargo)
+  const podeMutar = cargoPodeMutarConferenciaTransporte(cargo, usuarioNome)
   const coletaAtiva = useMemo(
     () => resolverColetaPorContextoUrl(coletas, idsCtx),
     [coletas, idsCtx]
@@ -329,10 +330,16 @@ export default function ConferenciaTransporte() {
       } = await supabase.auth.getUser()
       if (!user) {
         setCargo(null)
+        setUsuarioNome(null)
         return
       }
-      const { data } = await supabase.from('usuarios').select('cargo').eq('id', user.id).maybeSingle()
+      const { data } = await supabase
+        .from('usuarios')
+        .select('cargo, nome')
+        .eq('id', user.id)
+        .maybeSingle()
       setCargo(data?.cargo ?? null)
+      setUsuarioNome(data?.nome ?? null)
     }
     void carregarCargo()
   }, [])

@@ -7,20 +7,17 @@ import {
   cargoEhOperadores,
   cargoEhOperadoresTimeR,
   cargoTemAutoridadeMaximaSistema,
-  cargoPodeAlterarValorContaTravada,
   cargoPodeApagarHistoricoChat,
-  cargoPodeAprovarTicketConferenciaFaturamento,
   cargoPodeCriarOuExcluirUsuario,
   cargoPodeCustomizarTicketOperacional,
   cargoPodeEditarResumosFinanceirosFaturamento,
-  cargoPodeEncerrarTicketDefinitivoFaturamento,
+  cargoPodeEditarMtr,
   cargoPodeExcluirMtr,
   cargoPodeLancarPesagem,
   cargoPodeMutarFaturamentoFluxo,
   cargoPodeMutarFinanceiro,
   cargoPodeMutarProgramacao,
-  cargoPodeVerDashboardExecutivo,
-  cargoTemAcessoTipoAdministradorApp,
+  usuarioPodeVerFaturamento,
 } from "./workflowPermissions";
 
 describe("workflowPermissions — Desenvolvedor (autoridade máxima)", () => {
@@ -46,9 +43,10 @@ describe("workflowPermissions — Operadores (Time R)", () => {
     expect(cargoEhOperadoresTimeR("Operadores")).toBe(true);
   });
 
-  it("acede a programação, MTR e pesagem; sem faturamento", () => {
-    expect(cargoPodeMutarProgramacao(CARGO_OPERADORES_TIME_R)).toBe(true);
-    expect(cargoPodeExcluirMtr(CARGO_OPERADORES_TIME_R)).toBe(true);
+  it("operação edita MTR/pesagem; exclusões só Thais; sem faturamento", () => {
+    expect(cargoPodeMutarProgramacao(CARGO_OPERADORES_TIME_R)).toBe(false);
+    expect(cargoPodeEditarMtr(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(true);
+    expect(cargoPodeExcluirMtr(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(false);
     expect(cargoPodeLancarPesagem(CARGO_OPERADORES_TIME_R)).toBe(true);
     expect(cargoPodeCustomizarTicketOperacional(CARGO_OPERADORES_TIME_R)).toBe(true);
     expect(cargoPodeMutarFaturamentoFluxo(CARGO_OPERADORES_TIME_R)).toBe(false);
@@ -56,20 +54,18 @@ describe("workflowPermissions — Operadores (Time R)", () => {
   });
 });
 
-describe("workflowPermissions — Operacional (Time T)", () => {
-  it("reconhece o cargo canónico e legado Gerente do Time", () => {
+describe("workflowPermissions — Comercial Adm (Thais)", () => {
+  it("reconhece Comercial Adm e legado Operacional (Time T)", () => {
+    expect(cargoEhOperacionalTimeT("Comercial Adm")).toBe(true);
     expect(cargoEhOperacionalTimeT(CARGO_OPERACIONAL_TIME_T)).toBe(true);
     expect(cargoEhGerenteTimeFaturamento("Gerente do Time")).toBe(true);
   });
 
-  it("tem acesso tipo Administrador e faturamento editável", () => {
-    expect(cargoTemAcessoTipoAdministradorApp(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeVerDashboardExecutivo(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeMutarFinanceiro(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeAlterarValorContaTravada(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeEditarResumosFinanceirosFaturamento(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeEncerrarTicketDefinitivoFaturamento(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeMutarFaturamentoFluxo(CARGO_OPERACIONAL_TIME_T)).toBe(true);
-    expect(cargoPodeAprovarTicketConferenciaFaturamento(CARGO_OPERACIONAL_TIME_T)).toBe(true);
+  it("equipe comercial: faturamento e exclusões", () => {
+    expect(cargoPodeEditarResumosFinanceirosFaturamento("Comercial", "Thais")).toBe(true);
+    expect(cargoPodeEditarResumosFinanceirosFaturamento("Comercial", "Rafaela")).toBe(true);
+    expect(cargoPodeMutarFaturamentoFluxo("Comercial", "Rose")).toBe(true);
+    expect(cargoPodeExcluirMtr("Comercial", "Raquel")).toBe(true);
+    expect(usuarioPodeVerFaturamento({ cargo: "Comercial", nome: "Rafaela" })).toBe(true);
   });
 });

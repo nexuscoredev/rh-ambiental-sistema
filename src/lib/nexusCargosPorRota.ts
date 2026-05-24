@@ -3,13 +3,18 @@
  * Regras de negócio (resumo):
  * - Desenvolvedor: autoridade máxima (todas as rotas, incluindo `/usuarios`; bypass na UI).
  * - Administrador / Financeiro: acesso total às rotas de negócio (exceto Usuários).
- * - Operacional (Time T): mesmo acesso de Administrador + faturamento editável (ex-Thais).
+ * - Comercial Adm / Operacional (Time T): Thais — acesso amplo de negócio (como Administrador nas rotas).
+ * - Comercial: Rafaela, Rose, Raquel — cadastro, programação, MTR, faturamento, comprovante.
  * - Operacional: fluxo operacional geral (sem Faturamento, Financeiro, Pós-venda).
  * - Operadores (Time R): Programação, MTR, Pesagem/Ticket e Chat (ex-Rafael).
  * - Logística / Comercial: conforme perfis restritos abaixo.
  */
 
-import { CARGO_OPERACIONAL_TIME_T, CARGO_OPERADORES_TIME_R } from './workflowPermissions'
+import {
+  CARGO_COMERCIAL_ADM,
+  CARGO_OPERACIONAL_TIME_T,
+  CARGO_OPERADORES_TIME_R,
+} from './workflowPermissions'
 
 export const CARGO_NEXUS = {
   desenvolvedor: 'Desenvolvedor',
@@ -21,6 +26,7 @@ export const CARGO_NEXUS = {
   diretoria: 'Diretoria',
   faturamento: 'Faturamento',
   comercial: 'Comercial',
+  comercialAdm: CARGO_COMERCIAL_ADM,
   visualizador: 'Visualizador',
   operadoresTimeR: CARGO_OPERADORES_TIME_R,
   operacionalTimeT: CARGO_OPERACIONAL_TIME_T,
@@ -28,11 +34,14 @@ export const CARGO_NEXUS = {
 
 const C = CARGO_NEXUS
 
+/** Thais (Comercial Adm) e legado Time T — mesmo âmbito de rotas de negócio. */
+const ACESSO_COMERCIAL_ADM = [C.comercialAdm, C.operacionalTimeT] as const
+
 const ACESSO_TOTAL = [
   C.desenvolvedor,
   C.administrador,
   C.financeiro,
-  C.operacionalTimeT,
+  ...ACESSO_COMERCIAL_ADM,
 ] as const
 
 /** Visão geral: sem Comercial nem Logística (fluxo/cadastro fora do perfil). */
@@ -43,6 +52,7 @@ const DASHBOARD_E_CHAT = [
   C.diretoria,
   C.faturamento,
   C.visualizador,
+  C.comercial,
 ] as const
 
 /** Cadastros (sem Logística; Comercial incluído). */
@@ -72,6 +82,7 @@ const PROGRAMACAO_MTR = [
   C.operadoresTimeR,
   C.logistica,
   C.visualizador,
+  C.comercial,
 ] as const
 
 const CONTROLE_MASSA = [
@@ -94,6 +105,7 @@ const FLUXO_COM_LOGISTICA = [
   C.diretoria,
   C.faturamento,
   C.visualizador,
+  C.comercial,
 ] as const
 
 /** Checklist, ticket, aprovação: Logística não acede (fora do conjunto restrito). */
@@ -106,11 +118,18 @@ const FLUXO_SEM_LOGISTICA = [
   C.visualizador,
 ] as const
 
-const FATURAMENTO = [...ACESSO_TOTAL, C.balanceiro, C.diretoria, C.faturamento, C.visualizador] as const
+const FATURAMENTO = [
+  ...ACESSO_TOTAL,
+  C.balanceiro,
+  C.diretoria,
+  C.faturamento,
+  C.visualizador,
+  C.comercial,
+] as const
 
 const FINANCEIRO = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador] as const
 
-const ENVIO_NF = [...ACESSO_TOTAL, C.faturamento, C.visualizador] as const
+const ENVIO_NF = [...ACESSO_TOTAL, C.faturamento, C.visualizador, C.comercial] as const
 
 const USUARIOS = [C.desenvolvedor] as const
 

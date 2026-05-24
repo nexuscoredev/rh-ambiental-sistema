@@ -45,6 +45,12 @@ import {
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
 import { normalizarEmailNfLista } from "../lib/emailNfLista";
+import { useUsuarioAcesso } from "../lib/useUsuarioAcesso";
+import {
+  usuarioPodeEditarCliente,
+  usuarioPodeExcluirCliente,
+  usuarioPodeIncluirCliente,
+} from "../lib/workflowPermissions";
 import {
   normalizarMtrSigorValor,
   parseMtrSigorImport,
@@ -868,6 +874,11 @@ function clienteAtendeFiltroVencCadri(c: Cliente, filtro: FiltroVencCadri): bool
 }
 
 export default function Clientes() {
+  const acessoUsuario = useUsuarioAcesso();
+  const podeIncluirCliente = usuarioPodeIncluirCliente(acessoUsuario);
+  const podeEditarCliente = usuarioPodeEditarCliente(acessoUsuario);
+  const podeExcluirCliente = usuarioPodeExcluirCliente(acessoUsuario);
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useSessionPersistedState("lista-busca", "");
@@ -1916,12 +1927,28 @@ export default function Clientes() {
   }
 
   function abrirCadastroNovo() {
+    if (!podeIncluirCliente) {
+      void rgAlert({
+        title: "Clientes",
+        message: "Seu perfil não pode incluir clientes. Acesso ao cadastro: equipe Comercial (Thais, Rafaela, Rose, Raquel).",
+        variant: "warning",
+      });
+      return;
+    }
     limparFormulario();
     setMostrarCadastro(true);
     scrollRgMainContentToTop("smooth");
   }
 
   async function handleEditar(cliente: Cliente) {
+    if (!podeEditarCliente) {
+      void rgAlert({
+        title: "Clientes",
+        message: "Edição de clientes restrita à equipe Comercial ou Desenvolvedor.",
+        variant: "warning",
+      });
+      return;
+    }
     // feedback imediato: abre o cadastro já com os dados da linha
     setEditingId(cliente.id);
     setMostrarCadastro(true);
@@ -2340,6 +2367,14 @@ export default function Clientes() {
   }
 
   async function handleDelete(id: string) {
+    if (!podeExcluirCliente) {
+      void rgAlert({
+        title: "Clientes",
+        message: "Exclusão de clientes restrita à equipe Comercial ou Desenvolvedor.",
+        variant: "warning",
+      });
+      return;
+    }
     const confirmar = await rgConfirm({
       title: "Remover cliente",
       message: "Deseja realmente remover este cliente?",
@@ -2491,7 +2526,17 @@ export default function Clientes() {
               </button>
             </div>
 
-            <button type="button" className="rg-btn rg-btn--primary" onClick={abrirCadastroNovo}>
+            <button
+              type="button"
+              className="rg-btn rg-btn--primary"
+              onClick={abrirCadastroNovo}
+              disabled={!podeIncluirCliente}
+              title={
+                podeIncluirCliente
+                  ? undefined
+                  : "Inclusão: equipe Comercial (Thais, Rafaela, Rose, Raquel)"
+              }
+            >
               Novo cliente
             </button>
           </div>
@@ -3852,6 +3897,7 @@ export default function Clientes() {
                               <button
                                 type="button"
                                 onClick={() => void handleEditar(cliente)}
+                                disabled={!podeEditarCliente}
                                 style={{
                                   flex: "0 0 auto",
                                   background: "#16a34a",
@@ -3862,7 +3908,8 @@ export default function Clientes() {
                                   fontWeight: 700,
                                   fontSize: "11px",
                                   lineHeight: 1.2,
-                                  cursor: "pointer",
+                                  cursor: podeEditarCliente ? "pointer" : "not-allowed",
+                                  opacity: podeEditarCliente ? 1 : 0.5,
                                   boxShadow: "0 1px 2px rgba(22, 163, 74, 0.25)",
                                 }}
                               >
@@ -3871,6 +3918,7 @@ export default function Clientes() {
                               <button
                                 type="button"
                                 onClick={() => handleDelete(cliente.id)}
+                                disabled={!podeExcluirCliente}
                                 style={{
                                   flex: "0 0 auto",
                                   background: "#ffffff",
@@ -3881,7 +3929,8 @@ export default function Clientes() {
                                   fontWeight: 700,
                                   fontSize: "11px",
                                   lineHeight: 1.2,
-                                  cursor: "pointer",
+                                  cursor: podeExcluirCliente ? "pointer" : "not-allowed",
+                                  opacity: podeExcluirCliente ? 1 : 0.5,
                                 }}
                               >
                                 Excluir

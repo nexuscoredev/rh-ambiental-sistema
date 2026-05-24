@@ -49,6 +49,9 @@ function normalizarCargo(s: string | null | undefined): string {
 /** Espelha cargoPodeEnviarNfEmail (src/lib/workflowPermissions). */
 function cargoEhOperacionalTimeT(c: string): boolean {
   if (!c) return false;
+  if (c === "comercial adm" || (c.includes("comercial") && c.includes("adm"))) {
+    return true;
+  }
   if (c.includes("operacional") && (c.includes("time t") || c.includes("thais"))) {
     return true;
   }
@@ -71,6 +74,7 @@ function podeEnviarNf(cargo: string | null | undefined): boolean {
   if (c.includes("visualizador")) return false;
   if (!c) return false;
   if (cargoEhOperacionalTimeT(c)) return true;
+  if (c.includes("comercial")) return true;
   if (c.includes("administrador")) return true;
   if (c.includes("financeiro") && !c.includes("operacional")) return true;
   return (
@@ -333,7 +337,7 @@ Deno.serve(async (req: Request) => {
   if (!podeEnviarNf(perfil?.cargo ?? null)) {
     return jsonResponse(req,403, {
       error:
-        "Sem permissão para envio de NF. Perfis: Desenvolvedor, Administrador, Operacional (Time T), Faturamento, Financeiro ou Diretoria.",
+        "Sem permissão para envio de NF. Perfis: Desenvolvedor, Comercial Adm, Comercial, Administrador, Faturamento, Financeiro ou Diretoria.",
     });
   }
 

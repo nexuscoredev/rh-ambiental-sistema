@@ -107,11 +107,21 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Operacional', '/usuarios')).toBe(false)
   })
 
-  it('Comercial só Cadastros + Pós-venda (sem Dashboard)', () => {
-    expect(cargoPodeAcessarRotaMenu('Comercial', '/dashboard')).toBe(false)
+  it('Comercial: cadastro, programação, MTR e faturamento (equipe Rafaela/Rose/Raquel)', () => {
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/dashboard')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Comercial', '/clientes')).toBe(true)
-    expect(cargoPodeAcessarRotaMenu('Comercial', '/pos-venda')).toBe(true)
-    expect(cargoPodeAcessarRotaMenu('Comercial', '/mtr')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/programacao')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/mtr')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/faturamento')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/financeiro')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/controle-massa')).toBe(false)
+  })
+
+  it('Comercial Adm (Thais): acesso amplo de negócio, exceto Usuários', () => {
+    expect(cargoPodeAcessarRotaMenu('Comercial Adm', '/dashboard')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial Adm', '/faturamento')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial Adm', '/financeiro')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial Adm', '/usuarios')).toBe(false)
   })
 
   it('Logística acede ao fluxo do menu mas não a Cadastros', () => {

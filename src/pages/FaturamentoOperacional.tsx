@@ -114,6 +114,7 @@ export default function FaturamentoOperacional() {
   const idsCtx = useMemo(() => idsContextoFromSearchParams(searchParams), [searchParams])
 
   const [cargo, setCargo] = useState<string | null>(null)
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
 
   const {
     linhasView,
@@ -188,12 +189,12 @@ export default function FaturamentoOperacional() {
     },
   })
 
-  const podeConfirmarEmissao = cargoPodeConfirmarEmissaoFaturamento(cargo)
-  const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo)
-  const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo)
-  const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo)
-  const podeEditarPesoTicketFila = cargoPodeEditarPesoConferenciaTicket(cargo)
-  const podeConfirmarNfBoleto = cargoPodeEnviarNfEmail(cargo)
+  const podeConfirmarEmissao = cargoPodeConfirmarEmissaoFaturamento(cargo, usuarioNome)
+  const podeEditarResumos = cargoPodeEditarResumosFinanceirosFaturamento(cargo, usuarioNome)
+  const podeEncerrarTicket = cargoPodeEncerrarTicketDefinitivoFaturamento(cargo, usuarioNome)
+  const podeAprovarTicketFila = cargoPodeAprovarTicketConferenciaFaturamento(cargo, usuarioNome)
+  const podeEditarPesoTicketFila = cargoPodeEditarPesoConferenciaTicket(cargo, usuarioNome)
+  const podeConfirmarNfBoleto = cargoPodeEnviarNfEmail(cargo, usuarioNome)
 
   useEffect(() => {
     async function carregarCargo() {
@@ -202,10 +203,16 @@ export default function FaturamentoOperacional() {
       } = await supabase.auth.getUser()
       if (!user) {
         setCargo(null)
+        setUsuarioNome(null)
         return
       }
-      const { data } = await supabase.from('usuarios').select('cargo').eq('id', user.id).maybeSingle()
+      const { data } = await supabase
+        .from('usuarios')
+        .select('cargo, nome')
+        .eq('id', user.id)
+        .maybeSingle()
       setCargo(data?.cargo ?? null)
+      setUsuarioNome(data?.nome ?? null)
     }
     void carregarCargo()
   }, [])

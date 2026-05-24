@@ -1,5 +1,9 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
-import { cargoEhDesenvolvedor, cargoTemAutoridadeMaximaSistema } from './workflowPermissions'
+import {
+  cargoEhDesenvolvedor,
+  cargoEhOperacionalTimeT,
+  cargoTemAutoridadeMaximaSistema,
+} from './workflowPermissions'
 
 /**
  * Página inicial de boas-vindas — sempre acessível (fora da lista `paginas_permitidas`).
@@ -136,9 +140,13 @@ const PREFIXOS_ROTA_PARA_CARGO = Object.keys(CARGOS_POR_PREFIXO_ROTA).sort(
  */
 export function cargoPodeAcessarRotaMenu(cargo: string | null | undefined, pathname: string): boolean {
   if (cargoTemAutoridadeMaximaSistema(cargo)) return true
+  const path = normalizarPath(pathname)
+  if (cargoEhOperacionalTimeT(cargo)) {
+    if (path === '/usuarios' || path.startsWith('/usuarios/')) return false
+    return true
+  }
   const c = String(cargo ?? '').trim()
   if (!c) return false
-  const path = normalizarPath(pathname)
   for (const key of PREFIXOS_ROTA_PARA_CARGO) {
     const k = normalizarPath(key)
     if (path === k || path.startsWith(`${k}/`)) {

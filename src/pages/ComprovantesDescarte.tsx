@@ -62,8 +62,9 @@ export default function ComprovantesDescarte() {
     liberadosFaturamento: 0,
   })
   const [cargo, setCargo] = useState<string | null>(null)
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
 
-  const podeMutar = cargoPodeMutarComprovanteDescarte(cargo)
+  const podeMutar = cargoPodeMutarComprovanteDescarte(cargo, usuarioNome)
   const pageSize = 25
 
   const carregar = useCallback(async () => {
@@ -101,10 +102,16 @@ export default function ComprovantesDescarte() {
       } = await supabase.auth.getUser()
       if (!user) {
         setCargo(null)
+        setUsuarioNome(null)
         return
       }
-      const { data } = await supabase.from('usuarios').select('cargo').eq('id', user.id).maybeSingle()
+      const { data } = await supabase
+        .from('usuarios')
+        .select('cargo, nome')
+        .eq('id', user.id)
+        .maybeSingle()
       setCargo(data?.cargo ?? null)
+      setUsuarioNome(data?.nome ?? null)
     })()
   }, [])
 

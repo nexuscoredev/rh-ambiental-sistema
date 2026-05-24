@@ -60,13 +60,16 @@ const STATUS_DB = ['ativo', 'inativo', 'bloqueado'] as const
 const CARGOS_UI = [
   'Desenvolvedor',
   'Administrador',
+  'Diretoria',
+  'Comercial Adm',
+  'Comercial',
   'Operacional',
   'Operadores (Time R)',
-  'Operacional (Time T)',
   'Logística',
   'Balanceiro',
+  'Faturamento',
   'Financeiro',
-  'Comercial',
+  'Visualizador',
 ] as const
 
 /** Inclui o cargo actual na 1.ª posição se for legado (ex.: Balanceiro), para não quebrar edições. */

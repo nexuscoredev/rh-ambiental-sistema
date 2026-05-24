@@ -1,7 +1,31 @@
 /**
  * Permissões por cargo alinhadas ao fluxo operacional RG Ambiental.
  * Usado nas telas para desabilitar mutações; a fonte da verdade para políticas finas continua sendo o RLS no Supabase.
+ *
+ * Matriz por setor/nome (organograma): `src/lib/rbac` — funções abaixo aceitam `UsuarioAcessoCtx`
+ * ou cargo isolado (fallback por cargo quando o nome não está disponível na página).
  */
+
+import {
+  rbacPode,
+  type UsuarioAcessoContext,
+} from './rbac'
+
+export type UsuarioAcessoCtx = UsuarioAcessoContext
+
+export function acessoDesdeCargo(
+  cargo: string | null | undefined,
+  nome?: string | null
+): UsuarioAcessoCtx {
+  return { cargo: cargo ?? null, nome: nome ?? null }
+}
+
+function ctxDeArgs(
+  cargo: string | null | undefined,
+  nome?: string | null | undefined
+): UsuarioAcessoCtx {
+  return acessoDesdeCargo(cargo, nome)
+}
 
 /** Cargos canónicos dos times (valores gravados em `usuarios.cargo`). */
 export const CARGO_OPERACIONAL_TIME_T = 'Operacional (Time T)'
@@ -45,13 +69,9 @@ function cargoEhOperacionalGenerico(cargo: string | null | undefined): boolean {
   return normalizarTextoCargo(cargo) === 'operacional'
 }
 
-/** Criar / excluir utilizadores — Administrador, Desenvolvedor e Operacional (Time T). */
+/** Criar / excluir utilizadores — somente Desenvolvedor (master total). */
 export function cargoEhAdministradorOuDesenvolvedor(cargo: string | null | undefined): boolean {
-  return (
-    cargoEhAdministrador(cargo) ||
-    cargoEhDesenvolvedor(cargo) ||
-    cargoEhOperacionalTimeT(cargo)
-  )
+  return cargoEhDesenvolvedor(cargo)
 }
 
 /**
@@ -67,12 +87,6 @@ export function cargoTemAcessoTipoAdministradorApp(cargo: string | null | undefi
   return false
 }
 
-/** Logística não pode eliminar registos em lado nenhum (Desenvolvedor pode). */
-function cargoProibidoExcluirRegistos(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return false
-  return normalizarTextoCargo(cargo).includes('logistica')
-}
-
 export function cargoEhVisualizador(cargo: string | null | undefined): boolean {
   return normalizarTextoCargo(cargo).includes('visualizador')
 }
@@ -86,9 +100,14 @@ export function cargoEhDiretoria(cargo: string | null | undefined): boolean {
 /**
  * Operacional (Time T): administrador de negócio + faturamento editável (ex-Gerente do Time).
  */
+/** Thais — cargo «Comercial Adm» (legado: Operacional Time T). */
+export const CARGO_COMERCIAL_ADM = 'Comercial Adm'
+
 export function cargoEhOperacionalTimeT(cargo: string | null | undefined): boolean {
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
+  if (c === normalizarTextoCargo(CARGO_COMERCIAL_ADM)) return true
+  if (c.includes('comercial') && c.includes('adm')) return true
   if (c.includes('operacional') && c.includes('time t')) return true
   if (c.includes('operacional') && c.includes('thais')) return true
   if (c.includes('gerente') && c.includes('time')) return true
@@ -124,10 +143,6 @@ export function cargoPerfilSomenteLancamentoTicketPadrao(
   return false
 }
 
-function cargoBypassFaturamentoValoresEditaveis(cargo: string | null | undefined): boolean {
-  return cargoTemAcessoTipoAdministradorApp(cargo) || cargoEhOperacionalTimeT(cargo)
-}
-
 /**
  * Painel executivo (home tipo BI) — Diretoria e Administrador.
  * Outros perfis mantêm o dashboard operacional padrão.
@@ -140,21 +155,32 @@ export function cargoPodeVerDashboardExecutivo(cargo: string | null | undefined)
   return cargoEhDiretoria(cargo)
 }
 
-/** Programação: criação de agenda e vínculo ao fluxo — Operacional + Admin. */
-export function cargoPodeMutarProgramacao(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return true
-  if (cargoEhVisualizador(cargo)) return false
-  const c = normalizarTextoCargo(cargo)
-  // Sem cargo na tabela usuários: não bloquear a UI (RLS no Supabase continua sendo a barreira real).
-  if (!c) return true
-  if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
-  if (cargoEhOperadoresTimeR(cargo)) return true
-  return cargoEhOperacionalGenerico(cargo) || c.includes('logistica')
+/** Programação — criar/editar: setor Comercial (matriz RBAC). */
+export function usuarioPodeCriarProgramacao(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('programacao', 'criar', ctx)
 }
 
-/** MTR / documentação — Operacional + Admin. */
-export function cargoPodeMutarMtr(cargo: string | null | undefined): boolean {
-  return cargoPodeMutarProgramacao(cargo)
+export function usuarioPodeEditarProgramacao(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('programacao', 'editar', ctx)
+}
+
+export function cargoPodeMutarProgramacao(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeEditarProgramacao(ctxDeArgs(cargo, nome))
+}
+
+/** MTR — edição: todos os utilizadores autenticados (exceto visualizador). */
+export function usuarioPodeEditarMtr(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('mtr', 'editar', ctx)
+}
+
+export function cargoPodeMutarMtr(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeEditarMtr(ctxDeArgs(cargo, nome))
 }
 
 /** Lançamento de pesagem — balanceiro, Operadores, operacional, logística e admin. */
@@ -225,81 +251,89 @@ export function cargoPodeMutarAprovacaoDiretoria(cargo: string | null | undefine
   return cargoEhDiretoria(cargo)
 }
 
-/**
- * Comprovante de descarte — documentação pós-pesagem (operacional / pesagem / faturamento).
- */
-export function cargoPodeMutarComprovanteDescarte(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return true
-  if (cargoEhVisualizador(cargo)) return false
-  const c = normalizarTextoCargo(cargo)
-  if (!c) return true
-  if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
-  return (
-    cargoEhOperacionalGenerico(cargo) ||
-    c.includes('logistica') ||
-    c.includes('balanceiro') ||
-    c.includes('pesagem') ||
-    c.includes('faturamento') ||
-    c.includes('financeiro') ||
-    cargoEhDiretoria(cargo)
-  )
+/** Comprovante de descarte — Thais e Raquel (+ Desenvolvedor). */
+export function cargoPodeMutarComprovanteDescarte(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('comprovante_descarte', 'editar', ctxDeArgs(cargo, nome))
 }
 
-/** Resumos editáveis (ticket + MTR) e acréscimo/desconto — Operacional (Time T) (+ admin/dev). */
-export function cargoPodeEditarValoresFaturamento(cargo: string | null | undefined): boolean {
+/** Conferência de transporte — setor Operação; exclusão só Thais. */
+export function cargoPodeMutarConferenciaTransporte(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('conferencia_transporte', 'editar', ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeExcluirConferenciaTransporte(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('conferencia_transporte', 'excluir', ctxDeArgs(cargo, nome))
+}
+
+/** Resumos editáveis (ticket + MTR) e acréscimo/desconto — Thais (+ Desenvolvedor). */
+export function cargoPodeEditarValoresFaturamento(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
-  return cargoBypassFaturamentoValoresEditaveis(cargo)
+  return usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))
 }
 
 /** Alias semântico para UI do modal de faturamento. */
 export const cargoPodeEditarResumosFinanceirosFaturamento = cargoPodeEditarValoresFaturamento
 
-/** Encerramento definitivo do ticket no faturamento — Operacional (Time T). */
+/** Encerramento definitivo do ticket no faturamento — Thais (+ Desenvolvedor). */
 export function cargoPodeEncerrarTicketDefinitivoFaturamento(
-  cargo: string | null | undefined
+  cargo: string | null | undefined,
+  nome?: string | null
 ): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
-  return cargoBypassFaturamentoValoresEditaveis(cargo)
+  return usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))
 }
 
-/** Registo de faturamento (camada antes do financeiro). Operadores (Time R): sem acesso. */
-export function cargoPodeMutarFaturamentoFluxo(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return true
-  if (cargoEhOperadoresTimeR(cargo)) return false
-  if (cargoEhVisualizador(cargo)) return false
-  const c = normalizarTextoCargo(cargo)
-  if (!c) return false
-  if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
-  return (
-    c.includes('faturamento') ||
-    c.includes('financeiro') ||
-    cargoEhDiretoria(cargo)
-  )
+/** Visualizar módulo Faturamento — setor Comercial (+ Desenvolvedor). */
+export function usuarioPodeVerFaturamento(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('faturamento', 'ler', ctx)
 }
 
-/** Conferência / aprovação do ticket na fila (antes do faturamento com valores editáveis). */
+/** Mutações no fluxo de faturamento — Thais (+ Desenvolvedor); não altera cálculos internos. */
+export function usuarioPodeMutarFaturamentoFluxo(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('faturamento', 'editar', ctx)
+}
+
+export function cargoPodeMutarFaturamentoFluxo(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))
+}
+
+/** Conferência / aprovação do ticket na fila — Thais (+ Desenvolvedor). */
 export function cargoPodeAprovarTicketConferenciaFaturamento(
-  cargo: string | null | undefined
+  cargo: string | null | undefined,
+  nome?: string | null
 ): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhOperadoresTimeR(cargo)) return false
   if (cargoEhVisualizador(cargo)) return false
-  if (cargoEhOperacionalTimeT(cargo)) return true
-  const c = normalizarTextoCargo(cargo)
-  if (!c) return false
-  if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
-  return c.includes('faturamento') || cargoEhDiretoria(cargo)
+  return usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))
 }
 
 /** Corrigir peso líquido na fila de conferência do ticket (alinhado à RPC no Supabase). */
 export function cargoPodeEditarPesoConferenciaTicket(
-  cargo: string | null | undefined
+  cargo: string | null | undefined,
+  nome?: string | null
 ): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
   if (cargoEhOperacionalTimeT(cargo)) return true
+  if (usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))) return true
   if (cargoEhDiretoria(cargo)) return true
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
@@ -358,18 +392,72 @@ export function cargoPodeMutarFinanceiro(cargo: string | null | undefined): bool
 // Fase 5 — permissões por ação (wrappers sem espalhar regra pela UI)
 // ---------------------------------------------------------------------------
 
-export const cargoPodeCriarProgramacao = cargoPodeMutarProgramacao
-export const cargoPodeEditarProgramacao = cargoPodeMutarProgramacao
-export function cargoPodeExcluirProgramacao(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return true
-  return cargoPodeMutarProgramacao(cargo) && !cargoProibidoExcluirRegistos(cargo)
+export function cargoPodeCriarProgramacao(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeCriarProgramacao(ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeEditarProgramacao(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeEditarProgramacao(ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeExcluirProgramacao(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('programacao', 'excluir', ctxDeArgs(cargo, nome))
 }
 
 export const cargoPodeCriarMtr = cargoPodeMutarMtr
 export const cargoPodeEditarMtr = cargoPodeMutarMtr
-export function cargoPodeExcluirMtr(cargo: string | null | undefined): boolean {
-  if (liberadoSeAutoridadeMaxima(cargo)) return true
-  return cargoPodeMutarMtr(cargo) && !cargoProibidoExcluirRegistos(cargo)
+
+export function cargoPodeExcluirMtr(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('mtr', 'excluir', ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeExcluirTicketPesagem(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('pesagem_ticket', 'excluir', ctxDeArgs(cargo, nome))
+}
+
+// Cadastro ------------------------------------------------------------------
+
+export function usuarioPodeVerCliente(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('cliente', 'ler', ctx)
+}
+
+export function usuarioPodeIncluirCliente(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('cliente', 'criar', ctx)
+}
+
+export function usuarioPodeEditarCliente(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('cliente', 'editar', ctx)
+}
+
+export function usuarioPodeExcluirCliente(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('cliente', 'excluir', ctx)
+}
+
+export function usuarioPodeMutarMotorista(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('motorista', 'editar', ctx)
+}
+
+export function usuarioPodeMutarVeiculo(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('veiculo', 'editar', ctx)
+}
+
+export function usuarioPodeVerRepresentante(ctx: UsuarioAcessoCtx): boolean {
+  return rbacPode('representante', 'ler', ctx)
 }
 
 /** Cancelar / baixar MTR, frete em cancelamento e rateio (Time T, Faturamento, Financeiro, admin). */
@@ -385,16 +473,26 @@ export function cargoPodeMutarMtrCicloVida(cargo: string | null | undefined): bo
 
 export const cargoPodeLancarPesagem = cargoPodeMutarControleMassa
 
-export const cargoPodeEmitirFaturamento = cargoPodeMutarFaturamentoFluxo
-export const cargoPodeConfirmarEmissaoFaturamento = cargoPodeMutarFaturamentoFluxo
-export const cargoPodeCancelarFaturamento = cargoPodeMutarFaturamentoFluxo
+export function cargoPodeEmitirFaturamento(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return cargoPodeMutarFaturamentoFluxo(cargo, nome)
+}
+
+export const cargoPodeConfirmarEmissaoFaturamento = cargoPodeEmitirFaturamento
+export const cargoPodeCancelarFaturamento = cargoPodeEmitirFaturamento
 
 /** Mala direta / envio real de NF por e-mail (UI + Edge Function send-nf-email). */
-export function cargoPodeEnviarNfEmail(cargo: string | null | undefined): boolean {
+export function cargoPodeEnviarNfEmail(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhOperadoresTimeR(cargo)) return false
   if (cargoEhVisualizador(cargo)) return false
   if (cargoEhOperacionalTimeT(cargo)) return true
+  if (usuarioPodeMutarFaturamentoFluxo(ctxDeArgs(cargo, nome))) return true
   if (cargoEhAdministrador(cargo)) return true
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
@@ -403,7 +501,7 @@ export function cargoPodeEnviarNfEmail(cargo: string | null | undefined): boolea
 }
 
 export const PERFIS_ENVIO_NF_EMAIL =
-  'Desenvolvedor, Administrador, Operacional (Time T), Faturamento, Financeiro ou Diretoria'
+  'Desenvolvedor, Comercial Adm, Comercial, Administrador, Faturamento, Financeiro ou Diretoria'
 
 export const cargoPodeEditarCobranca = cargoPodeMutarFinanceiro
 export const cargoPodeMarcarPagamento = cargoPodeMutarFinanceiro
