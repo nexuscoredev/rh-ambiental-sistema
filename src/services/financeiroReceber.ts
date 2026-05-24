@@ -158,6 +158,39 @@ function avisoIgnoraErroSchema(contexto: string, err: { message?: string; code?:
   )
 }
 
+/** Grava conta por coleta sem `ON CONFLICT` (índice parcial de clínicas não serve ao PostgREST upsert). */
+async function persistirContaReceberPorColeta(
+  supabase: SupabaseClient,
+  referenciaColetaId: string,
+  row: Record<string, unknown>,
+  contaIdExistente: string | null | undefined
+): Promise<{ error: Error | null }> {
+  if (contaIdExistente) {
+    const { error } = await supabase.from('contas_receber').update(row).eq('id', contaIdExistente)
+    return { error: error ? new Error(error.message) : null }
+  }
+
+  const { error: errInsert } = await supabase.from('contas_receber').insert(row)
+  if (!errInsert) return { error: null }
+
+  if (errInsert.code === '23505') {
+    const { data: existente } = await supabase
+      .from('contas_receber')
+      .select('id')
+      .eq('referencia_coleta_id', referenciaColetaId)
+      .maybeSingle()
+    if (existente?.id) {
+      const { error: errUpdate } = await supabase
+        .from('contas_receber')
+        .update(row)
+        .eq('id', existente.id)
+      return { error: errUpdate ? new Error(errUpdate.message) : null }
+    }
+  }
+
+  return { error: new Error(errInsert.message) }
+}
+
 export async function registrarAuditoriaFinanceiro(
   supabase: SupabaseClient,
   input: {
@@ -231,12 +264,15 @@ export async function upsertContaReceber(
         observacoes: input.observacoes ?? null,
         updated_at: agora,
       }
-      const { error } = await supabase.from('contas_receber').upsert(row, {
-        onConflict: 'referencia_coleta_id',
-      })
+      const { error } = await persistirContaReceberPorColeta(
+        supabase,
+        input.referencia_coleta_id,
+        row,
+        prev?.id
+      )
       if (error) {
-        if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.upsert(faturamento)', error)
-        else return { error: new Error(error.message) }
+        if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.persist(faturamento)', error)
+        else return { error }
       }
       return { error: null }
     }
@@ -260,12 +296,15 @@ export async function upsertContaReceber(
         observacoes: input.observacoes ?? null,
         updated_at: agora,
       }
-      const { error } = await supabase.from('contas_receber').upsert(row, {
-        onConflict: 'referencia_coleta_id',
-      })
+      const { error } = await persistirContaReceberPorColeta(
+        supabase,
+        input.referencia_coleta_id,
+        row,
+        null
+      )
       if (error) {
-        if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.upsert(sem_prev)', error)
-        else return { error: new Error(error.message) }
+        if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.persist(sem_prev)', error)
+        else return { error }
       }
       return { error: null }
     }
@@ -337,12 +376,15 @@ export async function upsertContaReceber(
       updated_at: agora,
     }
 
-    const { error } = await supabase.from('contas_receber').upsert(row, {
-      onConflict: 'referencia_coleta_id',
-    })
+    const { error } = await persistirContaReceberPorColeta(
+      supabase,
+      input.referencia_coleta_id,
+      row,
+      prev.id
+    )
     if (error) {
-      if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.upsert(final)', error)
-      else return { error: new Error(error.message) }
+      if (ignoraErroSchema(error)) avisoIgnoraErroSchema('upsertContaReceber.persist(final)', error)
+      else return { error }
     }
     return { error: null }
   } catch (e) {
