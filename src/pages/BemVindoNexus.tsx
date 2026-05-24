@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { NovidadesSistemaModal } from '../components/bemVindo/NovidadesSistemaModal'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
-import {
-  primeiraRotaOperacionalPermitida,
-  usuarioPodeAcessarRota,
-  type UsuarioComPaginas,
-} from '../lib/paginasSistema'
+import { primeiraRotaOperacionalPermitida, type UsuarioComPaginas } from '../lib/paginasSistema'
 import { BRAND_WELCOME_LOGO } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 
@@ -15,6 +12,7 @@ type PerfilBemVindo = UsuarioComPaginas & { nome?: string | null }
 export default function BemVindoNexus() {
   const [perfil, setPerfil] = useState<PerfilBemVindo | null>(null)
   const [logoSrc, setLogoSrc] = useState(BRAND_WELCOME_LOGO)
+  const [novidadesAbertas, setNovidadesAbertas] = useState(false)
   const versaoExibir = useVersaoRgExibir()
 
   useEffect(() => {
@@ -35,11 +33,6 @@ export default function BemVindoNexus() {
       cancel = true
     }
   }, [])
-
-  const podeDashboard = useMemo(
-    () => (perfil ? usuarioPodeAcessarRota(perfil, '/dashboard') : false),
-    [perfil]
-  )
 
   const proximaRota = useMemo(() => {
     if (!perfil) return null
@@ -82,23 +75,30 @@ export default function BemVindoNexus() {
 
           <div className="welcome-nexus__rule" aria-hidden />
 
-          <div className="welcome-nexus__actions">
-            {podeDashboard ? (
-              <Link className="welcome-nexus__btn welcome-nexus__btn--primary" to="/dashboard">
-                Acessar dashboard
-              </Link>
-            ) : null}
+          <div className="welcome-nexus__actions welcome-nexus__actions--center">
+            <button
+              type="button"
+              className="welcome-nexus__btn welcome-nexus__btn--primary"
+              onClick={() => setNovidadesAbertas(true)}
+            >
+              Confira as novidades!
+            </button>
             {proximaRota ? (
               <Link className="welcome-nexus__btn welcome-nexus__btn--secondary" to={proximaRota}>
                 Ir às minhas áreas
               </Link>
             ) : null}
-            {!podeDashboard && !proximaRota ? (
+            {!proximaRota ? (
               <span className="welcome-nexus__hint">
                 Utilize o menu lateral para navegar nas áreas disponíveis para o seu perfil.
               </span>
             ) : null}
           </div>
+
+          <NovidadesSistemaModal
+            open={novidadesAbertas}
+            onClose={() => setNovidadesAbertas(false)}
+          />
 
           <p className="welcome-nexus__version" role="status">
             Versão do sistema: <strong>{versaoExibir}</strong>
