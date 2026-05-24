@@ -147,7 +147,9 @@ export function MtrManifestoPrint({
         <div className="mtr-excel__logo">
           <img src={BRAND_LOGO_MARK} alt="RG Ambiental" />
         </div>
-        <div className="mtr-excel__mtrno">Nº MTR: {mtrTextoCelula(numero)}</div>
+        <div className="mtr-excel__mtrno">
+          <span className="mtr-excel__mtrno-value">{mtrTextoCelula(numero)}</span>
+        </div>
       </div>
       <div className="mtr-excel__titlebar">MTR - MANIFESTO PARA TRANSPORTE DE RESÍDUOS</div>
 

@@ -30,10 +30,28 @@
 
 .mtr-excel__mtrno {
   text-align: right;
-  font-size: 11px;
-  font-weight: 800;
   white-space: nowrap;
-  padding-top: 4px;
+  padding-top: 2px;
+  line-height: 1.2;
+}
+
+.mtr-excel__mtrno-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.mtr-excel__mtrno-value {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f766e;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
 }
 
 .mtr-excel__titlebar {
@@ -286,6 +304,15 @@
 
   .mtr-excel__logo img {
     height: 30px !important;
+  }
+
+  .mtr-excel__mtrno-label {
+    font-size: 8.5px !important;
+  }
+
+  .mtr-excel__mtrno-value {
+    font-size: 11.5px !important;
+    padding: 1px 5px !important;
   }
 
   .mtr-excel__titlebar {
