@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { ClinicasHistoricoFaturado } from '../components/clinicas/ClinicasHistoricoFaturado'
@@ -13,6 +13,11 @@ import {
 export default function FaturamentoClinicas() {
   const [cargo, setCargo] = useState<string | null>(null)
   const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
+  const [historicoVersao, setHistoricoVersao] = useState(0)
+
+  const atualizarHistorico = useCallback(() => {
+    setHistoricoVersao((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     void (async () => {
@@ -65,8 +70,12 @@ export default function FaturamentoClinicas() {
         </div>
 
         <div style={{ marginTop: '22px' }}>
-          <FaturamentoFilaClinicas podeEmitir={podeEmitir} podeEditarValor={podeEditarValor} />
-          <ClinicasHistoricoFaturado />
+          <FaturamentoFilaClinicas
+            podeEmitir={podeEmitir}
+            podeEditarValor={podeEditarValor}
+            onOsEmitida={atualizarHistorico}
+          />
+          <ClinicasHistoricoFaturado refreshVersao={historicoVersao} />
         </div>
       </div>
     </MainLayout>

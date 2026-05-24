@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
 import { Link, useSearchParams } from 'react-router-dom'
-import { FinanceiroFilaClinicas } from '../components/financeiro/FinanceiroFilaClinicas'
+import {
+  FinanceiroFilaClinicas,
+  type FinanceiroFilaClinicasHandle,
+} from '../components/financeiro/FinanceiroFilaClinicas'
 import MainLayout from '../layouts/MainLayout'
 import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
@@ -100,6 +103,13 @@ export default function FinanceiroContasReceber() {
   >('filtro-faixa', 'todos')
   const [busca, setBusca] = useSessionPersistedState('busca', '')
   const [marcandoPagoId, setMarcandoPagoId] = useState<string | null>(null)
+  const clinicasRef = useRef<FinanceiroFilaClinicasHandle>(null)
+  const [resumoClinicas, setResumoClinicas] = useState({
+    qtd: 0,
+    saldoAberto: 0,
+    saldoVencido: 0,
+  })
+  const [toolbarClinicas, setToolbarClinicas] = useState({ loading: true, qtdFiltradas: 0 })
 
   const podeMutar = cargoPodeEditarCobranca(cargo)
 
@@ -340,6 +350,9 @@ export default function FinanceiroContasReceber() {
     return list
   }, [linhas, busca, filtroStatus, filtroFaixa, hojeMs])
 
+  const loadingAtivo = aba === 'clinicas' ? toolbarClinicas.loading : loading
+  const qtdExportAtiva = aba === 'clinicas' ? toolbarClinicas.qtdFiltradas : filtradas.length
+
   const resumo = useMemo(() => {
     let saldoAberto = 0
     let saldoVencido = 0
@@ -470,8 +483,17 @@ export default function FinanceiroContasReceber() {
               Títulos, vencimentos e saldos
             </h1>
             <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
-              Relatório por título: saldos em aberto, vencidos e faixa de vencimento. Use a{' '}
-              <Link to="/financeiro">cobrança por coleta</Link> para alterar vencimento, NF e baixas.
+              {aba === 'clinicas' ? (
+                <>
+                  Fila de títulos enviados pelo faturamento de clínicas. Marque pagamento, data de
+                  recebimento e exporte relatórios — mesma visão dos demais títulos.
+                </>
+              ) : (
+                <>
+                  Relatório por título: saldos em aberto, vencidos e faixa de vencimento. Use a{' '}
+                  <Link to="/financeiro">cobrança por coleta</Link> para alterar vencimento, NF e baixas.
+                </>
+              )}
             </p>
             {podeMutar ? null : (
               <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
@@ -482,7 +504,10 @@ export default function FinanceiroContasReceber() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             <button
               type="button"
-              onClick={() => void carregar()}
+              onClick={() => {
+                if (aba === 'clinicas') void clinicasRef.current?.recarregar()
+                else void carregar()
+              }}
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
@@ -497,9 +522,12 @@ export default function FinanceiroContasReceber() {
             <button
               type="button"
               className="rg-btn rg-btn--report"
-              onClick={gerarRelatorioPdf}
-              disabled={loading}
-              title={loading ? 'Aguarde o carregamento dos títulos' : 'Gerar PDF com resumo e tabela filtrada'}
+              onClick={() => {
+                if (aba === 'clinicas') clinicasRef.current?.gerarRelatorioPdf()
+                else gerarRelatorioPdf()
+              }}
+              disabled={loadingAtivo}
+              title={loadingAtivo ? 'Aguarde o carregamento dos títulos' : 'Gerar PDF com resumo e tabela filtrada'}
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
@@ -507,10 +535,11 @@ export default function FinanceiroContasReceber() {
                 background: '#fff',
                 color: '#0f766e',
                 fontWeight: 700,
-                cursor: loading ? 'wait' : 'pointer',
+                cursor: loadingAtivo ? 'wait' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
+                opacity: loadingAtivo ? 0.65 : 1,
               }}
             >
               <RgReportPdfIcon className="rg-btn__icon" />
@@ -518,8 +547,11 @@ export default function FinanceiroContasReceber() {
             </button>
             <button
               type="button"
-              onClick={exportarCsv}
-              disabled={loading || filtradas.length === 0}
+              onClick={() => {
+                if (aba === 'clinicas') clinicasRef.current?.exportarCsv()
+                else exportarCsv()
+              }}
+              disabled={loadingAtivo || qtdExportAtiva === 0}
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
@@ -527,8 +559,8 @@ export default function FinanceiroContasReceber() {
                 background: '#0f172a',
                 color: '#fff',
                 fontWeight: 700,
-                cursor: loading || filtradas.length === 0 ? 'not-allowed' : 'pointer',
-                opacity: loading || filtradas.length === 0 ? 0.6 : 1,
+                cursor: loadingAtivo || qtdExportAtiva === 0 ? 'not-allowed' : 'pointer',
+                opacity: loadingAtivo || qtdExportAtiva === 0 ? 0.6 : 1,
               }}
             >
               Exportar CSV
@@ -540,44 +572,109 @@ export default function FinanceiroContasReceber() {
           style={{
             marginTop: '20px',
             display: 'flex',
-            gap: '8px',
+            gap: '6px',
             flexWrap: 'wrap',
-            borderBottom: '2px solid #e2e8f0',
-            paddingBottom: '4px',
+            padding: '6px',
+            borderRadius: '14px',
+            background: '#f1f5f9',
+            border: '1px solid #e2e8f0',
           }}
+          role="tablist"
+          aria-label="Visão de contas a receber"
         >
           {(
             [
-              ['todos', 'Todos os títulos'],
-              ['clinicas', 'Fila — Clínicas'],
+              {
+                id: 'todos' as const,
+                label: 'Todos os títulos',
+                hint: 'Coletas e demais origens',
+                qtd: resumo.qtd,
+                ativoCor: '#fff',
+              },
+              {
+                id: 'clinicas' as const,
+                label: 'Fila — Clínicas',
+                hint: 'O.S. do módulo clínicas',
+                qtd: resumoClinicas.qtd,
+                ativoCor: '#ecfdf5',
+              },
             ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => mudarAba(id)}
-              style={{
-                padding: '10px 16px',
-                border: 'none',
-                borderBottom: aba === id ? '3px solid #0d9488' : '3px solid transparent',
-                background: 'transparent',
-                color: aba === id ? '#0f766e' : '#64748b',
-                fontWeight: aba === id ? 800 : 600,
-                fontSize: '14px',
-                cursor: 'pointer',
-                marginBottom: '-2px',
-              }}
-            >
-              {label}
-            </button>
-          ))}
+          ).map((tab) => {
+            const ativo = aba === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={ativo}
+                onClick={() => mudarAba(tab.id)}
+                style={{
+                  padding: '10px 16px',
+                  border: ativo ? '1px solid #cbd5e1' : '1px solid transparent',
+                  borderRadius: '10px',
+                  background: ativo ? tab.ativoCor : 'transparent',
+                  color: ativo ? (tab.id === 'clinicas' ? '#0f766e' : '#0f172a') : '#64748b',
+                  fontWeight: ativo ? 800 : 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: ativo ? '0 1px 4px rgba(15, 23, 42, 0.08)' : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                  <span>{tab.label}</span>
+                  {ativo ? (
+                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>{tab.hint}</span>
+                  ) : null}
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: ativo
+                      ? tab.id === 'clinicas'
+                        ? '#ccfbf1'
+                        : '#e2e8f0'
+                      : '#e2e8f0',
+                    color: ativo ? '#334155' : '#64748b',
+                  }}
+                >
+                  {tab.qtd}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
-        {aba === 'clinicas' ? (
-          <div style={{ marginTop: '20px' }}>
-            <FinanceiroFilaClinicas podeMutar={podeMutar} />
-          </div>
-        ) : null}
+        <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#64748b' }}>
+          {aba === 'clinicas'
+            ? 'Visão dedicada às clínicas — títulos enviados após faturamento (sem pesagem/ticket).'
+            : 'Visão geral de todos os títulos a receber do sistema.'}
+        </p>
+
+        <div
+          style={{
+            display: aba === 'clinicas' ? 'block' : 'none',
+            marginTop: '16px',
+            padding: '4px 4px 0',
+            borderRadius: '16px',
+            border: '2px solid #99f6e4',
+            background: 'linear-gradient(180deg, #f0fdfa 0%, #ffffff 48%)',
+          }}
+          role="tabpanel"
+          aria-hidden={aba !== 'clinicas'}
+        >
+          <FinanceiroFilaClinicas
+            ref={clinicasRef}
+            podeMutar={podeMutar}
+            onResumoChange={setResumoClinicas}
+            onToolbarStateChange={setToolbarClinicas}
+          />
+        </div>
 
         {aba === 'todos' && erro ? (
           <div

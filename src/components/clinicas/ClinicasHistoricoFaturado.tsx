@@ -34,7 +34,12 @@ function hojeIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function ClinicasHistoricoFaturado() {
+type Props = {
+  /** Incrementar após emissão na fila para atualizar a lista sem clicar em Atualizar. */
+  refreshVersao?: number
+}
+
+export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
   const { alert, confirm } = useRgDialog()
   const [dataDe, setDataDe] = useState(inicioMesIso)
   const [dataAte, setDataAte] = useState(hojeIso)
@@ -46,25 +51,38 @@ export function ClinicasHistoricoFaturado() {
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [processandoId, setProcessandoId] = useState<string | null>(null)
 
-  const recarregar = useCallback(async () => {
-    setCarregando(true)
-    setErro('')
-    const res = await listarHistoricoOsClinicasEmitidas({
-      dataServicoDe: dataDe,
-      dataServicoAte: dataAte,
-    })
-    setCarregando(false)
-    if (!res.ok) {
-      setErro(res.message)
-      setOrdens([])
-      return
-    }
-    setOrdens(res.ordens)
-  }, [dataDe, dataAte])
+  const recarregar = useCallback(
+    async (silencioso = false) => {
+      if (!silencioso) {
+        setCarregando(true)
+        setErro('')
+      }
+      const res = await listarHistoricoOsClinicasEmitidas({
+        dataServicoDe: dataDe,
+        dataServicoAte: dataAte,
+      })
+      if (!silencioso) setCarregando(false)
+      if (!res.ok) {
+        if (!silencioso) {
+          setErro(res.message)
+          setOrdens([])
+        }
+        return
+      }
+      setErro('')
+      setOrdens(res.ordens)
+    },
+    [dataDe, dataAte]
+  )
 
   useEffect(() => {
     void recarregar()
   }, [recarregar])
+
+  useEffect(() => {
+    if (refreshVersao < 1) return
+    void recarregar(true)
+  }, [refreshVersao, recarregar])
 
   const filtradas = useMemo(() => {
     const t = buscaDeb.trim().toLowerCase()

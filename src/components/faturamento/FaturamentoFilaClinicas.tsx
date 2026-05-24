@@ -18,6 +18,8 @@ import { sugerirDataVencimentoIso } from '../../services/financeiroReceber'
 type Props = {
   podeEmitir: boolean
   podeEditarValor: boolean
+  /** Dispara recarga do histórico de O.S. emitidas (secção abaixo). */
+  onOsEmitida?: () => void
 }
 
 const cardStyle: CSSProperties = {
@@ -29,7 +31,7 @@ const cardStyle: CSSProperties = {
   marginBottom: '18px',
 }
 
-export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor }: Props) {
+export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmitida }: Props) {
   const { confirm, alert } = useRgDialog()
   const [linhas, setLinhas] = useState<ClinicaFilaFaturamentoRow[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -150,6 +152,7 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor }: Props) 
       variant: 'success',
     })
     await recarregar()
+    onOsEmitida?.()
   }
 
   return (

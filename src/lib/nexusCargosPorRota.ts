@@ -5,6 +5,8 @@
  * - Administrador / Financeiro: acesso total às rotas de negócio (exceto Usuários).
  * - Comercial Adm / Operacional (Time T): Thais — acesso amplo de negócio (como Administrador nas rotas).
  * - Comercial: Rafaela, Rose, Raquel — cadastro, programação, MTR, faturamento, comprovante.
+ * - Diretoria: visão e operação em todo o fluxo de negócio (cadastros, programação, MTR,
+ *   pesagem, faturamento, financeiro, clínicas, mala direta); sem `/usuarios` (criar acessos).
  * - Operacional: fluxo operacional geral (sem Faturamento, Financeiro, Pós-venda).
  * - Operadores (Time R): Programação, MTR, Pesagem/Ticket e Chat (ex-Rafael).
  * - Logística / Comercial: conforme perfis restritos abaixo.
@@ -78,6 +80,7 @@ const POS_VENDA = [
 
 const PROGRAMACAO_MTR = [
   ...ACESSO_TOTAL,
+  C.diretoria,
   C.operacional,
   C.operadoresTimeR,
   C.logistica,
@@ -129,7 +132,7 @@ const FATURAMENTO = [
 
 const FINANCEIRO = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador] as const
 
-const ENVIO_NF = [...ACESSO_TOTAL, C.faturamento, C.visualizador, C.comercial] as const
+const ENVIO_NF = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador, C.comercial] as const
 
 const USUARIOS = [C.desenvolvedor] as const
 

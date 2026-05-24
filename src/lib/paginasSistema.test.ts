@@ -180,4 +180,14 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Financeiro', '/financeiro')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/financeiro/contas-pagar')).toBe(true)
   })
+
+  it('Diretoria: fluxo completo no menu exceto Usuários', () => {
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/programacao')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/mtr')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/controle-massa')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/faturamento')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/envio-nf')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/clinicas')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/usuarios')).toBe(false)
+  })
 })

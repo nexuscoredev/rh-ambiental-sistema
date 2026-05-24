@@ -187,6 +187,7 @@ export function cargoPodeMutarMtr(
 export function cargoPodeMutarControleMassa(cargo: string | null | undefined): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
+  if (cargoEhDiretoria(cargo)) return true
   if (cargoEhOperadoresTimeR(cargo)) return true
   if (cargoEhOperacionalTimeT(cargo)) return true
   const c = normalizarTextoCargo(cargo)
@@ -210,6 +211,7 @@ export function cargoPodeMutarConferenciaOperacional(cargo: string | null | unde
 export function cargoPodeMutarChecklistTransporte(cargo: string | null | undefined): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
+  if (cargoEhDiretoria(cargo)) return true
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
   if (cargoTemAcessoTipoAdministradorApp(cargo)) return true
@@ -366,8 +368,9 @@ export function cargoPodeGerirUsuarios(cargo: string | null | undefined): boolea
   return false
 }
 
-/** Criar ou excluir usuário — Administrador e Desenvolvedor (não Financeiro). */
+/** Criar ou excluir usuário / criar acessos — somente Desenvolvedor (não Diretoria). */
 export function cargoPodeCriarOuExcluirUsuario(cargo: string | null | undefined): boolean {
+  if (cargoEhDiretoria(cargo)) return false
   return cargoEhAdministradorOuDesenvolvedor(cargo)
 }
 

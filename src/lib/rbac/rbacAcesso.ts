@@ -150,6 +150,11 @@ function leituraGeralSistema(ctx: UsuarioAcessoContext): boolean {
   return true
 }
 
+/** Diretoria / financeiro estratégico — visão e operação em todo o fluxo (exceto gestão de acessos). */
+function diretoriaAcessoNegocio(ctx: UsuarioAcessoContext): boolean {
+  return usuarioEhDiretoriaFinanceiro(ctx)
+}
+
 /**
  * Matriz RBAC — fonte da verdade no frontend (espelhada em `rg_rbac_pode` no Supabase).
  * Equipe Comercial (Thais, Rafaela, Rose, Raquel): mesmo acesso; Thais usa cargo «Comercial Adm».
@@ -164,38 +169,42 @@ export function rbacPode(
 
   switch (recurso) {
     case 'cliente':
-      return usuarioEhEquipeComercial(ctx)
+      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
     case 'motorista':
     case 'veiculo':
-      return setorComercialOuOperacao(ctx)
+      return setorComercialOuOperacao(ctx) || diretoriaAcessoNegocio(ctx)
     case 'representante': {
-      if (acao === 'ler') return usuarioEhComercial(ctx) || usuarioEhDiretoriaFinanceiro(ctx)
-      return usuarioEhEquipeComercial(ctx)
+      if (acao === 'ler') return usuarioEhComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
     }
     case 'programacao': {
       if (acao === 'ler') return leituraGeralSistema(ctx)
-      if (acao === 'criar' || acao === 'editar' || acao === 'excluir') return usuarioEhEquipeComercial(ctx)
+      if (acao === 'criar' || acao === 'editar' || acao === 'excluir') {
+        return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      }
       return false
     }
     case 'mtr': {
       if (acao === 'ler' || acao === 'editar' || acao === 'criar') return leituraGeralSistema(ctx)
-      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx)
+      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
       return false
     }
     case 'pesagem_ticket': {
       if (acao === 'ler' || acao === 'editar' || acao === 'criar') return leituraGeralSistema(ctx)
-      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx)
+      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
       return false
     }
     case 'comprovante_descarte':
-      return usuarioEhEquipeComercial(ctx)
+      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
     case 'conferencia_transporte': {
-      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx)
-      return usuarioEhOperacao(ctx)
+      if (acao === 'excluir') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      return usuarioEhOperacao(ctx) || diretoriaAcessoNegocio(ctx)
     }
     case 'faturamento': {
-      if (acao === 'ler') return usuarioEhEquipeComercial(ctx)
-      if (acao === 'criar' || acao === 'editar' || acao === 'excluir') return usuarioEhEquipeComercial(ctx)
+      if (acao === 'ler') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      if (acao === 'criar' || acao === 'editar' || acao === 'excluir') {
+        return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      }
       return false
     }
     default:

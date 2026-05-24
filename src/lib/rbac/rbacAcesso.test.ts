@@ -58,3 +58,16 @@ describe('rbac — conferência transporte', () => {
     expect(rbacPode('conferencia_transporte', 'editar', ctx('Rose', 'Comercial'))).toBe(false)
   })
 })
+
+describe('rbac — Diretoria (visão completa do fluxo)', () => {
+  const ana = ctx('Ana Novaes', 'Diretoria')
+
+  it('acede a programação, faturamento e cadastros', () => {
+    expect(rbacPode('programacao', 'editar', ana)).toBe(true)
+    expect(rbacPode('faturamento', 'ler', ana)).toBe(true)
+    expect(rbacPode('faturamento', 'editar', ana)).toBe(true)
+    expect(rbacPode('cliente', 'editar', ana)).toBe(true)
+    expect(rbacPode('comprovante_descarte', 'editar', ana)).toBe(true)
+    expect(rbacPode('conferencia_transporte', 'editar', ana)).toBe(true)
+  })
+})

@@ -19,6 +19,7 @@ import {
   cargoPodeMutarProgramacao,
   usuarioPodeVerFaturamento,
 } from "./workflowPermissions";
+import { cargoPodeAcessarRotaMenu } from "./paginasSistema";
 
 describe("workflowPermissions — Desenvolvedor (autoridade máxima)", () => {
   it("reconhece autoridade máxima", () => {
@@ -51,6 +52,19 @@ describe("workflowPermissions — Operadores (Time R)", () => {
     expect(cargoPodeCustomizarTicketOperacional(CARGO_OPERADORES_TIME_R)).toBe(true);
     expect(cargoPodeMutarFaturamentoFluxo(CARGO_OPERADORES_TIME_R)).toBe(false);
     expect(cargoPodeMutarFinanceiro(CARGO_OPERADORES_TIME_R)).toBe(false);
+  });
+});
+
+describe("workflowPermissions — Diretoria", () => {
+  it("opera em todo o fluxo de negócio, sem criar acessos", () => {
+    expect(cargoPodeMutarProgramacao("Diretoria", "Ana Novaes")).toBe(true);
+    expect(cargoPodeLancarPesagem("Diretoria")).toBe(true);
+    expect(cargoPodeMutarFaturamentoFluxo("Diretoria", "Ana Novaes")).toBe(true);
+    expect(cargoPodeMutarFinanceiro("Diretoria")).toBe(true);
+    expect(usuarioPodeVerFaturamento({ cargo: "Diretoria", nome: "Ana Novaes" })).toBe(true);
+    expect(cargoPodeCriarOuExcluirUsuario("Diretoria")).toBe(false);
+    expect(cargoPodeAcessarRotaMenu("Diretoria", "/usuarios")).toBe(false);
+    expect(cargoPodeAcessarRotaMenu("Diretoria", "/programacao")).toBe(true);
   });
 });
 
