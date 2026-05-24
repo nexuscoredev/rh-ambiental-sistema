@@ -90,12 +90,19 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
     ],
   },
   {
+    title: 'Clínicas',
+    items: [{ label: 'Clínicas', path: '/clinicas' }],
+  },
+  {
     title: 'Faturamento',
     items: [
       {
         label: 'Faturamento',
         path: '/faturamento',
-        children: [{ label: 'Mala Direta', path: '/envio-nf' }],
+        children: [
+          { label: 'Faturar clínicas', path: '/faturamento-clinicas' },
+          { label: 'Mala Direta', path: '/envio-nf' },
+        ],
       },
     ],
   },

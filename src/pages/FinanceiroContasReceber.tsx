@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSessionPersistedState } from '../lib/usePageSessionPersistence'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { FinanceiroFilaClinicas } from '../components/financeiro/FinanceiroFilaClinicas'
 import MainLayout from '../layouts/MainLayout'
 import { rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
@@ -21,6 +22,8 @@ type ContaRow = {
   data_emissao: string
   nf_enviada_em: string | null
   referencia_coleta_id: string
+  referencia_clinica_os_id: string | null
+  origem_clinica: boolean
   cliente_id: string | null
   coleta_numero: string
   cliente_nome: string
@@ -77,7 +80,13 @@ function filtrarTitulosDuplicadosMtrConsolidada(
     })
 }
 
+type AbaContasReceber = 'todos' | 'clinicas'
+
 export default function FinanceiroContasReceber() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const abaInicial: AbaContasReceber =
+    searchParams.get('aba') === 'clinicas' ? 'clinicas' : 'todos'
+  const [aba, setAba] = useState<AbaContasReceber>(abaInicial)
   const [linhas, setLinhas] = useState<ContaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -94,12 +103,25 @@ export default function FinanceiroContasReceber() {
 
   const podeMutar = cargoPodeEditarCobranca(cargo)
 
+  useEffect(() => {
+    if (searchParams.get('aba') === 'clinicas') setAba('clinicas')
+  }, [searchParams])
+
+  function mudarAba(nova: AbaContasReceber) {
+    setAba(nova)
+    if (nova === 'clinicas') {
+      setSearchParams({ aba: 'clinicas' }, { replace: true })
+    } else {
+      setSearchParams({}, { replace: true })
+    }
+  }
+
   const carregar = useCallback(async () => {
     setLoading(true)
     setErro('')
     try {
       const selectCr =
-        'id, valor, valor_pago, valor_travado, status_pagamento, data_vencimento, data_emissao, nf_enviada_em, referencia_coleta_id, cliente_id'
+        'id, valor, valor_pago, valor_travado, status_pagamento, data_vencimento, data_emissao, nf_enviada_em, referencia_coleta_id, referencia_clinica_os_id, cliente_id'
 
       const PAGE_SIZE = REST_PAGE_SIZE
       const maxPages = Math.max(1, Math.ceil(CONTAS_RECEBER_LISTA_MAX_LINHAS / PAGE_SIZE))
@@ -127,7 +149,12 @@ export default function FinanceiroContasReceber() {
         )
       }
 
-      const refIds = [...new Set(list.map((r) => String(r.referencia_coleta_id || '')).filter(Boolean))]
+      const refIds = [
+        ...new Set(list.map((r) => String(r.referencia_coleta_id || '')).filter(Boolean)),
+      ]
+      const clinOsIds = [
+        ...new Set(list.map((r) => String(r.referencia_clinica_os_id || '')).filter(Boolean)),
+      ]
       const cliIds = [
         ...new Set(list.map((r) => r.cliente_id as string | null).filter(Boolean) as string[]),
       ]
@@ -165,6 +192,35 @@ export default function FinanceiroContasReceber() {
         }
       }
 
+      const osmap = new Map<string, { numero_os: string; razao_social: string }>()
+      if (clinOsIds.length > 0) {
+        const fatiasOs: string[][] = []
+        for (let i = 0; i < clinOsIds.length; i += IN_CHUNK) {
+          fatiasOs.push(clinOsIds.slice(i, i + IN_CHUNK))
+        }
+        const osRes = await Promise.all(
+          fatiasOs.map((slice) =>
+            supabase
+              .from('clinicas_ordens_servico')
+              .select('id, numero_os, unidade:clinicas_unidades(razao_social)')
+              .in('id', slice)
+          )
+        )
+        for (const { data: rows, error: eOs } of osRes) {
+          if (!eOs && rows) {
+            for (const row of rows as {
+              id: string
+              numero_os: string
+              unidade: { razao_social: string } | { razao_social: string }[] | null
+            }[]) {
+              const u = row.unidade
+              const razao = Array.isArray(u) ? u[0]?.razao_social : u?.razao_social
+              osmap.set(row.id, { numero_os: row.numero_os, razao_social: razao ?? 'Clínica' })
+            }
+          }
+        }
+      }
+
       const clmap = new Map<string, string>()
       if (cliIds.length > 0) {
         const fatiasCli: string[][] = []
@@ -187,8 +243,11 @@ export default function FinanceiroContasReceber() {
 
       let out: ContaRow[] = list.map((r) => {
         const ref = String(r.referencia_coleta_id || '')
+        const osRef = String(r.referencia_clinica_os_id || '')
         const cid = (r.cliente_id as string | null) || null
         const meta = cmap.get(ref)
+        const osMeta = osmap.get(osRef)
+        const origemClinica = !!osRef
         return {
           id: String(r.id),
           valor: Number(r.valor) || 0,
@@ -199,9 +258,17 @@ export default function FinanceiroContasReceber() {
           data_emissao: String(r.data_emissao || '').slice(0, 10),
           nf_enviada_em: (r.nf_enviada_em as string | null) || null,
           referencia_coleta_id: ref,
+          referencia_clinica_os_id: osRef || null,
+          origem_clinica: origemClinica,
           cliente_id: cid,
-          coleta_numero: meta?.numero ?? ref.slice(0, 8),
-          cliente_nome: cid ? clmap.get(cid) ?? '—' : '—',
+          coleta_numero: origemClinica
+            ? osMeta?.numero_os ?? osRef.slice(0, 8)
+            : meta?.numero ?? ref.slice(0, 8),
+          cliente_nome: origemClinica
+            ? osMeta?.razao_social ?? 'Clínica'
+            : cid
+              ? clmap.get(cid) ?? '—'
+              : '—',
           _numero_coleta: meta?.numero_coleta ?? null,
           _mtr_id: meta?.mtr_id ?? null,
         } as ContaRow & { _numero_coleta: number | null; _mtr_id: string | null }
@@ -250,7 +317,8 @@ export default function FinanceiroContasReceber() {
         (r) =>
           r.coleta_numero.toLowerCase().includes(t) ||
           r.cliente_nome.toLowerCase().includes(t) ||
-          r.referencia_coleta_id.toLowerCase().includes(t)
+          r.referencia_coleta_id.toLowerCase().includes(t) ||
+          (r.referencia_clinica_os_id ?? '').toLowerCase().includes(t)
       )
     }
     if (filtroStatus) {
@@ -293,7 +361,7 @@ export default function FinanceiroContasReceber() {
 
     const ok = await rgConfirm({
       title: 'Marcar como pago',
-      message: `Marcar a coleta ${row.coleta_numero} (${row.cliente_nome}) como Pago?`,
+      message: `Marcar ${row.origem_clinica ? 'a O.S.' : 'a coleta'} ${row.coleta_numero} (${row.cliente_nome}) como Pago?`,
       details: [`Saldo: ${formatCurrency(saldo)}`],
       confirmLabel: 'Marcar pago',
       variant: 'success',
@@ -307,7 +375,8 @@ export default function FinanceiroContasReceber() {
         data: { user },
       } = await supabase.auth.getUser()
       const { error } = await registrarBaixaContaReceber(supabase, {
-        referencia_coleta_id: row.referencia_coleta_id,
+        conta_receber_id: row.origem_clinica ? row.id : undefined,
+        referencia_coleta_id: row.origem_clinica ? undefined : row.referencia_coleta_id,
         valor_baixa: saldo,
         observacao: 'Marcado como Pago na lista de títulos (Contas a Receber).',
         usuario_id: user?.id ?? null,
@@ -467,7 +536,50 @@ export default function FinanceiroContasReceber() {
           </div>
         </div>
 
-        {erro ? (
+        <div
+          style={{
+            marginTop: '20px',
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            borderBottom: '2px solid #e2e8f0',
+            paddingBottom: '4px',
+          }}
+        >
+          {(
+            [
+              ['todos', 'Todos os títulos'],
+              ['clinicas', 'Fila — Clínicas'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => mudarAba(id)}
+              style={{
+                padding: '10px 16px',
+                border: 'none',
+                borderBottom: aba === id ? '3px solid #0d9488' : '3px solid transparent',
+                background: 'transparent',
+                color: aba === id ? '#0f766e' : '#64748b',
+                fontWeight: aba === id ? 800 : 600,
+                fontSize: '14px',
+                cursor: 'pointer',
+                marginBottom: '-2px',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {aba === 'clinicas' ? (
+          <div style={{ marginTop: '20px' }}>
+            <FinanceiroFilaClinicas podeMutar={podeMutar} />
+          </div>
+        ) : null}
+
+        {aba === 'todos' && erro ? (
           <div
             style={{
               marginTop: '16px',
@@ -482,6 +594,8 @@ export default function FinanceiroContasReceber() {
           </div>
         ) : null}
 
+        {aba === 'todos' ? (
+        <>
         <div
           style={{
             display: 'grid',
@@ -683,12 +797,21 @@ export default function FinanceiroContasReceber() {
                               />
                               Pago
                             </label>
-                            <Link
-                              to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
-                              style={{ fontWeight: 700, color: '#0d9488' }}
-                            >
-                              Cobrança
-                            </Link>
+                            {r.origem_clinica ? (
+                              <Link
+                                to="/financeiro/contas-receber?aba=clinicas"
+                                style={{ fontWeight: 700, color: '#0d9488' }}
+                              >
+                                Fila clínicas
+                              </Link>
+                            ) : (
+                              <Link
+                                to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
+                                style={{ fontWeight: 700, color: '#0d9488' }}
+                              >
+                                Cobrança
+                              </Link>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -699,6 +822,8 @@ export default function FinanceiroContasReceber() {
             </table>
           )}
         </div>
+        </>
+        ) : null}
       </div>
     </MainLayout>
   )

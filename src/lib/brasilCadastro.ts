@@ -34,6 +34,32 @@ export function formatarCpfParaArmazenar(valor: string): string {
   return formatarCPFDigitacao(d);
 }
 
+/** Máscara CNPJ (14 dígitos): 00.000.000/0000-00 */
+export function formatarCNPJDigitacao(input: string): string {
+  const digitos = apenasDigitos(input).slice(0, 14);
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 5) return digitos.replace(/^(\d{2})(\d+)/, "$1.$2");
+  if (digitos.length <= 8) return digitos.replace(/^(\d{2})(\d{3})(\d+)/, "$1.$2.$3");
+  if (digitos.length <= 12) {
+    return digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d+)/, "$1.$2.$3/$4");
+  }
+  return digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, "$1.$2.$3/$4-$5");
+}
+
+export function formatarCnpjParaArmazenar(valor: string): string {
+  const d = apenasDigitos(valor).slice(0, 14);
+  if (d.length !== 14) return "";
+  return formatarCNPJDigitacao(d);
+}
+
+export function documentoCnpjCompleto(valor: string): boolean {
+  return apenasDigitos(valor).length === 14;
+}
+
+export function documentoCpfCompleto(valor: string): boolean {
+  return apenasDigitos(valor).length === 11;
+}
+
 /** CNH (numeração atual): até 11 dígitos. */
 export function formatarCnhDigitacao(input: string): string {
   return apenasDigitos(input).slice(0, 11);

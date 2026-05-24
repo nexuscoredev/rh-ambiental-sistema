@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.73",
+  "version": "1.2.81",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

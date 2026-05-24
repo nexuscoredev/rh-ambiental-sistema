@@ -789,7 +789,8 @@ export async function confirmarNfBoletoEnviadosAoCliente(
 export async function registrarBaixaContaReceber(
   supabase: SupabaseClient,
   input: {
-    referencia_coleta_id: string
+    referencia_coleta_id?: string
+    conta_receber_id?: string
     valor_baixa: number
     observacao?: string | null
     usuario_id: string | null
@@ -799,17 +800,21 @@ export async function registrarBaixaContaReceber(
     const vb = Number(input.valor_baixa)
     if (!Number.isFinite(vb) || vb <= 0) return { error: new Error('Valor de baixa inválido.') }
 
-    const { data: conta, error: e0 } = await supabase
-      .from('contas_receber')
-      .select('id, valor, valor_pago, status_pagamento')
-      .eq('referencia_coleta_id', input.referencia_coleta_id)
-      .maybeSingle()
+    const contaId = (input.conta_receber_id ?? '').trim()
+    const coletaRef = (input.referencia_coleta_id ?? '').trim()
+
+    let q = supabase.from('contas_receber').select('id, valor, valor_pago, status_pagamento, referencia_coleta_id')
+    if (contaId) q = q.eq('id', contaId)
+    else if (coletaRef) q = q.eq('referencia_coleta_id', coletaRef)
+    else return { error: new Error('Informe conta_receber_id ou referencia_coleta_id.') }
+
+    const { data: conta, error: e0 } = await q.maybeSingle()
 
     if (e0) {
       if (ignoraErroSchema(e0)) avisoIgnoraErroSchema('registrarBaixaContaReceber.select', e0)
       else return { error: new Error(e0.message) }
     }
-    if (!conta) return { error: new Error('Conta a receber não encontrada para esta coleta.') }
+    if (!conta) return { error: new Error('Conta a receber não encontrada.') }
 
     const vtot = Number(conta.valor) || 0
     const vp0 = Number(conta.valor_pago) || 0
@@ -858,24 +863,27 @@ export async function registrarBaixaContaReceber(
       usuario_id: input.usuario_id,
       acao: 'baixa',
       detalhe: {
-        referencia_coleta_id: input.referencia_coleta_id,
+        referencia_coleta_id: coletaRef || (conta as { referencia_coleta_id?: string | null }).referencia_coleta_id,
         valor: add,
         valor_pago_novo: vp1,
         status: st,
       },
     })
 
-    const patchColeta: Record<string, unknown> = {
-      status_pagamento: st,
-    }
-    if (st === 'Pago') {
-      patchColeta.etapa_operacional = 'FINALIZADO'
-      patchColeta.fluxo_status = 'FINALIZADO'
-      patchColeta.status_processo = 'FINALIZADO'
-      patchColeta.liberado_financeiro = true
-    }
+    const refColeta = (conta as { referencia_coleta_id?: string | null }).referencia_coleta_id
+    if (refColeta) {
+      const patchColeta: Record<string, unknown> = {
+        status_pagamento: st,
+      }
+      if (st === 'Pago') {
+        patchColeta.etapa_operacional = 'FINALIZADO'
+        patchColeta.fluxo_status = 'FINALIZADO'
+        patchColeta.status_processo = 'FINALIZADO'
+        patchColeta.liberado_financeiro = true
+      }
 
-    await supabase.from('coletas').update(patchColeta).eq('id', input.referencia_coleta_id)
+      await supabase.from('coletas').update(patchColeta).eq('id', refColeta)
+    }
 
     return { error: null }
   } catch (e) {

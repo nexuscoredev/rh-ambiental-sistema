@@ -31,6 +31,8 @@ const ChecklistTransporte = lazyWithRetry(() => import('./pages/ChecklistTranspo
 const ConferenciaTransporte = lazyWithRetry(() => import('./pages/ConferenciaTransporte'))
 const TicketOperacional = lazyWithRetry(() => import('./pages/TicketOperacional'))
 const FaturamentoOperacional = lazyWithRetry(() => import('./pages/FaturamentoOperacional'))
+const FaturamentoClinicas = lazyWithRetry(() => import('./pages/FaturamentoClinicas'))
+const Clinicas = lazyWithRetry(() => import('./pages/Clinicas'))
 
 /** Etapa antiga «Aprovação Diretoria» — conferência do ticket passou para Faturamento. */
 function RedirectAprovacaoParaFaturamento() {
@@ -750,6 +752,21 @@ function App() {
             />
 
             <Route
+              path="/clinicas"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/clinicas']]}
+                >
+                  <Clinicas />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/faturamento"
               element={
                 <ProtectedRoute
@@ -760,6 +777,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento']]}
                 >
                   <FaturamentoOperacional />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/faturamento-clinicas"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/faturamento-clinicas']]}
+                >
+                  <FaturamentoClinicas />
                 </ProtectedRoute>
               }
             />
