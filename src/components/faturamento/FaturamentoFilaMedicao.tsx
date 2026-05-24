@@ -84,6 +84,8 @@ function GrupoMedicaoCard({
     return () => {
       cancel = true
     }
+    // linhasColeta já refletido em idsKey (ids das coletas)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, grupo.cliente_id, grupo.mtr_numero])
 
   if (linhasColeta.length === 0) return null

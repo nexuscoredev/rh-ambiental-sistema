@@ -818,6 +818,7 @@ export default function MTR() {
     queueMicrotask(() => {
       void loadData()
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial única
   }, [])
 
   useEffect(() => {
@@ -895,6 +896,7 @@ export default function MTR() {
     if (autofillCidadeTentadoRef.current === pid) return
     autofillCidadeTentadoRef.current = pid
     void preencherCidadeEnderecoDesdeCadastroSeVazio(pid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autofill cidade uma vez por programação
   }, [showForm, form.programacao_id, form.cidade])
 
   const mtrMapByProgramacaoId = useMemo(() => {

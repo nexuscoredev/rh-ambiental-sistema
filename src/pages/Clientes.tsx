@@ -1755,7 +1755,7 @@ export default function Clientes() {
   useEffect(() => {
     const id = window.setTimeout(() => setPage(1), 0);
     return () => window.clearTimeout(id);
-  }, [buscaDebounced, pageSize]);
+  }, [buscaDebounced, pageSize, setPage]);
 
   function handleInputChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -2385,7 +2385,7 @@ export default function Clientes() {
     if (page <= totalPaginas) return;
     const id = window.setTimeout(() => setPage(totalPaginas), 0);
     return () => window.clearTimeout(id);
-  }, [page, totalPaginas]);
+  }, [page, totalPaginas, setPage]);
 
   return (
     <MainLayout>

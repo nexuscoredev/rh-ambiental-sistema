@@ -46,7 +46,7 @@ function parseFabPos(raw: string | null): FabPos | null {
   }
 }
 
-export type ChatHeadThemeId = 'verde' | 'azul_escuro' | 'azul_claro' | 'rosa' | 'vermelho'
+export type ChatHeadThemeId = 'verde' | 'azul_escuro' | 'azul_claro' | 'rosa' | 'vermelho' | 'amarelo'
 
 const CHAT_HEAD_THEMES: Record<ChatHeadThemeId, { label: string; gradient: string }> = {
   verde: {
@@ -68,6 +68,10 @@ const CHAT_HEAD_THEMES: Record<ChatHeadThemeId, { label: string; gradient: strin
   vermelho: {
     label: 'Vermelho',
     gradient: 'linear-gradient(180deg, #ef4444 0%, #dc2626 48%, #b91c1c 100%)',
+  },
+  amarelo: {
+    label: 'Amarelo',
+    gradient: 'linear-gradient(180deg, #facc15 0%, #eab308 48%, #ca8a04 100%)',
   },
 }
 
@@ -516,7 +520,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       void ch.unsubscribe()
       channelThreadRef.current = null
     }
-  }, [conversaId, open, recarregarConversas])
+  }, [conversaId, open, recarregarConversas, tocarNotificacao])
 
   const abrirConversa = useCallback((id: string, opts?: { outroId?: string }) => {
     setConversaId(id)

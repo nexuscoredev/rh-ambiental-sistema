@@ -376,13 +376,13 @@ export default function Usuarios() {
     queueMicrotask(() => {
       setPaginaUsuarios(0)
     })
-  }, [buscaDebounced, itensPorPagina, usuarios.length])
+  }, [buscaDebounced, itensPorPagina, usuarios.length, setPaginaUsuarios])
 
   useEffect(() => {
     queueMicrotask(() => {
       setPaginaUsuarios((p) => Math.min(p, Math.max(0, totalPaginas - 1)))
     })
-  }, [totalPaginas])
+  }, [totalPaginas, setPaginaUsuarios])
 
   async function carregarUsuarios() {
     try {

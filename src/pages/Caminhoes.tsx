@@ -398,7 +398,7 @@ export default function Caminhoes() {
   useEffect(() => {
     const id = window.setTimeout(() => setPage(1), 0);
     return () => window.clearTimeout(id);
-  }, [buscaDebounced, pageSize]);
+  }, [buscaDebounced, pageSize, setPage]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -1025,7 +1025,7 @@ export default function Caminhoes() {
     if (page <= totalPaginas) return;
     const id = window.setTimeout(() => setPage(totalPaginas), 0);
     return () => window.clearTimeout(id);
-  }, [page, totalPaginas]);
+  }, [page, totalPaginas, setPage]);
 
   useEffect(() => {
     if (!fichaCaminhao) return;

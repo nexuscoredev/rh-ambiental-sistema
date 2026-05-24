@@ -274,7 +274,7 @@ export default function Financeiro() {
         setSomenteVencidos(true)
       })
     }
-  }, [urlSomenteVencidos])
+  }, [urlSomenteVencidos, setSomenteVencidos])
 
   function limparContextoUrl() {
     setSearchParams({}, { replace: true })
@@ -763,6 +763,7 @@ export default function Financeiro() {
     dataFimFiltro,
     filtroStatusConferencia,
     filtroStatusPagamentoLista,
+    setPageTab,
   ])
 
   useEffect(() => {
@@ -771,7 +772,7 @@ export default function Financeiro() {
         setPageTab(totalPaginasFin)
       })
     }
-  }, [pageTab, totalPaginasFin])
+  }, [pageTab, totalPaginasFin, setPageTab])
 
   const totalLiberadas = useMemo(() => itens.length, [itens])
 

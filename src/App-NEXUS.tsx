@@ -357,6 +357,8 @@ function App() {
     return () => {
       cancelado = true
     }
+    // session omitido de propósito: só reage a sessionUserId para não recarregar perfil a cada refresh do token
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUserId])
 
   if (session === undefined) {

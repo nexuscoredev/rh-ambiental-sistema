@@ -49,13 +49,13 @@ export function inferirCidadeEstadoEnderecoTexto(texto: string): { cidade: strin
     if (soUf && UFS_BR.has(soUf[1]!.toUpperCase())) {
       return { cidade: penultimo, estado: soUf[1]!.toUpperCase() }
     }
-    const comb = /^(.+?)\s*[—–\-/]\s*([A-Za-z]{2})$/i.exec(ultimo)
+    const comb = /^(.+?)\s*[—–/-]\s*([A-Za-z]{2})$/i.exec(ultimo)
     if (comb && UFS_BR.has(comb[2]!.toUpperCase())) {
       return { cidade: comb[1]!.trim(), estado: comb[2]!.toUpperCase() }
     }
   }
 
-  const fim = /([^,]+?)\s*[—–\-]\s*([A-Za-z]{2})\s*$/i.exec(t)
+  const fim = /([^,]+?)\s*[—–-]\s*([A-Za-z]{2})\s*$/i.exec(t)
   if (fim && UFS_BR.has(fim[2]!.toUpperCase())) {
     return { cidade: fim[1]!.trim(), estado: fim[2]!.toUpperCase() }
   }

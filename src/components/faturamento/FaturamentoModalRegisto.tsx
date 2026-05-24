@@ -242,7 +242,7 @@ export function FaturamentoModalRegisto({
         quantidadeFaturada: pesoKg,
       })
     },
-    [row, contratoCliente, contextoMtr, grupoConsolidado, pesoColetaKg]
+    [row, contratoCliente, contextoMtr, grupoConsolidado]
   )
 
   const reaplicarContratoNoResumo = useCallback(
@@ -627,6 +627,8 @@ export function FaturamentoModalRegisto({
     return () => {
       cancel = true
     }
+    // row completo omitido: só ids de programação/MTR para evitar re-fetch em cada render da linha
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, row?.programacao_id, row?.mtr_id])
 
   async function handleEncerrarTicketDefinitivo() {

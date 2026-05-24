@@ -1883,6 +1883,8 @@ export default function ControleMassa() {
         block: "start",
       });
     }, 150);
+    // aplicarColetaNoForm / aplicarHerancaMtrSemColeta omitidos: incluir re-dispararia o efeito de URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     loadingVinculo,
     todasColetas,

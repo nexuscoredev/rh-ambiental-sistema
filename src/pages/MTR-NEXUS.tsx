@@ -539,6 +539,7 @@ export default function MTR() {
     queueMicrotask(() => {
       void loadData()
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial única
   }, [])
 
   useEffect(() => {
