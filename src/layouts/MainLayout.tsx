@@ -73,7 +73,11 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
   {
     title: 'Cadastros',
     items: [
-      { label: 'Clientes', path: '/clientes' },
+      {
+        label: 'Clientes',
+        path: '/clientes',
+        children: [{ label: 'Gerenciador', path: '/clientes/gerenciador' }],
+      },
       { label: 'Motoristas', path: '/motoristas' },
       { label: 'Representante RG', path: '/representantes-rg' },
       { label: 'Veículos', path: '/caminhoes' },
@@ -215,7 +219,8 @@ function salvarSecoesSidebar(next: Record<string, boolean>) {
 function filtrarItemMenuPorPaginas(item: MenuItem, u: UsuarioLogado | null): MenuItem | null {
   if (!u) return item
   const podeRota = (path: string) =>
-    usuarioPodeAcessarRota(u, path) && cargoPodeAcessarRotaMenu(u.cargo, path)
+    usuarioPodeAcessarRota(u, path) &&
+    cargoPodeAcessarRotaMenu(u.cargo, path, u.nome, u.email)
   if (!isMenuBranch(item)) {
     return podeRota(item.path) ? item : null
   }

@@ -139,6 +139,7 @@ const USUARIOS = [C.desenvolvedor] as const
 export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/dashboard': [...DASHBOARD_E_CHAT],
   '/clientes': [...CADASTRO],
+  '/clientes/gerenciador': [...CADASTRO],
   '/motoristas': [...CADASTRO],
   '/caminhoes': [...CADASTRO],
   '/representantes-rg': [...CADASTRO],

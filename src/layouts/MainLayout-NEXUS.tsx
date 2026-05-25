@@ -73,7 +73,11 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
   {
     title: 'Cadastros',
     items: [
-      { label: 'Clientes', path: '/clientes' },
+      {
+        label: 'Clientes',
+        path: '/clientes',
+        children: [{ label: 'Gerenciador', path: '/clientes/gerenciador' }],
+      },
       { label: 'Motoristas', path: '/motoristas' },
       { label: 'Representante RG', path: '/representantes-rg' },
       { label: 'Veículos', path: '/caminhoes' },

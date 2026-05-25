@@ -10,7 +10,7 @@ import {
   normalizarEtapaColeta,
 } from '../lib/fluxoEtapas'
 import { isBenignSupabaseFetchError } from '../lib/supabaseErrors'
-import { cargoPodeEditarMtr } from '../lib/workflowPermissions'
+import { cargoPodeEditarMtr, cargoPodeExcluirMtr } from '../lib/workflowPermissions'
 import {
   excluirColetaPorId,
   excluirMtrPorId,
@@ -419,8 +419,11 @@ export default function MTR() {
 
   const [form, setForm] = useState<MTRFormState>(emptyForm)
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null)
+  const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
+  const [usuarioEmail, setUsuarioEmail] = useState<string | null>(null)
 
-  const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo)
+  const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo, usuarioNome)
+  const podeExcluirMtr = cargoPodeExcluirMtr(usuarioCargo, usuarioNome, usuarioEmail)
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
@@ -549,14 +552,24 @@ export default function MTR() {
       } = await supabase.auth.getUser()
       if (!user) {
         setUsuarioCargo(null)
+        setUsuarioNome(null)
+        setUsuarioEmail(null)
         return
       }
       const { data } = await supabase
         .from('usuarios')
-        .select('cargo')
+        .select('cargo, nome')
         .eq('id', user.id)
         .maybeSingle()
       setUsuarioCargo(data?.cargo ?? null)
+      const meta = user.user_metadata as Record<string, unknown> | undefined
+      const nomeMeta =
+        (typeof meta?.nome === 'string' && meta.nome.trim()) ||
+        (typeof meta?.full_name === 'string' && meta.full_name.trim()) ||
+        (typeof meta?.name === 'string' && meta.name.trim()) ||
+        null
+      setUsuarioNome(data?.nome?.trim() || nomeMeta || null)
+      setUsuarioEmail(user.email?.trim() || null)
     }
     void carregarCargo()
   }, [])
@@ -1128,10 +1141,11 @@ export default function MTR() {
   }
 
   async function handleDelete(item: MTR) {
-    if (!podeMutarMtr) {
+    if (!podeExcluirMtr) {
       await rgAlert({
         title: 'MTR',
-        message: 'Seu perfil não pode remover MTR. Apenas operacional ou administrador.',
+        message:
+          'Seu perfil não pode remover MTR. Utilizadores autorizados: Thais, Ezequiel, Ana, Rafael (operação), Vinicius e desenvolvedor master.',
         variant: 'warning',
       })
       return
@@ -1241,6 +1255,34 @@ export default function MTR() {
   function closeForm() {
     setShowForm(false)
     resetForm()
+  }
+
+  async function confirmarVisualizarMtr(item: MTR) {
+    if (
+      !(await rgConfirm({
+        title: 'Visualizar MTR',
+        message: `Abrir o manifesto ${item.numero} para visualização e impressão?`,
+        confirmLabel: 'Continuar',
+        cancelLabel: 'Cancelar',
+      }))
+    ) {
+      return
+    }
+    visualizarMtr(item)
+  }
+
+  async function confirmarEditarMtr(item: MTR) {
+    if (
+      !(await rgConfirm({
+        title: 'Editar MTR',
+        message: `Abrir o formulário de edição da MTR ${item.numero}?`,
+        confirmLabel: 'Continuar',
+        cancelLabel: 'Cancelar',
+      }))
+    ) {
+      return
+    }
+    await openEditForm(item)
   }
 
   function visualizarMtr(item: MTR) {
@@ -2829,33 +2871,35 @@ export default function MTR() {
                         <div className="table-actions">
                           <button
                             className="mini-btn"
-                            onClick={() => visualizarMtr(item)}
+                            onClick={() => void confirmarVisualizarMtr(item)}
                             title="Abrir manifesto para impressão ou salvar em PDF"
                           >
                             Visualizar
                           </button>
                           <button
                             className="mini-btn"
-                            onClick={() => void openEditForm(item)}
+                            onClick={() => void confirmarEditarMtr(item)}
                             disabled={!podeMutarMtr}
                             style={{ opacity: podeMutarMtr ? 1 : 0.5 }}
                           >
                             Editar
                           </button>
-                          <button
-                            className="mini-btn mini-btn-danger"
-                            onClick={() => handleDelete(item)}
-                            disabled={!podeMutarMtr}
-                            style={{ opacity: podeMutarMtr ? 1 : 0.5 }}
-                          >
-                            Remover
-                          </button>
+                          {podeExcluirMtr ? (
+                            <button
+                              className="mini-btn mini-btn-danger"
+                              onClick={() => void handleDelete(item)}
+                            >
+                              Remover
+                            </button>
+                          ) : null}
                           <MtrCicloVidaAcoes
                             mtrId={item.id}
                             mtrNumero={item.numero}
                             status={item.status}
                             podeMutar={podeMutarMtr}
                             usuarioCargo={usuarioCargo}
+                            usuarioNome={usuarioNome}
+                            usuarioEmail={usuarioEmail}
                             compact
                             onConcluido={() => void loadData()}
                           />
@@ -2881,6 +2925,8 @@ export default function MTR() {
                   status={selectedMTR.status}
                   podeMutar={podeMutarMtr}
                   usuarioCargo={usuarioCargo}
+                  usuarioNome={usuarioNome}
+                  usuarioEmail={usuarioEmail}
                   onConcluido={() => void loadData()}
                 />
               ) : null}

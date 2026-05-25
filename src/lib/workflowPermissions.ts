@@ -7,7 +7,10 @@
  */
 
 import {
+  nomeContemToken,
+  normalizarNomePessoa,
   rbacPode,
+  usuarioEhDesenvolvedorMaster,
   type UsuarioAcessoContext,
 } from './rbac'
 
@@ -47,21 +50,52 @@ export function cargoEhDesenvolvedor(cargo: string | null | undefined): boolean 
   return normalizarTextoCargo(cargo).includes('desenvolvedor')
 }
 
+/** E-mails com bypass total (rotas, MTR, etc.). */
+const EMAILS_AUTORIDADE_MAXIMA = new Set([
+  'cavalcantersc07@gmail.com',
+  'gestores@rgambiental.com',
+])
+
 /**
- * Autoridade máxima na UI: Desenvolvedor acede a tudo (rotas, mutações, listas de páginas).
- * RLS no Supabase pode ainda aplicar limites técnicos.
+ * Autoridade máxima na UI: desenvolvedor master (ex.: Rafael Cavalcante), cargo Desenvolvedor
+ * ou e-mail de gestão — acede a tudo (rotas, mutações, excluir MTR, etc.).
  */
-export function cargoTemAutoridadeMaximaSistema(cargo: string | null | undefined): boolean {
-  return cargoEhDesenvolvedor(cargo)
+export function temAutoridadeMaximaSistema(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (usuarioEhDesenvolvedorMaster(acessoDesdeCargo(cargo, nome))) return true
+  if (cargoEhDesenvolvedor(cargo)) return true
+  const em = (email || '').trim().toLowerCase()
+  if (em && EMAILS_AUTORIDADE_MAXIMA.has(em)) return true
+  return false
 }
 
-function liberadoSeAutoridadeMaxima(cargo: string | null | undefined): boolean {
-  return cargoTemAutoridadeMaximaSistema(cargo)
+/** @deprecated Preferir `temAutoridadeMaximaSistema(cargo, nome, email)`. */
+export function cargoTemAutoridadeMaximaSistema(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return temAutoridadeMaximaSistema(cargo, nome, email)
 }
 
-/** Limpar histórico de conversa no chat interno — apenas Desenvolvedor. */
-export function cargoPodeApagarHistoricoChat(cargo: string | null | undefined): boolean {
-  return cargoEhDesenvolvedor(cargo)
+function liberadoSeAutoridadeMaxima(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return temAutoridadeMaximaSistema(cargo, nome, email)
+}
+
+/** Limpar histórico de conversa no chat interno — desenvolvedor master ou cargo Desenvolvedor. */
+export function cargoPodeApagarHistoricoChat(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return temAutoridadeMaximaSistema(cargo, nome, email)
 }
 
 /** Operacional genérico (sem sufixo Time T). */
@@ -69,9 +103,13 @@ function cargoEhOperacionalGenerico(cargo: string | null | undefined): boolean {
   return normalizarTextoCargo(cargo) === 'operacional'
 }
 
-/** Criar / excluir utilizadores — somente Desenvolvedor (master total). */
-export function cargoEhAdministradorOuDesenvolvedor(cargo: string | null | undefined): boolean {
-  return cargoEhDesenvolvedor(cargo)
+/** Criar / excluir utilizadores — desenvolvedor master ou cargo Desenvolvedor. */
+export function cargoEhAdministradorOuDesenvolvedor(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return temAutoridadeMaximaSistema(cargo, nome, email)
 }
 
 /**
@@ -419,10 +457,37 @@ export function cargoPodeExcluirProgramacao(
 export const cargoPodeCriarMtr = cargoPodeMutarMtr
 export const cargoPodeEditarMtr = cargoPodeMutarMtr
 
+/**
+ * Remover MTR na lista — desenvolvedor master (Rafael Cavalcante, Vinicius) ou
+ * utilizadores nomeados no organograma («Rafael» = operação, sem Rafaela).
+ */
+export function usuarioPodeExcluirMtr(
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (temAutoridadeMaximaSistema(null, nome, email)) return true
+  const n = normalizarNomePessoa(nome)
+  if (!n) return false
+  if (nomeContemToken(n, 'thais')) return true
+  if (nomeContemToken(n, 'ezequiel') || nomeContemToken(n, 'ezequeil')) return true
+  if (nomeContemToken(n, 'ana')) return true
+  if (nomeContemToken(n, 'vinicius')) return true
+  if (nomeContemToken(n, 'rafael')) {
+    if (nomeContemToken(n, 'rafaela')) return false
+    return true
+  }
+  return false
+}
+
 export function cargoPodeExcluirMtr(
   cargo: string | null | undefined,
-  nome?: string | null
+  nome?: string | null,
+  email?: string | null
 ): boolean {
+  if (temAutoridadeMaximaSistema(cargo, nome, email)) return true
+  if (nome != null && String(nome).trim() !== '') {
+    return usuarioPodeExcluirMtr(nome, email)
+  }
   return rbacPode('mtr', 'excluir', ctxDeArgs(cargo, nome))
 }
 
@@ -461,6 +526,39 @@ export function usuarioPodeMutarVeiculo(ctx: UsuarioAcessoCtx): boolean {
 
 export function usuarioPodeVerRepresentante(ctx: UsuarioAcessoCtx): boolean {
   return rbacPode('representante', 'ler', ctx)
+}
+
+/**
+ * Cancelar / Baixar MTR na lista — apenas utilizadores nomeados (organograma RG).
+ * Nome de exibição em `usuarios.nome` (ex.: «Thais Pichirilli»).
+ */
+export function usuarioPodeCancelarBaixarMtr(
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (temAutoridadeMaximaSistema(null, nome, email)) return true
+  const n = normalizarNomePessoa(nome)
+  if (!n) return false
+  if (nomeContemToken(n, 'thais')) return true
+  if (nomeContemToken(n, 'ezequiel') || nomeContemToken(n, 'ezequeil')) return true
+  if (nomeContemToken(n, 'ana')) return true
+  if (nomeContemToken(n, 'raquel')) return true
+  if (n.includes('cavalcante')) return true
+  if (nomeContemToken(n, 'vinicius')) return true
+  return false
+}
+
+/** Cancelar / baixar MTR — lista por nome em `usuarios.nome` (como excluir MTR). */
+export function cargoPodeCancelarBaixarMtr(
+  cargo: string | null | undefined,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (temAutoridadeMaximaSistema(cargo, nome, email)) return true
+  if (nome != null && String(nome).trim() !== '') {
+    return usuarioPodeCancelarBaixarMtr(nome, email)
+  }
+  return false
 }
 
 /** Cancelar / baixar MTR, frete em cancelamento e rateio (Time T, Faturamento, Financeiro, admin). */

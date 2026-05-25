@@ -1,6 +1,5 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
 import {
-  cargoEhDesenvolvedor,
   cargoEhOperacionalTimeT,
   cargoTemAutoridadeMaximaSistema,
 } from './workflowPermissions'
@@ -17,6 +16,7 @@ export const ROTA_BEM_VINDO = '/bem-vindo'
 export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/clientes', label: 'Clientes' },
+  { path: '/clientes/gerenciador', label: 'Gerenciador (Clientes)' },
   { path: '/motoristas', label: 'Motoristas' },
   { path: '/representantes-rg', label: 'Representante RG' },
   { path: '/caminhoes', label: 'Veículos' },
@@ -77,6 +77,7 @@ export function emailPodeDefinirPaginasPorUsuario(email: string | null | undefin
 export type UsuarioComPaginas = {
   email?: string | null
   cargo?: string | null
+  nome?: string | null
   paginas_permitidas?: string[] | null
 }
 
@@ -140,8 +141,13 @@ const PREFIXOS_ROTA_PARA_CARGO = Object.keys(CARGOS_POR_PREFIXO_ROTA).sort(
  * Indica se o cargo pode aceder à rota segundo as regras do `App` (menu e CTAs).
  * Prefixo mais longo ganha (ex.: `/financeiro/contas-receber` antes de `/financeiro`).
  */
-export function cargoPodeAcessarRotaMenu(cargo: string | null | undefined, pathname: string): boolean {
-  if (cargoTemAutoridadeMaximaSistema(cargo)) return true
+export function cargoPodeAcessarRotaMenu(
+  cargo: string | null | undefined,
+  pathname: string,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (cargoTemAutoridadeMaximaSistema(cargo, nome, email)) return true
   const path = normalizarPath(pathname)
   if (cargoEhOperacionalTimeT(cargo)) {
     if (path === '/usuarios' || path.startsWith('/usuarios/')) return false
@@ -190,9 +196,11 @@ export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: str
   const bem = normalizarPath(ROTA_BEM_VINDO)
   if (path === bem || path.startsWith(`${bem}/`)) return true
 
-  if (cargoTemAutoridadeMaximaSistema(usuario.cargo)) return true
+  if (cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)) return true
 
-  if (rotaUsuarios(path)) return cargoEhDesenvolvedor(usuario.cargo)
+  if (rotaUsuarios(path)) {
+    return cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)
+  }
 
   const em = (usuario.email || '').trim().toLowerCase()
   if (EMAILS_BYPASS_PAGINAS.has(em)) return true
@@ -219,7 +227,7 @@ export function primeiraRotaOperacionalPermitida(usuario: UsuarioComPaginas): st
   for (const { path } of ROTAS_SISTEMA) {
     if (
       usuarioPodeAcessarRota(usuario, path) &&
-      cargoPodeAcessarRotaMenu(usuario.cargo, path)
+      cargoPodeAcessarRotaMenu(usuario.cargo, path, usuario.nome, usuario.email)
     ) {
       return path
     }

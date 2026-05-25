@@ -18,7 +18,10 @@ const MIN_CHARS = 2
 const LIMIT_EACH = 8
 
 function podePesquisarNaRota(usuario: UsuarioComPaginas, path: string): boolean {
-  return usuarioPodeAcessarRota(usuario, path) && cargoPodeAcessarRotaMenu(usuario.cargo, path)
+  return (
+    usuarioPodeAcessarRota(usuario, path) &&
+    cargoPodeAcessarRotaMenu(usuario.cargo, path, usuario.nome, usuario.email)
+  )
 }
 
 /** Preferir o hub de pesagem; se o perfil só tiver a página de ticket, usa essa rota. */

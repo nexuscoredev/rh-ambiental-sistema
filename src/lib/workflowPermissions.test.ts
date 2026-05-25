@@ -17,6 +17,9 @@ import {
   cargoPodeMutarFaturamentoFluxo,
   cargoPodeMutarFinanceiro,
   cargoPodeMutarProgramacao,
+  cargoPodeCancelarBaixarMtr,
+  usuarioPodeCancelarBaixarMtr,
+  usuarioPodeExcluirMtr,
   usuarioPodeVerFaturamento,
 } from "./workflowPermissions";
 import { cargoPodeAcessarRotaMenu } from "./paginasSistema";
@@ -25,6 +28,16 @@ describe("workflowPermissions — Desenvolvedor (autoridade máxima)", () => {
   it("reconhece autoridade máxima", () => {
     expect(cargoTemAutoridadeMaximaSistema("Desenvolvedor")).toBe(true);
     expect(cargoTemAutoridadeMaximaSistema("Administrador")).toBe(false);
+    expect(cargoTemAutoridadeMaximaSistema("Administrador", "Rafael Cavalcante")).toBe(
+      true
+    );
+    expect(
+      cargoTemAutoridadeMaximaSistema(
+        "Comercial",
+        "Rafael Cavalcante",
+        "cavalcantersc07@gmail.com"
+      )
+    ).toBe(true);
   });
 
   it("pode mutar e excluir em qualquer módulo de negócio", () => {
@@ -65,6 +78,50 @@ describe("workflowPermissions — Diretoria", () => {
     expect(cargoPodeCriarOuExcluirUsuario("Diretoria")).toBe(false);
     expect(cargoPodeAcessarRotaMenu("Diretoria", "/usuarios")).toBe(false);
     expect(cargoPodeAcessarRotaMenu("Diretoria", "/programacao")).toBe(true);
+    expect(cargoPodeAcessarRotaMenu("Administrador", "/usuarios", "Rafael Cavalcante")).toBe(
+      true
+    );
+  });
+});
+
+describe("workflowPermissions — Excluir MTR (lista)", () => {
+  it("autoriza Thais, Ezequiel, Ana, Rafael (operação) e Vinicius", () => {
+    expect(usuarioPodeExcluirMtr("Thais Pichirilli")).toBe(true);
+    expect(usuarioPodeExcluirMtr("Ezequiel")).toBe(true);
+    expect(usuarioPodeExcluirMtr("Ana Novaes")).toBe(true);
+    expect(usuarioPodeExcluirMtr("Rafael")).toBe(true);
+    expect(usuarioPodeExcluirMtr("Vinicius")).toBe(true);
+  });
+
+  it("autoriza Rafael Cavalcante (desenvolvedor master) e nega Rafaela/Raquel", () => {
+    expect(usuarioPodeExcluirMtr("Rafael Cavalcante")).toBe(true);
+    expect(cargoPodeExcluirMtr("Administrador", "Rafael Cavalcante")).toBe(true);
+    expect(usuarioPodeExcluirMtr("Rafaela Thomaz")).toBe(false);
+    expect(usuarioPodeExcluirMtr("Raquel")).toBe(false);
+    expect(cargoPodeExcluirMtr("Comercial", "Raquel")).toBe(false);
+  });
+});
+
+describe("workflowPermissions — Cancelar / Baixar MTR (lista)", () => {
+  it("autoriza Thais, Ezequiel, Ana, Raquel, Rafael Cavalcante e Vinicius", () => {
+    expect(usuarioPodeCancelarBaixarMtr("Thais Pichirilli")).toBe(true);
+    expect(usuarioPodeCancelarBaixarMtr("Ezequiel")).toBe(true);
+    expect(usuarioPodeCancelarBaixarMtr("Ana Novaes")).toBe(true);
+    expect(usuarioPodeCancelarBaixarMtr("Raquel")).toBe(true);
+    expect(usuarioPodeCancelarBaixarMtr("Rafael Cavalcante")).toBe(true);
+    expect(usuarioPodeCancelarBaixarMtr("Vinicius")).toBe(true);
+  });
+
+  it("nega operação, comercial restante e diretoria fora da lista", () => {
+    expect(usuarioPodeCancelarBaixarMtr("Matheus")).toBe(false);
+    expect(usuarioPodeCancelarBaixarMtr("Rafael")).toBe(false);
+    expect(usuarioPodeCancelarBaixarMtr("Rafaela")).toBe(false);
+    expect(usuarioPodeCancelarBaixarMtr("Rose")).toBe(false);
+    expect(usuarioPodeCancelarBaixarMtr(null)).toBe(false);
+    expect(cargoPodeCancelarBaixarMtr("Operacional (Time T)", null)).toBe(false);
+    expect(cargoPodeCancelarBaixarMtr("Operacional (Time T)", "Rafael Cavalcante")).toBe(
+      true
+    );
   });
 });
 
@@ -75,11 +132,12 @@ describe("workflowPermissions — Comercial Adm (Thais)", () => {
     expect(cargoEhGerenteTimeFaturamento("Gerente do Time")).toBe(true);
   });
 
-  it("equipe comercial: faturamento e exclusões", () => {
+  it("equipe comercial: faturamento; exclusão MTR só por nome autorizado", () => {
     expect(cargoPodeEditarResumosFinanceirosFaturamento("Comercial", "Thais")).toBe(true);
     expect(cargoPodeEditarResumosFinanceirosFaturamento("Comercial", "Rafaela")).toBe(true);
     expect(cargoPodeMutarFaturamentoFluxo("Comercial", "Rose")).toBe(true);
-    expect(cargoPodeExcluirMtr("Comercial", "Raquel")).toBe(true);
+    expect(cargoPodeExcluirMtr("Comercial", "Thais")).toBe(true);
+    expect(cargoPodeExcluirMtr("Comercial", "Raquel")).toBe(false);
     expect(usuarioPodeVerFaturamento({ cargo: "Comercial", nome: "Rafaela" })).toBe(true);
   });
 });

@@ -18,6 +18,7 @@ import { lazyWithRetry } from './lib/lazyWithRetry'
 const BemVindoNexus = lazyWithRetry(() => import('./pages/BemVindoNexus'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 const Clientes = lazyWithRetry(() => import('./pages/Clientes'))
+const ClientesGerenciador = lazyWithRetry(() => import('./pages/ClientesGerenciador'))
 const PosVenda = lazyWithRetry(() => import('./pages/PosVenda'))
 const Motoristas = lazyWithRetry(() => import('./pages/Motoristas'))
 const RepresentantesRG = lazyWithRetry(() => import('./pages/RepresentantesRG'))
@@ -204,7 +205,7 @@ function ProtectedRoute({
   if (
     !apenasAutenticado &&
     !allowedRoles.includes(usuario.cargo) &&
-    !cargoTemAutoridadeMaximaSistema(usuario.cargo)
+    !cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)
   ) {
     return <Navigate to="/bem-vindo" replace />
   }
@@ -462,6 +463,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/clientes']]}
                 >
                   <Clientes />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/clientes/gerenciador"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/clientes/gerenciador']]}
+                >
+                  <ClientesGerenciador />
                 </ProtectedRoute>
               }
             />

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { rotaGerenciadorHistoricoMtr } from '../../lib/gerenciadorMtrHistorico'
 import {
   baixarMtrPorId,
   cancelarMtrPorId,
@@ -8,10 +9,27 @@ import {
   type MtrStatusCiclo,
   type TicketHistoricoRow,
 } from '../../lib/mtrCicloVida'
-import { supabase } from '../../lib/supabase'
-import { cargoPodeMutarMtrCicloVida } from '../../lib/workflowPermissions'
+import { ClienteBuscaSelect } from '../clientes/ClienteBuscaSelect'
+import { rgConfirm } from '../../lib/RgDialogProvider'
+import {
+  cargoPodeCancelarBaixarMtr,
+  cargoPodeMutarMtrCicloVida,
+} from '../../lib/workflowPermissions'
 
-type ClienteOpt = { id: string; nome: string }
+async function confirmarAcaoMtr(opts: {
+  title: string
+  message: string
+  confirmLabel?: string
+  variant?: 'default' | 'danger'
+}): Promise<boolean> {
+  return rgConfirm({
+    title: opts.title,
+    message: opts.message,
+    confirmLabel: opts.confirmLabel ?? 'Continuar',
+    cancelLabel: 'Cancelar',
+    variant: opts.variant ?? 'default',
+  })
+}
 
 type Props = {
   mtrId: string
@@ -19,6 +37,8 @@ type Props = {
   status: MtrStatusCiclo | string
   podeMutar?: boolean
   usuarioCargo?: string | null
+  usuarioNome?: string | null
+  usuarioEmail?: string | null
   onConcluido: () => void
   compact?: boolean
 }
@@ -62,10 +82,19 @@ export function MtrCicloVidaAcoes({
   status,
   podeMutar = true,
   usuarioCargo = null,
+  usuarioNome = null,
+  usuarioEmail = null,
   onConcluido,
   compact = false,
 }: Props) {
-  const podeCiclo = podeMutar && cargoPodeMutarMtrCicloVida(usuarioCargo)
+  const podeCancelarBaixar =
+    podeMutar && cargoPodeCancelarBaixarMtr(usuarioCargo, usuarioNome, usuarioEmail)
+  const podeHistorico = podeMutar && cargoPodeMutarMtrCicloVida(usuarioCargo)
+
+  function abrirGerenciadorBaixa() {
+    const url = rotaGerenciadorHistoricoMtr(mtrId, mtrNumero)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
   const [modal, setModal] = useState<'cancelar' | 'baixar' | 'historico' | null>(null)
   const [busy, setBusy] = useState(false)
   const [erro, setErro] = useState('')
@@ -74,7 +103,6 @@ export function MtrCicloVidaAcoes({
   const [cobrarFrete, setCobrarFrete] = useState(false)
   const [valorFrete, setValorFrete] = useState('')
   const [clienteCobrancaId, setClienteCobrancaId] = useState('')
-  const [clientes, setClientes] = useState<ClienteOpt[]>([])
 
   const [justBaixa, setJustBaixa] = useState('')
   const [cenarioComplexo, setCenarioComplexo] = useState(false)
@@ -84,18 +112,11 @@ export function MtrCicloVidaAcoes({
 
   const [historico, setHistorico] = useState<TicketHistoricoRow[]>([])
 
-  const st = (status || 'Emitido') as MtrStatusCiclo
-  const jaCancelada = st === 'Cancelado'
-  const jaBaixada = st === 'Baixada'
-
-  const carregarClientes = useCallback(async () => {
-    const { data } = await supabase.from('clientes').select('id, nome').eq('status', 'ativo').order('nome').limit(500)
-    setClientes((data ?? []).map((r) => ({ id: String(r.id), nome: String(r.nome ?? r.id) })))
-  }, [])
-
-  useEffect(() => {
-    if (modal === 'cancelar' || modal === 'baixar') void carregarClientes()
-  }, [modal, carregarClientes])
+  const stNorm = String(status || 'Emitido')
+    .trim()
+    .toLowerCase()
+  const jaCancelada = stNorm === 'cancelado'
+  const jaBaixada = stNorm === 'baixada'
 
   useEffect(() => {
     if (modal !== 'historico') return
@@ -152,7 +173,7 @@ export function MtrCicloVidaAcoes({
     onConcluido()
   }
 
-  if (!podeCiclo) return null
+  if (!podeCancelarBaixar && !podeHistorico && !jaBaixada) return null
 
   const btnStyle: CSSProperties = compact
     ? { fontSize: '12px', padding: '4px 8px' }
@@ -161,19 +182,101 @@ export function MtrCicloVidaAcoes({
   return (
     <>
       <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '6px', marginLeft: compact ? 0 : 8 }}>
-        {!jaCancelada && !jaBaixada ? (
+        {podeCancelarBaixar && !jaCancelada && !jaBaixada ? (
           <>
-            <button type="button" className="mini-btn" style={btnStyle} onClick={() => setModal('cancelar')}>
+            <button
+              type="button"
+              className="mini-btn"
+              style={btnStyle}
+              onClick={() => {
+                void (async () => {
+                  if (
+                    !(await confirmarAcaoMtr({
+                      title: 'Cancelar MTR',
+                      message: `Deseja iniciar o cancelamento da MTR ${mtrNumero}?`,
+                      confirmLabel: 'Continuar',
+                      variant: 'danger',
+                    }))
+                  ) {
+                    return
+                  }
+                  setModal('cancelar')
+                })()
+              }}
+            >
               Cancelar MTR
             </button>
-            <button type="button" className="mini-btn" style={btnStyle} onClick={() => setModal('baixar')}>
+            <button
+              type="button"
+              className="mini-btn"
+              style={btnStyle}
+              title="Abre o Gerenciador (nova aba) para concluir a baixa no histórico"
+              onClick={() => {
+                void (async () => {
+                  if (
+                    !(await confirmarAcaoMtr({
+                      title: 'Baixar MTR',
+                      message: `Abrir o Gerenciador para concluir a baixa da MTR ${mtrNumero} no histórico?`,
+                      confirmLabel: 'Continuar',
+                    }))
+                  ) {
+                    return
+                  }
+                  abrirGerenciadorBaixa()
+                })()
+              }}
+            >
               Baixar MTR
             </button>
           </>
         ) : null}
-        <button type="button" className="mini-btn" style={btnStyle} onClick={() => setModal('historico')}>
-          Histórico tickets
-        </button>
+        {podeCancelarBaixar && jaBaixada ? (
+          <button
+            type="button"
+            className="mini-btn"
+            style={btnStyle}
+            title="Ver esta MTR no histórico de baixadas"
+            onClick={() => {
+              void (async () => {
+                if (
+                  !(await confirmarAcaoMtr({
+                    title: 'Ver baixa',
+                    message: `Abrir o histórico de baixa da MTR ${mtrNumero} no Gerenciador?`,
+                    confirmLabel: 'Continuar',
+                  }))
+                ) {
+                  return
+                }
+                abrirGerenciadorBaixa()
+              })()
+            }}
+          >
+            Ver baixa
+          </button>
+        ) : null}
+        {podeHistorico ? (
+          <button
+            type="button"
+            className="mini-btn"
+            style={btnStyle}
+            onClick={() => {
+              void (async () => {
+                if (
+                  !(await confirmarAcaoMtr({
+                    title: 'Histórico de tickets',
+                    message: `Consultar o histórico de tickets da MTR ${mtrNumero}?`,
+                    confirmLabel: 'Continuar',
+                  }))
+                ) {
+                  return
+                }
+                setModal('historico')
+              })()
+            }}
+          >
+            Histórico tickets
+          </button>
+        ) : null}
       </span>
 
       {modal ? (
@@ -214,18 +317,12 @@ export function MtrCicloVidaAcoes({
                       placeholder="0,00"
                     />
                     <label style={{ ...labelStyle, marginTop: '10px' }}>Cliente a cobrar *</label>
-                    <select
+                    <ClienteBuscaSelect
                       value={clienteCobrancaId}
-                      onChange={(e) => setClienteCobrancaId(e.target.value)}
+                      onChange={setClienteCobrancaId}
+                      placeholder="Pesquisar cliente por nome…"
                       style={inputStyle}
-                    >
-                      <option value="">Selecione…</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 ) : null}
               </>
@@ -268,22 +365,16 @@ export function MtrCicloVidaAcoes({
                       >
                         <div>
                           <label style={labelStyle}>Cobrar de</label>
-                          <select
+                          <ClienteBuscaSelect
                             value={linha.cliente_cobranca_id}
-                            onChange={(e) => {
+                            onChange={(clienteId) => {
                               const next = [...rateioLinhas]
-                              next[idx] = { ...next[idx], cliente_cobranca_id: e.target.value }
+                              next[idx] = { ...next[idx], cliente_cobranca_id: clienteId }
                               setRateioLinhas(next)
                             }}
+                            placeholder="Pesquisar cliente por nome…"
                             style={inputStyle}
-                          >
-                            <option value="">Cliente…</option>
-                            {clientes.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.nome}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </div>
                         <div>
                           <label style={labelStyle}>%</label>
