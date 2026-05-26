@@ -9,6 +9,9 @@ import type { PostgrestError } from '@supabase/supabase-js'
 
 const BUCKET = 'chat-anexos'
 
+/** Marcador em `conteudo` quando a mensagem é uma figurinha (anexo imagem). */
+export const CHAT_FIGURINHA_CONTEUDO = '[figurinha]'
+
 /** RPC inexistente no PostgREST (migração não aplicada) ou 404. */
 function chatRpcIndisponivel(err: PostgrestError | null): boolean {
   if (!err) return false

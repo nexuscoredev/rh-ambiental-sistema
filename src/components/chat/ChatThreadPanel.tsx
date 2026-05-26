@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ChatAvatar } from './ChatAvatar'
+import { ChatComposerPicker } from './ChatComposerPicker'
 import { chatUrlAssinadaAnexo } from '../../lib/chat'
+import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatStickers'
+import { chatMensagemEhPedidoAjuste } from '../../lib/chatPedidoAjuste'
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
 import type { ChatMensagem } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
@@ -14,10 +17,17 @@ type Props = {
   enviando: boolean
   /** Só Desenvolvedor: menu com exclusão de histórico. */
   podeApagarHistorico?: boolean
+  /** Só Desenvolvedor: adicionar figurinhas ao catálogo. */
+  podeGerirFigurinhas?: boolean
   apagandoHistorico?: boolean
   onApagarHistorico?: () => void
   onEnviarTexto: (texto: string) => Promise<void>
   onEnviarFicheiro: (f: File, legenda: string) => Promise<void>
+  onEnviarFigurinha: (sticker: ChatSticker) => Promise<void>
+  /** Desenvolvedor: marcar pedidos de ajuste como resolvidos. */
+  podeMarcarPedidoAjuste?: boolean
+  pedidosAjusteResolvidos?: Set<string>
+  onMarcarPedidoAjusteResolvido?: (mensagemId: string) => Promise<void>
 }
 
 export function ChatThreadPanel({
@@ -28,13 +38,19 @@ export function ChatThreadPanel({
   mensagens,
   enviando,
   podeApagarHistorico = false,
+  podeGerirFigurinhas = false,
   apagandoHistorico = false,
   onApagarHistorico,
   onEnviarTexto,
   onEnviarFicheiro,
+  onEnviarFigurinha,
+  podeMarcarPedidoAjuste = false,
+  pedidosAjusteResolvidos,
+  onMarcarPedidoAjusteResolvido,
 }: Props) {
   const [texto, setTexto] = useState('')
   const [menuMaisAberto, setMenuMaisAberto] = useState(false)
+  const [pickerAberto, setPickerAberto] = useState(false)
   const fRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -93,6 +109,33 @@ export function ChatThreadPanel({
       await onEnviarTexto(t)
     } catch {
       setTexto(t)
+    } finally {
+      focarComposer()
+    }
+  }
+
+  function inserirEmoji(emoji: string) {
+    setTexto((prev) => {
+      const el = textareaRef.current
+      if (!el) return prev + emoji
+      const start = el.selectionStart ?? prev.length
+      const end = el.selectionEnd ?? prev.length
+      return prev.slice(0, start) + emoji + prev.slice(end)
+    })
+    focarComposer()
+  }
+
+  async function enviarFigurinha(sticker: ChatSticker) {
+    if (enviando) return
+    try {
+      await onEnviarFigurinha(sticker)
+    } catch (err) {
+      console.error(err)
+      void rgAlert({
+        title: 'Figurinha',
+        message: 'Não foi possível enviar a figurinha.',
+        variant: 'danger',
+      })
     } finally {
       focarComposer()
     }
@@ -162,12 +205,27 @@ export function ChatThreadPanel({
           <div className="chat-interno-muted chat-interno-thread__empty">Sem mensagens. Escreva abaixo.</div>
         ) : (
           mensagens.map((m) => (
-            <MensagemBolha key={m.id} m={m} meuId={meuId} />
+            <MensagemBolha
+              key={m.id}
+              m={m}
+              meuId={meuId}
+              podeMarcarPedidoAjuste={podeMarcarPedidoAjuste}
+              pedidoResolvido={pedidosAjusteResolvidos?.has(m.id) ?? false}
+              enviando={enviando}
+              onMarcarResolvido={onMarcarPedidoAjusteResolvido}
+            />
           ))
         )}
       </div>
 
       <form className="chat-interno-composer" onSubmit={onSubmit}>
+        <ChatComposerPicker
+          open={pickerAberto}
+          onClose={() => setPickerAberto(false)}
+          podeGerirFigurinhas={podeGerirFigurinhas}
+          onEmojiSelect={inserirEmoji}
+          onStickerSelect={(s) => void enviarFigurinha(s)}
+        />
         <input
           ref={fRef}
           type="file"
@@ -200,6 +258,22 @@ export function ChatThreadPanel({
             }
           }}
         />
+        <button
+          type="button"
+          className="chat-interno-icon-btn"
+          title="Emoji e figurinhas"
+          aria-label="Emoji e figurinhas"
+          aria-expanded={pickerAberto}
+          disabled={enviando}
+          onClick={() => setPickerAberto((v) => !v)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+            <path
+              fill="currentColor"
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-4-6c.83 0 1.5-.67 1.5-1.5S8.83 11 8 11s-1.5.67-1.5 1.5S7.17 14 8 14zm8 0c.83 0 1.5-.67 1.5-1.5S16.83 11 16 11s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zm-4 4.5c2.33 0 4.32-1.45 5.12-3.5H6.88c.8 2.05 2.79 3.5 5.12 3.5z"
+            />
+          </svg>
+        </button>
         <button
           type="button"
           className="chat-interno-icon-btn"
@@ -239,10 +313,41 @@ export function ChatThreadPanel({
   )
 }
 
-function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
+function MensagemBolha({
+  m,
+  meuId,
+  podeMarcarPedidoAjuste,
+  pedidoResolvido,
+  enviando,
+  onMarcarResolvido,
+}: {
+  m: ChatMensagem
+  meuId: string
+  podeMarcarPedidoAjuste: boolean
+  pedidoResolvido: boolean
+  enviando: boolean
+  onMarcarResolvido?: (mensagemId: string) => Promise<void>
+}) {
   const meu = m.remetente_id === meuId
+  const [marcandoResolvido, setMarcandoResolvido] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
+  const ehPedidoAjuste = chatMensagemEhPedidoAjuste(m)
+  const mostrarMarcarResolvido =
+    podeMarcarPedidoAjuste && !meu && ehPedidoAjuste && onMarcarResolvido
   const temAnexo = !!(m.anexo_path && m.anexo_nome)
+  const ehFigurinha = chatMensagemEhFigurinha(m)
+  const ehImagemAnexo = temAnexo && !ehFigurinha && !!m.anexo_mime?.startsWith('image/')
+
+  useEffect(() => {
+    if (!m.anexo_path || (!ehFigurinha && !ehImagemAnexo)) return
+    let cancel = false
+    void chatUrlAssinadaAnexo(m.anexo_path).then((u) => {
+      if (!cancel) setUrl(u)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [m.anexo_path, ehFigurinha, ehImagemAnexo])
 
   async function abrir() {
     if (!m.anexo_path) return
@@ -258,14 +363,47 @@ function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
 
   const mostrarTexto = !!(
     m.conteudo &&
-    (!temAnexo || m.conteudo.trim() !== 'Anexo enviado')
+    (!temAnexo || (m.conteudo.trim() !== 'Anexo enviado' && !ehFigurinha))
   )
+
+  async function marcarComoResolvido() {
+    if (!onMarcarResolvido || marcandoResolvido || pedidoResolvido) return
+    setMarcandoResolvido(true)
+    try {
+      await onMarcarResolvido(m.id)
+    } catch (e) {
+      void rgAlert({
+        title: 'Pedido de ajuste',
+        message: e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.',
+        variant: 'warning',
+      })
+    } finally {
+      setMarcandoResolvido(false)
+    }
+  }
 
   return (
     <div className={meu ? 'chat-interno-bubble-wrap chat-interno-bubble-wrap--meu' : 'chat-interno-bubble-wrap'}>
-      <div className={meu ? 'chat-interno-bubble chat-interno-bubble--meu' : 'chat-interno-bubble'}>
+      <div
+        className={
+          meu
+            ? 'chat-interno-bubble chat-interno-bubble--meu'
+            : `chat-interno-bubble${ehPedidoAjuste ? ' chat-interno-bubble--pedido-ajuste' : ''}${pedidoResolvido ? ' chat-interno-bubble--pedido-ajuste-resolvido' : ''}`
+        }
+      >
+        {ehPedidoAjuste ? (
+          <div className="chat-interno-pedido-ajuste__badge" aria-hidden>
+            {pedidoResolvido ? 'Resolvido' : 'Pedido de ajuste'}
+          </div>
+        ) : null}
         {mostrarTexto ? <p className="chat-interno-bubble__text">{m.conteudo}</p> : null}
-        {temAnexo ? (
+        {ehFigurinha && url ? (
+          <img src={url} alt="Figurinha" className="chat-interno-figurinha" loading="lazy" />
+        ) : ehImagemAnexo && url ? (
+          <button type="button" className="chat-interno-imagem-anexo" onClick={() => void abrir()}>
+            <img src={url} alt={m.anexo_nome || 'Imagem'} className="chat-interno-imagem-anexo__img" loading="lazy" />
+          </button>
+        ) : temAnexo ? (
           <button type="button" className="chat-interno-anexo" onClick={() => void abrir()}>
             <span className="chat-interno-anexo__icon" aria-hidden>
               📎
@@ -278,6 +416,24 @@ function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
             ) : null}
             {url ? <span className="chat-interno-anexo__hint">Aberto num novo separador</span> : null}
           </button>
+        ) : null}
+        {mostrarMarcarResolvido ? (
+          <div className="chat-interno-pedido-ajuste__acoes">
+            {pedidoResolvido ? (
+              <span className="chat-interno-pedido-ajuste__ok" aria-live="polite">
+                ✓ Resolvido — resposta enviada
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="chat-interno-pedido-ajuste__btn"
+                disabled={marcandoResolvido || enviando}
+                onClick={() => void marcarComoResolvido()}
+              >
+                {marcandoResolvido ? 'A enviar resposta…' : '✓ Marcar como resolvido'}
+              </button>
+            )}
+          </div>
         ) : null}
         <time className="chat-interno-bubble__time" dateTime={m.created_at}>
           {hora}

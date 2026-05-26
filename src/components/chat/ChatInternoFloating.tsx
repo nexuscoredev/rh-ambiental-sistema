@@ -12,6 +12,11 @@ import {
   chatListarUsuariosAtivos,
   chatMarcarLida,
 } from '../../lib/chat'
+import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
+import {
+  chatListarPedidosAjusteResolvidos,
+  chatMarcarPedidoAjusteResolvido,
+} from '../../lib/chatPedidoAjuste'
 import { cargoPodeApagarHistoricoChat } from '../../lib/workflowPermissions'
 import { usePerfilUsuario } from '../../contexts/PerfilUsuarioContext'
 import { normalizarPresencaStatus } from '../../lib/presencaStatus'
@@ -122,6 +127,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const [conversaId, setConversaId] = useState<string | null>(null)
   const [outroIdPainel, setOutroIdPainel] = useState<string | null>(null)
   const [mensagens, setMensagens] = useState<ChatMensagem[]>([])
+  const [pedidosAjusteResolvidos, setPedidosAjusteResolvidos] = useState<Set<string>>(() => new Set())
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
   const [abrindoComPessoa, setAbrindoComPessoa] = useState(false)
@@ -468,15 +474,24 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     channelThreadRef.current = null
 
     if (!conversaId || !open) {
-      queueMicrotask(() => setMensagens([]))
+      queueMicrotask(() => {
+        setMensagens([])
+        setPedidosAjusteResolvidos(new Set())
+      })
       return
     }
 
     let cancel = false
     void (async () => {
       try {
-        const list = await chatCarregarMensagens(conversaId)
-        if (!cancel) setMensagens(list)
+        const [list, resolvidos] = await Promise.all([
+          chatCarregarMensagens(conversaId),
+          chatListarPedidosAjusteResolvidos(conversaId),
+        ])
+        if (!cancel) {
+          setMensagens(list)
+          setPedidosAjusteResolvidos(resolvidos)
+        }
         const uid = meuIdRef.current
         if (uid) await chatMarcarLida(conversaId, uid)
         if (!cancel) void recarregarConversas()
@@ -603,6 +618,42 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       await recarregarConversas()
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao enviar anexo.')
+      throw e
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const handleMarcarPedidoAjusteResolvido = useCallback(
+    async (mensagemPedidoId: string) => {
+      if (!conversaId || !meuId || !podeApagarHistoricoChat) return
+      setEnviando(true)
+      setErro('')
+      try {
+        const resposta = await chatMarcarPedidoAjusteResolvido(conversaId, mensagemPedidoId, meuId)
+        setPedidosAjusteResolvidos((prev) => new Set(prev).add(mensagemPedidoId))
+        setMensagens((prev) => (prev.some((p) => p.id === resposta.id) ? prev : [...prev, resposta]))
+        await recarregarConversas()
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.')
+        throw e
+      } finally {
+        setEnviando(false)
+      }
+    },
+    [conversaId, meuId, podeApagarHistoricoChat, recarregarConversas]
+  )
+
+  async function handleEnviarFigurinha(sticker: ChatSticker) {
+    if (!conversaId || !meuId) return
+    setEnviando(true)
+    setErro('')
+    try {
+      const m = await chatEnviarFigurinha(conversaId, meuId, sticker)
+      setMensagens((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]))
+      await recarregarConversas()
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao enviar figurinha.')
       throw e
     } finally {
       setEnviando(false)
@@ -776,10 +827,15 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   mensagens={mensagens}
                   enviando={enviando || apagandoHistorico}
                   podeApagarHistorico={podeApagarHistoricoChat}
+                  podeGerirFigurinhas={podeApagarHistoricoChat}
                   apagandoHistorico={apagandoHistorico}
                   onApagarHistorico={() => void handleApagarHistoricoConversa()}
                   onEnviarTexto={handleEnviarTexto}
                   onEnviarFicheiro={handleEnviarFicheiro}
+                  onEnviarFigurinha={handleEnviarFigurinha}
+                  podeMarcarPedidoAjuste={podeApagarHistoricoChat}
+                  pedidosAjusteResolvidos={pedidosAjusteResolvidos}
+                  onMarcarPedidoAjusteResolvido={handleMarcarPedidoAjusteResolvido}
                 />
               ) : (
                 <div className="chat-interno-empty-main">

@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.93",
+  "version": "1.2.94",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -41,6 +41,8 @@
     "db:apply:faturamento-registros-rls": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_faturamento_registros_rls_operacional.sql",
     "db:apply:clientes-contrato": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql",
     "db:apply:excluir-mtr-cascata": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260520140000_excluir_mtr_coleta_cascata.sql",
+    "db:apply:chat-stickers": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260526140000_chat_stickers.sql",
+    "db:apply:chat-pedido-ajuste-resolvido": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260526160000_chat_pedido_ajuste_resolvido.sql",
     "db:apply:usuarios-perfil-login": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260622120000_usuarios_select_own_rpc_perfil.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
@@ -65,6 +67,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
     "@svg-country-maps/brazil": "^1.0.3",
+    "emoji-picker-element": "^1.29.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",

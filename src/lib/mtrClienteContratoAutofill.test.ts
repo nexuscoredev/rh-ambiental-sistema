@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizarResiduoContratoParaKg } from './clienteContratoCadastro'
 import {
   dividirTextoMultiResiduo,
+  expandirLinhasPesagemComContrato,
   expandirListaResiduosMtrParaContrato,
   listaResiduosParaDocumentoMtr,
   parseContratoClienteMtr,
@@ -47,6 +48,30 @@ describe('mtrClienteContratoAutofill', () => {
     })
     expect(c.residuos).toHaveLength(1)
     expect(residuosContratoParaListaDetalhesMtr(c.residuos, '')[0].caracterizacao).toBe('Classe I')
+  })
+
+  it('expandirLinhasPesagemComContrato abre linhas e preserva pesos da linha correspondente', () => {
+    const contrato = parseContratoClienteMtr({
+      residuos_contrato: [
+        { tipo_residuo: 'Resíduos sólidos contaminado', classificacao: 'Classe I', unidade_medida: 'kg' },
+        { tipo_residuo: 'Óleo usado', classificacao: 'Classe I', unidade_medida: 'kg' },
+      ],
+    }).residuos
+    const expandida = expandirLinhasPesagemComContrato(
+      [
+        {
+          catalogo_id: '',
+          texto: 'Resíduos sólidos contaminado — Classe I',
+          peso_tara: '100',
+          peso_bruto: '500',
+          peso_liquido: '400',
+        },
+      ],
+      contrato
+    )
+    expect(expandida).toHaveLength(2)
+    expect(expandida[0]?.peso_liquido).toBe('400')
+    expect(expandida[1]?.texto).toContain('Óleo')
   })
 
   it('expandirListaResiduosMtrParaContrato abre linhas conforme cadastro do cliente', () => {

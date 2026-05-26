@@ -18,8 +18,10 @@ import {
 } from './clienteContratoCadastro'
 import { resolverClienteIdProgramacaoMtr } from './mtrCadastroClienteAutofill'
 import type { ProgramacaoMtrRow } from './mtrProgramacoesFetch'
+import { sanitizeIlikePattern } from './sanitizeIlike'
 import {
   linhaVaziaResiduoPesagem,
+  linhasComConteudo,
   SEPARADOR_RESIDUOS_TEXTO,
   type ResiduoPesagemItem,
 } from './residuosPesagem'
@@ -102,6 +104,108 @@ export function residuosContratoParaLinhasPesagem(residuos: ResiduoContratoItem[
     ...linhaVaziaResiduoPesagem(),
     texto: rotuloResiduoContrato(r),
   }))
+}
+
+function normalizarChaveResiduoTexto(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function linhasPesagemTextoCoincide(a: string, b: string): boolean {
+  const na = normalizarChaveResiduoTexto(a)
+  const nb = normalizarChaveResiduoTexto(b)
+  if (!na || !nb) return false
+  return na === nb || na.includes(nb) || nb.includes(na)
+}
+
+/**
+ * Abre uma linha de pesagem por resíduo do contrato do cliente, preservando pesos já lançados.
+ */
+export function expandirLinhasPesagemComContrato(
+  linhasAtuais: ResiduoPesagemItem[],
+  residuosContrato: ResiduoContratoItem[]
+): ResiduoPesagemItem[] {
+  const modelo = residuosContratoParaLinhasPesagem(residuosContrato)
+  const modeloCom = linhasComConteudo(modelo)
+  if (modeloCom.length === 0) {
+    return linhasAtuais.length > 0 ? linhasAtuais : [linhaVaziaResiduoPesagem()]
+  }
+
+  const atuais = linhasComConteudo(linhasAtuais)
+
+  if (modeloCom.length === 1) {
+    const mod = modeloCom[0]!
+    const match = atuais[0]
+    if (!match) return modeloCom
+    return [
+      {
+        ...mod,
+        texto: match.texto.trim() ? match.texto : mod.texto,
+        peso_tara: match.peso_tara,
+        peso_bruto: match.peso_bruto,
+        peso_liquido: match.peso_liquido,
+      },
+    ]
+  }
+
+  return modeloCom.map((mod, i) => {
+    const match =
+      atuais.find((a) => linhasPesagemTextoCoincide(a.texto, mod.texto)) ?? atuais[i]
+    if (!match) return mod
+    return {
+      ...mod,
+      texto: match.texto.trim() ? match.texto : mod.texto,
+      peso_tara: match.peso_tara,
+      peso_bruto: match.peso_bruto,
+      peso_liquido: match.peso_liquido,
+    }
+  })
+}
+
+/** Resolve contrato do cliente pelo nome da empresa (pesagem / ticket). */
+export async function fetchContratoClientePorNomeEmpresa(
+  client: SupabaseClient,
+  empresa: string
+): Promise<MtrContratoClienteSnapshot | null> {
+  const q = empresa.trim()
+  if (q.length < 2) return null
+
+  const s = sanitizeIlikePattern(q)
+  const resCompleto = await client
+    .from('clientes')
+    .select(MTR_SEL_CLIENTE_CONTRATO)
+    .or(`nome.ilike.%${s}%,razao_social.ilike.%${s}%`)
+    .limit(10)
+
+  let rows: ClienteRowContratoMtr[] | null = (resCompleto.data as ClienteRowContratoMtr[] | null) ?? null
+  let fetchError = resCompleto.error
+
+  if (fetchError && isMissingClienteContratoColumnsError(fetchError)) {
+    const resLegado = await client
+      .from('clientes')
+      .select(MTR_SEL_CLIENTE_CONTRATO_LEGADO)
+      .or(`nome.ilike.%${s}%,razao_social.ilike.%${s}%`)
+      .limit(10)
+    rows = (resLegado.data as ClienteRowContratoMtr[] | null) ?? null
+    fetchError = resLegado.error
+  }
+
+  if (fetchError || !rows?.length) return null
+
+  const norm = (x: string) => x.trim().toLowerCase()
+  const nq = norm(q)
+  const best =
+    rows.find((r) => norm(r.nome ?? '') === nq || norm(r.razao_social ?? '') === nq) ??
+    rows.find(
+      (r) =>
+        norm(r.nome ?? '').includes(nq) ||
+        norm(r.razao_social ?? '').includes(nq) ||
+        nq.includes(norm(r.nome ?? '')) ||
+        nq.includes(norm(r.razao_social ?? ''))
+    ) ??
+    rows[0]
+
+  if (!best) return null
+  return parseContratoClienteMtr(best)
 }
 
 export function residuoDetalhesVazio(): MtrResiduoDetalhesCampos {

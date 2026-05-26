@@ -1,4 +1,6 @@
 ﻿import { type CSSProperties } from "react";
+import type { ResiduoContratoItem } from "../../lib/clienteContratoCadastro";
+import { SelectTipoResiduoClienteContrato } from "../mtr/SelectTipoResiduoClienteContrato";
 import {
   agregarPesosDasLinhas,
   calcularPesoLiquidoLinha,
@@ -10,13 +12,18 @@ type Props = {
   linhas: ResiduoPesagemItem[];
   onLinhasChange: (linhas: ResiduoPesagemItem[]) => void;
   inputStyle: CSSProperties;
+  /** Resíduos cadastrados no contrato do cliente (dropdown por linha). */
+  residuosContrato?: ResiduoContratoItem[];
 };
 
 export function PesagemResiduosLista({
   linhas,
   onLinhasChange,
   inputStyle,
+  residuosContrato = [],
 }: Props) {
+  const temCatalogo = residuosContrato.length > 0;
+
   function atualizarLinha(index: number, patch: Partial<ResiduoPesagemItem>) {
     onLinhasChange(linhas.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
@@ -47,12 +54,18 @@ export function PesagemResiduosLista({
     onLinhasChange(linhas.filter((_, i) => i !== index));
   }
 
+  function adicionarLinha() {
+    onLinhasChange([...linhas, linhaVaziaResiduoPesagem()]);
+  }
+
   return (
     <div style={{ gridColumn: "span 12", display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Resíduos</div>
         <div style={{ marginTop: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-          Um ticket = um resíduo. Informe o tipo e os pesos (texto livre).
+          {temCatalogo
+            ? "Um ticket = um resíduo. Escolha o tipo do contrato do cliente ou adicione linhas para pesar cada resíduo."
+            : "Um ticket = um resíduo. Informe o tipo e os pesos (texto livre)."}
         </div>
       </div>
 
@@ -107,13 +120,22 @@ export function PesagemResiduosLista({
               <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
                 Tipo de resíduo
               </label>
-              <input
-                value={linha.texto}
-                onChange={(e) => onTextoChange(index, e.target.value)}
-                placeholder="Ex.: Mix de resíduos contaminados"
-                style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
-                aria-label={`Tipo de resíduo ${index + 1}`}
-              />
+              {temCatalogo ? (
+                <SelectTipoResiduoClienteContrato
+                  value={linha.texto}
+                  residuosContrato={residuosContrato}
+                  onChange={(valor) => onTextoChange(index, valor)}
+                  style={{ height: "44px", fontSize: "14px" }}
+                />
+              ) : (
+                <input
+                  value={linha.texto}
+                  onChange={(e) => onTextoChange(index, e.target.value)}
+                  placeholder="Ex.: Mix de resíduos contaminados"
+                  style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
+                  aria-label={`Tipo de resíduo ${index + 1}`}
+                />
+              )}
             </div>
 
             <div style={{ gridColumn: "span 4" }} className="field">
@@ -163,6 +185,15 @@ export function PesagemResiduosLista({
           </div>
         </div>
       ))}
+
+      <button
+        type="button"
+        className="rg-btn rg-btn--outline"
+        onClick={adicionarLinha}
+        style={{ alignSelf: "flex-start", fontSize: 13 }}
+      >
+        + Adicionar resíduo
+      </button>
 
       {totais.peso_liquido ? (
         <div

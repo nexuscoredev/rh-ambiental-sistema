@@ -60,12 +60,18 @@ import {
   resolverResiduosParaGravacao,
   type ResiduoPesagemItem,
 } from "../lib/residuosPesagem";
+import type { ResiduoContratoItem } from "../lib/clienteContratoCadastro";
 import {
   aplicarHerancaMtrEmCamposPesagem,
   buscarMtrHerancaPesagem,
   linhasResiduoHerancaOuColeta,
   type MtrHerancaPesagem,
 } from "../lib/mtrHerancaTicketPesagem";
+import {
+  expandirLinhasPesagemComContrato,
+  fetchContratoClientePorNomeEmpresa,
+  residuoContratoTemConteudo,
+} from "../lib/mtrClienteContratoAutofill";
 import {
   coletaCorrespondeResiduo,
   deveSegmentarTicketsPorMtr,
@@ -850,6 +856,7 @@ export default function ControleMassa() {
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null);
   const [usuarioNome, setUsuarioNome] = useState<string | null>(null);
   const [excluindoColetaId, setExcluindoColetaId] = useState<string | null>(null);
+  const [residuosContratoCliente, setResiduosContratoCliente] = useState<ResiduoContratoItem[]>([]);
 
   const controleMassaDraft = useMemo(
     () => ({
@@ -1493,6 +1500,42 @@ export default function ControleMassa() {
     }));
   }
 
+  async function aplicarContratoResiduosNaPesagem(empresa: string, coletaId: string, mtrId: string) {
+    const emp = empresa.trim();
+    if (emp.length < 2) {
+      setResiduosContratoCliente([]);
+      return;
+    }
+    const snap = await fetchContratoClientePorNomeEmpresa(supabase, emp);
+    ultimoEnriquecimentoKeyRef.current = `${coletaId}|${mtrId}|${emp}`;
+    if (!snap) {
+      setResiduosContratoCliente([]);
+      return;
+    }
+    setResiduosContratoCliente(snap.residuos);
+    if (snap.residuos.filter(residuoContratoTemConteudo).length <= 1) return;
+    setForm((prev) =>
+      mergeFormResiduosLinhas(
+        prev,
+        expandirLinhasPesagemComContrato(prev.residuos_linhas, snap.residuos)
+      )
+    );
+  }
+
+  useEffect(() => {
+    const emp = form.empresa.trim();
+    if (emp.length < 3) {
+      setResiduosContratoCliente([]);
+      return;
+    }
+    const key = `${form.coleta_id}|${mtrSemColetaSelecionado ?? ""}|${emp}`;
+    if (ultimoEnriquecimentoKeyRef.current === key) return;
+    const t = window.setTimeout(() => {
+      void aplicarContratoResiduosNaPesagem(emp, form.coleta_id, mtrSemColetaSelecionado ?? "");
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [form.empresa, form.coleta_id, mtrSemColetaSelecionado]);
+
   function montarFormPesagemComColeta(
     prev: FormRegistro,
     coletaSelecionada: ColetaOpcao,
@@ -1575,6 +1618,14 @@ export default function ControleMassa() {
     const aplicar = (heranca: MtrHerancaPesagem | null) => {
       registrarTipoCaminhaoHeranca(heranca);
       setForm((prev) => montarFormPesagemComColeta(prev, coletaSelecionada, heranca));
+      const empresa = (coletaSelecionada.cliente || "").trim();
+      if (empresa) {
+        void aplicarContratoResiduosNaPesagem(
+          empresa,
+          coletaSelecionada.id,
+          coletaSelecionada.mtr_id ?? ""
+        );
+      }
     };
 
     if (coletaSelecionada.mtr_id) {
@@ -1624,6 +1675,10 @@ export default function ControleMassa() {
           }
         )
       );
+      const empresa = (clienteMtr || "").trim();
+      if (empresa) {
+        void aplicarContratoResiduosNaPesagem(empresa, "", mtrId);
+      }
     });
   }
 
@@ -1631,6 +1686,8 @@ export default function ControleMassa() {
     if (!v) {
       setMtrSemColetaSelecionado(null);
       setTipoVeiculoMtrSelecionada("");
+      setResiduosContratoCliente([]);
+      ultimoEnriquecimentoKeyRef.current = "";
       setErroTela("");
       setForm((prev) => ({
         ...prev,
@@ -3370,12 +3427,13 @@ export default function ControleMassa() {
                     />
                   </div>
 
-                                    <PesagemResiduosLista
+                  <PesagemResiduosLista
                     linhas={form.residuos_linhas}
                     onLinhasChange={(linhas) =>
                       setForm((prev) => mergeFormResiduosLinhas(prev, linhas))
                     }
                     inputStyle={inputStyle}
+                    residuosContrato={residuosContratoCliente}
                   />
 
 
