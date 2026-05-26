@@ -132,6 +132,16 @@ export function expandirLinhasPesagemComContrato(
 
   const atuais = linhasComConteudo(linhasAtuais)
 
+  if (
+    modeloCom.length > 1 &&
+    atuais.length === 1 &&
+    atuais[0]!.texto.trim() &&
+    (atuais[0]!.peso_liquido.trim() || atuais[0]!.peso_bruto.trim()) &&
+    !modeloCom.some((mod) => linhasPesagemTextoCoincide(atuais[0]!.texto, mod.texto))
+  ) {
+    return linhasAtuais
+  }
+
   if (modeloCom.length === 1) {
     const mod = modeloCom[0]!
     const match = atuais[0]

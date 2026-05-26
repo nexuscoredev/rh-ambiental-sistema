@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aplicarHerancaMtrEmCamposPesagem,
   extrairHerancaMtrParaPesagem,
+  linhasResiduoHerancaOuColeta,
   mesclarLinhasResiduoHerancaMtr,
 } from "./mtrHerancaTicketPesagem";
 import { linhaVaziaResiduoPesagem } from "./residuosPesagem";
@@ -74,14 +75,54 @@ describe("mtrHerancaTicketPesagem", () => {
     expect(h.linhas_residuo[1]?.texto).toContain("Teste Residuo 2");
   });
 
-  it("preserva pesos da coleta ao mesclar linhas da MTR", () => {
+  it("preserva texto e pesos da coleta ao mesclar linhas da MTR", () => {
     const mescladas = mesclarLinhasResiduoHerancaMtr(
-      [{ ...linhaVaziaResiduoPesagem(), texto: "Antigo", peso_bruto: "1000", peso_tara: "200", peso_liquido: "800" }],
-      [{ ...linhaVaziaResiduoPesagem(), texto: "Da MTR" }]
+      [{ ...linhaVaziaResiduoPesagem(), texto: "EFLUENTE CONTAMINADO", peso_bruto: "1000", peso_tara: "200", peso_liquido: "800" }],
+      [{ ...linhaVaziaResiduoPesagem(), texto: "RESIDUO CLASSE I" }]
     );
-    expect(mescladas[0]?.texto).toBe("Da MTR");
+    expect(mescladas).toHaveLength(1);
+    expect(mescladas[0]?.texto).toBe("EFLUENTE CONTAMINADO");
     expect(mescladas[0]?.peso_bruto).toBe("1000");
     expect(mescladas[0]?.peso_tara).toBe("200");
     expect(mescladas[0]?.peso_liquido).toBe("800");
+  });
+
+  it("linhasResiduoHerancaOuColeta não expande várias linhas MTR sobre coleta já definida", () => {
+    const coleta = [{ ...linhaVaziaResiduoPesagem(), texto: "EFLUENTE CONTAMINADO", peso_liquido: "1040" }];
+    const heranca = extrairHerancaMtrParaPesagem({
+      tipo_residuo: "MIX",
+      detalhes: {
+        residuos_lista: [
+          {
+            fonte_origem: "Industrial",
+            caracterizacao: "CLASSE II",
+            estado_fisico: "Sólido",
+            acondicionamento: "",
+            quantidade_aproximada: "",
+            onu: "",
+          },
+          {
+            fonte_origem: "Industrial",
+            caracterizacao: "RESIDUO CLASSE I",
+            estado_fisico: "Líquido",
+            acondicionamento: "",
+            quantidade_aproximada: "",
+            onu: "",
+          },
+        ],
+        residuo: {
+          fonte_origem: "Industrial",
+          caracterizacao: "CLASSE II",
+          estado_fisico: "Sólido",
+          acondicionamento: "",
+          quantidade_aproximada: "",
+          onu: "",
+        },
+      },
+    });
+    const linhas = linhasResiduoHerancaOuColeta(coleta, heranca);
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.texto).toBe("EFLUENTE CONTAMINADO");
+    expect(linhas[0]?.peso_liquido).toBe("1040");
   });
 });

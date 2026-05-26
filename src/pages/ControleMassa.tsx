@@ -1581,6 +1581,9 @@ export default function ControleMassa() {
       setResiduosContratoCliente([]);
       return;
     }
+    if (coletaId && ultimaPesagemPorColeta.has(coletaId)) {
+      return;
+    }
     const snap = await fetchContratoClientePorNomeEmpresa(supabase, emp);
     ultimoEnriquecimentoKeyRef.current = `${coletaId}|${mtrId}|${emp}`;
     if (!snap) {

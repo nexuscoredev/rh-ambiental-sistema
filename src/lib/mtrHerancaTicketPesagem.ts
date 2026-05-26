@@ -5,6 +5,7 @@ import {
 } from "./mtrClienteContratoAutofill";
 import { MTR_TEXTO_VIDE_FICHA } from "./mtrPrintTexto";
 import { supabase } from "./supabase";
+import { coletaCorrespondeResiduo } from "./ticketCardinalidadeResiduo";
 import {
   linhaVaziaResiduoPesagem,
   linhasComConteudo,
@@ -164,8 +165,25 @@ export function extrairHerancaMtrParaPesagem(
   };
 }
 
+function linhaColetaParaMatchResiduo(cl: ResiduoPesagemItem) {
+  return { tipo_residuo: cl.texto, residuos_itens: [cl] as ResiduoPesagemItem[] };
+}
+
+function mesclarPesosLinhaColetaMtr(
+  cl: ResiduoPesagemItem,
+  ml: ResiduoPesagemItem
+): ResiduoPesagemItem {
+  return {
+    catalogo_id: cl.catalogo_id,
+    texto: cl.texto.trim() ? cl.texto : ml.texto,
+    peso_tara: cl.peso_tara.trim() ? cl.peso_tara : ml.peso_tara,
+    peso_bruto: cl.peso_bruto.trim() ? cl.peso_bruto : ml.peso_bruto,
+    peso_liquido: cl.peso_liquido.trim() ? cl.peso_liquido : ml.peso_liquido,
+  };
+}
+
 /**
- * Texto e estrutura vêm da MTR; pesos já lançados na coleta são preservados por linha.
+ * Prioriza o texto da coleta (emissão do ticket); pesos vazios vêm da MTR quando houver match.
  */
 export function mesclarLinhasResiduoHerancaMtr(
   linhasColeta: ResiduoPesagemItem[],
@@ -174,15 +192,27 @@ export function mesclarLinhasResiduoHerancaMtr(
   const mtrCom = linhasComConteudo(linhasMtr);
   if (mtrCom.length === 0) return linhasColeta;
 
+  const coletaCom = linhasComConteudo(linhasColeta);
+
+  if (coletaCom.length === 1 && mtrCom.length >= 1) {
+    const cl = coletaCom[0]!;
+    const ctx = linhaColetaParaMatchResiduo(cl);
+    const ml =
+      mtrCom.find((m) => coletaCorrespondeResiduo(ctx, m.texto)) ??
+      (mtrCom.length === 1 ? mtrCom[0] : undefined);
+    if (!ml) return [cl];
+    return [mesclarPesosLinhaColetaMtr(cl, ml)];
+  }
+
   return mtrCom.map((ml, i) => {
-    const cl = linhasColeta[i] ?? linhasColeta[0];
+    const cl =
+      coletaCom.find((c) =>
+        coletaCorrespondeResiduo(linhaColetaParaMatchResiduo(c), ml.texto)
+      ) ??
+      coletaCom[i] ??
+      coletaCom[0];
     if (!cl) return ml;
-    return {
-      ...ml,
-      peso_tara: cl.peso_tara.trim() ? cl.peso_tara : ml.peso_tara,
-      peso_bruto: cl.peso_bruto.trim() ? cl.peso_bruto : ml.peso_bruto,
-      peso_liquido: cl.peso_liquido.trim() ? cl.peso_liquido : ml.peso_liquido,
-    };
+    return mesclarPesosLinhaColetaMtr(cl, ml);
   });
 }
 
@@ -226,7 +256,27 @@ export function linhasResiduoHerancaOuColeta(
   linhasColeta: ResiduoPesagemItem[],
   heranca: MtrHerancaPesagem | null
 ): ResiduoPesagemItem[] {
-  if (!heranca) return linhasColeta;
+  const coletaCom = linhasComConteudo(linhasColeta);
+  if (!heranca) {
+    return coletaCom.length > 0 ? linhasColeta : [linhaVaziaResiduoPesagem()];
+  }
+
+  const mtrCom = linhasComConteudo(heranca.linhas_residuo);
+  if (mtrCom.length === 0) {
+    return coletaCom.length > 0 ? linhasColeta : [linhaVaziaResiduoPesagem()];
+  }
+
+  if (coletaCom.length > 0) {
+    return coletaCom.map((cl) => {
+      const ctx = linhaColetaParaMatchResiduo(cl);
+      const ml =
+        mtrCom.find((m) => coletaCorrespondeResiduo(ctx, m.texto)) ??
+        (mtrCom.length === 1 ? mtrCom[0] : undefined);
+      if (!ml) return { ...cl };
+      return mesclarPesosLinhaColetaMtr(cl, ml);
+    });
+  }
+
   const mescladas = mesclarLinhasResiduoHerancaMtr(linhasColeta, heranca.linhas_residuo);
   return mescladas.length > 0 ? mescladas : [linhaVaziaResiduoPesagem()];
 }
