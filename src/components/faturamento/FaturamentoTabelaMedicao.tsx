@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   formatarDataCurta,
   formatarMoedaMedicao,
@@ -8,6 +8,11 @@ import {
   type LinhaRelatorioMedicao,
 } from '../../lib/faturamentoRelatorioMedicao'
 import { COLUNAS_RELATORIO_MEDICAO } from '../../lib/faturamentoRelatorioMedicaoColunas'
+import {
+  aplicarRascunhoBulkLinhasMedicao,
+  rascunhoEdicaoBulkMedicaoVazio,
+  type RascunhoEdicaoBulkMedicao,
+} from '../../lib/faturamentoRelatorioMedicaoEdicao'
 
 const thBase: CSSProperties = {
   padding: '8px 6px',
@@ -26,11 +31,24 @@ const tdBase: CSSProperties = {
   verticalAlign: 'middle',
 }
 
+const inputBulk: CSSProperties = {
+  width: '100%',
+  minWidth: '56px',
+  padding: '5px 6px',
+  borderRadius: '6px',
+  border: '1px solid #cbd5e1',
+  fontSize: '11px',
+  fontFamily: 'inherit',
+  boxSizing: 'border-box',
+  background: '#fff',
+}
+
 type Props = {
   linhas: LinhaRelatorioMedicao[]
   compacto?: boolean
   mostrarTotais?: boolean
   mostrarColeta?: boolean
+  onLinhasChange?: (linhas: LinhaRelatorioMedicao[]) => void
 }
 
 function celulaValor(
@@ -65,13 +83,47 @@ function celulaValor(
 
 /** Tabela da esteira / pré-visualização — mesmas colunas do relatório impresso. */
 export function FaturamentoTabelaMedicao({
-  linhas,
+  linhas: linhasProp,
   compacto,
   mostrarTotais = true,
   mostrarColeta = true,
+  onLinhasChange,
 }: Props) {
-  const totais = totaisRelatorioMedicao(linhas)
+  const [linhas, setLinhas] = useState(linhasProp)
+  const [modoEdicaoTotal, setModoEdicaoTotal] = useState(false)
+  const [rascunhoBulk, setRascunhoBulk] = useState<RascunhoEdicaoBulkMedicao>(
+    rascunhoEdicaoBulkMedicaoVazio
+  )
+
+  useEffect(() => {
+    setLinhas(linhasProp)
+    setModoEdicaoTotal(false)
+    setRascunhoBulk(rascunhoEdicaoBulkMedicaoVazio())
+  }, [linhasProp])
+
+  const totais = useMemo(() => totaisRelatorioMedicao(linhas), [linhas])
   const fontSize = compacto ? '10px' : '11px'
+  const colunasEditaveisBulk = new Set(['quantViagens', 'valorFrete', 'pesoKg', 'valorTaxa', 'total'])
+
+  function publicarLinhas(next: LinhaRelatorioMedicao[]) {
+    setLinhas(next)
+    onLinhasChange?.(next)
+  }
+
+  function aplicarEdicaoTotal() {
+    const next = aplicarRascunhoBulkLinhasMedicao(linhas, rascunhoBulk)
+    publicarLinhas(next)
+    setRascunhoBulk(rascunhoEdicaoBulkMedicaoVazio())
+    setModoEdicaoTotal(false)
+  }
+
+  function toggleEdicaoTotal() {
+    if (modoEdicaoTotal) {
+      aplicarEdicaoTotal()
+      return
+    }
+    setModoEdicaoTotal(true)
+  }
 
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: compacto ? 920 : 980 }}>
@@ -118,6 +170,36 @@ export function FaturamentoTabelaMedicao({
       </tbody>
       {mostrarTotais && linhas.length > 0 ? (
         <tfoot>
+          {modoEdicaoTotal ? (
+            <tr style={{ background: '#f8fafc' }}>
+              {mostrarColeta ? (
+                <td style={{ ...tdBase, fontSize, color: '#64748b', fontStyle: 'italic' }}>
+                  Edição em massa
+                </td>
+              ) : null}
+              {COLUNAS_RELATORIO_MEDICAO.map((c) => (
+                <td key={`bulk-${c.key}`} style={{ ...tdBase, fontSize, textAlign: c.align }}>
+                  {colunasEditaveisBulk.has(c.key) ? (
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      style={inputBulk}
+                      value={rascunhoBulk[c.key as keyof RascunhoEdicaoBulkMedicao]}
+                      onChange={(e) => {
+                        const key = c.key as keyof RascunhoEdicaoBulkMedicao
+                        setRascunhoBulk((prev) => ({
+                          ...prev,
+                          [key]: e.target.value,
+                        }))
+                      }}
+                      placeholder="—"
+                      aria-label={`Editar ${c.label} em todas as linhas`}
+                    />
+                  ) : null}
+                </td>
+              ))}
+            </tr>
+          ) : null}
           <tr style={{ background: '#fffbeb' }}>
             {mostrarColeta ? (
               <td style={{ ...tdBase, fontSize, fontWeight: 700, textAlign: 'right' }} colSpan={1}>
@@ -137,16 +219,20 @@ export function FaturamentoTabelaMedicao({
               {formatarPesoMedicao(totais.pesoKg)}
             </td>
             <td style={{ ...tdBase, fontSize }} />
-            <td
-              style={{
-                ...tdBase,
-                fontSize,
-                fontWeight: 800,
-                textAlign: 'right',
-                background: '#fef08a',
-              }}
-            >
-              {formatarMoedaMedicao(totais.total)}
+            <td style={{ ...tdBase, fontSize, textAlign: 'right' }}>
+              <button
+                type="button"
+                className="rg-btn rg-btn--outline"
+                style={{
+                  fontSize: '11px',
+                  padding: '6px 10px',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+                onClick={toggleEdicaoTotal}
+              >
+                {modoEdicaoTotal ? 'Aplicar a todas' : 'Editar total'}
+              </button>
             </td>
           </tr>
         </tfoot>

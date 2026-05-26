@@ -49,7 +49,11 @@ function GrupoMedicaoCard({
   titulo: string
   acao: ReactNode
   esteiraAtiva: boolean
-  onImprimir: (linhas: FaturamentoResumoViewRow[], clienteNome: string) => void
+  onImprimir: (
+    linhasColeta: FaturamentoResumoViewRow[],
+    clienteNome: string,
+    linhasMedicaoOverride?: LinhaRelatorioMedicao[]
+  ) => void
   preparandoPrint?: boolean
 }) {
   const linhasColeta = grupo.linhas
@@ -108,7 +112,7 @@ function GrupoMedicaoCard({
             type="button"
             className="rg-btn rg-btn--report"
             disabled={preparandoPrint || carregandoMedicao}
-            onClick={() => onImprimir(linhasColeta, tituloRelatorio)}
+            onClick={() => onImprimir(linhasColeta, tituloRelatorio, linhasMedicao)}
           >
             {preparandoPrint ? 'A preparar…' : 'Imprimir / PDF'}
           </button>
@@ -122,7 +126,11 @@ function GrupoMedicaoCard({
         ) : erroMedicao ? (
           <p style={{ margin: 0, fontSize: '12px', color: '#b45309' }}>{erroMedicao}</p>
         ) : (
-          <FaturamentoTabelaMedicao linhas={linhasMedicao} mostrarColeta />
+          <FaturamentoTabelaMedicao
+            linhas={linhasMedicao}
+            mostrarColeta
+            onLinhasChange={setLinhasMedicao}
+          />
         )}
       </div>
 
@@ -250,16 +258,21 @@ export function FaturamentoFilaMedicao({
 
   async function imprimirRelatorioMedicao(
     linhasColeta: FaturamentoResumoViewRow[],
-    clienteNome: string
+    clienteNome: string,
+    linhasMedicaoOverride?: LinhaRelatorioMedicao[]
   ) {
     setPreparandoPrint(true)
     try {
-      const res = await carregarLinhasRelatorioMedicao(linhasColeta)
-      if (res.erro) {
-        await alert({ title: 'Relatório de medição', message: res.erro, variant: 'danger' })
-        return
+      let linhasPrint = linhasMedicaoOverride
+      if (!linhasPrint?.length) {
+        const res = await carregarLinhasRelatorioMedicao(linhasColeta)
+        if (res.erro) {
+          await alert({ title: 'Relatório de medição', message: res.erro, variant: 'danger' })
+          return
+        }
+        linhasPrint = res.linhas
       }
-      if (res.linhas.every((l) => l.total <= 0)) {
+      if (linhasPrint.every((l) => l.total <= 0)) {
         const ok = await confirm({
           title: 'Imprimir sem valores do contrato',
           message: (
@@ -278,7 +291,7 @@ export function FaturamentoFilaMedicao({
       }
       imprimirRelatorioMedicaoJanela({
         clienteNome,
-        linhas: res.linhas,
+        linhas: linhasPrint,
         geradoEm: new Date().toLocaleString('pt-BR'),
       })
     } finally {
