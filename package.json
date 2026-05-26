@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.102",
+  "version": "1.2.103",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -70,6 +70,7 @@
     "@supabase/supabase-js": "^2.100.0",
     "@svg-country-maps/brazil": "^1.0.3",
     "emoji-picker-element": "^1.29.1",
+    "emoji-picker-element-data": "^1.8.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",

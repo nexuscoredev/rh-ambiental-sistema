@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import 'emoji-picker-element'
 import type { EmojiClickEventDetail } from 'emoji-picker-element/shared'
 import ptI18n from 'emoji-picker-element/i18n/pt_PT'
+import emojiDataUrl from 'emoji-picker-element-data/pt/cldr/data.json?url'
 import {
   chatAdicionarSticker,
   chatCriarStickerPack,
@@ -96,9 +97,11 @@ export function ChatComposerPicker({
     const el = document.createElement('emoji-picker') as HTMLElement & {
       i18n?: typeof ptI18n
       locale?: string
+      dataSource?: string
     }
     el.i18n = ptI18n
     el.locale = 'pt'
+    el.dataSource = emojiDataUrl
     el.className = 'chat-composer-picker__emoji-el'
 
     const onEmoji = (ev: Event) => {
