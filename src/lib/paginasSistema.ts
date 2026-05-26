@@ -22,6 +22,7 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/caminhoes', label: 'Veículos' },
   { path: '/programacao', label: 'Programação' },
   { path: '/mtr', label: 'MTR' },
+  { path: '/mtr/gerenciador', label: 'MTR Gerenciador' },
   { path: '/controle-massa', label: 'Pesagem e Ticket' },
   { path: '/comprovantes-descarte', label: 'Comprovante de Descarte' },
   { path: '/checklist-transporte', label: 'Checklist de transportes' },

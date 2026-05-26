@@ -1,20 +1,14 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { rotaGerenciadorHistoricoMtr } from '../../lib/gerenciadorMtrHistorico'
 import {
   baixarMtrPorId,
   cancelarMtrPorId,
-  listarTicketsHistoricoMtr,
-  reativarTicketHistorico,
   type MtrRateioLinha,
   type MtrStatusCiclo,
-  type TicketHistoricoRow,
 } from '../../lib/mtrCicloVida'
 import { ClienteBuscaSelect } from '../clientes/ClienteBuscaSelect'
 import { rgConfirm } from '../../lib/RgDialogProvider'
-import {
-  cargoPodeCancelarBaixarMtr,
-  cargoPodeMutarMtrCicloVida,
-} from '../../lib/workflowPermissions'
+import { cargoPodeCancelarBaixarMtr } from '../../lib/workflowPermissions'
 
 async function confirmarAcaoMtr(opts: {
   title: string
@@ -89,13 +83,12 @@ export function MtrCicloVidaAcoes({
 }: Props) {
   const podeCancelarBaixar =
     podeMutar && cargoPodeCancelarBaixarMtr(usuarioCargo, usuarioNome, usuarioEmail)
-  const podeHistorico = podeMutar && cargoPodeMutarMtrCicloVida(usuarioCargo)
 
   function abrirGerenciadorBaixa() {
     const url = rotaGerenciadorHistoricoMtr(mtrId, mtrNumero)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
-  const [modal, setModal] = useState<'cancelar' | 'baixar' | 'historico' | null>(null)
+  const [modal, setModal] = useState<'cancelar' | 'baixar' | null>(null)
   const [busy, setBusy] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -110,18 +103,11 @@ export function MtrCicloVidaAcoes({
     { cliente_cobranca_id: '', percentual: 100 },
   ])
 
-  const [historico, setHistorico] = useState<TicketHistoricoRow[]>([])
-
   const stNorm = String(status || 'Emitido')
     .trim()
     .toLowerCase()
   const jaCancelada = stNorm === 'cancelado'
   const jaBaixada = stNorm === 'baixada'
-
-  useEffect(() => {
-    if (modal !== 'historico') return
-    void listarTicketsHistoricoMtr(mtrId).then(setHistorico)
-  }, [modal, mtrId])
 
   async function executarCancelar() {
     setBusy(true)
@@ -160,20 +146,7 @@ export function MtrCicloVidaAcoes({
     onConcluido()
   }
 
-  async function executarReativar(histId: string) {
-    setBusy(true)
-    setErro('')
-    const res = await reativarTicketHistorico(histId)
-    setBusy(false)
-    if (!res.ok) {
-      setErro(res.message)
-      return
-    }
-    setHistorico((prev) => prev.filter((h) => h.id !== histId))
-    onConcluido()
-  }
-
-  if (!podeCancelarBaixar && !podeHistorico && !jaBaixada) return null
+  if (!podeCancelarBaixar && !jaBaixada) return null
 
   const btnStyle: CSSProperties = compact
     ? { fontSize: '12px', padding: '4px 8px' }
@@ -254,29 +227,6 @@ export function MtrCicloVidaAcoes({
             Ver baixa
           </button>
         ) : null}
-        {podeHistorico ? (
-          <button
-            type="button"
-            className="mini-btn"
-            style={btnStyle}
-            onClick={() => {
-              void (async () => {
-                if (
-                  !(await confirmarAcaoMtr({
-                    title: 'Histórico de tickets',
-                    message: `Consultar o histórico de tickets da MTR ${mtrNumero}?`,
-                    confirmLabel: 'Continuar',
-                  }))
-                ) {
-                  return
-                }
-                setModal('historico')
-              })()
-            }}
-          >
-            Histórico tickets
-          </button>
-        ) : null}
       </span>
 
       {modal ? (
@@ -285,7 +235,6 @@ export function MtrCicloVidaAcoes({
             <h3 style={{ margin: '0 0 12px', fontSize: '17px' }}>
               {modal === 'cancelar' && `Cancelar MTR ${mtrNumero}`}
               {modal === 'baixar' && `Baixar MTR ${mtrNumero}`}
-              {modal === 'historico' && `Histórico de tickets — MTR ${mtrNumero}`}
             </h3>
 
             {modal === 'cancelar' ? (
@@ -417,43 +366,6 @@ export function MtrCicloVidaAcoes({
                   </div>
                 ) : null}
               </>
-            ) : null}
-
-            {modal === 'historico' ? (
-              historico.length === 0 ? (
-                <p style={{ fontSize: '13px', color: '#64748b' }}>Nenhum ticket arquivado para esta MTR.</p>
-              ) : (
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                  {historico.map((h) => {
-                    const snap = h.ticket_snapshot as { numero?: string; tipo_ticket?: string }
-                    return (
-                      <li
-                        key={h.id}
-                        style={{
-                          padding: '10px 0',
-                          borderBottom: '1px solid #e2e8f0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: '8px',
-                        }}
-                      >
-                        <span style={{ fontSize: '13px' }}>
-                          Ticket {snap.numero || '—'} ({snap.tipo_ticket || 'saida'}) — {h.motivo}
-                        </span>
-                        <button
-                          type="button"
-                          className="mini-btn"
-                          disabled={busy}
-                          onClick={() => void executarReativar(h.id)}
-                        >
-                          Reativar
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )
             ) : null}
 
             {erro ? (

@@ -3,6 +3,12 @@ import { mensagemErroSupabase } from './supabaseErrors'
 
 export type MtrStatusCiclo = 'Rascunho' | 'Emitido' | 'Cancelado' | 'Baixada'
 
+export function isMtrStatusCancelado(status: string | null | undefined): boolean {
+  return String(status ?? '')
+    .trim()
+    .toLowerCase() === 'cancelado'
+}
+
 export type MtrRateioLinha = {
   coleta_id?: string | null
   cliente_coleta_id?: string | null

@@ -17,6 +17,8 @@ import {
   listarColetaIdsPorMtr,
 } from '../lib/excluirOperacionalCascata'
 import { MtrCicloVidaAcoes } from '../components/mtr/MtrCicloVidaAcoes'
+import { isMtrStatusCancelado } from '../lib/mtrCicloVida'
+import { classeMtrListaCard, MTR_LISTA_CARD_UI_CSS } from '../lib/mtrListaCardUi'
 import {
   MtrManifestoPrint,
   type MtrManifestoPrintDetalhes,
@@ -74,6 +76,9 @@ interface MTR {
   observacoes: string
   status: MTRStatus
   created_at?: string
+  cancelada_em?: string | null
+  cancelamento_justificativa?: string | null
+  cancelamento_cobrar_frete?: boolean | null
 }
 
 interface Coleta {
@@ -293,6 +298,30 @@ function formatDate(date: string | null | undefined) {
   return `${day}/${month}/${year}`
 }
 
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return formatDate(iso)
+  return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+async function mostrarMotivoCancelamentoMtr(item: MTR) {
+  const just = (item.cancelamento_justificativa || '').trim()
+  const linhas: string[] = []
+  const em = formatDateTime(item.cancelada_em)
+  if (em) linhas.push(`Cancelada em: ${em}`)
+  if (item.cancelamento_cobrar_frete) {
+    linhas.push('Marcado para cobrança de frete/custo operacional.')
+  }
+  if (linhas.length > 0) linhas.push('')
+  linhas.push(just || 'Nenhuma justificativa registrada no sistema.')
+  await rgAlert({
+    title: `Motivo do cancelamento — ${item.numero}`,
+    message: linhas.join('\n'),
+    variant: just ? 'warning' : 'default',
+  })
+}
+
 function generateMTRNumber() {
   const now = new Date()
   const year = now.getFullYear()
@@ -475,15 +504,22 @@ export default function MTR() {
     setEditingId(null)
   }
 
-  async function loadData() {
+  type LoadDataOptions = { /** Atualiza lista sem esconder a UI (ex.: cancelar/baixar MTR). */ silent?: boolean }
+
+  async function loadData(opts?: LoadDataOptions) {
     const gen = ++loadDataGenRef.current
-    setLoading(true)
+    const silent = !!opts?.silent
+    if (silent) {
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
 
     const [mtrsRes, coletasRes] = await Promise.all([
       supabase
         .from('mtrs')
         .select(
-          'id, numero, programacao_id, cliente, gerador, endereco, cidade, tipo_residuo, quantidade, unidade, destinador, transportador, detalhes, data_emissao, observacoes, status, created_at'
+          'id, numero, programacao_id, cliente, gerador, endereco, cidade, tipo_residuo, quantidade, unidade, destinador, transportador, detalhes, data_emissao, observacoes, status, created_at, cancelada_em, cancelamento_justificativa, cancelamento_cobrar_frete'
         )
         .order('created_at', { ascending: false })
         .limit(300),
@@ -496,7 +532,10 @@ export default function MTR() {
         .limit(500),
     ])
 
-    if (gen !== loadDataGenRef.current) return
+    if (gen !== loadDataGenRef.current) {
+      if (!silent) setLoading((prev) => (prev && mtrs.length > 0 ? false : prev))
+      return
+    }
 
     const alertarSeCritico = async (titulo: string, err: typeof mtrsRes.error) => {
       if (!err) return
@@ -513,13 +552,18 @@ export default function MTR() {
       })
     }
 
+    let mtrsRows: MTR[] = []
     if (mtrsRes.error) {
       await alertarSeCritico('Erro ao carregar MTRs:', mtrsRes.error)
     } else {
-      setMtrs((mtrsRes.data || []) as MTR[])
+      mtrsRows = (mtrsRes.data || []) as MTR[]
+      setMtrs(mtrsRows)
+      setSelectedMTR((prev) => {
+        if (!prev) return prev
+        if (mtrsRows.length === 0) return null
+        return mtrsRows.find((m) => m.id === prev.id) ?? null
+      })
     }
-
-    const mtrsRows = mtrsRes.error ? [] : ((mtrsRes.data || []) as MTR[])
     let coletasRows: Coleta[] = []
     if (coletasRes.error) {
       await alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
@@ -535,7 +579,11 @@ export default function MTR() {
       ])
     }
 
-    setLoading(false)
+    if (gen === loadDataGenRef.current && !silent) setLoading(false)
+  }
+
+  function aoConcluirCicloVidaMtr() {
+    void loadData({ silent: true })
   }
 
   useEffect(() => {
@@ -609,6 +657,11 @@ export default function MTR() {
     })
     return map
   }, [programacoes])
+
+  const mtrSelecionadaValida = useMemo(() => {
+    if (!selectedMTR) return null
+    return mtrs.find((m) => m.id === selectedMTR.id) ?? null
+  }, [selectedMTR, mtrs])
 
   const temParametrosContexto = !!(
     urlMtrId ||
@@ -1305,11 +1358,13 @@ export default function MTR() {
 
   const totalVinculadas = mtrs.filter((item) => !!item.programacao_id).length
 
-  const selectedProgramacao = selectedMTR?.programacao_id
-    ? programacaoMap.get(selectedMTR.programacao_id)
+  const selectedProgramacao = mtrSelecionadaValida?.programacao_id
+    ? programacaoMap.get(mtrSelecionadaValida.programacao_id)
     : null
 
-  const selectedColeta = selectedMTR ? coletaMapByMtrId.get(selectedMTR.id) : null
+  const selectedColeta = mtrSelecionadaValida
+    ? coletaMapByMtrId.get(mtrSelecionadaValida.id)
+    : null
   const duplicateMTR = getDuplicateMTRForSelectedProgramacao()
 
   const motoristaColeta =
@@ -1484,6 +1539,8 @@ export default function MTR() {
           background: linear-gradient(180deg, #f3fff7 0%, #fbfffc 100%);
           box-shadow: 0 10px 28px rgba(22, 163, 74, 0.10);
         }
+
+${MTR_LISTA_CARD_UI_CSS}
 
         .mtr-list-top {
           display: flex;
@@ -2742,7 +2799,7 @@ export default function MTR() {
             >
               Nova MTR
             </button>
-            <button className="btn btn-secondary" onClick={loadData}>
+            <button className="btn btn-secondary" onClick={() => void loadData()}>
               Atualizar lista
             </button>
             {selectedMTR && (
@@ -2822,14 +2879,15 @@ export default function MTR() {
             </div>
 
             <div className="panel-body">
-              {loading ? (
+              {loading && mtrs.length === 0 ? (
                 <div className="loading-box">Carregando MTRs...</div>
               ) : mtrs.length === 0 ? (
                 <div className="empty-state">Nenhuma MTR cadastrada até o momento.</div>
               ) : (
                 <div className="mtr-list">
                   {mtrs.map((item) => {
-                    const isSelected = selectedMTR?.id === item.id
+                    const isSelected = mtrSelecionadaValida?.id === item.id
+                    const cancelada = isMtrStatusCancelado(item.status)
                     const linkedProgramacao = item.programacao_id ? programacaoMap.get(item.programacao_id) : null
                     const linkedColeta = coletaMapByMtrId.get(item.id)
 
@@ -2837,24 +2895,29 @@ export default function MTR() {
                       <div
                         key={item.id}
                         id={`mtr-row-${item.id}`}
-                        className={`mtr-list-item ${isSelected ? 'selected' : ''}`}
+                        className={classeMtrListaCard(item.status, { selected: isSelected })}
                       >
                         <div className="mtr-list-top">
                           <div>
                             <p className="mtr-number">{item.numero}</p>
                             <p className="mtr-client">{item.cliente}</p>
                           </div>
+                          {cancelada ? (
+                            <span className="status-badge status-cancelado" title="MTR cancelada">
+                              Cancelada
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="mtr-meta">
-                          <div className="mtr-meta-box">
+                          <div className="mtr-meta-box mtr-meta-box--programacao">
                             <div className="mtr-meta-label">Programação vinculada</div>
                             <div className="mtr-meta-value">
                               {linkedProgramacao ? getProgramacaoLabel(linkedProgramacao) : '-'}
                             </div>
                           </div>
 
-                          <div className="mtr-meta-box">
+                          <div className="mtr-meta-box mtr-meta-box--coleta">
                             <div className="mtr-meta-label">Coleta gerada</div>
                             <div className="mtr-meta-value">
                               {linkedColeta ? (
@@ -2876,6 +2939,16 @@ export default function MTR() {
                           >
                             Visualizar
                           </button>
+                          {cancelada ? (
+                            <button
+                              type="button"
+                              className="mini-btn"
+                              onClick={() => void mostrarMotivoCancelamentoMtr(item)}
+                              title="Ver justificativa do cancelamento"
+                            >
+                              Ver motivo
+                            </button>
+                          ) : null}
                           <button
                             className="mini-btn"
                             onClick={() => void confirmarEditarMtr(item)}
@@ -2901,7 +2974,7 @@ export default function MTR() {
                             usuarioNome={usuarioNome}
                             usuarioEmail={usuarioEmail}
                             compact
-                            onConcluido={() => void loadData()}
+                            onConcluido={aoConcluirCicloVidaMtr}
                           />
                         </div>
                       </div>
@@ -2918,16 +2991,16 @@ export default function MTR() {
                 <h2>Visualização do documento</h2>
                 <p>Visualize e imprima o manifesto selecionado na lista.</p>
               </div>
-              {selectedMTR ? (
+              {mtrSelecionadaValida ? (
                 <MtrCicloVidaAcoes
-                  mtrId={selectedMTR.id}
-                  mtrNumero={selectedMTR.numero}
-                  status={selectedMTR.status}
+                  mtrId={mtrSelecionadaValida.id}
+                  mtrNumero={mtrSelecionadaValida.numero}
+                  status={mtrSelecionadaValida.status}
                   podeMutar={podeMutarMtr}
                   usuarioCargo={usuarioCargo}
                   usuarioNome={usuarioNome}
                   usuarioEmail={usuarioEmail}
-                  onConcluido={() => void loadData()}
+                  onConcluido={aoConcluirCicloVidaMtr}
                 />
               ) : null}
             </div>

@@ -42,6 +42,7 @@ function RedirectAprovacaoParaFaturamento() {
 }
 const Programacao = lazyWithRetry(() => import('./pages/Programacao'))
 const MTR = lazyWithRetry(() => import('./pages/MTR'))
+const MtrGerenciador = lazyWithRetry(() => import('./pages/MtrGerenciador'))
 const ControleMassa = lazyWithRetry(() => import('./pages/ControleMassa'))
 const ComprovantesDescarte = lazyWithRetry(() => import('./pages/ComprovantesDescarte'))
 const ComprovanteDescarteForm = lazyWithRetry(() => import('./pages/ComprovanteDescarteForm'))
@@ -568,6 +569,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/controle-massa']]}
                 >
                   <RedirectColetasParaControleMassa />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/mtr/gerenciador"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/mtr/gerenciador']]}
+                >
+                  <MtrGerenciador />
                 </ProtectedRoute>
               }
             />

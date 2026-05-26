@@ -146,6 +146,7 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/pos-venda': [...POS_VENDA],
   '/programacao': [...PROGRAMACAO_MTR],
   '/mtr': [...PROGRAMACAO_MTR],
+  '/mtr/gerenciador': [...PROGRAMACAO_MTR],
   '/controle-massa': [...CONTROLE_MASSA],
   '/comprovantes-descarte': [...FLUXO_COM_LOGISTICA],
   '/checklist-transporte': [...FLUXO_SEM_LOGISTICA],

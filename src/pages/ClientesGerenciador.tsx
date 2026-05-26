@@ -10,10 +10,17 @@ import {
 } from '../components/clientes/ClienteGerenciadorMtrTabela'
 import { useClienteCadastroForm } from '../hooks/useClienteCadastroForm'
 import { formClienteFromJson, nomeExibicaoGerenciador } from '../lib/clienteCadastroForm'
+import type { ResiduoContratoItem } from '../lib/clienteContratoCadastro'
+import { parseNumeroCampo } from '../lib/faturamentoDesvinculacao'
+import {
+  calcularValorTotalMtrLinha,
+  valorUnitarioResiduoContrato,
+} from '../lib/gerenciadorMtrLinhaCalculo'
 import { rgAlert, rgConfirm } from '../lib/RgDialogProvider'
 import { supabase } from '../lib/supabase'
 import { useUsuarioAcesso } from '../lib/useUsuarioAcesso'
 import {
+  temAutoridadeMaximaSistema,
   usuarioPodeEditarCliente,
   usuarioPodeIncluirCliente,
 } from '../lib/workflowPermissions'
@@ -81,6 +88,9 @@ function linhasFromDb(
     gerador: string | null
     residuo: string | null
     quantidade: string | null
+    peso_kg?: number | null
+    valor_unitario?: number | null
+    valor_total?: number | null
   }>
 ): LinhaMtrGerenciador[] {
   if (!rows.length) return [linhaMtrGerenciadorVazia()]
@@ -91,21 +101,50 @@ function linhasFromDb(
     gerador: r.gerador ?? '',
     residuo: r.residuo ?? '',
     quantidade: r.quantidade ?? '',
+    peso: r.peso_kg != null && Number(r.peso_kg) > 0 ? String(r.peso_kg).replace('.', ',') : '',
+    valor_unitario:
+      r.valor_unitario != null && Number(r.valor_unitario) > 0
+        ? String(r.valor_unitario).replace('.', ',')
+        : '',
+    valor_total:
+      r.valor_total != null && Number(r.valor_total) > 0
+        ? Number(r.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        : '',
   }))
 }
 
-function linhasParaPersistir(linhas: LinhaMtrGerenciador[]) {
+function linhasParaPersistir(
+  linhas: LinhaMtrGerenciador[],
+  residuosContrato: ResiduoContratoItem[]
+) {
   return linhas
-    .map((l, ordem) => ({
-      mtr_baixada: l.mtr_baixada.trim() || null,
-      data: l.data.trim() || null,
-      gerador: l.gerador.trim() || null,
-      residuo: l.residuo.trim() || null,
-      quantidade: l.quantidade.trim() || null,
-      ordem,
-    }))
+    .map((l, ordem) => {
+      const peso = parseNumeroCampo(l.peso)
+      const manualUnit = parseNumeroCampo(l.valor_unitario)
+      const valorUnit =
+        manualUnit > 0 ? manualUnit : valorUnitarioResiduoContrato(l.residuo, residuosContrato)
+      const valorTotal = calcularValorTotalMtrLinha(l.peso, valorUnit)
+      return {
+        mtr_baixada: l.mtr_baixada.trim() || null,
+        data: l.data.trim() || null,
+        gerador: l.gerador.trim() || null,
+        residuo: l.residuo.trim() || null,
+        quantidade: l.quantidade.trim() || null,
+        peso_kg: peso > 0 ? peso : null,
+        valor_unitario: valorUnit > 0 ? valorUnit : null,
+        valor_total: valorTotal > 0 ? valorTotal : null,
+        ordem,
+      }
+    })
     .filter(
-      (l) => l.mtr_baixada || l.data || l.gerador || l.residuo || l.quantidade
+      (l) =>
+        l.mtr_baixada ||
+        l.data ||
+        l.gerador ||
+        l.residuo ||
+        l.quantidade ||
+        l.peso_kg ||
+        l.valor_total
     )
 }
 
@@ -116,17 +155,29 @@ function scrollParaHistoricoMtr() {
   }
 }
 
-export default function ClientesGerenciador() {
+export type ClientesGerenciadorProps = {
+  pageTitle?: string
+  pageLead?: string
+  /** Abre o painel de histórico ao entrar (rota MTR Gerenciador). */
+  abrirHistoricoPorPadrao?: boolean
+}
+
+export default function ClientesGerenciador(props: unknown) {
+  const {
+    pageTitle = 'Gerenciador',
+    pageLead = 'Cadastro com os mesmos campos de Clientes. Preencha os dados e registre as MTRs baixadas na tabela ao final do formulário.',
+    abrirHistoricoPorPadrao = false,
+  } = (props ?? {}) as ClientesGerenciadorProps
   const [searchParams, setSearchParams] = useSearchParams()
   const acesso = useUsuarioAcesso()
-  const podeIncluir = usuarioPodeIncluirCliente(acesso)
-  const podeEditar = usuarioPodeEditarCliente(acesso)
+  const acessoMaximo = temAutoridadeMaximaSistema(acesso.cargo, acesso.nome, acesso.email)
+  const podeIncluir = usuarioPodeIncluirCliente(acesso) || acessoMaximo
+  const podeEditar = usuarioPodeEditarCliente(acesso) || acessoMaximo
 
   const cadastro = useClienteCadastroForm()
   const [lista, setLista] = useState<GerenciadorRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [linhasMtr, setLinhasMtr] = useState<LinhaMtrGerenciador[]>([linhaMtrGerenciadorVazia()])
-  const [listaMtrRefreshKey, setListaMtrRefreshKey] = useState(0)
   const [representantesRg, setRepresentantesRg] = useState<RepresentanteOpt[]>([])
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -136,6 +187,12 @@ export default function ClientesGerenciador() {
   const baixarMtrId = searchParams.get('baixarMtr')
   const baixarMtrNumero = searchParams.get('mtrNumero') ?? ''
   const historicoScrollFeito = useRef(false)
+
+  useEffect(() => {
+    if (!abrirHistoricoPorPadrao) return
+    if (searchParams.get('historico') === '1' || searchParams.get('baixarMtr')) return
+    setSearchParams({ historico: '1' }, { replace: true })
+  }, [abrirHistoricoPorPadrao, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!mostrarHistorico && !baixarMtrId) return
@@ -221,7 +278,7 @@ export default function ClientesGerenciador() {
 
     const { data, error } = await supabase
       .from('clientes_gerenciador_mtr_linhas')
-      .select('id, mtr_baixada, data, gerador, residuo, quantidade')
+      .select('id, mtr_baixada, data, gerador, residuo, quantidade, peso_kg, valor_unitario, valor_total')
       .eq('gerenciador_id', row.id)
       .order('ordem', { ascending: true })
 
@@ -232,28 +289,34 @@ export default function ClientesGerenciador() {
     setLinhasMtr(linhasFromDb(data ?? []))
   }
 
-  async function handleSalvar(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function salvarGerenciadorInterno(opts?: {
+    silencioso?: boolean
+  }): Promise<boolean> {
     const podeSalvar = editingId ? podeEditar : podeIncluir
     if (!podeSalvar) {
-      void rgAlert({ title: 'Gerenciador', message: 'Sem permissão para salvar.', variant: 'warning' })
-      return
+      if (!opts?.silencioso) {
+        void rgAlert({ title: 'Gerenciador', message: 'Sem permissão para salvar.', variant: 'warning' })
+      }
+      return false
     }
 
     const nomeTrim = cadastro.form.nome.trim()
     const razaoTrim = cadastro.form.razao_social.trim()
     const cnpjTrim = cadastro.form.cnpj.trim()
     if (!nomeTrim && !razaoTrim && !cnpjTrim) {
-      void rgAlert({
-        title: 'Gerenciador',
-        message:
-          'Informe pelo menos um destes campos: Nome fantasia, Razão social ou CNPJ/CPF.',
-        variant: 'warning',
-      })
-      return
+      if (!opts?.silencioso) {
+        void rgAlert({
+          title: 'Gerenciador',
+          message:
+            'Informe pelo menos um destes campos: Nome fantasia, Razão social ou CNPJ/CPF.',
+          variant: 'warning',
+        })
+      }
+      return false
     }
 
     setSalvando(true)
+    const eraNovo = !editingId
     const payload = {
       nome_exibicao: nomeExibicaoGerenciador(cadastro.form),
       dados_cadastro: cadastro.form,
@@ -267,7 +330,7 @@ export default function ClientesGerenciador() {
       if (error) {
         setSalvando(false)
         void rgAlert({ title: 'Erro ao salvar', message: error.message, variant: 'danger' })
-        return
+        return false
       }
     } else {
       const { data, error } = await supabase
@@ -282,7 +345,7 @@ export default function ClientesGerenciador() {
           message: error?.message ?? 'Não foi possível criar o registro.',
           variant: 'danger',
         })
-        return
+        return false
       }
       gerenciadorId = String(data.id)
       setEditingId(gerenciadorId)
@@ -290,7 +353,7 @@ export default function ClientesGerenciador() {
 
     if (gerenciadorId) {
       await supabase.from('clientes_gerenciador_mtr_linhas').delete().eq('gerenciador_id', gerenciadorId)
-      const linhas = linhasParaPersistir(linhasMtr)
+      const linhas = linhasParaPersistir(linhasMtr, cadastro.form.residuos)
       if (linhas.length > 0) {
         const { error: errLinhas } = await supabase.from('clientes_gerenciador_mtr_linhas').insert(
           linhas.map((l) => ({ ...l, gerenciador_id: gerenciadorId }))
@@ -298,18 +361,26 @@ export default function ClientesGerenciador() {
         if (errLinhas) {
           setSalvando(false)
           void rgAlert({ title: 'Erro nas linhas MTR', message: errLinhas.message, variant: 'danger' })
-          return
+          return false
         }
       }
     }
 
     setSalvando(false)
-    void rgAlert({
-      title: 'Gerenciador',
-      message: editingId ? 'Registro atualizado.' : 'Registro criado.',
-      variant: 'success',
-    })
+    if (!opts?.silencioso) {
+      void rgAlert({
+        title: 'Gerenciador',
+        message: eraNovo ? 'Registro criado.' : 'Registro atualizado.',
+        variant: 'success',
+      })
+    }
     await carregarLista()
+    return true
+  }
+
+  async function handleSalvar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    await salvarGerenciadorInterno()
   }
 
   async function handleExcluir(id: string) {
@@ -355,11 +426,10 @@ export default function ClientesGerenciador() {
                 color: '#0f172a',
               }}
             >
-              Gerenciador
+              {pageTitle}
             </h1>
             <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
-              Cadastro com os mesmos campos de Clientes. Preencha os dados e registre as MTRs
-              baixadas na tabela ao final do formulário.
+              {pageLead}
             </p>
           </div>
           <div style={{ flexShrink: 0, alignSelf: 'flex-start' }}>
@@ -381,7 +451,6 @@ export default function ClientesGerenciador() {
                 baixarMtrId={baixarMtrId}
                 baixarMtrNumero={baixarMtrNumero}
                 onBaixaConcluida={() => {
-                  setListaMtrRefreshKey((k) => k + 1)
                   limparParamsBaixa()
                 }}
               />
@@ -494,20 +563,13 @@ export default function ClientesGerenciador() {
                   cadastro.resetForm()
                   setLinhasMtr([linhaMtrGerenciadorVazia()])
                 }}
-                antesDosBotoes={
-                  <div
-                    style={{
-                      padding: '8px 0 4px',
-                      borderTop: '1px solid #e2e8f0',
-                      marginTop: '4px',
-                    }}
-                  >
-                    <ClienteGerenciadorMtrTabela
-                      linhas={linhasMtr}
-                      onChange={setLinhasMtr}
-                      listaRefreshKey={listaMtrRefreshKey}
-                    />
-                  </div>
+                depoisDosBotoes={
+                  <ClienteGerenciadorMtrTabela
+                    linhas={linhasMtr}
+                    onChange={setLinhasMtr}
+                    residuosContrato={cadastro.form.residuos}
+                    onSalvarGerenciador={() => salvarGerenciadorInterno({ silencioso: true })}
+                  />
                 }
             />
           </div>

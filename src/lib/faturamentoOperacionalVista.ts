@@ -77,7 +77,7 @@ export function useFaturamentoOperacionalVista(coletaIdUrl?: string | null) {
       return
     }
     setTicketAprovacaoAtivo(ticketCols)
-    setEsteiraMedicaoAtiva(esteiraCols)
+    setEsteiraMedicaoAtiva((prev) => prev || esteiraCols)
     setLinhasHistorico(data)
   }, [])
 

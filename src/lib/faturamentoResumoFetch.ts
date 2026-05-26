@@ -105,13 +105,17 @@ const SEL_VW_FATURAMENTO_TICKET_APROVACAO =
 const SEL_VW_FATURAMENTO_ESTEIRA =
   ', faturamento_esteira_status, medicao_relatorio_gerado_em, medicao_email_enviado_em, medicao_cliente_aprovado_em, medicao_cliente_aprovacao_obs, faturamento_relatorio_cliente_em, cliente_email_nf, mtr_status'
 
-function isEsteiraColumnMissingError(err: { message?: string }): boolean {
+/** Colunas da migração 20260601120000 expostas em vw_faturamento_resumo (evitar falso positivo com erro genérico da view). */
+export function isEsteiraColumnMissingError(err: { message?: string }): boolean {
   const msg = String(err.message ?? '').toLowerCase()
   return (
     msg.includes('faturamento_esteira_status') ||
+    msg.includes('faturamento_relatorio_cliente') ||
     msg.includes('medicao_relatorio') ||
+    msg.includes('medicao_email') ||
+    msg.includes('medicao_cliente') ||
     msg.includes('cliente_email_nf') ||
-    (msg.includes('column') && msg.includes('vw_faturamento_resumo'))
+    msg.includes('mtr_status')
   )
 }
 

@@ -245,13 +245,36 @@ export function montarPatchColetaDesdeMtr(
   return patch
 }
 
-async function vincularColetasProgramacaoSemMtr(mtrId: string, programacaoId: string): Promise<void> {
-  const { error } = await supabase
+/** Vincula coletas da programação ainda sem `mtr_id` — usado no sync MTR e no Gerenciador. */
+export async function vincularColetasProgramacaoAMtr(
+  mtrId: string,
+  programacaoId: string
+): Promise<{ ok: boolean; vinculadas: number; message?: string }> {
+  const mid = mtrId.trim()
+  const pid = programacaoId.trim()
+  if (!mid || !pid) {
+    return { ok: false, vinculadas: 0, message: 'MTR ou programação inválida.' }
+  }
+
+  const { data, error } = await supabase
     .from('coletas')
-    .update({ mtr_id: mtrId })
-    .eq('programacao_id', programacaoId)
+    .update({ mtr_id: mid })
+    .eq('programacao_id', pid)
     .is('mtr_id', null)
-  if (error) console.warn('[mtr→ticket] vincular coletas:', error.message)
+    .select('id')
+
+  if (error) {
+    const msg = error.message || 'Não foi possível vincular coletas da programação.'
+    console.warn('[mtr→ticket] vincular coletas:', msg)
+    return { ok: false, vinculadas: 0, message: msg }
+  }
+
+  return { ok: true, vinculadas: (data ?? []).length }
+}
+
+async function vincularColetasProgramacaoSemMtr(mtrId: string, programacaoId: string): Promise<void> {
+  const res = await vincularColetasProgramacaoAMtr(mtrId, programacaoId)
+  if (!res.ok && res.message) console.warn('[mtr→ticket] vincular coletas:', res.message)
 }
 
 async function listarColetasParaSync(

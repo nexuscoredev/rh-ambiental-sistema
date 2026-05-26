@@ -96,7 +96,7 @@ function erroColunasEsteiraAusentes(error: { message?: string }): boolean {
 }
 
 export const MENSAGEM_MIGRACAO_ESTEIRA =
-  'A esteira de medição ainda não está ativa neste Supabase. Execute supabase/migrations/20260601120000_faturamento_esteira_medicoes.sql no SQL Editor.'
+  'No SQL Editor do Supabase deste projeto, execute supabase/migrations/20260601120000_faturamento_esteira_medicoes.sql (colunas da esteira em coletas + recriação de vw_faturamento_resumo) e recarregue a página.'
 
 export function normalizarEsteiraStatus(
   raw: string | null | undefined

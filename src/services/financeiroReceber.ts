@@ -3,7 +3,10 @@ import {
   alinharValorPagoComStatusUi,
   derivarStatusPagamento,
 } from '../lib/contasReceberUtils'
-import { payloadFaturamentoEmitidoEnviaAoFinanceiro } from '../lib/coletaFluxoAtualizacao'
+import {
+  payloadFaturamentoEmitidoAguardaFinalizacaoEsteira,
+  payloadFaturamentoEmitidoEnviaAoFinanceiro,
+} from '../lib/coletaFluxoAtualizacao'
 import {
   parseResumoFinanceiroJson,
   totalResumoFinanceiro,
@@ -930,5 +933,163 @@ export async function registrarBaixaContaReceber(
     return { error: null }
   } catch (e) {
     return { error: e instanceof Error ? e : new Error(String(e)) }
+  }
+}
+
+async function expandirColetasTituloMesmaMtrParaDevolucaoFaturamento(
+  supabase: SupabaseClient,
+  coletaId: string
+): Promise<
+  | { ok: true; coletaIds: string[]; contas: { id: string; referencia_coleta_id: string }[] }
+  | { ok: false; message: string }
+> {
+  const id = coletaId.trim()
+  if (!id) return { ok: false, message: 'Coleta inválida.' }
+
+  const { data: coleta, error: errColeta } = await supabase
+    .from('coletas')
+    .select('id, mtr_id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (errColeta) return { ok: false, message: errColeta.message || 'Não foi possível localizar a coleta.' }
+  if (!coleta) return { ok: false, message: 'Coleta não encontrada.' }
+
+  const idsColeta = new Set<string>([id])
+  const mtrId = (coleta.mtr_id as string | null)?.trim()
+  if (mtrId) {
+    const { data: irmaos, error: errIrmaos } = await supabase
+      .from('coletas')
+      .select('id')
+      .eq('mtr_id', mtrId)
+    if (errIrmaos) {
+      return { ok: false, message: errIrmaos.message || 'Não foi possível localizar tickets da MTR.' }
+    }
+    for (const r of irmaos ?? []) {
+      const cid = String(r.id ?? '').trim()
+      if (cid) idsColeta.add(cid)
+    }
+  }
+
+  const { data: contas, error: errContas } = await supabase
+    .from('contas_receber')
+    .select('id, referencia_coleta_id, status_pagamento, valor_pago')
+    .in('referencia_coleta_id', [...idsColeta])
+
+  if (errContas) {
+    return { ok: false, message: errContas.message || 'Não foi possível ler o título a receber.' }
+  }
+
+  const elegiveis: { id: string; referencia_coleta_id: string }[] = []
+  for (const c of contas ?? []) {
+    const ref = String(c.referencia_coleta_id ?? '').trim()
+    if (!ref || !idsColeta.has(ref)) continue
+    const st = String(c.status_pagamento || 'Pendente')
+    const vp = Number(c.valor_pago) || 0
+    if (st === 'Pago' || st === 'Cancelado') continue
+    if (vp > 0) continue
+    elegiveis.push({ id: String(c.id), referencia_coleta_id: ref })
+  }
+
+  if (elegiveis.length === 0) {
+    return {
+      ok: false,
+      message:
+        'Não há título em aberto sem baixa para devolver. Títulos pagos, cancelados ou com baixa parcial não podem voltar ao faturamento.',
+    }
+  }
+
+  return {
+    ok: true,
+    coletaIds: [...new Set(elegiveis.map((c) => c.referencia_coleta_id))],
+    contas: elegiveis,
+  }
+}
+
+/**
+ * Devolve coleta(s) da mesma MTR da fila Financeiro (Contas a Receber) para a esteira
+ * operacional de faturamento (passo 7 — registo NF/boleto), sem desfazer o faturamento emitido.
+ */
+export async function devolverColetaContasReceberParaFilaFaturamento(
+  supabase: SupabaseClient,
+  input: {
+    referencia_coleta_id: string
+    usuario_id?: string | null
+    observacao?: string | null
+  }
+): Promise<{ ok: true; coleta_ids: string[] } | { ok: false; message: string }> {
+  try {
+    const exp = await expandirColetasTituloMesmaMtrParaDevolucaoFaturamento(
+      supabase,
+      input.referencia_coleta_id
+    )
+    if (!exp.ok) return exp
+
+    const { data: regs, error: errRegs } = await supabase
+      .from('faturamento_registros')
+      .select('coleta_id')
+      .in('coleta_id', exp.coletaIds)
+      .eq('status', 'emitido')
+      .limit(1)
+
+    if (errRegs) {
+      return { ok: false, message: errRegs.message || 'Não foi possível verificar o faturamento emitido.' }
+    }
+    if (!regs?.length) {
+      return {
+        ok: false,
+        message:
+          'Esta coleta não tem faturamento emitido. Só é possível devolver títulos gerados pela esteira de faturamento.',
+      }
+    }
+
+    const agora = new Date().toISOString()
+    const obsDevolucao =
+      (input.observacao ?? '').trim() ||
+      'Devolvido da fila Financeiro (Contas a Receber) para a esteira de faturamento.'
+
+    const patchColeta = {
+      ...payloadFaturamentoEmitidoAguardaFinalizacaoEsteira(),
+      faturamento_esteira_status: 'LIBERADO_FINANCEIRO',
+    }
+
+    const { error: errUpdColeta } = await supabase.from('coletas').update(patchColeta).in('id', exp.coletaIds)
+    if (errUpdColeta) {
+      return {
+        ok: false,
+        message: errUpdColeta.message || 'Não foi possível atualizar a coleta na esteira de faturamento.',
+      }
+    }
+
+    for (const conta of exp.contas) {
+      const { error: errConta } = await supabase
+        .from('contas_receber')
+        .update({
+          status_pagamento: 'Cancelado',
+          nf_enviada_em: null,
+          nf_envio_observacao: obsDevolucao.slice(0, 500),
+          updated_at: agora,
+        })
+        .eq('id', conta.id)
+
+      if (errConta && !ignoraErroSchema(errConta)) {
+        return { ok: false, message: errConta.message || 'Não foi possível cancelar o título a receber.' }
+      }
+
+      void registrarAuditoriaFinanceiro(supabase, {
+        entidade: 'contas_receber',
+        entidade_id: conta.id,
+        usuario_id: input.usuario_id ?? null,
+        acao: 'devolver_fila_faturamento',
+        detalhe: {
+          referencia_coleta_id: conta.referencia_coleta_id,
+          coleta_ids: exp.coletaIds,
+        },
+      })
+    }
+
+    return { ok: true, coleta_ids: exp.coletaIds }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) }
   }
 }

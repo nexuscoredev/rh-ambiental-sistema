@@ -22,7 +22,8 @@ export type ClienteCadastroFormularioProps = CadastroHandlers & {
   salvando?: boolean
   onSubmit: (e: FormEvent<HTMLFormElement>) => void
   onCancelar?: () => void
-  antesDosBotoes?: ReactNode
+  /** Conteúdo após Salvar/Cancelar (ex.: MTRs baixadas no Gerenciador). */
+  depoisDosBotoes?: ReactNode
   /** Preenche colunas conforme a largura do painel (página Gerenciador). */
   gridFluido?: boolean
   form: FormCliente
@@ -37,7 +38,7 @@ export function ClienteCadastroFormulario({
   salvando = false,
   onSubmit,
   onCancelar,
-  antesDosBotoes,
+  depoisDosBotoes,
   gridFluido = false,
   handleInputChange,
   preencherEnderecoPorCep,
@@ -715,16 +716,12 @@ export function ClienteCadastroFormulario({
                 />
               </div>
 
-              {antesDosBotoes ? (
-                <div style={{ marginTop: '4px' }}>{antesDosBotoes}</div>
-              ) : null}
-
               <div
                 style={{
                   display: 'flex',
                   gap: '10px',
                   alignItems: 'center',
-                  marginTop: '8px',
+                  marginTop: '16px',
                   flexWrap: 'wrap',
                   justifyContent: 'flex-start',
                 }}
@@ -766,6 +763,18 @@ export function ClienteCadastroFormulario({
                   Cancelar
                 </button>
               </div>
+
+              {depoisDosBotoes ? (
+                <div
+                  style={{
+                    marginTop: '20px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #e2e8f0',
+                  }}
+                >
+                  {depoisDosBotoes}
+                </div>
+              ) : null}
     </form>
   )
 }

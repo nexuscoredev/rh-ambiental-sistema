@@ -3,6 +3,7 @@ import {
   escopoOrFilterPostgrest,
   FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO,
   faturamentoResumoDesdeDias,
+  isEsteiraColumnMissingError,
 } from './faturamentoResumoFetch'
 
 describe('faturamentoResumoDesdeDias', () => {
@@ -27,5 +28,23 @@ describe('escopoOrFilterPostgrest', () => {
 
   it('completo não aplica filtro de escopo', () => {
     expect(escopoOrFilterPostgrest('completo')).toBeUndefined()
+  })
+})
+
+describe('isEsteiraColumnMissingError', () => {
+  it('reconhece colunas da esteira na mensagem PostgREST', () => {
+    expect(
+      isEsteiraColumnMissingError({
+        message: 'column vw_faturamento_resumo.faturamento_esteira_status does not exist',
+      })
+    ).toBe(true)
+  })
+
+  it('não trata erro genérico de outra coluna da view como esteira', () => {
+    expect(
+      isEsteiraColumnMissingError({
+        message: 'column vw_faturamento_resumo.ticket_impresso_em does not exist',
+      })
+    ).toBe(false)
   })
 })

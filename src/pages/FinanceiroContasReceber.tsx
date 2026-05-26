@@ -13,7 +13,10 @@ import { cargoPodeEditarCobranca } from '../lib/workflowPermissions'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { gerarRelatorioContasReceberPdf } from '../lib/gerarRelatorioContasReceberPdf'
-import { registrarBaixaContaReceber } from '../services/financeiroReceber'
+import {
+  devolverColetaContasReceberParaFilaFaturamento,
+  registrarBaixaContaReceber,
+} from '../services/financeiroReceber'
 
 type ContaRow = {
   id: string
@@ -103,6 +106,7 @@ export default function FinanceiroContasReceber() {
   >('filtro-faixa', 'todos')
   const [busca, setBusca] = useSessionPersistedState('busca', '')
   const [marcandoPagoId, setMarcandoPagoId] = useState<string | null>(null)
+  const [devolvendoColetaId, setDevolvendoColetaId] = useState<string | null>(null)
   const clinicasRef = useRef<FinanceiroFilaClinicasHandle>(null)
   const [resumoClinicas, setResumoClinicas] = useState({
     qtd: 0,
@@ -367,6 +371,49 @@ export default function FinanceiroContasReceber() {
     return { saldoAberto, saldoVencido, qtd: linhas.length }
   }, [linhas, hojeMs])
 
+  function podeDevolverParaFilaFaturamento(row: ContaRow): boolean {
+    if (row.origem_clinica) return false
+    if (row.status_pagamento === 'Pago' || row.status_pagamento === 'Cancelado') return false
+    if (row.valor_pago > 0) return false
+    return true
+  }
+
+  async function devolverParaFilaFaturamento(row: ContaRow) {
+    if (!podeMutar || !podeDevolverParaFilaFaturamento(row)) return
+
+    const ok = await rgConfirm({
+      title: 'Voltar para fila do faturamento',
+      message: `Devolver a coleta ${row.coleta_numero} (${row.cliente_nome}) da fila Financeiro para a esteira de faturamento?`,
+      details: [
+        'O título a receber será cancelado (sem baixas registadas).',
+        'A coleta volta ao passo «Registo de NF / boleto» em Faturamento operacional; o faturamento emitido mantém-se.',
+        'Tickets da mesma MTR em aberto na mesma situação são incluídos.',
+      ],
+      confirmLabel: 'Devolver ao faturamento',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setDevolvendoColetaId(row.referencia_coleta_id)
+    setErro('')
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const res = await devolverColetaContasReceberParaFilaFaturamento(supabase, {
+        referencia_coleta_id: row.referencia_coleta_id,
+        usuario_id: user?.id ?? null,
+        observacao: `Devolvido pelo título ${row.coleta_numero} em Contas a Receber.`,
+      })
+      if (!res.ok) throw new Error(res.message)
+      await carregar()
+    } catch (e) {
+      setErro(mensagemErroSupabase(e, 'Erro ao devolver coleta para a fila do faturamento.'))
+    } finally {
+      setDevolvendoColetaId(null)
+    }
+  }
+
   async function marcarTituloComoPago(row: ContaRow) {
     if (!podeMutar) return
     const saldo = row.valor - row.valor_pago
@@ -501,7 +548,7 @@ export default function FinanceiroContasReceber() {
               </p>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => {
@@ -902,12 +949,45 @@ export default function FinanceiroContasReceber() {
                                 Fila clínicas
                               </Link>
                             ) : (
-                              <Link
-                                to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
-                                style={{ fontWeight: 700, color: '#0d9488' }}
-                              >
-                                Cobrança
-                              </Link>
+                              <>
+                                <Link
+                                  to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
+                                  style={{ fontWeight: 700, color: '#0d9488' }}
+                                >
+                                  Cobrança
+                                </Link>
+                                {podeDevolverParaFilaFaturamento(r) ? (
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      !podeMutar || devolvendoColetaId === r.referencia_coleta_id
+                                    }
+                                    onClick={() => void devolverParaFilaFaturamento(r)}
+                                    title="Cancela o título e devolve a coleta ao passo de registo NF/boleto no Faturamento operacional"
+                                    style={{
+                                      padding: 0,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      fontWeight: 700,
+                                      fontSize: '13px',
+                                      color:
+                                        podeMutar && devolvendoColetaId !== r.referencia_coleta_id
+                                          ? '#b45309'
+                                          : '#94a3b8',
+                                      cursor:
+                                        podeMutar && devolvendoColetaId !== r.referencia_coleta_id
+                                          ? 'pointer'
+                                          : 'not-allowed',
+                                      textDecoration: 'underline',
+                                      textUnderlineOffset: '2px',
+                                    }}
+                                  >
+                                    {devolvendoColetaId === r.referencia_coleta_id
+                                      ? 'A devolver…'
+                                      : 'Voltar para fila do faturamento'}
+                                  </button>
+                                ) : null}
+                              </>
                             )}
                           </div>
                         </td>

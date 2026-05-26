@@ -87,7 +87,11 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
     title: 'Fluxo operacional',
     items: [
       { label: 'Programação', path: '/programacao' },
-      { label: 'MTR', path: '/mtr' },
+      {
+        label: 'MTR',
+        path: '/mtr',
+        children: [{ label: 'MTR Gerenciador', path: '/mtr/gerenciador' }],
+      },
       { label: 'Pesagem e Ticket', path: '/controle-massa' },
       { label: 'Comprovante de Descarte', path: '/comprovantes-descarte' },
       { label: 'Conferência de transportes', path: '/conferencia-transporte' },
@@ -137,7 +141,10 @@ const allMenuItems = menuGroups.flatMap((g) => flattenMenuLeaves(g.items))
 
 /** Itens de menu cujo path pode ter sufixo (/mtr/:id, /controle-massa/:id) usam prefix match. */
 const navLinkEndExact = (path: string) =>
-  path !== '/mtr' && path !== '/controle-massa' && path !== '/comprovantes-descarte'
+  path !== '/mtr' &&
+  path !== '/mtr/gerenciador' &&
+  path !== '/controle-massa' &&
+  path !== '/comprovantes-descarte'
 
 function formatarDataHora(date: Date) {
   const data = new Intl.DateTimeFormat('pt-BR', {
