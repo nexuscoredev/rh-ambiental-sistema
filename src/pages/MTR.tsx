@@ -55,6 +55,7 @@ import {
   montarCidadeUfCliente,
   montarEnderecoLinhaCliente,
   parseCidadeUfCampoTopo,
+  atividadeGeradorDesdeClienteProgramacao,
   buscarNomeGeradorPorProgramacaoMtr,
   patchCidadeEnderecoGeradorDesdeCliente,
   resolverClienteIdProgramacaoMtr,
@@ -76,7 +77,8 @@ import {
 } from '../lib/mtrTransportadorRgDefaults'
 import { MTR_TEXTO_VIDE_FICHA } from '../lib/mtrPrintTexto'
 import ProgramacaoCalendarPicker from '../components/mtr/ProgramacaoCalendarPicker'
-import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
+import { SelectTipoResiduoClienteContrato } from '../components/mtr/SelectTipoResiduoClienteContrato'
+import { escolherTipoResiduoContratoMtr } from '../lib/mtrResiduoContratoOpcoes'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
 import {
   excluirColetaPorId,
@@ -1230,7 +1232,9 @@ export default function MTR() {
 
       return {
         ...prev,
-        tipo_residuo: tipoResiduoResumoContrato(contrato.residuos) || prev.tipo_residuo,
+        tipo_residuo:
+          escolherTipoResiduoContratoMtr(contrato.residuos, { valorAtual: prev.tipo_residuo }) ||
+          prev.tipo_residuo,
         detalhes: {
           ...(prev.detalhes ?? dz),
           ...syncResiduos,
@@ -1483,7 +1487,6 @@ export default function MTR() {
       contrato,
       programacao.tipo_caminhao ?? ''
     )
-    const tipoResContrato = tipoResiduoResumoContrato(contrato.residuos)
     const linhasResiduo = residuosContratoParaLinhasPesagem(contrato.residuos)
 
     setForm((prev) => {
@@ -1522,8 +1525,7 @@ export default function MTR() {
         residuo: listaResiduosForm[0],
         residuos_lista: listaResiduosForm,
       })
-      const atividadeGerador =
-        (prev.detalhes?.gerador?.atividade ?? '').trim() || dz.gerador.atividade
+      const atividadeGerador = atividadeGeradorDesdeClienteProgramacao(row, programacao)
       const obsExtrasCliente = [row.observacoes_gerais, row.link_google_maps]
         .map((s) => (s ?? '').trim())
         .filter(Boolean)
@@ -1570,10 +1572,14 @@ export default function MTR() {
         cidade: montarCidadeUfCliente(row),
         destinador: destinoTxt || prev.destinador,
         tipo_residuo:
-          tipoResContrato ||
+          escolherTipoResiduoContratoMtr(contrato.residuos, {
+            preferencia: programacao.tipo_servico,
+            valorAtual: prev.tipo_residuo,
+          }) ||
           (prev.tipo_residuo || '').trim() ||
           (row.tipo_residuo ?? '').trim() ||
-          prev.tipo_residuo,
+          programacao.tipo_servico ||
+          '',
         unidade: unidade || prev.unidade,
         detalhes: {
           ...dz,
@@ -4154,12 +4160,14 @@ ${MTR_LISTA_CARD_UI_CSS}
 
                     <div className="field">
                       <label>Tipo de resíduo / serviço</label>
-                      <SelectTipoResiduoCatalogo
+                      <SelectTipoResiduoClienteContrato
                         value={form.tipo_residuo}
-                        onChange={(tipo_residuo) =>
+                        residuosContrato={form.detalhes?.residuos_contrato_catalogo ?? []}
+                        onChange={(tipo_residuo, item) =>
                           setForm((prev) => ({
                             ...prev,
                             tipo_residuo,
+                            unidade: item?.unidade_medida?.trim() || prev.unidade || 'kg',
                             detalhes: prev.detalhes
                               ? {
                                   ...prev.detalhes,
@@ -4175,6 +4183,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                         }
                         disabled={!podeMutarMtr}
                       />
+                      {(form.detalhes?.residuos_contrato_catalogo ?? []).length === 0 ? (
+                        <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
+                          Selecione a programação para carregar os resíduos do contrato do cliente.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="field">

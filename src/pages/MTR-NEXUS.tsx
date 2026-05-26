@@ -24,7 +24,10 @@ import {
   type MtrManifestoPrintDetalhes,
 } from '../components/mtr/MtrManifestoPrint'
 import { MTR_TEXTO_VIDE_FICHA } from '../lib/mtrPrintTexto'
-import { SelectTipoResiduoCatalogo } from '../components/residuos/SelectTipoResiduoCatalogo'
+import type { ResiduoContratoItem } from '../lib/clienteContratoCadastro'
+import { SelectTipoResiduoClienteContrato } from '../components/mtr/SelectTipoResiduoClienteContrato'
+import { fetchContratoClienteMtrPorProgramacao } from '../lib/mtrClienteContratoAutofill'
+import { escolherTipoResiduoContratoMtr } from '../lib/mtrResiduoContratoOpcoes'
 import {
   coletarProgramacaoIdsVinculadasMtr,
   fetchProgramacoesMtrCatalogo,
@@ -32,7 +35,10 @@ import {
   mergeProgramacoesMtrPorId,
   mtrProgramacoesMesesJanela,
 } from '../lib/mtrProgramacoesFetch'
-import { buscarNomeGeradorPorProgramacaoMtr } from '../lib/mtrCadastroClienteAutofill'
+import {
+  atividadeGeradorDesdeClienteProgramacao,
+  buscarNomeGeradorPorProgramacaoMtr,
+} from '../lib/mtrCadastroClienteAutofill'
 import {
   resolverDestinadorMtrForm,
   sincronizarDestinatarioDetalhesComDestinador,
@@ -172,6 +178,7 @@ type MTRDetalhes = {
     responsavel: string
     telefone: string
   }
+  residuos_contrato_catalogo?: ResiduoContratoItem[]
 }
 
 type MTRFormState = Omit<MTR, 'id' | 'created_at' | 'status'>
@@ -266,6 +273,8 @@ type ClienteRowAutofill = {
   unidade_medida: string | null
   classificacao: string | null
   licenca_numero: string | null
+  observacoes_operacionais: string | null
+  observacoes_gerais: string | null
 }
 
 function montarEnderecoLinhaCliente(row: ClienteRowAutofill): string {
@@ -913,7 +922,7 @@ export default function MTR() {
     const { data: clienteRow, error } = await supabase
       .from('clientes')
       .select(
-        'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero'
+        'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, observacoes_operacionais, observacoes_gerais'
       )
       .eq('id', clienteId)
       .maybeSingle()
@@ -927,11 +936,15 @@ export default function MTR() {
     }
 
     const row = clienteRow as ClienteRowAutofill
+    const contrato = await fetchContratoClienteMtrPorProgramacao(supabase, programacao)
+    if (gen !== programacaoChangeGenRef.current) return
 
     setForm((prev) => {
       if (prev.programacao_id !== programacao.id) return prev
       const dz = detalhesVazios()
       const unidade = (row.unidade_medida ?? '').trim()
+      const residuosContrato = contrato?.residuos ?? prev.detalhes?.residuos_contrato_catalogo ?? []
+      const atividadeGerador = atividadeGeradorDesdeClienteProgramacao(row, programacao)
       return {
         ...prev,
         gerador: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
@@ -939,14 +952,23 @@ export default function MTR() {
         endereco: montarEnderecoLinhaCliente(row),
         cidade: montarCidadeUfCliente(row),
         tipo_residuo:
-          (prev.tipo_residuo || '').trim() || (row.tipo_residuo ?? '').trim() || prev.tipo_residuo,
+          escolherTipoResiduoContratoMtr(residuosContrato, {
+            preferencia: programacao.tipo_servico,
+            valorAtual: prev.tipo_residuo,
+          }) ||
+          (prev.tipo_residuo || '').trim() ||
+          (row.tipo_residuo ?? '').trim() ||
+          programacao.tipo_servico ||
+          '',
         unidade: unidade || prev.unidade,
         detalhes: {
           ...dz,
           ...prev.detalhes,
+          residuos_contrato_catalogo: residuosContrato,
           gerador: {
             ...dz.gerador,
             ...(prev.detalhes?.gerador || {}),
+            atividade: (prev.detalhes?.gerador?.atividade ?? '').trim() || atividadeGerador,
             cnpj: (row.cnpj ?? '').trim() || dz.gerador.cnpj,
             cadri: (row.licenca_numero ?? '').trim() || dz.gerador.cadri,
             responsavel: (row.responsavel_nome ?? '').trim() || dz.gerador.responsavel,
@@ -3267,12 +3289,14 @@ ${MTR_LISTA_CARD_UI_CSS}
 
                     <div className="field">
                       <label>Tipo de resíduo / serviço</label>
-                      <SelectTipoResiduoCatalogo
+                      <SelectTipoResiduoClienteContrato
                         value={form.tipo_residuo}
-                        onChange={(tipo_residuo) =>
+                        residuosContrato={form.detalhes?.residuos_contrato_catalogo ?? []}
+                        onChange={(tipo_residuo, item) =>
                           setForm((prev) => ({
                             ...prev,
                             tipo_residuo,
+                            unidade: item?.unidade_medida?.trim() || prev.unidade || 'kg',
                             detalhes: prev.detalhes
                               ? {
                                   ...prev.detalhes,

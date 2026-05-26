@@ -283,6 +283,25 @@ export type GeradorCidadePatch = {
   cep?: string
 }
 
+/** Campo «Atividade» (secção 1. Gerador) — prioridade alinhada ao autofill histórico da MTR. */
+export function atividadeGeradorDesdeClienteProgramacao(
+  row: {
+    classificacao?: string | null
+    observacoes_operacionais?: string | null
+    observacoes_gerais?: string | null
+  },
+  programacao: { tipo_servico?: string | null }
+): string {
+  const obs = (s: string | null | undefined, max = 120) => (s ?? '').trim().slice(0, max)
+  return (
+    (row.classificacao ?? '').trim() ||
+    (programacao.tipo_servico ?? '').trim() ||
+    obs(row.observacoes_operacionais) ||
+    obs(row.observacoes_gerais) ||
+    ''
+  )
+}
+
 export function patchCidadeEnderecoGeradorDesdeCliente(
   row: ClienteEnderecoAutofill,
   atual: {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  atividadeGeradorDesdeClienteProgramacao,
   enriquecerClienteEnderecoAutofill,
   inferirCidadeEstadoEnderecoTexto,
   montarCidadeUfCliente,
@@ -8,6 +9,27 @@ import {
 } from './mtrCadastroClienteAutofill'
 
 describe('mtrCadastroClienteAutofill', () => {
+  it('resolve atividade do gerador a partir do cadastro e da programação', () => {
+    expect(
+      atividadeGeradorDesdeClienteProgramacao(
+        { classificacao: 'Hospitalar', observacoes_operacionais: 'x' },
+        { tipo_servico: 'RSS' }
+      )
+    ).toBe('Hospitalar')
+    expect(
+      atividadeGeradorDesdeClienteProgramacao(
+        { classificacao: '', observacoes_operacionais: 'Obs longa' },
+        { tipo_servico: 'Coleta fixa' }
+      )
+    ).toBe('Coleta fixa')
+    expect(
+      atividadeGeradorDesdeClienteProgramacao(
+        { classificacao: '', observacoes_operacionais: '  Cadastro  ' },
+        { tipo_servico: '' }
+      )
+    ).toBe('Cadastro')
+  })
+
   it('monta cidade e UF do cadastro', () => {
     expect(montarCidadeUfCliente({ cidade: 'Araçariguama', estado: 'SP' })).toBe(
       'Araçariguama — SP'
