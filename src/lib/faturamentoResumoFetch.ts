@@ -286,3 +286,70 @@ export async function fetchVwFaturamentoResumoPorColetaIds(
     esteiraMedicaoAtiva,
   }
 }
+
+const MAX_LINHAS_POR_MTR_LOOKUP = 100
+
+/**
+ * Coletas de uma MTR para consulta de etapa (sem corte `VITE_FATURAMENTO_RESUMO_DESDE_DIAS`).
+ */
+export async function fetchVwFaturamentoResumoPorMtrId(
+  supabase: SupabaseClient,
+  mtrId: string
+): Promise<FetchVwFaturamentoResumoResult> {
+  const mid = mtrId.trim()
+  if (!mid) {
+    return { data: [], error: null, ticketAprovacaoAtivo: true, esteiraMedicaoAtiva: true }
+  }
+
+  let sel = `${SEL_VW_FATURAMENTO_BASE}${SEL_VW_FATURAMENTO_TICKET_APROVACAO}${SEL_VW_FATURAMENTO_ESTEIRA}`
+  let ticketAprovacaoAtivo = true
+  let esteiraMedicaoAtiva = true
+
+  let qb = supabase
+    .from('vw_faturamento_resumo')
+    .select(sel)
+    .eq('mtr_id', mid)
+    .order('created_at', { ascending: false })
+    .limit(MAX_LINHAS_POR_MTR_LOOKUP)
+
+  let { data, error } = await qb
+
+  if (error && esteiraMedicaoAtiva && isEsteiraColumnMissingError(error)) {
+    esteiraMedicaoAtiva = false
+    sel = `${SEL_VW_FATURAMENTO_BASE}${ticketAprovacaoAtivo ? SEL_VW_FATURAMENTO_TICKET_APROVACAO : ''}`
+    const retry = await supabase
+      .from('vw_faturamento_resumo')
+      .select(sel)
+      .eq('mtr_id', mid)
+      .order('created_at', { ascending: false })
+      .limit(MAX_LINHAS_POR_MTR_LOOKUP)
+    data = retry.data
+    error = retry.error
+  }
+
+  if (error && ticketAprovacaoAtivo && isTicketAprovacaoColumnMissingError(error)) {
+    ticketAprovacaoAtivo = false
+    sel = `${SEL_VW_FATURAMENTO_BASE}${esteiraMedicaoAtiva ? SEL_VW_FATURAMENTO_ESTEIRA : ''}`
+    const retry = await supabase
+      .from('vw_faturamento_resumo')
+      .select(sel)
+      .eq('mtr_id', mid)
+      .order('created_at', { ascending: false })
+      .limit(MAX_LINHAS_POR_MTR_LOOKUP)
+    data = retry.data
+    error = retry.error
+  }
+
+  if (error) {
+    const base = error.message || 'Erro ao ler vw_faturamento_resumo.'
+    const msg = isVwFaturamentoResumoMissingError(error) ? base + mensagemCorrecaoViewFaturamento() : base
+    return { data: [], error: new Error(msg), ticketAprovacaoAtivo: false, esteiraMedicaoAtiva: false }
+  }
+
+  return {
+    data: ordenarLinhas((data ?? []) as unknown as FaturamentoResumoViewRow[]),
+    error: null,
+    ticketAprovacaoAtivo,
+    esteiraMedicaoAtiva,
+  }
+}

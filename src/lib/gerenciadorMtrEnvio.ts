@@ -343,6 +343,7 @@ export async function prepararEnvioGerenciadorParaMtr(
   linhas: LinhaGerenciadorEnvio[],
   _residuosContrato?: ResiduoContratoItem[]
 ): Promise<ResultadoPrepararEnvioGerenciador> {
+  void _residuosContrato
   const agrupado = agruparLinhasPorMtrBaixada(linhas)
   const numeros = [...agrupado.keys()]
   const resultados: ResultadoEnvioLinhaGerenciador[] = []

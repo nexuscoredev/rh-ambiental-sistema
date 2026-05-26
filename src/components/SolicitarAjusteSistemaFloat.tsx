@@ -146,7 +146,7 @@ export default function SolicitarAjusteSistemaFloat({
             >
               <div className="suporte-float-panel__head">
                 <h2 id={`${panelId}-titulo`} className="suporte-float-panel__title">
-                  Solicitar ajuste
+                  Solicitar ajuste no sistema
                 </h2>
                 <p className="suporte-float-panel__lead">
                   {contaDesenvolvedor

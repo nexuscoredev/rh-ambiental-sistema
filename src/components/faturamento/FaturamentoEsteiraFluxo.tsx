@@ -5,6 +5,7 @@ import {
   ROTULO_PASSO_UI_ESTEIRA,
   type PassoUiEsteiraFaturamento,
 } from '../../lib/faturamentoEsteira'
+import { FaturamentoEsteiraBuscaMtr } from './FaturamentoEsteiraBuscaMtr'
 
 const wrap: CSSProperties = {
   display: 'flex',
@@ -94,6 +95,9 @@ export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: PassoUiEs
       <span style={{ width: '100%', fontSize: '10px', color: '#94a3b8', marginTop: passoAtivo ? '4px' : '4px' }}>
         Status internos: {ORDEM_ESTEIRA_UI.map((s) => ROTULO_ESTEIRA[s]).join(' → ')}
       </span>
+      <div style={{ width: '100%' }}>
+        <FaturamentoEsteiraBuscaMtr />
+      </div>
     </div>
   )
 }

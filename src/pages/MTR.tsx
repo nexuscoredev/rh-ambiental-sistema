@@ -20,6 +20,16 @@ import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { MtrCicloVidaAcoes } from '../components/mtr/MtrCicloVidaAcoes'
 import { isMtrStatusCancelado } from '../lib/mtrCicloVida'
 import { classeMtrListaCard, MTR_LISTA_CARD_UI_CSS } from '../lib/mtrListaCardUi'
+import {
+  fetchColetasPorMtrIds,
+  fetchMtrListaPorId,
+  fetchOpcoesUsuariosLancadoresMtr,
+  fetchPaginaListaMtr,
+  type OpcaoUsuarioLancadorMtr,
+  MTR_LISTA_BUSCA_MIN_CHARS,
+  MTR_LISTA_TAMANHO_PAGINA,
+} from '../lib/mtrListaQuery'
+import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { MtrManifestoPrint } from '../components/mtr/MtrManifestoPrint'
 import { MtrResiduosDescricaoForm } from '../components/mtr/MtrResiduosDescricaoForm'
 import { officialSiteUrl } from '../lib/officialSiteUrl'
@@ -688,6 +698,16 @@ export default function MTR() {
   const [coletas, setColetas] = useState<Coleta[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [buscaLista, setBuscaLista] = useState('')
+  const buscaListaDebounced = useDebouncedValue(buscaLista, 400)
+  const buscaListaAtiva = buscaListaDebounced.trim().length >= MTR_LISTA_BUSCA_MIN_CHARS
+  const [filtroLancadorId, setFiltroLancadorId] = useState('')
+  const [usuariosLancadores, setUsuariosLancadores] = useState<OpcaoUsuarioLancadorMtr[]>([])
+  const filtroLancadorAtivo = Boolean(filtroLancadorId.trim())
+  const [listaTotal, setListaTotal] = useState<number | null>(null)
+  const [listaTemMais, setListaTemMais] = useState(false)
+  const [carregandoMaisLista, setCarregandoMaisLista] = useState(false)
+  const mtrsRef = useRef<MTR[]>([])
 
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -780,40 +800,51 @@ export default function MTR() {
     setMtrDevCriadoPorNome('')
   }
 
-  type LoadDataOptions = { /** Atualiza lista sem esconder a UI (ex.: cancelar/baixar MTR). */ silent?: boolean }
+  type LoadDataOptions = {
+    /** Atualiza lista sem esconder a UI (ex.: cancelar/baixar MTR). */
+    silent?: boolean
+    /** Filtro por número, cliente ou gerador (mín. 2 caracteres). */
+    busca?: string
+    /** Filtra por `criado_por_user_id`. */
+    lancadorUserId?: string
+    /** Acrescenta a próxima página à lista (10 por vez). */
+    append?: boolean
+  }
+
+  function paramsListaMtrAtual(): Pick<LoadDataOptions, 'busca' | 'lancadorUserId'> {
+    return {
+      busca: buscaListaDebounced,
+      lancadorUserId: filtroLancadorId.trim() || undefined,
+    }
+  }
 
   async function loadData(opts?: LoadDataOptions) {
     const gen = ++loadDataGenRef.current
     const silent = !!opts?.silent
-    if (silent) {
+    const append = !!opts?.append
+    const offset = append ? mtrsRef.current.length : 0
+
+    if (append) {
+      setCarregandoMaisLista(true)
+    } else if (silent) {
       setLoading(false)
     } else {
       setLoading(true)
     }
 
-    const [mtrsRes, coletasRes] = await Promise.all([
-      supabase
-        .from('mtrs')
-        .select(
-          'id, numero, programacao_id, cliente, gerador, endereco, cidade, tipo_residuo, quantidade, unidade, destinador, transportador, detalhes, data_emissao, observacoes, status, created_at, criado_por_nome, criado_por_user_id, cancelada_em, cancelamento_justificativa, cancelamento_cobrar_frete'
-        )
-        .order('created_at', { ascending: false })
-        .limit(300),
-      supabase
-        .from('coletas')
-        .select(
-          'id, numero, cliente, etapa_operacional, fluxo_status, status_processo, mtr_id, programacao_id, motorista, motorista_nome, placa, tipo_residuo'
-        )
-        .order('created_at', { ascending: false })
-        .limit(500),
-    ])
+    const pagina = await fetchPaginaListaMtr<MTR>(supabase, {
+      busca: opts?.busca ?? '',
+      lancadorUserId: opts?.lancadorUserId,
+      offset,
+    })
 
     if (gen !== loadDataGenRef.current) {
-      if (!silent) setLoading((prev) => (prev && mtrs.length > 0 ? false : prev))
+      if (append) setCarregandoMaisLista(false)
+      else if (!silent) setLoading((prev) => (prev && mtrs.length > 0 ? false : prev))
       return
     }
 
-    const alertarSeCritico = async (titulo: string, err: typeof mtrsRes.error) => {
+    const alertarSeCritico = async (titulo: string, err: typeof pagina.error) => {
       if (!err) return
       if (isBenignSupabaseFetchError(err)) {
         if (import.meta.env.DEV) {
@@ -829,56 +860,125 @@ export default function MTR() {
     }
 
     let mtrsRows: MTR[] = []
-    if (mtrsRes.error) {
-      await alertarSeCritico('Erro ao carregar MTRs:', mtrsRes.error)
+    if (pagina.error) {
+      await alertarSeCritico('Erro ao carregar MTRs:', pagina.error)
+      if (!append) {
+        setMtrs([])
+        setListaTotal(0)
+        setListaTemMais(false)
+      }
     } else {
-      const rawMtrs = (mtrsRes.data || []) as MTR[]
+      const rawMtrs = pagina.rows
       const idsAutorSemNome = rawMtrs
         .filter((m) => !(m.criado_por_nome || '').trim() && (m.criado_por_user_id || '').trim())
         .map((m) => m.criado_por_user_id as string)
       const nomePorUsuarioId = await montarMapNomeExibicaoPorUsuarioId(supabase, idsAutorSemNome)
-      mtrsRows = rawMtrs.map((m) => ({
+      const paginaEnriquecida = rawMtrs.map((m) => ({
         ...m,
         criado_por_nome:
           (m.criado_por_nome || '').trim() ||
           nomePorUsuarioId.get(String(m.criado_por_user_id || '').trim()) ||
           null,
       }))
+
+      if (!append && urlMtrId && !paginaEnriquecida.some((m) => m.id === urlMtrId)) {
+        const extra = await fetchMtrListaPorId<MTR>(supabase, urlMtrId)
+        if (extra && gen === loadDataGenRef.current) {
+          const idsExtra = !(extra.criado_por_nome || '').trim() && (extra.criado_por_user_id || '').trim()
+            ? [extra.criado_por_user_id as string]
+            : []
+          const nomesExtra = await montarMapNomeExibicaoPorUsuarioId(supabase, idsExtra)
+          mtrsRows = [
+            {
+              ...extra,
+              criado_por_nome:
+                (extra.criado_por_nome || '').trim() ||
+                nomesExtra.get(String(extra.criado_por_user_id || '').trim()) ||
+                null,
+            },
+            ...paginaEnriquecida,
+          ]
+        } else {
+          mtrsRows = paginaEnriquecida
+        }
+      } else {
+        mtrsRows = append
+          ? [...mtrsRef.current, ...paginaEnriquecida]
+          : paginaEnriquecida
+      }
+
+      setListaTotal(pagina.total)
+      setListaTemMais(append ? pagina.temMais : pagina.temMais || mtrsRows.length < pagina.total)
       setMtrs(mtrsRows)
+      mtrsRef.current = mtrsRows
       setSelectedMTR((prev) => {
         if (!prev) return prev
-        if (mtrsRows.length === 0) return null
-        return mtrsRows.find((m) => m.id === prev.id) ?? null
+        return mtrsRows.find((m) => m.id === prev.id) ?? prev
       })
+    }
+
+    const idsColeta = mtrsRows.map((m) => m.id)
+    const coletasRes = await fetchColetasPorMtrIds<Coleta>(supabase, idsColeta)
+
+    if (gen !== loadDataGenRef.current) {
+      if (append) setCarregandoMaisLista(false)
+      else if (!silent) setLoading(false)
+      return
     }
 
     let coletasRows: Coleta[] = []
     if (coletasRes.error) {
       await alertarSeCritico('Erro ao carregar coletas:', coletasRes.error)
+      if (!append) setColetas([])
+      else coletasRows = coletasRes.rows
     } else {
-      coletasRows = (coletasRes.data || []) as Coleta[]
-      setColetas(coletasRows)
+      coletasRows = coletasRes.rows
+      setColetas((prev) => {
+        if (!append) return coletasRows
+        const porId = new Map(prev.map((c) => [c.id, c]))
+        for (const c of coletasRows) porId.set(c.id, c)
+        return [...porId.values()]
+      })
     }
 
     if (gen === loadDataGenRef.current) {
-      await carregarProgramacoesVinculadas(mtrsRows, coletasRows, [
-        urlProgramacaoId,
-        urlColetaId,
-      ])
+      const coletasParaProg = append ? [...coletasRows] : coletasRows
+      await carregarProgramacoesVinculadas(mtrsRows, coletasParaProg, [urlProgramacaoId, urlColetaId])
     }
 
-    if (gen === loadDataGenRef.current && !silent) setLoading(false)
+    if (gen === loadDataGenRef.current) {
+      if (append) setCarregandoMaisLista(false)
+      else if (!silent) setLoading(false)
+    }
   }
 
   function aoConcluirCicloVidaMtr() {
-    void loadData({ silent: true })
+    void loadData({ silent: true, ...paramsListaMtrAtual() })
   }
+
+  const listaInicialCarregadaRef = useRef(false)
 
   useEffect(() => {
     queueMicrotask(() => {
       void loadData()
+      listaInicialCarregadaRef.current = true
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial única
+  }, [])
+
+  useEffect(() => {
+    if (!listaInicialCarregadaRef.current) return
+    void loadData(paramsListaMtrAtual())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData estável o suficiente
+  }, [buscaListaDebounced, filtroLancadorId])
+
+  useEffect(() => {
+    void fetchOpcoesUsuariosLancadoresMtr(supabase).then(({ opcoes, error }) => {
+      if (error && import.meta.env.DEV) {
+        console.debug('[MTR] utilizadores lançadores:', error.message)
+      }
+      setUsuariosLancadores(opcoes)
+    })
   }, [])
 
   useEffect(() => {
@@ -1950,7 +2050,7 @@ export default function MTR() {
     })
     setShowForm(false)
     resetForm()
-    await loadData()
+    await loadData(paramsListaMtrAtual())
   }
 
   async function handleDelete(item: MTR) {
@@ -2004,7 +2104,7 @@ export default function MTR() {
         : 'MTR removida com sucesso.',
       variant: 'success',
     })
-    await loadData()
+    await loadData(paramsListaMtrAtual())
   }
 
   async function handleDeleteColetasDaMtr(
@@ -2026,7 +2126,7 @@ export default function MTR() {
     const ids = [...new Set([...idsMemoria, ...idsDb])]
 
     if (ids.length === 0) {
-      await loadData()
+      await loadData(paramsListaMtrAtual())
       return true
     }
 
@@ -2049,13 +2149,13 @@ export default function MTR() {
           message: res.message,
           variant: 'danger',
         })
-        await loadData()
+        await loadData(paramsListaMtrAtual())
         return false
       }
     }
 
     setColetas((prev) => prev.filter((c) => c.mtr_id !== mtrId))
-    await loadData()
+    await loadData(paramsListaMtrAtual())
     if (!opts?.suppressSuccessAlert) {
       await rgAlert({
         title: 'MTR',
@@ -3693,7 +3793,10 @@ ${MTR_LISTA_CARD_UI_CSS}
             >
               Nova MTR
             </button>
-            <button className="btn btn-secondary" onClick={() => void loadData()}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void loadData(paramsListaMtrAtual())}
+            >
               Atualizar lista
             </button>
             {mtrSelecionadaValida && (
@@ -3706,9 +3809,11 @@ ${MTR_LISTA_CARD_UI_CSS}
 
         <div className="mtr-stats">
           <div className="stat-card">
-            <div className="stat-label">Total de MTRs</div>
-            <div className="stat-value">{mtrs.length}</div>
-            <div className="stat-help">Cadastradas no sistema.</div>
+            <div className="stat-label">
+              {buscaListaAtiva || filtroLancadorAtivo ? 'Resultados filtrados' : 'Total de MTRs'}
+            </div>
+            <div className="stat-value">{listaTotal ?? mtrs.length}</div>
+            <div className="stat-help">{mtrs.length} na lista</div>
           </div>
 
           <div className="stat-card">
@@ -3770,13 +3875,63 @@ ${MTR_LISTA_CARD_UI_CSS}
             <div className="panel-header">
               <h2>Lista de MTRs</h2>
               <p>Gerencie, visualize, edite e imprima os manifestos cadastrados.</p>
+              <div className="mtr-lista-filtros">
+                <div className="mtr-lista-busca">
+                  <label htmlFor="mtr-lista-busca-input" className="mtr-lista-busca__label">
+                    Pesquisar
+                  </label>
+                  <input
+                    id="mtr-lista-busca-input"
+                    type="search"
+                    className="mtr-lista-busca__input"
+                    placeholder="Nº MTR ou nome do cliente…"
+                    value={buscaLista}
+                    onChange={(e) => setBuscaLista(e.target.value)}
+                    autoComplete="off"
+                  />
+                  {buscaLista.trim() ? (
+                    <button
+                      type="button"
+                      className="mtr-lista-busca__limpar"
+                      onClick={() => setBuscaLista('')}
+                    >
+                      Limpar
+                    </button>
+                  ) : null}
+                </div>
+                <div className="mtr-lista-busca mtr-lista-busca--lancador">
+                  <label htmlFor="mtr-filtro-lancador" className="mtr-lista-busca__label">
+                    Quem lançou
+                  </label>
+                  <select
+                    id="mtr-filtro-lancador"
+                    className="mtr-lista-busca__select"
+                    value={filtroLancadorId}
+                    onChange={(e) => setFiltroLancadorId(e.target.value)}
+                  >
+                    <option value="">Todos</option>
+                    {usuariosLancadores.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {buscaLista.trim().length > 0 && buscaLista.trim().length < MTR_LISTA_BUSCA_MIN_CHARS ? (
+                <p className="mtr-lista-busca__hint">Digite pelo menos {MTR_LISTA_BUSCA_MIN_CHARS} caracteres.</p>
+              ) : null}
             </div>
 
             <div className="panel-body">
               {loading && mtrs.length === 0 ? (
                 <div className="loading-box">Carregando MTRs...</div>
               ) : mtrs.length === 0 ? (
-                <div className="empty-state">Nenhuma MTR cadastrada até o momento.</div>
+                <div className="empty-state">
+                  {buscaListaAtiva || filtroLancadorAtivo
+                    ? 'Nenhuma MTR encontrada com estes filtros.'
+                    : 'Nenhuma MTR cadastrada até o momento.'}
+                </div>
               ) : (
                 <div className="mtr-list">
                   {mtrs.map((item) => {
@@ -3887,6 +4042,20 @@ ${MTR_LISTA_CARD_UI_CSS}
                       </div>
                     )
                   })}
+
+                  {listaTemMais ? (
+                    <div style={{ padding: '12px 4px 4px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={carregandoMaisLista}
+                        onClick={() => void loadData({ ...paramsListaMtrAtual(), append: true, silent: true })}
+                        style={{ width: '100%' }}
+                      >
+                        {carregandoMaisLista ? 'Carregando…' : `Carregar mais (${MTR_LISTA_TAMANHO_PAGINA})`}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

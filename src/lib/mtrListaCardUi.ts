@@ -95,4 +95,82 @@ export const MTR_LISTA_CARD_UI_CSS = `
           background: linear-gradient(180deg, #e2e8f0 0%, #f1f5f9 100%);
           box-shadow: 0 10px 28px rgba(100, 116, 139, 0.1);
         }
+
+        .mtr-lista-filtros {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px 16px;
+          margin-top: 12px;
+          align-items: flex-end;
+        }
+
+        .mtr-lista-busca {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px 10px;
+          flex: 2;
+          min-width: 220px;
+        }
+
+        .mtr-lista-busca--lancador {
+          flex: 1;
+          min-width: 180px;
+        }
+
+        .mtr-lista-busca__select {
+          flex: 1;
+          min-width: 160px;
+          height: 40px;
+          padding: 0 10px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          font-size: 14px;
+          background: #fff;
+          color: #0f172a;
+        }
+
+        .mtr-lista-busca__select:focus {
+          outline: none;
+          border-color: #0f766e;
+          box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+        }
+
+        .mtr-lista-busca__label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+        }
+
+        .mtr-lista-busca__input {
+          flex: 1;
+          min-width: 180px;
+          height: 40px;
+          padding: 0 12px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          font-size: 14px;
+        }
+
+        .mtr-lista-busca__input:focus {
+          outline: none;
+          border-color: #0f766e;
+          box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+        }
+
+        .mtr-lista-busca__limpar {
+          border: none;
+          background: transparent;
+          color: #0f766e;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          padding: 6px 8px;
+        }
+
+        .mtr-lista-busca__hint {
+          margin: 6px 0 0;
+          font-size: 12px;
+          color: #94a3b8;
+        }
 `
