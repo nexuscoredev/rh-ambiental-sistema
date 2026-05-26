@@ -49,19 +49,19 @@ export const MTR_LISTA_CARD_UI_CSS = `
         }
 
         .mtr-list-item.mtr-status-baixada {
-          background: linear-gradient(180deg, #ecfdf5 0%, #f0fdf4 100%);
-          border-color: #bbf7d0;
+          background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+          border-color: #fdba74;
         }
 
         .mtr-list-item.mtr-status-baixada:hover {
-          border-color: #86efac;
-          box-shadow: 0 10px 24px rgba(22, 163, 74, 0.06);
+          border-color: #fb923c;
+          box-shadow: 0 10px 24px rgba(234, 88, 12, 0.1);
         }
 
         .mtr-list-item.mtr-status-baixada.selected {
-          border-color: #059669;
-          background: linear-gradient(180deg, #d1fae5 0%, #ecfdf5 100%);
-          box-shadow: 0 10px 28px rgba(5, 150, 105, 0.12);
+          border-color: #ea580c;
+          background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+          box-shadow: 0 10px 28px rgba(234, 88, 12, 0.14);
         }
 
         .mtr-list-item.mtr-status-emitido {
