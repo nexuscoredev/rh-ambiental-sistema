@@ -553,6 +553,50 @@ export {
  * O destinatário tem de existir em `usuarios` com status ativo.
  * Preferir `VITE_SUPORTE_USER_ID`; senão resolve-se pelo e-mail (`VITE_SUPORTE_EMAIL`).
  */
+export async function chatEnviarPedidoAjusteSistema(
+  texto: string,
+  print?: File | null
+): Promise<{ conversaId: string; destinoUserId: string }> {
+  const trimmed = texto.trim()
+  if (!trimmed) throw new Error('Descreva a sugestão de melhoria antes de enviar.')
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id) throw new Error('Sessão inválida.')
+
+  const { resolverIdDesenvolvedorAjustes } = await import('./solicitacaoAjusteSistema')
+  const destinoUserId = await resolverIdDesenvolvedorAjustes(user.id)
+
+  const conversaId = await chatGetOrCreateDirect(destinoUserId)
+
+  const { data: perfil } = await supabase
+    .from('usuarios')
+    .select('nome, email')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const quem = perfil?.nome?.trim() || perfil?.email || user.email || 'Utilizador'
+  const pagina =
+    typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : ''
+  const corpo = `[Solicitação de ajuste no sistema]\n\n${trimmed}\n\nPágina: ${pagina || '—'}\n— ${quem}`
+
+  await chatEnviarTexto(conversaId, user.id, corpo)
+
+  if (print && print.size > 0) {
+    const tipo = (print.type || '').toLowerCase()
+    if (!tipo.startsWith('image/')) {
+      throw new Error('O print deve ser uma imagem (PNG, JPG, etc.).')
+    }
+    if (print.size > 8 * 1024 * 1024) {
+      throw new Error('Imagem demasiado grande (máx. 8 MB).')
+    }
+    await chatEnviarAnexo(conversaId, user.id, print, 'Print anexo à solicitação de ajuste')
+  }
+
+  return { conversaId, destinoUserId }
+}
+
 export async function chatEnviarPedidoSuporteTecnico(texto: string): Promise<{
   conversaId: string
   suporteUserId: string

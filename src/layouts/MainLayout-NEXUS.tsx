@@ -20,6 +20,7 @@ import { ROTAS_SISTEMA, usuarioPodeAcessarRota } from '../lib/paginasSistema'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SuporteTecnicoFloat from '../components/SuporteTecnicoFloat'
+import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
@@ -288,7 +289,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const [chatNaoLidas, setChatNaoLidas] = useState(0)
   const [suporteAberto, setSuporteAberto] = useState(false)
+  const [ajusteAberto, setAjusteAberto] = useState(false)
   const suportePanelId = useId()
+  const ajustePanelId = useId()
 
   const atualizarBadgeChat = useCallback(async () => {
     const {
@@ -706,27 +709,50 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
 
         <div className="layout-sidebar__footer">
-          <button
-            type="button"
-            className="layout-sidebar-suporte"
-            aria-expanded={suporteAberto}
-            aria-controls={suportePanelId}
-            title="Suporte técnico"
-            onClick={() => {
-              setSuporteAberto((v) => !v)
-            }}
-          >
-            <span className="layout-sidebar-suporte__icon" aria-hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18.2 12.3c0 .8-.2 1.5-.5 2.2-.3.6-.7 1.2-1.2 1.6-.5.5-1.1.9-1.8 1.1-.7.3-1.4.4-2.2.4-.8 0-1.5-.1-2.2-.4-.7-.3-1.3-.6-1.8-1.1s-.9-1-1.2-1.6c-.3-.7-.5-1.4-.5-2.2" />
-                <path d="M15 13a3 3 0 1 0-6 0" />
-                <path d="M12 19v3" />
-                <path d="M8 22h8" />
-                <path d="M4.9 4.9C6.8 3 9.3 2 12 2s5.2 1 7.1 2.9L12 12 4.9 4.9z" />
-              </svg>
-            </span>
-            Suporte técnico
-          </button>
+          <div className="layout-sidebar__footer-actions">
+            <button
+              type="button"
+              className="layout-sidebar-suporte"
+              aria-expanded={suporteAberto}
+              aria-controls={suportePanelId}
+              title="Suporte técnico"
+              onClick={() => {
+                setAjusteAberto(false)
+                setSuporteAberto((v) => !v)
+              }}
+            >
+              <span className="layout-sidebar-suporte__icon" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18.2 12.3c0 .8-.2 1.5-.5 2.2-.3.6-.7 1.2-1.2 1.6-.5.5-1.1.9-1.8 1.1-.7.3-1.4.4-2.2.4-.8 0-1.5-.1-2.2-.4-.7-.3-1.3-.6-1.8-1.1s-.9-1-1.2-1.6c-.3-.7-.5-1.4-.5-2.2" />
+                  <path d="M15 13a3 3 0 1 0-6 0" />
+                  <path d="M12 19v3" />
+                  <path d="M8 22h8" />
+                  <path d="M4.9 4.9C6.8 3 9.3 2 12 2s5.2 1 7.1 2.9L12 12 4.9 4.9z" />
+                </svg>
+              </span>
+              Suporte técnico
+            </button>
+            <button
+              type="button"
+              className="layout-sidebar-suporte layout-sidebar-ajuste"
+              aria-expanded={ajusteAberto}
+              aria-controls={ajustePanelId}
+              title="Solicitar ajuste ou melhoria no sistema"
+              onClick={() => {
+                setSuporteAberto(false)
+                setAjusteAberto((v) => !v)
+              }}
+            >
+              <span className="layout-sidebar-suporte__icon" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18h6" />
+                  <path d="M10 22h4" />
+                  <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
+                </svg>
+              </span>
+              Solicitar ajuste
+            </button>
+          </div>
           <p
             className="layout-sidebar-version"
             aria-label={`Versão do sistema ${versaoExibir}`}
@@ -815,6 +841,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
         open={suporteAberto}
         onOpenChange={setSuporteAberto}
         panelId={suportePanelId}
+      />
+
+      <SolicitarAjusteSistemaFloat
+        open={ajusteAberto}
+        onOpenChange={setAjusteAberto}
+        panelId={ajustePanelId}
       />
 
       <ChatInternoFloating naoLidasBadge={chatNaoLidas} />
