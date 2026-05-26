@@ -54,7 +54,14 @@ type Props = {
   onLinhasChange?: (linhas: LinhaRelatorioMedicao[]) => void
 }
 
-const COLUNAS_EDITAVEIS = new Set([
+type CampoRascunhoMedicaoEditavel =
+  | 'quantViagens'
+  | 'valorFrete'
+  | 'pesoKg'
+  | 'valorTaxa'
+  | 'total'
+
+const COLUNAS_EDITAVEIS = new Set<string>([
   'quantViagens',
   'valorFrete',
   'pesoKg',
@@ -143,11 +150,7 @@ export function FaturamentoTabelaMedicao({
     setRascunhos({})
   }
 
-  function atualizarRascunho(
-    coletaId: string,
-    key: keyof RascunhoEdicaoLinhaMedicao,
-    valor: string
-  ) {
+  function atualizarRascunho(coletaId: string, key: CampoRascunhoMedicaoEditavel, valor: string) {
     const linha = linhas.find((l) => l.coleta_id === coletaId)
     if (!linha) return
     setRascunhos((prev) => {
@@ -206,11 +209,11 @@ export function FaturamentoTabelaMedicao({
                       type="text"
                       inputMode="decimal"
                       style={inputCelula}
-                      value={draft[c.key as keyof RascunhoEdicaoLinhaMedicao]}
+                      value={draft[c.key as CampoRascunhoMedicaoEditavel]}
                       onChange={(e) =>
                         atualizarRascunho(
                           r.coleta_id,
-                          c.key as keyof RascunhoEdicaoLinhaMedicao,
+                          c.key as CampoRascunhoMedicaoEditavel,
                           e.target.value
                         )
                       }
