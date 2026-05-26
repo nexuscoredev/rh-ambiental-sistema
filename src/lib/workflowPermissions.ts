@@ -555,6 +555,8 @@ export function cargoPodeCancelarBaixarMtr(
   email?: string | null
 ): boolean {
   if (temAutoridadeMaximaSistema(cargo, nome, email)) return true
+  const c = normalizarTextoCargo(cargo)
+  if (c === normalizarTextoCargo(CARGO_COMERCIAL_ADM)) return true
   if (nome != null && String(nome).trim() !== '') {
     return usuarioPodeCancelarBaixarMtr(nome, email)
   }

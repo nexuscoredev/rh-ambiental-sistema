@@ -123,6 +123,11 @@ describe("workflowPermissions — Cancelar / Baixar MTR (lista)", () => {
       true
     );
   });
+
+  it("autoriza cargo Comercial Adm (Thais) mesmo sem nome no perfil", () => {
+    expect(cargoPodeCancelarBaixarMtr("Comercial Adm", null)).toBe(true);
+    expect(cargoPodeCancelarBaixarMtr("Comercial", null)).toBe(false);
+  });
 });
 
 describe("workflowPermissions — Comercial Adm (Thais)", () => {

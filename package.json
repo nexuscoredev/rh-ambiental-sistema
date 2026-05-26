@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.98",
+  "version": "1.2.99",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -44,6 +44,7 @@
     "db:apply:chat-stickers": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260526140000_chat_stickers.sql",
     "db:apply:chat-pedido-ajuste-resolvido": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260526160000_chat_pedido_ajuste_resolvido.sql",
     "db:apply:chat-pedido-ajuste-fix": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260527120000_chat_pedido_ajuste_resolvido_rpc.sql",
+    "db:apply:mtr-baixa-comercial-adm": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260726130000_mtr_baixa_comercial_adm.sql",
     "db:apply:usuarios-perfil-login": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260622120000_usuarios_select_own_rpc_perfil.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
