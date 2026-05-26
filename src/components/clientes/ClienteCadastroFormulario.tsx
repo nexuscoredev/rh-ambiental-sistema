@@ -1,4 +1,4 @@
-﻿import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react'
+import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react'
 import { ClienteContratoCadastroSecoes } from "./ClienteContratoCadastroSecoes"
 import {
   alternarMtrSigorOpcao,
@@ -10,6 +10,7 @@ import {
   clienteLabelSigorCheckboxStyle,
 } from "../../lib/clienteCadastroUi"
 import type { FormCliente } from "../../lib/clienteCadastroForm"
+import { ClienteGeradorDonoFaturamentoCampos } from "./ClienteGeradorDonoFaturamentoCampos"
 import type { useClienteCadastroForm } from "../../hooks/useClienteCadastroForm"
 
 type RepresentanteOpt = { id: string; nome: string }
@@ -518,16 +519,11 @@ export function ClienteCadastroFormulario({
               </div>
 
               <div>
-                <div
-                  style={{
-                    fontSize: "15px",
-                    fontWeight: 800,
-                    color: "#334155",
-                    marginBottom: "12px",
-                  }}
-                >
-                  Endereço de Faturamento
-                </div>
+                <ClienteGeradorDonoFaturamentoCampos
+                  form={form}
+                  setForm={setForm}
+                  inputStyle={inputStyle}
+                />
 
                 <div
                   style={{

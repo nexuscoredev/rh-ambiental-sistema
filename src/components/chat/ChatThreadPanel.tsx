@@ -25,10 +25,8 @@ type Props = {
   onEnviarTexto: (texto: string) => Promise<void>
   onEnviarFicheiro: (f: File, legenda: string) => Promise<void>
   onEnviarFigurinha: (sticker: ChatSticker) => Promise<void>
-  /** Desenvolvedor: marcar pedidos de ajuste como resolvidos. */
-  podeMarcarPedidoAjuste?: boolean
-  pedidosAjusteResolvidos?: Set<string>
-  onMarcarPedidoAjusteResolvido?: (mensagemId: string) => Promise<void>
+  /** Desenvolvedor: pedidos ficam na coluna «Solicitações», não no histórico. */
+  ocultarPedidosAjusteNoHistorico?: boolean
 }
 
 export function ChatThreadPanel({
@@ -46,10 +44,11 @@ export function ChatThreadPanel({
   onEnviarTexto,
   onEnviarFicheiro,
   onEnviarFigurinha,
-  podeMarcarPedidoAjuste = false,
-  pedidosAjusteResolvidos,
-  onMarcarPedidoAjusteResolvido,
+  ocultarPedidosAjusteNoHistorico = false,
 }: Props) {
+  const mensagensVisiveis = ocultarPedidosAjusteNoHistorico
+    ? mensagens.filter((m) => !chatMensagemEhPedidoAjuste(m))
+    : mensagens
   const [texto, setTexto] = useState('')
   const [menuMaisAberto, setMenuMaisAberto] = useState(false)
   const [pickerAberto, setPickerAberto] = useState(false)
@@ -203,22 +202,16 @@ export function ChatThreadPanel({
       </header>
 
       <div ref={scrollRef} className="chat-interno-thread__scroll">
-        {carregandoMensagens && mensagens.length === 0 ? (
+        {carregandoMensagens && mensagensVisiveis.length === 0 ? (
           <div className="chat-interno-muted chat-interno-thread__empty">A carregar mensagens…</div>
-        ) : mensagens.length === 0 ? (
-          <div className="chat-interno-muted chat-interno-thread__empty">Sem mensagens. Escreva abaixo.</div>
+        ) : mensagensVisiveis.length === 0 ? (
+          <div className="chat-interno-muted chat-interno-thread__empty">
+            {ocultarPedidosAjusteNoHistorico && mensagens.some((m) => chatMensagemEhPedidoAjuste(m))
+              ? 'Os pedidos de ajuste aparecem na coluna «Solicitações». Use o compositor para responder.'
+              : 'Sem mensagens. Escreva abaixo.'}
+          </div>
         ) : (
-          mensagens.map((m) => (
-            <MensagemBolha
-              key={m.id}
-              m={m}
-              meuId={meuId}
-              podeMarcarPedidoAjuste={podeMarcarPedidoAjuste}
-              pedidoResolvido={pedidosAjusteResolvidos?.has(m.id) ?? false}
-              enviando={enviando}
-              onMarcarResolvido={onMarcarPedidoAjusteResolvido}
-            />
-          ))
+          mensagensVisiveis.map((m) => <MensagemBolha key={m.id} m={m} meuId={meuId} />)
         )}
       </div>
 
@@ -317,27 +310,10 @@ export function ChatThreadPanel({
   )
 }
 
-function MensagemBolha({
-  m,
-  meuId,
-  podeMarcarPedidoAjuste,
-  pedidoResolvido,
-  enviando,
-  onMarcarResolvido,
-}: {
-  m: ChatMensagem
-  meuId: string
-  podeMarcarPedidoAjuste: boolean
-  pedidoResolvido: boolean
-  enviando: boolean
-  onMarcarResolvido?: (mensagemId: string) => Promise<void>
-}) {
+function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
   const meu = m.remetente_id === meuId
-  const [marcandoResolvido, setMarcandoResolvido] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
   const ehPedidoAjuste = chatMensagemEhPedidoAjuste(m)
-  const mostrarMarcarResolvido =
-    podeMarcarPedidoAjuste && !meu && ehPedidoAjuste && onMarcarResolvido
   const temAnexo = !!(m.anexo_path && m.anexo_nome)
   const ehFigurinha = chatMensagemEhFigurinha(m)
   const ehImagemAnexo = temAnexo && !ehFigurinha && !!m.anexo_mime?.startsWith('image/')
@@ -370,40 +346,18 @@ function MensagemBolha({
     (!temAnexo || (m.conteudo.trim() !== 'Anexo enviado' && !ehFigurinha))
   )
 
-  async function marcarComoResolvido() {
-    if (!onMarcarResolvido || marcandoResolvido || pedidoResolvido) return
-    setMarcandoResolvido(true)
-    try {
-      await onMarcarResolvido(m.id)
-    } catch (e) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : e && typeof e === 'object' && 'message' in e
-            ? String((e as { message?: unknown }).message || 'Não foi possível marcar como resolvido.')
-            : 'Não foi possível marcar como resolvido.'
-      void rgAlert({
-        title: 'Pedido de ajuste',
-        message: msg,
-        variant: 'warning',
-      })
-    } finally {
-      setMarcandoResolvido(false)
-    }
-  }
-
   return (
     <div className={meu ? 'chat-interno-bubble-wrap chat-interno-bubble-wrap--meu' : 'chat-interno-bubble-wrap'}>
       <div
         className={
           meu
             ? 'chat-interno-bubble chat-interno-bubble--meu'
-            : `chat-interno-bubble${ehPedidoAjuste ? ' chat-interno-bubble--pedido-ajuste' : ''}${pedidoResolvido ? ' chat-interno-bubble--pedido-ajuste-resolvido' : ''}`
+            : `chat-interno-bubble${ehPedidoAjuste ? ' chat-interno-bubble--pedido-ajuste' : ''}`
         }
       >
         {ehPedidoAjuste ? (
           <div className="chat-interno-pedido-ajuste__badge" aria-hidden>
-            {pedidoResolvido ? 'Resolvido' : 'Pedido de ajuste'}
+            Pedido de ajuste
           </div>
         ) : null}
         {mostrarTexto ? <p className="chat-interno-bubble__text">{m.conteudo}</p> : null}
@@ -426,24 +380,6 @@ function MensagemBolha({
             ) : null}
             {url ? <span className="chat-interno-anexo__hint">Aberto num novo separador</span> : null}
           </button>
-        ) : null}
-        {mostrarMarcarResolvido ? (
-          <div className="chat-interno-pedido-ajuste__acoes">
-            {pedidoResolvido ? (
-              <span className="chat-interno-pedido-ajuste__ok" aria-live="polite">
-                ✓ Resolvido — resposta enviada
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="chat-interno-pedido-ajuste__btn"
-                disabled={marcandoResolvido || enviando}
-                onClick={() => void marcarComoResolvido()}
-              >
-                {marcandoResolvido ? 'A enviar resposta…' : '✓ Marcar como resolvido'}
-              </button>
-            )}
-          </div>
         ) : null}
         <time className="chat-interno-bubble__time" dateTime={m.created_at}>
           {hora}

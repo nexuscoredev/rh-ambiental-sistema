@@ -87,6 +87,58 @@ export function chatMensagemEhPedidoAjuste(m: Pick<ChatMensagem, 'conteudo'>): b
   return (m.conteudo ?? '').trimStart().startsWith(CHAT_PEDIDO_AJUSTE_PREFIX)
 }
 
+export type PedidoAjusteFilaItem = {
+  mensagemId: string
+  conversaId: string
+  remetenteId: string
+  conteudo: string
+  createdAt: string
+  parseado: PedidoAjusteParseado | null
+}
+
+/** Pedidos de ajuste recebidos ainda não marcados como resolvidos (fila do desenvolvedor). */
+export async function chatListarPedidosAjustePendentes(meuId: string): Promise<PedidoAjusteFilaItem[]> {
+  const uid = meuId.trim()
+  if (!uid) return []
+
+  const resolvidos = await supabase.from('chat_pedido_ajuste_resolvido').select('mensagem_id')
+  const resolvidoSet = new Set<string>()
+  if (resolvidos.error) {
+    if (!/does not exist|relation|42P01/i.test(resolvidos.error.message)) {
+      throw new Error(mensagemErroPedidoAjuste(resolvidos.error))
+    }
+  } else {
+    for (const row of resolvidos.data ?? []) {
+      resolvidoSet.add(String(row.mensagem_id))
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id, conteudo, created_at')
+    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .neq('remetente_id', uid)
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
+
+  const itens: PedidoAjusteFilaItem[] = []
+  for (const row of data ?? []) {
+    const mensagemId = String(row.id)
+    if (resolvidoSet.has(mensagemId)) continue
+    const conteudo = String(row.conteudo ?? '')
+    itens.push({
+      mensagemId,
+      conversaId: String(row.conversa_id),
+      remetenteId: String(row.remetente_id),
+      conteudo,
+      createdAt: String(row.created_at),
+      parseado: parsePedidoAjusteConteudo(conteudo),
+    })
+  }
+  return itens
+}
+
 export async function chatListarPedidosAjusteResolvidos(
   conversaId: string
 ): Promise<Set<string>> {

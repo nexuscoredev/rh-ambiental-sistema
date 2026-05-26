@@ -18,6 +18,7 @@ import { imprimirRelatorioMedicaoJanela } from '../../lib/imprimirRelatorioMedic
 import { buildUrlEnvioNfMedicao } from '../../lib/coletaContextoUrl'
 import { useRgDialog } from '../../lib/RgDialogProvider'
 import { FaturamentoTabelaMedicao } from './FaturamentoTabelaMedicao'
+import { MedicaoGeradorDonoFaturamentoBloco } from './MedicaoGeradorDonoFaturamentoBloco'
 
 const card: CSSProperties = {
   background: '#fff',
@@ -119,6 +120,8 @@ function GrupoMedicaoCard({
           {acao ? <div className="fat-esteira-toolbar__extra">{acao}</div> : null}
         </div>
       </div>
+
+      <MedicaoGeradorDonoFaturamentoBloco clienteId={grupo.cliente_id} />
 
       <div style={{ marginTop: '12px', overflowX: 'auto' }}>
         {carregandoMedicao ? (

@@ -10,6 +10,7 @@ import {
 } from '../components/clientes/ClienteGerenciadorMtrTabela'
 import { useClienteCadastroForm } from '../hooks/useClienteCadastroForm'
 import { formClienteFromJson, nomeExibicaoGerenciador } from '../lib/clienteCadastroForm'
+import { validarGeradorDonoFaturamentoForm } from '../lib/clienteGeradorDonoFaturamento'
 import type { ResiduoContratoItem } from '../lib/clienteContratoCadastro'
 import { parseNumeroCampo } from '../lib/faturamentoDesvinculacao'
 import {
@@ -307,6 +308,14 @@ export default function ClientesGerenciador(props: unknown) {
             'Informe pelo menos um destes campos: Nome fantasia, Razão social ou CNPJ/CPF.',
           variant: 'warning',
         })
+      }
+      return false
+    }
+
+    const geradorDonoVal = validarGeradorDonoFaturamentoForm(cadastro.form)
+    if (!geradorDonoVal.ok) {
+      if (!opts?.silencioso) {
+        void rgAlert({ title: 'Gerenciador', message: geradorDonoVal.message, variant: 'warning' })
       }
       return false
     }

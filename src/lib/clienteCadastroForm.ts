@@ -31,6 +31,9 @@ export type FormCliente = {
   bairro_faturamento: string
   cidade_faturamento: string
   estado_faturamento: string
+  gerador_dono_faturamento: string
+  faturamento_titular_razao_social: string
+  faturamento_titular_cnpj: string
   email_nf: string
   margem_lucro_percentual: string
   responsavel_nome: string
@@ -85,6 +88,9 @@ export const formClienteInicial: FormCliente = {
   bairro_faturamento: '',
   cidade_faturamento: '',
   estado_faturamento: '',
+  gerador_dono_faturamento: '',
+  faturamento_titular_razao_social: '',
+  faturamento_titular_cnpj: '',
   email_nf: '',
   margem_lucro_percentual: '',
   responsavel_nome: '',

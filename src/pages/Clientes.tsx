@@ -22,6 +22,12 @@ import {
   parseMargemLucroPercentual,
 } from "../lib/clienteMargemLucro";
 import { ClienteContratoCadastroSecoes } from "../components/clientes/ClienteContratoCadastroSecoes";
+import { ClienteGeradorDonoFaturamentoCampos } from "../components/clientes/ClienteGeradorDonoFaturamentoCampos";
+import {
+  normalizarGeradorDonoFaturamentoOpcao,
+  payloadGeradorDonoFaturamento,
+  validarGeradorDonoFaturamentoForm,
+} from "../lib/clienteGeradorDonoFaturamento";
 import {
   descricaoVeiculoLegadoDeItens,
   equipamentoContratoInicial,
@@ -80,6 +86,10 @@ type Cliente = {
   bairro_faturamento: string | null;
   cidade_faturamento: string | null;
   estado_faturamento: string | null;
+
+  gerador_dono_faturamento: string | null;
+  faturamento_titular_razao_social: string | null;
+  faturamento_titular_cnpj: string | null;
 
   endereco_coleta: string | null;
   endereco_faturamento: string | null;
@@ -158,6 +168,10 @@ type FormCliente = {
   cidade_faturamento: string;
   estado_faturamento: string;
 
+  gerador_dono_faturamento: string;
+  faturamento_titular_razao_social: string;
+  faturamento_titular_cnpj: string;
+
   email_nf: string;
   margem_lucro_percentual: string;
 
@@ -218,6 +232,10 @@ const formInicial: FormCliente = {
   bairro_faturamento: "",
   cidade_faturamento: "",
   estado_faturamento: "",
+
+  gerador_dono_faturamento: "",
+  faturamento_titular_razao_social: "",
+  faturamento_titular_cnpj: "",
 
   email_nf: "",
   margem_lucro_percentual: "",
@@ -660,7 +678,7 @@ const CLIENTES_SELECT_CORE =
   "id, nome, razao_social, cnpj, status, cep, rua, numero, complemento, bairro, cidade, estado";
 
 const CLIENTES_SELECT_FAT_ENDERECO =
-  "cep_faturamento, rua_faturamento, numero_faturamento, complemento_faturamento, bairro_faturamento, cidade_faturamento, estado_faturamento";
+  "cep_faturamento, rua_faturamento, numero_faturamento, complemento_faturamento, bairro_faturamento, cidade_faturamento, estado_faturamento, gerador_dono_faturamento, faturamento_titular_razao_social, faturamento_titular_cnpj";
 
 const CLIENTES_SELECT_TAIL_BASE =
   "endereco_coleta, endereco_faturamento, email_nf, responsavel_nome, telefone, email, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, licenca_numero, validade, codigo_ibama, descricao_veiculo, mtr_coleta, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, ajudante, solicitante, origem_planilha_cliente, mtr_sigor, cnpj_raiz, tipo_unidade_cliente, representante_rg_id, caminhao_id, equipamentos";
@@ -726,7 +744,10 @@ function isMissingFaturamentoEstruturadoColumnsError(
     msg.includes("complemento_faturamento") ||
     msg.includes("bairro_faturamento") ||
     msg.includes("cidade_faturamento") ||
-    msg.includes("estado_faturamento")
+    msg.includes("estado_faturamento") ||
+    msg.includes("gerador_dono_faturamento") ||
+    msg.includes("faturamento_titular_razao_social") ||
+    msg.includes("faturamento_titular_cnpj")
   );
 }
 
@@ -1980,6 +2001,10 @@ export default function Clientes() {
         cidade_faturamento: row.cidade_faturamento ?? row.cidade ?? "",
         estado_faturamento: row.estado_faturamento ?? row.estado ?? "",
 
+        gerador_dono_faturamento: row.gerador_dono_faturamento ?? "",
+        faturamento_titular_razao_social: row.faturamento_titular_razao_social ?? "",
+        faturamento_titular_cnpj: row.faturamento_titular_cnpj ?? "",
+
         email_nf: row.email_nf || "",
         margem_lucro_percentual: margemLucroDbParaCampo(row.margem_lucro_percentual),
 
@@ -2124,6 +2149,12 @@ export default function Clientes() {
       return;
     }
 
+    const geradorDonoVal = validarGeradorDonoFaturamentoForm(form);
+    if (!geradorDonoVal.ok) {
+      alert(geradorDonoVal.message);
+      return;
+    }
+
     setSalvando(true);
 
     const residuosSerializados = serializarResiduosLegadoPipe(residuosValidos);
@@ -2155,6 +2186,7 @@ export default function Clientes() {
       bairro_faturamento: limparOuNull(form.bairro_faturamento),
       cidade_faturamento: limparOuNull(form.cidade_faturamento),
       estado_faturamento: limparOuNull(form.estado_faturamento),
+      ...payloadGeradorDonoFaturamento(form),
       endereco_coleta: limparOuNull(form.endereco_coleta || enderecoColetaEstruturado),
       endereco_faturamento: limparOuNull(
         montarEnderecoTextoLivreDosCamposEstruturados({
@@ -3039,16 +3071,11 @@ export default function Clientes() {
               </div>
 
               <div>
-                <div
-                  style={{
-                    fontSize: "15px",
-                    fontWeight: 800,
-                    color: "#334155",
-                    marginBottom: "12px",
-                  }}
-                >
-                  Endereço de Faturamento
-                </div>
+                <ClienteGeradorDonoFaturamentoCampos
+                  form={form}
+                  setForm={setForm}
+                  inputStyle={inputStyle}
+                />
 
                 <div
                   style={{
@@ -4343,6 +4370,16 @@ function ClienteDetalheModal({
 
   const residuos = montarResiduosDoCliente(cliente);
   const margemRotulo = margemLucroClienteRotuloLista(cliente.margem_lucro_percentual);
+  const geradorDonoOpcao = normalizarGeradorDonoFaturamentoOpcao(cliente.gerador_dono_faturamento);
+  const geradorDonoRotulo = !geradorDonoOpcao
+    ? "Não informado"
+    : geradorDonoOpcao === "sim"
+      ? "Sim"
+      : [
+          "Não",
+          `Razão Social do dono do faturamento: ${(cliente.faturamento_titular_razao_social ?? "").trim() || "—"}`,
+          `CNPJ do dono do faturamento: ${(cliente.faturamento_titular_cnpj ?? "").trim() || "—"}`,
+        ].join(" · ");
   const ativo = clienteEstaAtivo(cliente.status);
 
   return (
@@ -4528,6 +4565,7 @@ function ClienteDetalheModal({
           <DetalheSecao titulo="Endereços">
             <DetalheCampo rotulo="Endereço de coleta" valor={enderecoColeta} colunas={2} />
             <DetalheCampo rotulo="Endereço de faturamento" valor={enderecoFaturamento} colunas={2} />
+            <DetalheCampo rotulo="Gerador é dono do faturamento" valor={geradorDonoRotulo} colunas={2} />
             <DetalheCampo
               rotulo="Link Google Maps"
               valor={cliente.link_google_maps}

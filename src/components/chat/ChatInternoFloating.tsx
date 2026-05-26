@@ -14,9 +14,11 @@ import {
 } from '../../lib/chat'
 import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
-  chatListarPedidosAjusteResolvidos,
+  chatListarPedidosAjustePendentes,
   chatMarcarPedidoAjusteResolvido,
+  type PedidoAjusteFilaItem,
 } from '../../lib/chatPedidoAjuste'
+import { ChatPedidosAjusteColuna } from './ChatPedidosAjusteColuna'
 import { cargoPodeApagarHistoricoChat } from '../../lib/workflowPermissions'
 import { usePerfilUsuario } from '../../contexts/PerfilUsuarioContext'
 import { normalizarPresencaStatus } from '../../lib/presencaStatus'
@@ -128,7 +130,9 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const [outroIdPainel, setOutroIdPainel] = useState<string | null>(null)
   const [mensagens, setMensagens] = useState<ChatMensagem[]>([])
   const [carregandoMensagens, setCarregandoMensagens] = useState(false)
-  const [pedidosAjusteResolvidos, setPedidosAjusteResolvidos] = useState<Set<string>>(() => new Set())
+  const [pedidosAjustePendentes, setPedidosAjustePendentes] = useState<PedidoAjusteFilaItem[]>([])
+  const [carregandoPedidosAjuste, setCarregandoPedidosAjuste] = useState(false)
+  const [marcandoPedidoAjusteId, setMarcandoPedidoAjusteId] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
   const [abrindoComPessoa, setAbrindoComPessoa] = useState(false)
@@ -328,6 +332,23 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     }
   }, [])
 
+  const recarregarPedidosAjustePendentes = useCallback(async () => {
+    const uid = meuIdRef.current
+    if (!uid || !podeApagarHistoricoChat) {
+      setPedidosAjustePendentes([])
+      return
+    }
+    setCarregandoPedidosAjuste(true)
+    try {
+      const list = await chatListarPedidosAjustePendentes(uid)
+      setPedidosAjustePendentes(list)
+    } catch (e) {
+      console.error('[chat] fila pedidos ajuste:', e)
+    } finally {
+      setCarregandoPedidosAjuste(false)
+    }
+  }, [podeApagarHistoricoChat])
+
   useEffect(() => {
     let cancel = false
     void (async () => {
@@ -456,7 +477,10 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
             if (uid && row?.remetente_id && row.remetente_id !== uid) {
               tocarNotificacao()
             }
-            if (openRef.current) void recarregarConversas()
+            if (openRef.current) {
+              void recarregarConversas()
+              void recarregarPedidosAjustePendentes()
+            }
           }
         )
         .subscribe()
@@ -469,13 +493,20 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       void channelListRef.current?.unsubscribe()
       channelListRef.current = null
     }
-  }, [meuId, recarregarConversas, tocarNotificacao])
+  }, [meuId, recarregarConversas, recarregarPedidosAjustePendentes, tocarNotificacao])
+
+  useEffect(() => {
+    if (!open || !meuId || !podeApagarHistoricoChat) {
+      queueMicrotask(() => setPedidosAjustePendentes([]))
+      return
+    }
+    void recarregarPedidosAjustePendentes()
+  }, [open, meuId, podeApagarHistoricoChat, recarregarPedidosAjustePendentes])
 
   useEffect(() => {
     if (!conversaId) {
       queueMicrotask(() => {
         setMensagens([])
-        setPedidosAjusteResolvidos(new Set())
         setCarregandoMensagens(false)
       })
     }
@@ -498,13 +529,6 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
         const list = await chatCarregarMensagens(cid)
         if (mensagensLoadSeqRef.current !== seq) return
         setMensagens(list)
-
-        void chatListarPedidosAjusteResolvidos(cid)
-          .then((resolvidos) => {
-            if (mensagensLoadSeqRef.current !== seq) return
-            setPedidosAjusteResolvidos(resolvidos)
-          })
-          .catch((e) => console.error('[chat] pedidos ajuste resolvidos:', e))
 
         const uid = meuIdRef.current
         if (uid) await chatMarcarLida(cid, uid)
@@ -648,23 +672,30 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   }
 
   const handleMarcarPedidoAjusteResolvido = useCallback(
-    async (mensagemPedidoId: string) => {
-      if (!conversaId || !meuId || !podeApagarHistoricoChat) return
-      setEnviando(true)
+    async (item: PedidoAjusteFilaItem) => {
+      if (!meuId || !podeApagarHistoricoChat) return
+      setMarcandoPedidoAjusteId(item.mensagemId)
       setErro('')
       try {
-        const resposta = await chatMarcarPedidoAjusteResolvido(conversaId, mensagemPedidoId, meuId)
-        setPedidosAjusteResolvidos((prev) => new Set(prev).add(mensagemPedidoId))
-        setMensagens((prev) => (prev.some((p) => p.id === resposta.id) ? prev : [...prev, resposta]))
+        const resposta = await chatMarcarPedidoAjusteResolvido(
+          item.conversaId,
+          item.mensagemId,
+          meuId
+        )
+        setPedidosAjustePendentes((prev) => prev.filter((p) => p.mensagemId !== item.mensagemId))
+        if (conversaIdRef.current === item.conversaId) {
+          setMensagens((prev) => (prev.some((p) => p.id === resposta.id) ? prev : [...prev, resposta]))
+        }
         await recarregarConversas()
+        void recarregarPedidosAjustePendentes()
       } catch (e) {
         setErro(e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.')
         throw e
       } finally {
-        setEnviando(false)
+        setMarcandoPedidoAjusteId(null)
       }
     },
-    [conversaId, meuId, podeApagarHistoricoChat, recarregarConversas]
+    [meuId, podeApagarHistoricoChat, recarregarConversas, recarregarPedidosAjustePendentes]
   )
 
   async function handleEnviarFigurinha(sticker: ChatSticker) {
@@ -765,7 +796,15 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       ) : (
         <div className="chat-float-open">
           <div className="chat-float-backdrop" aria-hidden onClick={fechar} />
-          <div className="chat-float-sheet" role="dialog" aria-label="CHAT INTERNO">
+          <div
+            className={
+              podeApagarHistoricoChat
+                ? 'chat-float-sheet chat-float-sheet--com-fila-ajuste'
+                : 'chat-float-sheet'
+            }
+            role="dialog"
+            aria-label="CHAT INTERNO"
+          >
             <header
               className="chat-float-sheet__head"
               style={{ background: CHAT_HEAD_THEMES[temaCabecalho].gradient }}
@@ -841,6 +880,17 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                 carregandoLista={carregandoPainelLateral || abrindoComPessoa}
               />
 
+              {podeApagarHistoricoChat ? (
+                <ChatPedidosAjusteColuna
+                  itens={pedidosAjustePendentes}
+                  usuariosPorId={usuariosPorId}
+                  carregando={carregandoPedidosAjuste}
+                  marcandoId={marcandoPedidoAjusteId}
+                  onAbrirConversa={(id, outroId) => abrirConversa(id, { outroId })}
+                  onMarcarResolvido={handleMarcarPedidoAjusteResolvido}
+                />
+              ) : null}
+
               {mostrarThread ? (
                 <ChatThreadPanel
                   meuId={meuId || ''}
@@ -857,9 +907,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   onEnviarTexto={handleEnviarTexto}
                   onEnviarFicheiro={handleEnviarFicheiro}
                   onEnviarFigurinha={handleEnviarFigurinha}
-                  podeMarcarPedidoAjuste={podeApagarHistoricoChat}
-                  pedidosAjusteResolvidos={pedidosAjusteResolvidos}
-                  onMarcarPedidoAjusteResolvido={handleMarcarPedidoAjusteResolvido}
+                  ocultarPedidosAjusteNoHistorico={podeApagarHistoricoChat}
                 />
               ) : (
                 <div className="chat-interno-empty-main">
