@@ -376,9 +376,15 @@ function MensagemBolha({
     try {
       await onMarcarResolvido(m.id)
     } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : e && typeof e === 'object' && 'message' in e
+            ? String((e as { message?: unknown }).message || 'Não foi possível marcar como resolvido.')
+            : 'Não foi possível marcar como resolvido.'
       void rgAlert({
         title: 'Pedido de ajuste',
-        message: e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.',
+        message: msg,
         variant: 'warning',
       })
     } finally {

@@ -86,6 +86,19 @@ function formatPesoBr(n: number | null | undefined): string {
   }).format(Number(n))
 }
 
+function valorCampoTicketImpressao(
+  pesagem: string | null | undefined,
+  controleMassa: string,
+  coleta: string | null | undefined
+): string {
+  const p = (pesagem ?? '').trim()
+  if (p) return p
+  const cm = controleMassa.trim()
+  if (cm && cm !== '—') return cm
+  const col = (coleta ?? '').trim()
+  return col || '—'
+}
+
 function formatDataHoraBr(iso: string | null | undefined): { data: string; hora: string } {
   if (!iso) return { data: '—', hora: '—' }
   const d = new Date(iso)
@@ -114,6 +127,8 @@ export type TicketOperacionalPanelProps = {
   numeroTicketExterno?: string | null
   /** Coleta cuja impressão foi pedida — força recarregar o ticket antes de `window.print()`. */
   impressaoPendenteColetaId?: string | null
+  /** Placa/motorista da pesagem (controle_massa), preenchidos antes de imprimir no Controle de Massa. */
+  camposImpressaoPesagem?: { motorista: string; placa: string } | null
 }
 
 export function TicketOperacionalPanel({
@@ -129,6 +144,7 @@ export function TicketOperacionalPanel({
   dataPesagemAtual = null,
   numeroTicketExterno = null,
   impressaoPendenteColetaId = null,
+  camposImpressaoPesagem = null,
 }: TicketOperacionalPanelProps) {
   const [ticketId, setTicketId] = useState<string | null>(null)
   const [numero, setNumero] = useState('')
@@ -144,6 +160,8 @@ export function TicketOperacionalPanel({
   const [mtrNumeroImpressao, setMtrNumeroImpressao] = useState('')
   const empresaTransporteImpressao = empresaTicketImpressaoRg()
   const [balanceiroImpressao, setBalanceiroImpressao] = useState('—')
+  const [motoristaImpressao, setMotoristaImpressao] = useState('')
+  const [placaImpressao, setPlacaImpressao] = useState('')
   const [horaEntradaImpressao, setHoraEntradaImpressao] = useState('—')
   const [horaSaidaImpressao, setHoraSaidaImpressao] = useState('—')
   const [dataPesagemImpressao, setDataPesagemImpressao] = useState<string | null>(null)
@@ -180,6 +198,8 @@ export function TicketOperacionalPanel({
   const carregarDadosImpressao = useCallback(async (coleta: TicketColetaSnapshot) => {
     setMtrNumeroImpressao('')
     setBalanceiroImpressao('—')
+    setMotoristaImpressao('')
+    setPlacaImpressao('')
     setHoraEntradaImpressao('—')
     setHoraSaidaImpressao('—')
     setDataPesagemImpressao(null)
@@ -236,6 +256,10 @@ export function TicketOperacionalPanel({
         const { hora: hStr } = formatDataHoraBr(dh)
         if (hStr !== '—') setHoraSaidaImpressao(hStr)
       }
+      const mot = r.motorista
+      if (typeof mot === 'string' && mot.trim()) setMotoristaImpressao(mot.trim())
+      const pl = r.placa
+      if (typeof pl === 'string' && pl.trim()) setPlacaImpressao(pl.trim())
     }
   }, [])
 
@@ -246,6 +270,19 @@ export function TicketOperacionalPanel({
       })
     }
   }, [coletaAtiva, carregarDadosImpressao])
+
+  useEffect(() => {
+    if (
+      !coletaAtiva ||
+      !impressaoPendenteColetaId ||
+      impressaoPendenteColetaId !== coletaAtiva.id
+    ) {
+      return
+    }
+    queueMicrotask(() => {
+      void carregarDadosImpressao(coletaAtiva)
+    })
+  }, [impressaoPendenteColetaId, coletaAtiva, carregarDadosImpressao])
 
   useEffect(() => {
     if (!coletaAtiva) {
@@ -580,6 +617,26 @@ export function TicketOperacionalPanel({
 
   const podePortalImpressao = Boolean(
     coletaAtiva && (preReqPesagem || ticketId || numeroImpressao)
+  )
+
+  const motoristaParaImpressao = useMemo(
+    () =>
+      valorCampoTicketImpressao(
+        camposImpressaoPesagem?.motorista,
+        motoristaImpressao,
+        coletaAtiva?.motorista
+      ),
+    [camposImpressaoPesagem?.motorista, motoristaImpressao, coletaAtiva?.motorista]
+  )
+
+  const placaParaImpressao = useMemo(
+    () =>
+      valorCampoTicketImpressao(
+        camposImpressaoPesagem?.placa,
+        placaImpressao,
+        coletaAtiva?.placa
+      ),
+    [camposImpressaoPesagem?.placa, placaImpressao, coletaAtiva?.placa]
   )
 
   const labelTipoTicket: Record<TipoTicketOperacional, string> = {
@@ -1065,8 +1122,8 @@ export function TicketOperacionalPanel({
               pesoTara={formatPesoBr(coletaAtiva.peso_tara)}
               pesoLiquido={formatPesoBr(coletaAtiva.peso_liquido)}
               balanceiro={balanceiroImpressao}
-              motorista={coletaAtiva.motorista || '—'}
-              placa={coletaAtiva.placa || '—'}
+              motorista={motoristaParaImpressao}
+              placa={placaParaImpressao}
               empresaTransporte={empresaTransporteImpressao}
               obs={ticketDescricao.trim() || '—'}
               horaEntrada={horaEntradaImpressao}

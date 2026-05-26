@@ -629,6 +629,33 @@ function coletaOpcaoParaTicketSnapshot(c: ColetaOpcao): TicketColetaSnapshot {
   };
 }
 
+function enriquecerTicketSnapshotComCampos(
+  s: TicketColetaSnapshot,
+  opts: {
+    formColetaId: string;
+    formPlaca: string;
+    formMotorista: string;
+    imprimindoColetaId: string | null;
+    impressaoPesagem: { coletaId: string; motorista: string; placa: string } | null;
+  }
+): TicketColetaSnapshot {
+  const imp = opts.impressaoPesagem;
+  if (imp && imp.coletaId === s.id) {
+    return {
+      ...s,
+      placa: imp.placa.trim() || s.placa,
+      motorista: imp.motorista.trim() || s.motorista,
+    };
+  }
+  const podeForm =
+    opts.formColetaId === s.id && !opts.imprimindoColetaId;
+  if (!podeForm) return s;
+  const placa = opts.formPlaca.trim() || s.placa;
+  const motorista = opts.formMotorista.trim() || s.motorista;
+  if (placa === s.placa && motorista === s.motorista) return s;
+  return { ...s, placa, motorista };
+}
+
 function resolverColetaContexto(
   coletas: ColetaOpcao[],
   ids: {
@@ -823,6 +850,12 @@ export default function ControleMassa() {
   const [loadingVinculo, setLoadingVinculo] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [imprimindoTicketColetaId, setImprimindoTicketColetaId] = useState<string | null>(null);
+  /** Placa/motorista da última pesagem, carregados antes de `window.print()`. */
+  const [camposImpressaoPesagem, setCamposImpressaoPesagem] = useState<{
+    coletaId: string;
+    motorista: string;
+    placa: string;
+  } | null>(null);
   /** Coletas do último save — mantém botões de impressão mesmo após atualizar o formulário. */
   const [coletasImpressaoSessao, setColetasImpressaoSessao] = useState<string[]>([]);
   const [secaoPesagemAberta, setSecaoPesagemAberta] = useState(true);
@@ -1146,9 +1179,18 @@ export default function ControleMassa() {
   );
 
   const coletaTicketSnapshot = useMemo((): TicketColetaSnapshot | null => {
+    const enriquecer = (s: TicketColetaSnapshot) =>
+      enriquecerTicketSnapshotComCampos(s, {
+        formColetaId: form.coleta_id.trim(),
+        formPlaca: form.placa,
+        formMotorista: form.motorista,
+        imprimindoColetaId: imprimindoTicketColetaId,
+        impressaoPesagem: camposImpressaoPesagem,
+      });
+
     const porId = (id: string) => {
       const c = todasColetas.find((x) => x.id === id);
-      return c ? coletaOpcaoParaTicketSnapshot(c) : null;
+      return c ? enriquecer(coletaOpcaoParaTicketSnapshot(c)) : null;
     };
     const formId = form.coleta_id.trim();
     if (formId) {
@@ -1156,10 +1198,18 @@ export default function ControleMassa() {
       if (s) return s;
     }
     if (itemContextoResolvido) {
-      return coletaOpcaoParaTicketSnapshot(itemContextoResolvido);
+      return enriquecer(coletaOpcaoParaTicketSnapshot(itemContextoResolvido));
     }
     return null;
-  }, [form.coleta_id, todasColetas, itemContextoResolvido]);
+  }, [
+    form.coleta_id,
+    form.placa,
+    form.motorista,
+    todasColetas,
+    itemContextoResolvido,
+    imprimindoTicketColetaId,
+    camposImpressaoPesagem,
+  ]);
 
   const coletasTicketOpcoes = useMemo(
     () => todasColetas.map(coletaOpcaoParaTicketSnapshot),
@@ -1194,7 +1244,28 @@ export default function ControleMassa() {
     const tipoTicket: "entrada" | "saida" | "frete" =
       tipoRaw === "frete" ? "frete" : tipoRaw === "entrada" ? "entrada" : "saida";
 
+    const formJaEraColeta = form.coleta_id.trim() === coletaId;
     setForm((prev) => ({ ...prev, coleta_id: coletaId }));
+    setCamposImpressaoPesagem(null);
+
+    const { data: cmImpressao } = await supabase
+      .from("controle_massa")
+      .select("motorista, placa")
+      .eq("coleta_id", coletaId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const camposPesagem = {
+      coletaId,
+      motorista:
+        String((cmImpressao as { motorista?: string | null } | null)?.motorista ?? "").trim() ||
+        (formJaEraColeta ? form.motorista.trim() : ""),
+      placa:
+        String((cmImpressao as { placa?: string | null } | null)?.placa ?? "").trim() ||
+        (formJaEraColeta ? form.placa.trim() : ""),
+    };
+    setCamposImpressaoPesagem(camposPesagem);
     setImprimindoTicketColetaId(coletaId);
 
     const gt = await garantirTicketAposPesagem({
@@ -1208,6 +1279,7 @@ export default function ControleMassa() {
       setErroTela(gt.message);
       setSucesso("");
       setImprimindoTicketColetaId(null);
+      setCamposImpressaoPesagem(null);
       return;
     }
 
@@ -1220,6 +1292,7 @@ export default function ControleMassa() {
       );
       setSucesso("");
       setImprimindoTicketColetaId(null);
+      setCamposImpressaoPesagem(null);
       return;
     }
 
@@ -1228,6 +1301,7 @@ export default function ControleMassa() {
       setErroTela(res.message);
       setSucesso("");
       setImprimindoTicketColetaId(null);
+      setCamposImpressaoPesagem(null);
       return;
     }
 
@@ -1236,6 +1310,7 @@ export default function ControleMassa() {
     setTimeout(() => setSucesso(""), 5000);
     window.print();
     setImprimindoTicketColetaId(null);
+    setCamposImpressaoPesagem(null);
   }
 
   function montarParamsFluxo(c: ColetaOpcao) {
@@ -3746,6 +3821,15 @@ export default function ControleMassa() {
                       : null
                   }
                   impressaoPendenteColetaId={imprimindoTicketColetaId}
+                  camposImpressaoPesagem={
+                    camposImpressaoPesagem &&
+                    coletaTicketSnapshot?.id === camposImpressaoPesagem.coletaId
+                      ? {
+                          motorista: camposImpressaoPesagem.motorista,
+                          placa: camposImpressaoPesagem.placa,
+                        }
+                      : null
+                  }
                   cargo={usuarioCargo}
                   coletasOpcoes={coletasTicketOpcoes}
                   carregandoColetas={loadingVinculo}
