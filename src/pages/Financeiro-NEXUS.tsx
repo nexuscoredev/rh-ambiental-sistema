@@ -35,6 +35,7 @@ import {
   fetchVwFaturamentoResumoPorColetaIds,
   faturamentoResumoCreatedAtMinIso,
   faturamentoResumoDesdeDias,
+  formatarRotuloJanelaFaturamentoResumo,
 } from '../lib/faturamentoResumoFetch'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
@@ -834,7 +835,7 @@ export default function Financeiro() {
               Faturamento
             </Link>
             . Lista carregada com janela de{' '}
-            <strong>{faturamentoResumoDesdeDias() != null ? `${faturamentoResumoDesdeDias()} dias` : 'histórico completo'}</strong>{' '}
+            <strong>{formatarRotuloJanelaFaturamentoResumo(faturamentoResumoDesdeDias())}</strong>{' '}
             (variável <code style={{ fontSize: '11px' }}>VITE_FATURAMENTO_RESUMO_DESDE_DIAS</code>).
           </p>
           {usuarioCargo ? (

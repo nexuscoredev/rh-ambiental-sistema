@@ -3,13 +3,25 @@ import {
   escopoOrFilterPostgrest,
   FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO,
   faturamentoResumoDesdeDias,
+  formatarRotuloJanelaFaturamentoResumo,
   isEsteiraColumnMissingError,
 } from './faturamentoResumoFetch'
 
 describe('faturamentoResumoDesdeDias', () => {
   it('usa janela padrão quando env não está definida', () => {
     expect(faturamentoResumoDesdeDias()).toBe(FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO)
-    expect(FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO).toBe(180)
+    expect(FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO).toBe(30)
+  })
+})
+
+describe('formatarRotuloJanelaFaturamentoResumo', () => {
+  it('formata intervalo com últimos N dias', () => {
+    const texto = formatarRotuloJanelaFaturamentoResumo(30)
+    expect(texto).toMatch(/^do dia \d{2}\/\d{2}\/\d{4} ao dia \d{2}\/\d{2}\/\d{4} \(últimos 30 dias\)$/)
+  })
+
+  it('indica histórico completo sem corte', () => {
+    expect(formatarRotuloJanelaFaturamentoResumo(null)).toContain('histórico completo')
   })
 })
 

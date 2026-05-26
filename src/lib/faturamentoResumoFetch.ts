@@ -9,7 +9,7 @@ const MAX_PAGES_OPERACIONAL = 8
 const MAX_PAGES_HISTORICO = 12
 
 /** Janela padrão (dias) quando `VITE_FATURAMENTO_RESUMO_DESDE_DIAS` não está definida. */
-export const FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO = 180
+export const FATURAMENTO_RESUMO_DESDE_DIAS_PADRAO = 30
 
 export type FaturamentoResumoEscopo =
   /** Filas ativas (ticket, conferência, a faturar) — exclui registo emitido. */
@@ -49,6 +49,30 @@ export function faturamentoResumoCreatedAtMinIso(): string | null {
   d.setUTCDate(d.getUTCDate() - dias)
   d.setUTCHours(0, 0, 0, 0)
   return d.toISOString()
+}
+
+/** Intervalo local alinhado ao corte de `faturamentoResumoCreatedAtMinIso` (para rótulos na UI). */
+export function faturamentoResumoIntervaloLocal(dias: number): { inicio: Date; fim: Date } {
+  const fim = new Date()
+  const inicio = new Date()
+  inicio.setDate(inicio.getDate() - dias)
+  inicio.setHours(0, 0, 0, 0)
+  return { inicio, fim }
+}
+
+function formatarDataJanelaPtBr(d: Date): string {
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+/** Ex.: «do dia 26/04/2026 ao dia 26/05/2026 (últimos 30 dias)». */
+export function formatarRotuloJanelaFaturamentoResumo(dias: number | null): string {
+  if (dias == null) return 'histórico completo (sem corte de data)'
+  const { inicio, fim } = faturamentoResumoIntervaloLocal(dias)
+  return `do dia ${formatarDataJanelaPtBr(inicio)} ao dia ${formatarDataJanelaPtBr(fim)} (últimos ${dias} dias)`
 }
 
 /** Filtro PostgREST `.or(...)` conforme o escopo da carga. */

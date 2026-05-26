@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
+import { supabase } from '../../lib/supabase'
 import {
   aprovarTicketFaturamentoColeta,
   atualizarPesoLiquidoConferenciaTicket,
@@ -43,6 +44,61 @@ const td: CSSProperties = {
   verticalAlign: 'middle',
 }
 
+const FILA_TICKET_VISIVEL_INICIAL = 5
+const FILA_TICKET_CARREGAR_MAIS = 20
+
+const filtrosWrap: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+  gap: '10px 12px',
+  marginBottom: '14px',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  background: '#fffbeb',
+  border: '1px solid #fde68a',
+}
+
+const filtroLabel: CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  color: '#78716c',
+  marginBottom: '4px',
+}
+
+const filtroInput: CSSProperties = {
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: '8px',
+  border: '1px solid #cbd5e1',
+  fontSize: '13px',
+  background: '#fff',
+}
+
+function normalizarBuscaFila(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .trim()
+}
+
+function textoColetaFila(r: FaturamentoResumoViewRow): string {
+  const n = r.numero_coleta ?? r.numero
+  return n != null ? String(n) : ''
+}
+
+function rotuloLancadorCm(row: {
+  balanceiro?: string | null
+  balanceiro_nome?: string | null
+  usuario_balanceiro?: string | null
+}): string {
+  const bal = row.balanceiro ?? row.balanceiro_nome ?? row.usuario_balanceiro
+  return typeof bal === 'string' ? bal.trim() : ''
+}
+
 type Props = {
   linhas: FaturamentoResumoViewRow[]
   carregando: boolean
@@ -73,7 +129,98 @@ export function FaturamentoFilaAprovacaoTicket({
   const [sucessoPeso, setSucessoPeso] = useState('')
   /** Reflete o peso gravado antes do refresh da vista. */
   const [pesoLocal, setPesoLocal] = useState<Record<string, number>>({})
+  const [filtroCliente, setFiltroCliente] = useState('')
+  const [filtroMtr, setFiltroMtr] = useState('')
+  const [filtroColeta, setFiltroColeta] = useState('')
+  const [filtroLancador, setFiltroLancador] = useState('')
+  const [visiveis, setVisiveis] = useState(FILA_TICKET_VISIVEL_INICIAL)
+  const [lancadorPorColeta, setLancadorPorColeta] = useState<Record<string, string>>({})
   const { confirm, alert } = useRgDialog()
+
+  const filtroAtivo =
+    filtroCliente.trim() !== '' ||
+    filtroMtr.trim() !== '' ||
+    filtroColeta.trim() !== '' ||
+    filtroLancador.trim() !== ''
+
+  useEffect(() => {
+    setVisiveis(FILA_TICKET_VISIVEL_INICIAL)
+  }, [filtroCliente, filtroMtr, filtroColeta, filtroLancador, linhas])
+
+  useEffect(() => {
+    const ids = linhas.map((r) => r.coleta_id).filter(Boolean)
+    if (!ids.length) {
+      setLancadorPorColeta({})
+      return
+    }
+    let cancel = false
+    void (async () => {
+      const map: Record<string, string> = {}
+      const chunk = 80
+      for (let i = 0; i < ids.length; i += chunk) {
+        const slice = ids.slice(i, i + chunk)
+        const { data, error } = await supabase
+          .from('controle_massa')
+          .select('coleta_id, balanceiro, balanceiro_nome, usuario_balanceiro, created_at')
+          .in('coleta_id', slice)
+          .order('created_at', { ascending: false })
+        if (cancel) return
+        if (error) {
+          console.error('[fila ticket] balanceiro:', error)
+          break
+        }
+        for (const row of data ?? []) {
+          const cid = String(row.coleta_id ?? '')
+          if (!cid || map[cid]) continue
+          const nome = rotuloLancadorCm(row as Record<string, unknown>)
+          if (nome) map[cid] = nome
+        }
+      }
+      if (!cancel) setLancadorPorColeta(map)
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [linhas])
+
+  const linhasFiltradas = useMemo(() => {
+    const qCliente = normalizarBuscaFila(filtroCliente)
+    const qMtr = normalizarBuscaFila(filtroMtr)
+    const qColeta = normalizarBuscaFila(filtroColeta)
+    const qLancador = normalizarBuscaFila(filtroLancador)
+
+    return linhas.filter((r) => {
+      if (qCliente) {
+        const cliente = normalizarBuscaFila(r.cliente_nome ?? r.cliente_razao_social ?? '')
+        if (!cliente.includes(qCliente)) return false
+      }
+      if (qMtr) {
+        const mtr = normalizarBuscaFila(r.mtr_numero ?? '')
+        if (!mtr.includes(qMtr)) return false
+      }
+      if (qColeta) {
+        const coleta = normalizarBuscaFila(textoColetaFila(r))
+        if (!coleta.includes(qColeta)) return false
+      }
+      if (qLancador) {
+        const quem = normalizarBuscaFila(lancadorPorColeta[r.coleta_id] ?? '')
+        if (!quem.includes(qLancador)) return false
+      }
+      return true
+    })
+  }, [linhas, filtroCliente, filtroMtr, filtroColeta, filtroLancador, lancadorPorColeta])
+
+  const linhasVisiveis = useMemo(
+    () => linhasFiltradas.slice(0, visiveis),
+    [linhasFiltradas, visiveis]
+  )
+
+  const restantes = Math.max(0, linhasFiltradas.length - visiveis)
+  const proximoLote = Math.min(FILA_TICKET_CARREGAR_MAIS, restantes)
+  const listaExpandida = visiveis > FILA_TICKET_VISIVEL_INICIAL
+  const mostrarControlesLista = linhasFiltradas.length > FILA_TICKET_VISIVEL_INICIAL
+
+  const recolherLista = () => setVisiveis(FILA_TICKET_VISIVEL_INICIAL)
 
   const linhaOcupada = (coletaId: string) =>
     aprovandoId === coletaId || abrindoPdfId === coletaId || salvandoPesoId === coletaId
@@ -274,6 +421,97 @@ export function FaturamentoFilaAprovacaoTicket({
           Nenhum ticket aguardando conferência neste momento.
         </p>
       ) : (
+        <>
+          <div style={filtrosWrap} role="search" aria-label="Filtros da fila de conferência do ticket">
+            <div>
+              <label htmlFor="fila-ticket-filtro-cliente" style={filtroLabel}>
+                Cliente
+              </label>
+              <input
+                id="fila-ticket-filtro-cliente"
+                type="search"
+                value={filtroCliente}
+                onChange={(e) => setFiltroCliente(e.target.value)}
+                placeholder="Nome do cliente"
+                style={filtroInput}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label htmlFor="fila-ticket-filtro-mtr" style={filtroLabel}>
+                MTR
+              </label>
+              <input
+                id="fila-ticket-filtro-mtr"
+                type="search"
+                value={filtroMtr}
+                onChange={(e) => setFiltroMtr(e.target.value)}
+                placeholder="Número da MTR"
+                style={filtroInput}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label htmlFor="fila-ticket-filtro-coleta" style={filtroLabel}>
+                Coleta
+              </label>
+              <input
+                id="fila-ticket-filtro-coleta"
+                type="search"
+                value={filtroColeta}
+                onChange={(e) => setFiltroColeta(e.target.value)}
+                placeholder="N.º da coleta"
+                style={filtroInput}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label htmlFor="fila-ticket-filtro-lancador" style={filtroLabel}>
+                Quem lançou
+              </label>
+              <input
+                id="fila-ticket-filtro-lancador"
+                type="search"
+                value={filtroLancador}
+                onChange={(e) => setFiltroLancador(e.target.value)}
+                placeholder="Balanceiro / operador"
+                style={filtroInput}
+                autoComplete="off"
+              />
+            </div>
+            {filtroAtivo ? (
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="rg-btn rg-btn--outline"
+                  style={{ fontSize: 12, padding: '8px 12px', width: '100%' }}
+                  onClick={() => {
+                    setFiltroCliente('')
+                    setFiltroMtr('')
+                    setFiltroColeta('')
+                    setFiltroLancador('')
+                  }}
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+            {filtroAtivo
+              ? `${linhasFiltradas.length} de ${linhas.length} na fila (filtrado)`
+              : `${linhas.length} na fila`}
+            {linhasFiltradas.length > 0
+              ? ` · a mostrar ${Math.min(visiveis, linhasFiltradas.length)}`
+              : ''}
+          </p>
+
+          {linhasFiltradas.length === 0 ? (
+            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+              Nenhum resultado com os filtros actuais.
+            </p>
+          ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -284,12 +522,13 @@ export function FaturamentoFilaAprovacaoTicket({
                 <th style={th}>Ticket</th>
                 <th style={th}>Peso líq.</th>
                 <th style={th}>Salvo em</th>
+                <th style={th}>Quem lançou</th>
                 <th style={th}>Situação</th>
                 <th style={th}>Ação</th>
               </tr>
             </thead>
             <tbody>
-              {linhas.map((r) => {
+              {linhasVisiveis.map((r) => {
                 const editando = editandoPesoId === r.coleta_id
                 const ocupada = linhaOcupada(r.coleta_id)
 
@@ -384,6 +623,7 @@ export function FaturamentoFilaAprovacaoTicket({
                       )}
                     </td>
                     <td style={td}>{fmtData(r.ticket_impresso_em)}</td>
+                    <td style={td}>{lancadorPorColeta[r.coleta_id] || '—'}</td>
                     <td style={{ ...td, color: '#b45309', fontWeight: 700 }}>
                       {rotuloConferenciaNaFilaTicket(r)}
                     </td>
@@ -421,6 +661,43 @@ export function FaturamentoFilaAprovacaoTicket({
             </tbody>
           </table>
         </div>
+          )}
+
+          {mostrarControlesLista ? (
+            <div style={{ marginTop: '14px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+              {restantes > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    className="rg-btn rg-btn--outline"
+                    style={{ fontSize: 13, padding: '10px 16px', fontWeight: 700 }}
+                    onClick={() => setVisiveis((v) => v + proximoLote)}
+                  >
+                    Carregar mais {proximoLote} ({restantes} restante{restantes === 1 ? '' : 's'})
+                  </button>
+                  <button
+                    type="button"
+                    className="rg-btn rg-btn--outline"
+                    style={{ fontSize: 12, padding: '8px 12px' }}
+                    onClick={() => setVisiveis(linhasFiltradas.length)}
+                  >
+                    Mostrar todos ({linhasFiltradas.length})
+                  </button>
+                </>
+              ) : null}
+              {listaExpandida ? (
+                <button
+                  type="button"
+                  className="rg-btn rg-btn--outline"
+                  style={{ fontSize: 12, padding: '8px 12px', fontWeight: 700 }}
+                  onClick={recolherLista}
+                >
+                  Recolher lista (mostrar {FILA_TICKET_VISIVEL_INICIAL})
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   )

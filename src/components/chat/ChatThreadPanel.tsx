@@ -14,6 +14,7 @@ type Props = {
   outroFoto: string | null
   presencaOutro: PresencaStatus
   mensagens: ChatMensagem[]
+  carregandoMensagens?: boolean
   enviando: boolean
   /** Só Desenvolvedor: menu com exclusão de histórico. */
   podeApagarHistorico?: boolean
@@ -36,6 +37,7 @@ export function ChatThreadPanel({
   outroFoto,
   presencaOutro,
   mensagens,
+  carregandoMensagens = false,
   enviando,
   podeApagarHistorico = false,
   podeGerirFigurinhas = false,
@@ -201,7 +203,9 @@ export function ChatThreadPanel({
       </header>
 
       <div ref={scrollRef} className="chat-interno-thread__scroll">
-        {mensagens.length === 0 ? (
+        {carregandoMensagens && mensagens.length === 0 ? (
+          <div className="chat-interno-muted chat-interno-thread__empty">A carregar mensagens…</div>
+        ) : mensagens.length === 0 ? (
           <div className="chat-interno-muted chat-interno-thread__empty">Sem mensagens. Escreva abaixo.</div>
         ) : (
           mensagens.map((m) => (

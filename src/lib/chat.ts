@@ -393,7 +393,7 @@ export async function chatMarcarLida(conversaId: string, meuId: string): Promise
   if (uid !== meuId) console.warn('[chat] marcar lida: JWT difere do meuId')
 }
 
-export async function chatCarregarMensagens(conversaId: string, limite = 80): Promise<ChatMensagem[]> {
+export async function chatCarregarMensagens(conversaId: string, limite = 200): Promise<ChatMensagem[]> {
   const { data, error } = await supabase
     .from('chat_mensagens')
     .select(

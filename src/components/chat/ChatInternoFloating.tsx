@@ -127,6 +127,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const [conversaId, setConversaId] = useState<string | null>(null)
   const [outroIdPainel, setOutroIdPainel] = useState<string | null>(null)
   const [mensagens, setMensagens] = useState<ChatMensagem[]>([])
+  const [carregandoMensagens, setCarregandoMensagens] = useState(false)
   const [pedidosAjusteResolvidos, setPedidosAjusteResolvidos] = useState<Set<string>>(() => new Set())
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
@@ -260,6 +261,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const conversaIdRef = useRef<string | null>(null)
   const meuIdRef = useRef<string | null>(null)
   const openRef = useRef<boolean>(false)
+  const mensagensLoadSeqRef = useRef(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   useEffect(() => {
     conversaIdRef.current = conversaId
@@ -470,33 +472,54 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   }, [meuId, recarregarConversas, tocarNotificacao])
 
   useEffect(() => {
+    if (!conversaId) {
+      queueMicrotask(() => {
+        setMensagens([])
+        setPedidosAjusteResolvidos(new Set())
+        setCarregandoMensagens(false)
+      })
+    }
+  }, [conversaId])
+
+  useEffect(() => {
     void channelThreadRef.current?.unsubscribe()
     channelThreadRef.current = null
 
     if (!conversaId || !open) {
-      queueMicrotask(() => {
-        setMensagens([])
-        setPedidosAjusteResolvidos(new Set())
-      })
       return
     }
 
-    let cancel = false
+    const cid = conversaId
+    const seq = ++mensagensLoadSeqRef.current
+    queueMicrotask(() => setCarregandoMensagens(true))
+
     void (async () => {
       try {
-        const [list, resolvidos] = await Promise.all([
-          chatCarregarMensagens(conversaId),
-          chatListarPedidosAjusteResolvidos(conversaId),
-        ])
-        if (!cancel) {
-          setMensagens(list)
-          setPedidosAjusteResolvidos(resolvidos)
-        }
+        const list = await chatCarregarMensagens(cid)
+        if (mensagensLoadSeqRef.current !== seq) return
+        setMensagens(list)
+
+        void chatListarPedidosAjusteResolvidos(cid)
+          .then((resolvidos) => {
+            if (mensagensLoadSeqRef.current !== seq) return
+            setPedidosAjusteResolvidos(resolvidos)
+          })
+          .catch((e) => console.error('[chat] pedidos ajuste resolvidos:', e))
+
         const uid = meuIdRef.current
-        if (uid) await chatMarcarLida(conversaId, uid)
-        if (!cancel) void recarregarConversas()
+        if (uid) await chatMarcarLida(cid, uid)
+        if (mensagensLoadSeqRef.current === seq) void recarregarConversas()
       } catch (e) {
         console.error(e)
+        if (mensagensLoadSeqRef.current === seq) {
+          setErro(
+            e instanceof Error
+              ? e.message
+              : 'Não foi possível carregar o histórico desta conversa.'
+          )
+        }
+      } finally {
+        if (mensagensLoadSeqRef.current === seq) setCarregandoMensagens(false)
       }
     })()
 
@@ -531,13 +554,13 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     channelThreadRef.current = ch
 
     return () => {
-      cancel = true
       void ch.unsubscribe()
       channelThreadRef.current = null
     }
   }, [conversaId, open, recarregarConversas, tocarNotificacao])
 
   const abrirConversa = useCallback((id: string, opts?: { outroId?: string }) => {
+    setErro('')
     setConversaId(id)
     setOutroIdPainel(opts?.outroId ?? null)
     setTab('conversas')
@@ -825,6 +848,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   outroFoto={outroMeta?.foto_url ?? null}
                   presencaOutro={presencaOutro}
                   mensagens={mensagens}
+                  carregandoMensagens={carregandoMensagens}
                   enviando={enviando || apagandoHistorico}
                   podeApagarHistorico={podeApagarHistoricoChat}
                   podeGerirFigurinhas={podeApagarHistoricoChat}

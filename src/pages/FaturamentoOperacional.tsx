@@ -19,6 +19,7 @@ import {
   cargoPodeEnviarNfEmail,
 } from '../lib/workflowPermissions'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
+import { formatarRotuloJanelaFaturamentoResumo } from '../lib/faturamentoResumoFetch'
 import { useFaturamentoOperacionalVista } from '../lib/faturamentoOperacionalVista'
 import {
   coletaConferenciaPendente,
@@ -510,7 +511,8 @@ export default function FaturamentoOperacional() {
             {carregandoVista ? 'Atualizando…' : 'Atualizar dados'}
           </button>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
-            Janela de dados: <strong style={{ color: '#0f172a' }}>{diasJanela != null ? `${diasJanela} dias` : 'completa'}</strong>
+            Janela de dados:{' '}
+            <strong style={{ color: '#0f172a' }}>{formatarRotuloJanelaFaturamentoResumo(diasJanela)}</strong>
             {' · '}
             Perfil: <strong style={{ color: '#0f172a' }}>{cargo ?? '—'}</strong>
             {!podeConfirmarEmissao

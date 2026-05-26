@@ -53,31 +53,27 @@ const painelStyle: CSSProperties = {
   overflow: 'hidden',
 }
 
-const registrosChipsWrap: CSSProperties = {
+const registrosAbrirWrap: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
-  gap: '8px',
+  gap: '10px',
   alignItems: 'center',
   marginTop: '12px',
   paddingTop: '12px',
   borderTop: '1px solid #f1f5f9',
 }
 
-function chipRegistroStyle(ativo: boolean): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    border: ativo ? '1px solid #86efac' : '1px solid #e2e8f0',
-    background: ativo ? '#f0fdf4' : '#f8fafc',
-    borderRadius: '999px',
-    padding: '7px 12px 7px 14px',
-    fontSize: '13px',
-    fontWeight: ativo ? 800 : 600,
-    color: '#0f172a',
-    cursor: 'pointer',
-    maxWidth: '100%',
-  }
+const selectAbrirGerenciadorStyle: CSSProperties = {
+  flex: '1 1 240px',
+  minWidth: 200,
+  maxWidth: 480,
+  padding: '10px 12px',
+  borderRadius: '10px',
+  border: '1px solid #cbd5e1',
+  fontSize: '14px',
+  fontWeight: 600,
+  color: '#0f172a',
+  background: '#fff',
 }
 
 function linhasFromDb(
@@ -493,46 +489,51 @@ export default function ClientesGerenciador(props: unknown) {
             </div>
 
             {loading ? (
-              <p style={{ ...registrosChipsWrap, marginTop: '12px', borderTop: 'none', paddingTop: 0, fontSize: '13px', color: '#64748b' }}>
+              <p style={{ ...registrosAbrirWrap, marginTop: '12px', borderTop: 'none', paddingTop: 0, fontSize: '13px', color: '#64748b' }}>
                 Carregando registros…
               </p>
             ) : lista.length > 0 ? (
-              <div style={registrosChipsWrap}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '4px' }}>
+              <div style={registrosAbrirWrap}>
+                <label
+                  htmlFor="gerenciador-abrir-select"
+                  style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', flexShrink: 0 }}
+                >
                   Abrir:
-                </span>
-                {lista.map((g) => (
-                  <span key={g.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                    <button
-                      type="button"
-                      onClick={() => void abrirEdicao(g)}
-                      style={chipRegistroStyle(editingId === g.id)}
-                      title={g.nome_exibicao || 'Registro'}
-                    >
-                      <span
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: 'min(320px, 42vw)',
-                        }}
-                      >
-                        {g.nome_exibicao || '—'}
-                      </span>
-                    </button>
-                    {podeEditar ? (
-                      <button
-                        type="button"
-                        className="mini-btn mini-btn-danger"
-                        onClick={() => void handleExcluir(g.id)}
-                        title="Excluir"
-                        style={{ marginLeft: '-4px' }}
-                      >
-                        ×
-                      </button>
-                    ) : null}
-                  </span>
-                ))}
+                </label>
+                <select
+                  id="gerenciador-abrir-select"
+                  value={editingId ?? ''}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    if (!id) {
+                      setEditingId(null)
+                      cadastro.resetForm()
+                      setLinhasMtr([linhaMtrGerenciadorVazia()])
+                      return
+                    }
+                    const row = lista.find((g) => g.id === id)
+                    if (row) void abrirEdicao(row)
+                  }}
+                  style={selectAbrirGerenciadorStyle}
+                  title="Selecione o gerenciador para editar"
+                >
+                  <option value="">— Selecione um gerenciador —</option>
+                  {lista.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.nome_exibicao || '—'}
+                    </option>
+                  ))}
+                </select>
+                {podeEditar && editingId ? (
+                  <button
+                    type="button"
+                    className="mini-btn mini-btn-danger"
+                    onClick={() => void handleExcluir(editingId)}
+                    title="Excluir gerenciador selecionado"
+                  >
+                    Excluir
+                  </button>
+                ) : null}
               </div>
             ) : (
               <p
