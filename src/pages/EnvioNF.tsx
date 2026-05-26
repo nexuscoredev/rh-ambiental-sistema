@@ -98,7 +98,7 @@ function formatarDataHora(iso: string) {
 
 /**
  * Mala direta de NF: seleção de clientes com `email_nf`, envio simulado e registo em `nf_envios_log`.
- * Integração real (SMTP/API) pode substituir o modo `simulacao` mantendo o mesmo fluxo de seleção.
+ * Envio real (SMTP/API) ou rascunho em `nf_envios_log` (sem e-mail; esteira só avança no envio real).
  */
 export default function EnvioNF() {
   const [searchParams] = useSearchParams()
@@ -115,7 +115,7 @@ export default function EnvioNF() {
   const [anexoFiles, setAnexoFiles] = useState<File[]>([])
   const [boletoFile, setBoletoFile] = useState<File | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const [envioModo, setEnvioModo] = useState<'simulacao' | 'email' | null>(null)
+  const [envioModo, setEnvioModo] = useState<'rascunho' | 'email' | null>(null)
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null)
@@ -593,7 +593,7 @@ export default function EnvioNF() {
     }
   }
 
-  async function handleSimularEnvio() {
+  async function handleSalvarRascunho() {
     setErro('')
     setMensagem('')
     if (!podeDisparar) {
@@ -607,7 +607,7 @@ export default function EnvioNF() {
 
     const destinatarios: DestinatarioPayload[] = selecionadosComEmail.flatMap(destinatariosDeCliente)
 
-    const nomesSimulacao = [
+    const nomesAnexosRascunho = [
       ...(anexoFiles.length > 0
         ? [`NF: ${anexoFiles.map((f) => f.name).join(', ')}`]
         : []),
@@ -616,51 +616,34 @@ export default function EnvioNF() {
     const obsComAnexos = [
       observacao.trim(),
       modoMedicao ? `Corpo do e-mail (medição):\n${corpoMedicaoEmail.trim()}` : '',
-      nomesSimulacao.length > 0
-        ? `Anexos (simulação, não enviados): ${nomesSimulacao.join(' · ')}`
+      nomesAnexosRascunho.length > 0
+        ? `Anexos (rascunho, não enviados): ${nomesAnexosRascunho.join(' · ')}`
         : '',
     ]
       .filter(Boolean)
       .join('\n\n')
 
     setEnviando(true)
-    setEnvioModo('simulacao')
+    setEnvioModo('rascunho')
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
-      const { data: logRow, error } = await supabase
-        .from('nf_envios_log')
-        .insert({
-          modo: modoMedicao ? 'medicao_simulacao' : 'simulacao',
-          destinatarios,
-          total_destinatarios: destinatarios.length,
-          observacao: obsComAnexos || null,
-          created_by: user?.id ?? null,
-        })
-        .select('id')
-        .maybeSingle()
+      const { error } = await supabase.from('nf_envios_log').insert({
+        modo: modoMedicao ? 'medicao_rascunho' : 'rascunho',
+        destinatarios,
+        total_destinatarios: destinatarios.length,
+        observacao: obsComAnexos || null,
+        created_by: user?.id ?? null,
+      })
 
       if (error) throw error
 
-      const logId =
-        logRow && typeof logRow === 'object' && 'id' in logRow && logRow.id
-          ? String(logRow.id)
-          : null
-      let coletasMedicaoAtualizadas = 0
-      if (!modoMedicao) {
-        await aplicarEnvioNasContasMarcadas('simulacao', obsComAnexos, logId)
-      } else {
-        const est = await registrarMedicaoEnviadaClientes(destinatarios.map((d) => d.cliente_id))
-        if (!est.ok) throw new Error(est.message)
-        coletasMedicaoAtualizadas = est.atualizadas
-      }
-
       setMensagem(
         modoMedicao
-          ? `Simulação de medição: ${destinatarios.length} destinatário(s). Esteira avançada para aprovação do cliente (${coletasMedicaoAtualizadas} coleta(s)).`
-          : `Simulação concluída: ${destinatarios.length} destinatário(s). Nenhum e-mail foi enviado.`
+          ? `Rascunho de medição guardado: ${destinatarios.length} destinatário(s). Nenhum e-mail enviado; a esteira só avança após «Enviar medição por e-mail».`
+          : `Rascunho guardado: ${destinatarios.length} destinatário(s). Nenhum e-mail enviado — pode concluir o envio depois.`
       )
       setObservacao('')
       limparAnexos()
@@ -668,7 +651,7 @@ export default function EnvioNF() {
       setSelecionados(new Set())
       await carregarLogs()
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao registar envio.')
+      setErro(e instanceof Error ? e.message : 'Erro ao guardar rascunho.')
     } finally {
       setEnviando(false)
       setEnvioModo(null)
@@ -816,9 +799,10 @@ export default function EnvioNF() {
               <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
                 {modoMedicao ? (
                   <>
-                    Envie o <strong>relatório de medição</strong> ao cliente (e-mail em Clientes). Após envio ou
-                    simulação, as coletas em <strong>envio do relatório</strong> passam para{' '}
-                    <strong>aprovação do cliente</strong> na{' '}
+                    Envie o <strong>relatório de medição</strong> ao cliente (e-mail em Clientes). Use{' '}
+                    <strong>Rascunho</strong> para guardar o caso sem enviar; após{' '}
+                    <strong>Enviar medição por e-mail</strong>, as coletas em{' '}
+                    <strong>envio do relatório</strong> passam para <strong>aprovação do cliente</strong> na{' '}
                     <Link to="/faturamento-operacional" style={{ fontWeight: 700 }}>
                       esteira de faturamento
                     </Link>
@@ -828,8 +812,8 @@ export default function EnvioNF() {
                   <>
                     Envio ao cliente de <strong>medição</strong>, <strong>nota fiscal</strong> e{' '}
                     <strong>boleto</strong>. Selecione clientes com e-mail em <strong>Clientes</strong>. Use{' '}
-                    <strong>Enviar e-mails</strong> (SMTP/Resend) ou <strong>simulação</strong> para registar no
-                    histórico sem disparar.
+                    <strong>Enviar e-mails</strong> (SMTP/Resend) ou <strong>Rascunho</strong> para guardar o caso e
+                    enviar depois.
                   </>
                 )}
               </p>
@@ -859,8 +843,8 @@ export default function EnvioNF() {
                     fontWeight: 600,
                   }}
                 >
-                  Contexto: coleta <code style={{ fontWeight: 800 }}>{coletaParam.slice(0, 8)}…</code> — após envio ou
-                  simulação, o registo fica em <strong>contas a receber</strong> (se já existir linha para esta coleta).
+                  Contexto: coleta <code style={{ fontWeight: 800 }}>{coletaParam.slice(0, 8)}…</code> — após envio por
+                  e-mail, o registo fica em <strong>contas a receber</strong> (se já existir linha para esta coleta).
                 </p>
               ) : null}
               {clienteParam || coletaParam ? (
@@ -901,7 +885,7 @@ export default function EnvioNF() {
                   Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
                   {!podeDisparar
                     ? ' · apenas consulta / histórico'
-                    : ' · pode enviar e-mails ou registar simulação'}
+                    : ' · pode enviar e-mails ou guardar rascunho'}
                 </p>
               ) : null}
             </div>
@@ -1339,8 +1323,7 @@ export default function EnvioNF() {
                     {MAX_TOTAL_ANEXOS_EMAIL} ficheiros no e-mail).
                   </>
                 )}{' '}
-                Os anexos são enviados no e-mail real; na <strong>simulação</strong> só ficam registados os nomes no
-                log.
+                Os anexos são enviados no e-mail real; no <strong>rascunho</strong> só ficam registados os nomes no log.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                 <label
@@ -1535,8 +1518,13 @@ export default function EnvioNF() {
               </button>
               <button
                 type="button"
-                onClick={() => void handleSimularEnvio()}
+                onClick={() => void handleSalvarRascunho()}
                 disabled={enviando || !podeDisparar || selecionadosComEmail.length === 0}
+                title={
+                  modoMedicao
+                    ? 'Guarda destinatários e texto para envio posterior, sem e-mail e sem avançar a esteira.'
+                    : 'Guarda destinatários e observações para envio posterior, sem disparar e-mail.'
+                }
                 style={{
                   background: '#ffffff',
                   color: '#334155',
@@ -1551,7 +1539,7 @@ export default function EnvioNF() {
                       : 'pointer',
                 }}
               >
-                {enviando && envioModo === 'simulacao' ? 'A registar…' : 'Só simulação (histórico)'}
+                {enviando && envioModo === 'rascunho' ? 'A guardar rascunho…' : 'Rascunho'}
               </button>
             </div>
             <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '820px' }}>
@@ -1585,7 +1573,7 @@ export default function EnvioNF() {
               Histórico recente
             </h2>
             <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
-              Últimos registos em <code style={{ fontSize: '12px' }}>nf_envios_log</code> (simulação, Outlook, Resend ou
+              Últimos registos em <code style={{ fontSize: '12px' }}>nf_envios_log</code> (rascunho, e-mail, Resend ou
               parcial).
             </p>
             {loadingLogs ? (

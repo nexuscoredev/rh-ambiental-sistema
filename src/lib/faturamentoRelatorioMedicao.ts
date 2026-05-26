@@ -28,6 +28,10 @@ export type LinhaRelatorioMedicao = {
   valorFrete: number
   pesoKg: number
   valorTaxa: number
+  /** Subtotal do resíduo (com mínimo do contrato, se houver). */
+  valorResiduo?: number
+  /** Mínimo em kg do contrato (para recálculo na edição). */
+  faturamentoMinimoKg?: number
   total: number
 }
 
@@ -158,6 +162,8 @@ export function montarLinhasRelatorioMedicao(
       valorFrete,
       pesoKg,
       valorTaxa: preco.valorUnitario,
+      valorResiduo: preco.valorResiduo,
+      faturamentoMinimoKg: preco.faturamentoMinimoKg,
       total,
     }
   })

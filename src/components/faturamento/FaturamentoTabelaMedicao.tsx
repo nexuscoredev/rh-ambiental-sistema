@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   formatarDataCurta,
   formatarMoedaMedicao,
@@ -10,6 +10,8 @@ import {
 import { COLUNAS_RELATORIO_MEDICAO } from '../../lib/faturamentoRelatorioMedicaoColunas'
 import {
   aplicarRascunhosLinhasMedicao,
+  atualizarCampoRascunhoMedicao,
+  fingerprintLinhasMedicao,
   linhasParaRascunhosEdicao,
   mesclarLinhasComRascunhosMedicao,
   type RascunhoEdicaoLinhaMedicao,
@@ -101,12 +103,20 @@ export function FaturamentoTabelaMedicao({
   const [linhas, setLinhas] = useState(linhasProp)
   const [modoEdicao, setModoEdicao] = useState(false)
   const [rascunhos, setRascunhos] = useState<Record<string, RascunhoEdicaoLinhaMedicao>>({})
+  const modoEdicaoRef = useRef(false)
+  const linhasPropFingerprint = useMemo(() => fingerprintLinhasMedicao(linhasProp), [linhasProp])
+
+  useEffect(() => {
+    modoEdicaoRef.current = modoEdicao
+  }, [modoEdicao])
 
   useEffect(() => {
     setLinhas(linhasProp)
-    setModoEdicao(false)
-    setRascunhos({})
-  }, [linhasProp])
+    if (!modoEdicaoRef.current) {
+      setModoEdicao(false)
+      setRascunhos({})
+    }
+  }, [linhasPropFingerprint, linhasProp])
 
   const linhasPreview = useMemo(
     () => (modoEdicao ? mesclarLinhasComRascunhosMedicao(linhas, rascunhos) : linhas),
@@ -138,13 +148,15 @@ export function FaturamentoTabelaMedicao({
     key: keyof RascunhoEdicaoLinhaMedicao,
     valor: string
   ) {
-    setRascunhos((prev) => ({
-      ...prev,
-      [coletaId]: {
-        ...(prev[coletaId] ?? linhasParaRascunhosEdicao(linhas)[coletaId]!),
-        [key]: valor,
-      },
-    }))
+    const linha = linhas.find((l) => l.coleta_id === coletaId)
+    if (!linha) return
+    setRascunhos((prev) => {
+      const draft = prev[coletaId] ?? linhasParaRascunhosEdicao(linhas)[coletaId]!
+      return {
+        ...prev,
+        [coletaId]: atualizarCampoRascunhoMedicao(linha, draft, key, valor),
+      }
+    })
   }
 
   return (

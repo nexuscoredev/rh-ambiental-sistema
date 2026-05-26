@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   aplicarRascunhoLinhaMedicao,
   aplicarRascunhosLinhasMedicao,
+  atualizarCampoRascunhoMedicao,
   linhaParaRascunhoEdicao,
   recalcularTotalLinhaMedicao,
+  recalcularValorResiduoLinhaMedicao,
 } from './faturamentoRelatorioMedicaoEdicao'
 import type { LinhaRelatorioMedicao } from './faturamentoRelatorioMedicao'
 
@@ -34,6 +36,33 @@ describe('faturamentoRelatorioMedicaoEdicao', () => {
     const next = aplicarRascunhoLinhaMedicao(linhaBase(), draft)
     expect(next.pesoKg).toBe(3000)
     expect(next.total).toBe(2700)
+  })
+
+  it('recalcula total ao mudar peso no rascunho (total pré-preenchido não trava)', () => {
+    const linha = linhaBase()
+    const draft = linhaParaRascunhoEdicao(linha)
+    const nextDraft = atualizarCampoRascunhoMedicao(linha, draft, 'pesoKg', '1000,00')
+    const aplicada = aplicarRascunhoLinhaMedicao(linha, nextDraft)
+    expect(aplicada.pesoKg).toBe(1000)
+    expect(aplicada.total).toBe(1460)
+  })
+
+  it('respeita faturamento mínimo em kg no recálculo', () => {
+    expect(
+      recalcularValorResiduoLinhaMedicao({
+        pesoKg: 100,
+        valorTaxa: 10,
+        faturamentoMinimoKg: 1500,
+      })
+    ).toBe(15000)
+  })
+
+  it('mantém total manual quando o utilizador edita o campo Total', () => {
+    const linha = linhaBase()
+    const draft = linhaParaRascunhoEdicao(linha)
+    const nextDraft = atualizarCampoRascunhoMedicao(linha, draft, 'total', '999,00')
+    const aplicada = aplicarRascunhoLinhaMedicao(linha, nextDraft)
+    expect(aplicada.total).toBe(999)
   })
 
   it('aplica rascunhos distintos por coleta', () => {
