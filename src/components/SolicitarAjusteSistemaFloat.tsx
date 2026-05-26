@@ -11,6 +11,30 @@ export type SolicitarAjusteSistemaFloatProps = {
   panelId: string
 }
 
+function imagemColadaDoClipboard(e: ClipboardEvent): File | null {
+  const items = e.clipboardData?.items
+  if (!items?.length) return null
+  for (const item of items) {
+    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
+    const blob = item.getAsFile()
+    if (!blob) continue
+    const ext =
+      blob.type === 'image/jpeg'
+        ? 'jpg'
+        : blob.type === 'image/webp'
+          ? 'webp'
+          : blob.type === 'image/gif'
+            ? 'gif'
+            : 'png'
+    const nome =
+      blob.name?.trim() && !/^image\.\w+$/i.test(blob.name)
+        ? blob.name
+        : `print-tela-${Date.now()}.${ext}`
+    return new File([blob], nome, { type: blob.type || 'image/png' })
+  }
+  return null
+}
+
 export default function SolicitarAjusteSistemaFloat({
   open,
   onOpenChange,
@@ -18,7 +42,6 @@ export default function SolicitarAjusteSistemaFloat({
 }: SolicitarAjusteSistemaFloatProps) {
   const { openChat, openChatWithUser } = useChatFloat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const ficheiroRef = useRef<HTMLInputElement>(null)
 
   const [texto, setTexto] = useState('')
   const [print, setPrint] = useState<File | null>(null)
@@ -35,7 +58,6 @@ export default function SolicitarAjusteSistemaFloat({
       setSucessoId(null)
       setTexto('')
       setPrint(null)
-      if (ficheiroRef.current) ficheiroRef.current.value = ''
     }
     abertoAnterior.current = open
   }, [open])
@@ -98,6 +120,24 @@ export default function SolicitarAjusteSistemaFloat({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onOpenChange])
 
+  const aplicarPrintColado = useCallback((e: ClipboardEvent) => {
+    const img = imagemColadaDoClipboard(e)
+    if (!img) return false
+    e.preventDefault()
+    setPrint(img)
+    setErro('')
+    return true
+  }, [])
+
+  useEffect(() => {
+    if (!open || contaDesenvolvedor || sucessoId) return
+    const onPaste = (e: ClipboardEvent) => {
+      void aplicarPrintColado(e)
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [open, contaDesenvolvedor, sucessoId, aplicarPrintColado])
+
   const fecharPainel = useCallback(() => {
     onOpenChange(false)
     setErro('')
@@ -111,7 +151,6 @@ export default function SolicitarAjusteSistemaFloat({
       const { destinoUserId } = await chatEnviarPedidoAjusteSistema(texto, print)
       setTexto('')
       setPrint(null)
-      if (ficheiroRef.current) ficheiroRef.current.value = ''
       setSucessoId(destinoUserId)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível enviar.')
@@ -151,7 +190,7 @@ export default function SolicitarAjusteSistemaFloat({
                 <p className="suporte-float-panel__lead">
                   {contaDesenvolvedor
                     ? 'Esta conta recebe os pedidos de melhoria. Responda pelo Chat Interno.'
-                    : 'Descreva como podemos melhorar o sistema. A mensagem chega ao chat do desenvolvedor (Rafael Cavalcante).'}
+                    : 'Descreva como podemos melhorar o sistema. Pode colar um print da tela com Ctrl+V. A mensagem chega ao chat do desenvolvedor (Rafael Cavalcante).'}
                 </p>
               </div>
 
@@ -214,25 +253,43 @@ export default function SolicitarAjusteSistemaFloat({
                         onChange={(e) => setTexto(e.target.value)}
                       />
 
-                      <label htmlFor={`${panelId}-print`} className="suporte-float-label">
-                        Print (opcional)
-                      </label>
-                      <input
-                        ref={ficheiroRef}
-                        id={`${panelId}-print`}
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        className="suporte-float-file"
-                        disabled={enviando}
-                        onChange={(e) => setPrint(e.target.files?.[0] ?? null)}
-                      />
-                      {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt="Pré-visualização do print"
-                          className="suporte-float-preview"
-                        />
-                      ) : null}
+                      <span className="suporte-float-label" id={`${panelId}-print-label`}>
+                        Print da tela (opcional)
+                      </span>
+                      <div
+                        className={`suporte-float-paste${previewUrl ? ' suporte-float-paste--filled' : ''}`}
+                        tabIndex={0}
+                        role="group"
+                        aria-labelledby={`${panelId}-print-label`}
+                        aria-describedby={`${panelId}-print-hint`}
+                        onPaste={(e) => {
+                          if (enviando) return
+                          aplicarPrintColado(e.nativeEvent)
+                        }}
+                      >
+                        {previewUrl ? (
+                          <>
+                            <img
+                              src={previewUrl}
+                              alt="Print colado"
+                              className="suporte-float-preview suporte-float-preview--in-paste"
+                            />
+                            <button
+                              type="button"
+                              className="suporte-float-paste__remover"
+                              disabled={enviando}
+                              onClick={() => setPrint(null)}
+                            >
+                              Remover print
+                            </button>
+                          </>
+                        ) : (
+                          <p id={`${panelId}-print-hint`} className="suporte-float-paste__hint">
+                            Capture o ecrã (ex.: Win+Shift+S) e prima{' '}
+                            <kbd>Ctrl</kbd>+<kbd>V</kbd> aqui ou em qualquer lugar deste formulário.
+                          </p>
+                        )}
+                      </div>
 
                       <div className="suporte-float-actions">
                         <button
