@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { formClienteFromJson } from './clienteCadastroForm'
-import { nomeGeradorParaMtr, type ClienteNomeAutofill } from './mtrNomeGerador'
+import {
+  nomeGeradorParaMtr,
+  textoPareceClassificacaoResiduoLegado,
+  type ClienteNomeAutofill,
+} from './mtrNomeGerador'
 import { MTR_PROGRAMACAO_SELECT, type ProgramacaoMtrRow } from './mtrProgramacoesFetch'
 
 export type ClienteEnderecoAutofill = {
@@ -283,23 +287,32 @@ export type GeradorCidadePatch = {
   cep?: string
 }
 
-/** Campo «Atividade» (secção 1. Gerador) — prioridade alinhada ao autofill histórico da MTR. */
+/** Campo «Atividade» (secção 1. Gerador) — não usar classificação/tipo de resíduo do contrato. */
 export function atividadeGeradorDesdeClienteProgramacao(
   row: {
-    classificacao?: string | null
     observacoes_operacionais?: string | null
     observacoes_gerais?: string | null
   },
   programacao: { tipo_servico?: string | null }
 ): string {
   const obs = (s: string | null | undefined, max = 120) => (s ?? '').trim().slice(0, max)
-  return (
-    (row.classificacao ?? '').trim() ||
-    (programacao.tipo_servico ?? '').trim() ||
-    obs(row.observacoes_operacionais) ||
-    obs(row.observacoes_gerais) ||
-    ''
-  )
+  const candidatos = [
+    (programacao.tipo_servico ?? '').trim(),
+    obs(row.observacoes_operacionais),
+    obs(row.observacoes_gerais),
+  ].filter(Boolean)
+  for (const c of candidatos) {
+    if (!textoPareceClassificacaoResiduoLegado(c)) return c
+  }
+  return ''
+}
+
+/** Mantém atividade já digitada; substitui valor legado que veio de classificação de resíduo. */
+export function resolverAtividadeGeradorMtr(atividadeSalva: string, atividadeSugerida: string): string {
+  const salva = atividadeSalva.trim()
+  const sugerida = atividadeSugerida.trim()
+  if (salva && !textoPareceClassificacaoResiduoLegado(salva)) return salva
+  return sugerida
 }
 
 export function patchCidadeEnderecoGeradorDesdeCliente(

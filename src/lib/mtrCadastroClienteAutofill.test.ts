@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   atividadeGeradorDesdeClienteProgramacao,
+  resolverAtividadeGeradorMtr,
   enriquecerClienteEnderecoAutofill,
   inferirCidadeEstadoEnderecoTexto,
   montarCidadeUfCliente,
@@ -9,25 +10,27 @@ import {
 } from './mtrCadastroClienteAutofill'
 
 describe('mtrCadastroClienteAutofill', () => {
-  it('resolve atividade do gerador a partir do cadastro e da programação', () => {
+  it('resolve atividade do gerador sem usar classificação de resíduo', () => {
     expect(
       atividadeGeradorDesdeClienteProgramacao(
-        { classificacao: 'Hospitalar', observacoes_operacionais: 'x' },
+        { observacoes_operacionais: 'Hospitalar' },
         { tipo_servico: 'RSS' }
       )
-    ).toBe('Hospitalar')
+    ).toBe('RSS')
     expect(
-      atividadeGeradorDesdeClienteProgramacao(
-        { classificacao: '', observacoes_operacionais: 'Obs longa' },
-        { tipo_servico: 'Coleta fixa' }
-      )
+      atividadeGeradorDesdeClienteProgramacao({}, { tipo_servico: 'Coleta fixa' })
     ).toBe('Coleta fixa')
     expect(
       atividadeGeradorDesdeClienteProgramacao(
-        { classificacao: '', observacoes_operacionais: '  Cadastro  ' },
+        { observacoes_operacionais: '  Cadastro  ' },
         { tipo_servico: '' }
       )
     ).toBe('Cadastro')
+  })
+
+  it('resolverAtividadeGeradorMtr ignora atividade salva com classe de resíduo', () => {
+    expect(resolverAtividadeGeradorMtr('Classe II | Classe II', 'Coleta RSS')).toBe('Coleta RSS')
+    expect(resolverAtividadeGeradorMtr('Laboratório', 'RSS')).toBe('Laboratório')
   })
 
   it('monta cidade e UF do cadastro', () => {

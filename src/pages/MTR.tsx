@@ -66,6 +66,7 @@ import {
   montarEnderecoLinhaCliente,
   parseCidadeUfCampoTopo,
   atividadeGeradorDesdeClienteProgramacao,
+  resolverAtividadeGeradorMtr,
   buscarNomeGeradorPorProgramacaoMtr,
   patchCidadeEnderecoGeradorDesdeCliente,
   resolverClienteIdProgramacaoMtr,
@@ -1692,7 +1693,10 @@ export default function MTR() {
           gerador: {
             ...dz.gerador,
             ...(prev.detalhes?.gerador || {}),
-            atividade: (prev.detalhes?.gerador?.atividade ?? '').trim() || atividadeGerador,
+            atividade: resolverAtividadeGeradorMtr(
+              prev.detalhes?.gerador?.atividade ?? '',
+              atividadeGerador
+            ),
             cnpj: (row.cnpj ?? '').trim() || dz.gerador.cnpj,
             cadri: (row.licenca_numero ?? '').trim() || dz.gerador.cadri,
             responsavel: (row.responsavel_nome ?? '').trim() || dz.gerador.responsavel,

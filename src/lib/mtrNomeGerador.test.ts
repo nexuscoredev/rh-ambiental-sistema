@@ -26,6 +26,16 @@ describe('resolverNomeGeradorMtr', () => {
     ).toBe('Clínica Sul')
   })
 
+  it('substitui gerador que é só classificação de resíduo legada', () => {
+    expect(
+      resolverNomeGeradorMtr({
+        gerador: 'Classe II | Classe II | Classe II',
+        cliente: 'Clínica ABC LTDA',
+        tipoResiduo: 'Resíduo X',
+      })
+    ).toBe('Clínica ABC LTDA')
+  })
+
   it('não confunde gerador com tipo de resíduo', () => {
     expect(
       resolverNomeGeradorMtr({

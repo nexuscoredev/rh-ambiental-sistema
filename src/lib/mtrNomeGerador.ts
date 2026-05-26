@@ -29,6 +29,16 @@ function normTexto(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+/** Texto legado de classificação de resíduo (ex.: «Classe II | Classe II») — não é atividade do gerador. */
+export function textoPareceClassificacaoResiduoLegado(texto: string): boolean {
+  const t = texto.trim()
+  if (!t) return false
+  const partes = t.split(/\s*\|\s*/).map((p) => p.trim()).filter(Boolean)
+  if (partes.length === 0) return false
+  const padraoClasse = /^classe\s+[iva\d]+/i
+  return partes.every((p) => padraoClasse.test(p))
+}
+
 /**
  * Nome exibido na coluna/campo «Gerador» da MTR.
  * Evita mostrar traço, tipo de resíduo ou rótulos genéricos no lugar do nome do cliente.
@@ -44,6 +54,7 @@ export function resolverNomeGeradorMtr(opts: {
 
   if (!g) return c
   if (/^[-—–]+$/.test(g)) return c
+  if (textoPareceClassificacaoResiduoLegado(g)) return c || g
   if (t && normTexto(g) === normTexto(t)) return c || g
 
   const gNorm = normTexto(g)
