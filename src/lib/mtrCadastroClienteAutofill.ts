@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formClienteFromJson } from './clienteCadastroForm'
+import { nomeGeradorParaMtr, type ClienteNomeAutofill } from './mtrNomeGerador'
 import { MTR_PROGRAMACAO_SELECT, type ProgramacaoMtrRow } from './mtrProgramacoesFetch'
 
 export type ClienteEnderecoAutofill = {
@@ -105,6 +107,93 @@ export function montarEnderecoLinhaCliente(row: ClienteEnderecoAutofill): string
   const estruturado = parts.join(' — ')
   const livre = row.endereco_coleta?.trim()
   return estruturado || livre || ''
+}
+
+export async function fetchClienteNomeGeradorMtr(
+  client: SupabaseClient,
+  clienteId: string
+): Promise<ClienteNomeAutofill | null> {
+  const id = clienteId.trim()
+  if (!id) return null
+
+  const { data, error } = await client
+    .from('clientes')
+    .select('nome, razao_social')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !data) {
+    if (error && import.meta.env?.DEV) {
+      console.debug('[MTR] nome gerador cliente:', error.message)
+    }
+    return null
+  }
+  return data as ClienteNomeAutofill
+}
+
+async function buscarNomeGeradorGerenciadorPorTexto(
+  client: SupabaseClient,
+  nomeProgramacao: string
+): Promise<ClienteNomeAutofill | null> {
+  const nome = normalizarNomeBuscaCliente(nomeProgramacao)
+  if (!nome) return null
+
+  const tentativas = [
+    () =>
+      client
+        .from('clientes_gerenciador')
+        .select('dados_cadastro, nome_exibicao')
+        .eq('nome_exibicao', nome)
+        .limit(1)
+        .maybeSingle(),
+    () =>
+      client
+        .from('clientes_gerenciador')
+        .select('dados_cadastro, nome_exibicao')
+        .ilike('nome_exibicao', nome)
+        .limit(1)
+        .maybeSingle(),
+    () =>
+      client
+        .from('clientes_gerenciador')
+        .select('dados_cadastro, nome_exibicao')
+        .ilike('nome_exibicao', `%${nome}%`)
+        .limit(1)
+        .maybeSingle(),
+  ]
+
+  for (const fn of tentativas) {
+    const { data, error } = await fn()
+    if (error || !data) continue
+    const row = data as { dados_cadastro: unknown; nome_exibicao: string | null }
+    const form = formClienteFromJson(row.dados_cadastro)
+    return {
+      razao_social: form.razao_social || null,
+      nome: form.nome || row.nome_exibicao || null,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Razão social / nome do gerador a partir da programação (clientes → fallback Gerenciador).
+ */
+export async function buscarNomeGeradorPorProgramacaoMtr(
+  client: SupabaseClient,
+  programacao: { cliente_id?: string | null; cliente?: string | null }
+): Promise<string> {
+  const fallback = (programacao.cliente ?? '').trim()
+  const clienteId = await resolverClienteIdProgramacaoMtr(client, programacao)
+  if (clienteId) {
+    const row = await fetchClienteNomeGeradorMtr(client, clienteId)
+    if (row) return nomeGeradorParaMtr(row, fallback)
+  }
+
+  const ger = await buscarNomeGeradorGerenciadorPorTexto(client, fallback)
+  if (ger) return nomeGeradorParaMtr(ger, fallback)
+
+  return fallback
 }
 
 export async function fetchClienteEnderecoAutofill(

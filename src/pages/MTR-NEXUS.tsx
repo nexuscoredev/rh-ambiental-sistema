@@ -32,6 +32,16 @@ import {
   mergeProgramacoesMtrPorId,
   mtrProgramacoesMesesJanela,
 } from '../lib/mtrProgramacoesFetch'
+import { buscarNomeGeradorPorProgramacaoMtr } from '../lib/mtrCadastroClienteAutofill'
+import {
+  resolverDestinadorMtrForm,
+  sincronizarDestinatarioDetalhesComDestinador,
+} from '../lib/mtrDestinadorForm'
+import {
+  deveAtualizarGeradorMtrDesdeCadastro,
+  nomeGeradorParaMtr,
+  resolverNomeGeradorMtr,
+} from '../lib/mtrNomeGerador'
 
 type MTRStatus = 'Rascunho' | 'Emitido' | 'Cancelado' | 'Baixada'
 
@@ -240,6 +250,8 @@ const emptyForm: MTRFormState = {
 }
 
 type ClienteRowAutofill = {
+  nome: string | null
+  razao_social: string | null
   cnpj: string | null
   cep: string | null
   rua: string | null
@@ -791,13 +803,21 @@ export default function MTR() {
       numero: item.numero || '',
       programacao_id: item.programacao_id || null,
       cliente: item.cliente || '',
-      gerador: item.gerador || '',
+      gerador: resolverNomeGeradorMtr({
+        gerador: item.gerador,
+        cliente: item.cliente,
+        tipoResiduo: item.tipo_residuo,
+      }),
       endereco: item.endereco || '',
       cidade: item.cidade || '',
       tipo_residuo: item.tipo_residuo || '',
       quantidade: item.quantidade ?? null,
       unidade: item.unidade || 'kg',
-      destinador: item.destinador || '',
+      destinador:
+        resolverDestinadorMtrForm({
+          destinador: item.destinador,
+          detalhes: item.detalhes ?? null,
+        }) || item.destinador || '',
       transportador: item.transportador || 'RG Ambiental',
       detalhes: item.detalhes ? { ...detalhesVazios(), ...item.detalhes } : detalhesVazios(),
       data_emissao: item.data_emissao || new Date().toISOString().slice(0, 10),
@@ -877,12 +897,23 @@ export default function MTR() {
     }))
 
     const clienteId = programacao.cliente_id?.trim()
-    if (!clienteId) return
+    if (!clienteId) {
+      const nomeGer = await buscarNomeGeradorPorProgramacaoMtr(supabase, programacao)
+      if (gen !== programacaoChangeGenRef.current) return
+      if (nomeGer.trim()) {
+        setForm((prev) => {
+          if (prev.programacao_id !== programacao.id) return prev
+          if (!deveAtualizarGeradorMtrDesdeCadastro(prev.gerador, prev.cliente, nomeGer)) return prev
+          return { ...prev, gerador: nomeGer, cliente: nomeGer || prev.cliente }
+        })
+      }
+      return
+    }
 
     const { data: clienteRow, error } = await supabase
       .from('clientes')
       .select(
-        'cnpj, cep, rua, numero, complemento, bairro, cidade, estado, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero'
+        'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero'
       )
       .eq('id', clienteId)
       .maybeSingle()
@@ -903,6 +934,8 @@ export default function MTR() {
       const unidade = (row.unidade_medida ?? '').trim()
       return {
         ...prev,
+        gerador: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
+        cliente: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
         endereco: montarEnderecoLinhaCliente(row),
         cidade: montarCidadeUfCliente(row),
         tipo_residuo:
@@ -1072,8 +1105,17 @@ export default function MTR() {
       }
     }
 
-    if (!form.destinador.trim()) {
-      await rgAlert({ title: 'MTR', message: 'Preencha o destinador.', variant: 'warning' })
+    const destinadorGravar = resolverDestinadorMtrForm({
+      destinador: form.destinador,
+      detalhes: form.detalhes,
+    })
+    if (!destinadorGravar) {
+      await rgAlert({
+        title: 'MTR',
+        message:
+          'Preencha o destinador no topo do formulário ou a razão social em «Unidade destinatária» (modelo completo).',
+        variant: 'warning',
+      })
       return
     }
 
@@ -1110,6 +1152,10 @@ export default function MTR() {
     const detalhesGravar: MTRDetalhes = {
       ...detBase,
       gerador: { ...detBase.gerador },
+      destinatario: sincronizarDestinatarioDetalhesComDestinador(
+        { ...detBase.destinatario },
+        destinadorGravar
+      ),
     }
 
     const payload = {
@@ -1122,7 +1168,7 @@ export default function MTR() {
       tipo_residuo: form.tipo_residuo.trim(),
       quantidade: qtd,
       unidade: form.unidade.trim() || '',
-      destinador: form.destinador.trim(),
+      destinador: destinadorGravar,
       transportador: form.transportador.trim(),
       detalhes: detalhesGravar,
       data_emissao: form.data_emissao,
@@ -3065,7 +3111,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                         return (
                           <MtrManifestoPrint
                             numero={selectedMTR.numero}
-                            gerador={selectedMTR.gerador}
+                            gerador={resolverNomeGeradorMtr({
+                              gerador: selectedMTR.gerador,
+                              cliente: selectedMTR.cliente,
+                              tipoResiduo: selectedMTR.tipo_residuo,
+                            })}
                             endereco={selectedMTR.endereco}
                             cidade={selectedMTR.cidade}
                             tipo_residuo={selectedMTR.tipo_residuo}
@@ -3283,8 +3333,26 @@ ${MTR_LISTA_CARD_UI_CSS}
                       <label>Destinador</label>
                       <input
                         value={form.destinador}
-                        onChange={(e) => setForm((prev) => ({ ...prev, destinador: e.target.value }))}
-                        placeholder="Destinador"
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setForm((prev) => {
+                            const dz = prev.detalhes ?? detalhesVazios()
+                            const destAtual = dz.destinatario
+                            const razaoAtual = (destAtual.razao_social ?? '').trim()
+                            return {
+                              ...prev,
+                              destinador: v,
+                              detalhes: {
+                                ...dz,
+                                destinatario: {
+                                  ...destAtual,
+                                  razao_social: razaoAtual || v,
+                                },
+                              },
+                            }
+                          })
+                        }}
+                        placeholder="Destinador / razão social"
                       />
                     </div>
 
@@ -3882,7 +3950,28 @@ ${MTR_LISTA_CARD_UI_CSS}
                           </div>
 
                           <div className="field field-full">
-                            <div style={{ fontWeight: 800 }}>4. STTADE Destinatário</div>
+                            <div style={{ fontWeight: 800 }}>4. Destinatário</div>
+                          </div>
+                          <div className="field field-full">
+                            <label>Razão social (impresso)</label>
+                            <input
+                              value={form.detalhes?.destinatario.razao_social ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setForm((prev) => ({
+                                  ...prev,
+                                  destinador: (prev.destinador ?? '').trim() ? prev.destinador : v,
+                                  detalhes: {
+                                    ...(prev.detalhes ?? detalhesVazios()),
+                                    destinatario: {
+                                      ...(prev.detalhes?.destinatario ?? detalhesVazios().destinatario),
+                                      razao_social: v,
+                                    },
+                                  },
+                                }))
+                              }}
+                              placeholder="Razão social do destinatário (vale também para gravar)"
+                            />
                           </div>
                           <div className="field">
                             <label>Atividade</label>

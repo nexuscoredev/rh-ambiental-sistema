@@ -19,6 +19,7 @@ import {
   listarHistoricoMtrsBaixadas,
   type MtrBaixadaHistoricoRow,
 } from './gerenciadorMtrHistorico'
+import { exibirNomeGeradorMtr } from './mtrNomeGerador'
 import { supabase } from './supabase'
 import { mensagemErroSupabase } from './supabaseErrors'
 import { buildUrlEnvioNfMedicao } from './coletaContextoUrl'
@@ -324,7 +325,11 @@ function linhaSemColeta(mtr: MtrBaixaExtra): MtrGerenciadorRelatorioLinha {
     baixadaEm: mtr.data ? formatarDataHora(`${mtr.data}T12:00:00`) : '—',
     baixaJustificativa: mtr.baixaJustificativa || '—',
     cenarioComplexo: mtr.cenarioComplexo,
-    gerador: mtr.gerador || '—',
+    gerador: exibirNomeGeradorMtr({
+      gerador: mtr.gerador,
+      cliente: mtr.cliente,
+      tipoResiduo: mtr.residuo,
+    }),
     residuo: mtr.residuo || '—',
     quantidade: qtdFmt === '' ? '—' : qtdFmt,
     quantidadeNum: mtr.quantidadeNum,
@@ -373,7 +378,11 @@ function linhaComColeta(
     baixadaEm: mtr.data ? formatarDataHora(`${mtr.data}T12:00:00`) : '—',
     baixaJustificativa: mtr.baixaJustificativa || vw.mtr_baixa_justificativa || '—',
     cenarioComplexo: mtr.cenarioComplexo || !!vw.mtr_baixa_cenario_complexo,
-    gerador: mtr.gerador || '—',
+    gerador: exibirNomeGeradorMtr({
+      gerador: mtr.gerador,
+      cliente: mtr.cliente || vw.cliente_nome || vw.cliente_razao_social,
+      tipoResiduo: mtr.residuo || vw.tipo_residuo,
+    }),
     residuo: mtr.residuo || vw.tipo_residuo || '—',
     quantidade:
       formatarQuantidadeGerenciadorRelatorio(mtr.quantidadeNum, mtr.unidade) ||

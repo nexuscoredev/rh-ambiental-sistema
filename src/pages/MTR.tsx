@@ -55,9 +55,19 @@ import {
   montarCidadeUfCliente,
   montarEnderecoLinhaCliente,
   parseCidadeUfCampoTopo,
+  buscarNomeGeradorPorProgramacaoMtr,
   patchCidadeEnderecoGeradorDesdeCliente,
   resolverClienteIdProgramacaoMtr,
 } from '../lib/mtrCadastroClienteAutofill'
+import {
+  resolverDestinadorMtrForm,
+  sincronizarDestinatarioDetalhesComDestinador,
+} from '../lib/mtrDestinadorForm'
+import {
+  deveAtualizarGeradorMtrDesdeCadastro,
+  nomeGeradorParaMtr,
+  resolverNomeGeradorMtr,
+} from '../lib/mtrNomeGerador'
 import type { ResiduoPesagemItem } from '../lib/residuosPesagem'
 import {
   nomeIndicaRgAmbiental,
@@ -345,10 +355,6 @@ type ClienteRowAutofill = {
   frequencia_coleta?: string | null
 }
 
-function nomeGeradorParaMtr(row: ClienteRowAutofill, fallbackCliente: string): string {
-  return row.razao_social?.trim() || row.nome?.trim() || fallbackCliente.trim() || ''
-}
-
 /** Coluna `mtrs.cidade` (combinado ou legado); prioriza o campo de topo do formulário. */
 function cidadeCompletaGeradorParaGravar(cidadeTopo: string, gerador: MTRDetalhes['gerador']): string {
   const top = (cidadeTopo ?? '').trim()
@@ -557,7 +563,7 @@ function avisosImpressaoMtr(mtr: MTR, d: MTRDetalhes): string[] {
     f.push('Descrição / caracterização dos resíduos')
   }
   if (!(mtr.transportador ?? '').trim()) f.push('Transportador')
-  if (!(mtr.destinador ?? '').trim()) f.push('Destinatário')
+  if (!resolverDestinadorMtrForm({ destinador: mtr.destinador, detalhes: d })) f.push('Destinatário')
   if (!(d.gerador.cnpj ?? '').trim()) f.push('CNPJ do gerador')
   return f
 }
@@ -960,6 +966,16 @@ export default function MTR() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- autofill cidade uma vez por programação
   }, [showForm, form.programacao_id, form.cidade])
 
+  const autofillGeradorTentadoRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!showForm || !form.programacao_id?.trim()) return
+    const pid = form.programacao_id
+    if (autofillGeradorTentadoRef.current === pid) return
+    autofillGeradorTentadoRef.current = pid
+    void preencherRazaoSocialGeradorDesdeCadastro(pid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autofill gerador uma vez por programação
+  }, [showForm, form.programacao_id, form.gerador, form.cliente])
+
   const mtrMapByProgramacaoId = useMemo(() => {
     const map = new Map<string, MTR>()
     mtrs.forEach((item) => {
@@ -1133,13 +1149,21 @@ export default function MTR() {
       numero: item.numero || '',
       programacao_id: item.programacao_id || null,
       cliente: item.cliente || '',
-      gerador: item.gerador || '',
+      gerador: resolverNomeGeradorMtr({
+        gerador: item.gerador,
+        cliente: item.cliente,
+        tipoResiduo: item.tipo_residuo,
+      }),
       endereco: item.endereco || '',
       cidade: item.cidade || '',
       tipo_residuo: item.tipo_residuo || '',
       quantidade: quantidadeMtrLegadaParaKg(item.quantidade, item.unidade),
       unidade: unidadeMedidaEhTonelada(item.unidade) ? 'kg' : item.unidade || 'kg',
-      destinador: item.destinador || '',
+      destinador:
+        resolverDestinadorMtrForm({
+          destinador: item.destinador,
+          detalhes: item.detalhes ?? null,
+        }) || item.destinador || '',
       transportador: item.transportador || 'RG Ambiental',
       detalhes: mergeMtrDetalhesProfundo(item.detalhes ?? null),
       data_emissao: item.data_emissao || new Date().toISOString().slice(0, 10),
@@ -1156,6 +1180,7 @@ export default function MTR() {
     }
     void ensureCatalogoProgramacoes()
     if (item.programacao_id) {
+      void preencherRazaoSocialGeradorDesdeCadastro(item.programacao_id)
       void preencherCidadeEnderecoDesdeCadastroSeVazio(item.programacao_id)
       void expandirResiduosMtrDesdeProgramacao(item.programacao_id)
     }
@@ -1222,6 +1247,40 @@ export default function MTR() {
     })
   }
 
+  /** Preenche Gerador (razão social) e Cliente a partir do cadastro ou Gerenciador. */
+  async function preencherRazaoSocialGeradorDesdeCadastro(programacaoId: string) {
+    let programacao =
+      programacoes.find((p) => p.id === programacaoId) ??
+      programacoesVinculadas.find((p) => p.id === programacaoId) ??
+      (await buscarProgramacaoMtrPorId(supabase, programacaoId))
+
+    if (!programacao) {
+      const { data, error } = await fetchProgramacoesMtrPorIds(supabase, [programacaoId])
+      if (!error && data.length > 0) {
+        programacao = data[0] as Programacao
+        setProgramacoesVinculadas((prev) =>
+          mergeProgramacoesMtrPorId(prev, data) as Programacao[]
+        )
+      }
+    }
+    if (!programacao) return
+
+    const nomeGerador = await buscarNomeGeradorPorProgramacaoMtr(supabase, programacao)
+    if (!nomeGerador.trim()) return
+
+    setForm((prev) => {
+      if (prev.programacao_id !== programacaoId) return prev
+      if (!deveAtualizarGeradorMtrDesdeCadastro(prev.gerador, prev.cliente, nomeGerador)) {
+        return prev
+      }
+      return {
+        ...prev,
+        gerador: nomeGerador,
+        cliente: nomeGerador || prev.cliente,
+      }
+    })
+  }
+
   /** Ao editar MTR antiga ou cadastro incompleto: preenche cidade/endereço a partir do cliente. */
   async function preencherCidadeEnderecoDesdeCadastroSeVazio(programacaoId: string) {
     let programacao = programacoes.find((p) => p.id === programacaoId)
@@ -1237,10 +1296,18 @@ export default function MTR() {
     if (!programacao) return
 
     const clienteId = await resolverClienteIdProgramacaoMtr(supabase, programacao)
-    if (!clienteId) return
+    if (!clienteId) {
+      await preencherRazaoSocialGeradorDesdeCadastro(programacaoId)
+      return
+    }
 
     const row = await fetchClienteEnderecoAutofill(supabase, clienteId)
-    if (!row) return
+    if (!row) {
+      await preencherRazaoSocialGeradorDesdeCadastro(programacaoId)
+      return
+    }
+
+    const nomeGerador = nomeGeradorParaMtr(row, programacao.cliente || '')
 
     setForm((prev) => {
       if (prev.programacao_id !== programacaoId) return prev
@@ -1262,8 +1329,15 @@ export default function MTR() {
       ) {
         return prev
       }
+      const patchGeradorTopo =
+        deveAtualizarGeradorMtrDesdeCadastro(prev.gerador, prev.cliente, nomeGerador) ||
+        !prev.gerador.trim()
+          ? { gerador: nomeGerador, cliente: nomeGerador || prev.cliente }
+          : {}
+
       return {
         ...prev,
+        ...patchGeradorTopo,
         ...(patch.cidadeTopo ? { cidade: patch.cidadeTopo } : {}),
         ...(patch.endereco ? { endereco: patch.endereco } : {}),
         ...(patch.gerador
@@ -1364,6 +1438,14 @@ export default function MTR() {
       if (import.meta.env.DEV) {
         console.debug('[MTR] Programação sem cliente_id resolvível:', programacao.cliente)
       }
+      const nomeGer = await buscarNomeGeradorPorProgramacaoMtr(supabase, programacao)
+      if (nomeGer.trim()) {
+        setForm((prev) => {
+          if (prev.programacao_id !== programacao.id) return prev
+          if (!deveAtualizarGeradorMtrDesdeCadastro(prev.gerador, prev.cliente, nomeGer)) return prev
+          return { ...prev, gerador: nomeGer, cliente: nomeGer || prev.cliente }
+        })
+      }
       return
     }
 
@@ -1441,11 +1523,7 @@ export default function MTR() {
         residuos_lista: listaResiduosForm,
       })
       const atividadeGerador =
-        (row.classificacao ?? '').trim() ||
-        (programacao.tipo_servico ?? '').trim() ||
-        (row.observacoes_operacionais ?? '').trim().slice(0, 120) ||
-        (row.observacoes_gerais ?? '').trim().slice(0, 120) ||
-        dz.gerador.atividade
+        (prev.detalhes?.gerador?.atividade ?? '').trim() || dz.gerador.atividade
       const obsExtrasCliente = [row.observacoes_gerais, row.link_google_maps]
         .map((s) => (s ?? '').trim())
         .filter(Boolean)
@@ -1486,7 +1564,8 @@ export default function MTR() {
       return {
         ...prev,
         observacoes: observacoesMescladas,
-        gerador: nomeGeradorParaMtr(row, prev.cliente),
+        gerador: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
+        cliente: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
         endereco: montarEnderecoLinhaCliente(row),
         cidade: montarCidadeUfCliente(row),
         destinador: destinoTxt || prev.destinador,
@@ -1686,8 +1765,17 @@ export default function MTR() {
       }
     }
 
-    if (!form.destinador.trim()) {
-      await rgAlert({ title: 'MTR', message: 'Preencha o destinador.', variant: 'warning' })
+    const destinadorGravar = resolverDestinadorMtrForm({
+      destinador: form.destinador,
+      detalhes: form.detalhes,
+    })
+    if (!destinadorGravar) {
+      await rgAlert({
+        title: 'MTR',
+        message:
+          'Preencha o destinador no topo do formulário ou a razão social em «Unidade destinatária» (modelo completo).',
+        variant: 'warning',
+      })
       return
     }
 
@@ -1726,6 +1814,10 @@ export default function MTR() {
       ...detBase,
       ...syncResiduosGravar,
       gerador: { ...detBase.gerador },
+      destinatario: sincronizarDestinatarioDetalhesComDestinador(
+        { ...detBase.destinatario },
+        destinadorGravar
+      ),
     }
 
     const payload: Record<string, unknown> = {
@@ -1738,7 +1830,7 @@ export default function MTR() {
       tipo_residuo: form.tipo_residuo.trim(),
       quantidade: qtd,
       unidade: form.unidade.trim() || '',
-      destinador: form.destinador.trim(),
+      destinador: destinadorGravar,
       transportador: form.transportador.trim(),
       detalhes: detalhesGravar,
       data_emissao: form.data_emissao,
@@ -3844,7 +3936,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                     <div className="document-content mtr-modelo-pdf">
                       <MtrManifestoPrint
                         numero={mtrSelecionadaValida.numero}
-                        gerador={mtrSelecionadaValida.gerador}
+                        gerador={resolverNomeGeradorMtr({
+                          gerador: mtrSelecionadaValida.gerador,
+                          cliente: mtrSelecionadaValida.cliente,
+                          tipoResiduo: mtrSelecionadaValida.tipo_residuo,
+                        })}
                         endereco={mtrSelecionadaValida.endereco}
                         cidade={mtrSelecionadaValida.cidade}
                         tipo_residuo={mtrSelecionadaValida.tipo_residuo}
@@ -4016,11 +4112,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                     </div>
 
                     <div className="field">
-                      <label>Gerador</label>
+                      <label>Gerador (razão social)</label>
                       <input
                         value={form.gerador}
                         onChange={(e) => setForm((prev) => ({ ...prev, gerador: e.target.value }))}
-                        placeholder="Gerador"
+                        placeholder="Razão social do gerador"
                       />
                     </div>
 
@@ -4123,8 +4219,26 @@ ${MTR_LISTA_CARD_UI_CSS}
                       <label>Destinador</label>
                       <input
                         value={form.destinador}
-                        onChange={(e) => setForm((prev) => ({ ...prev, destinador: e.target.value }))}
-                        placeholder="Destinador"
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setForm((prev) => {
+                            const dz = prev.detalhes ?? detalhesVazios()
+                            const destAtual = dz.destinatario
+                            const razaoAtual = (destAtual.razao_social ?? '').trim()
+                            return {
+                              ...prev,
+                              destinador: v,
+                              detalhes: {
+                                ...dz,
+                                destinatario: {
+                                  ...destAtual,
+                                  razao_social: razaoAtual || v,
+                                },
+                              },
+                            }
+                          })
+                        }}
+                        placeholder="Destinador / razão social"
                       />
                     </div>
 
@@ -4800,19 +4914,21 @@ ${MTR_LISTA_CARD_UI_CSS}
                             <label>Razão social (impresso)</label>
                             <input
                               value={form.detalhes?.destinatario.razao_social ?? ''}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const v = e.target.value
                                 setForm((prev) => ({
                                   ...prev,
+                                  destinador: (prev.destinador ?? '').trim() ? prev.destinador : v,
                                   detalhes: {
                                     ...(prev.detalhes ?? detalhesVazios()),
                                     destinatario: {
                                       ...(prev.detalhes?.destinatario ?? detalhesVazios().destinatario),
-                                      razao_social: e.target.value,
+                                      razao_social: v,
                                     },
                                   },
                                 }))
-                              }
-                              placeholder="Ex.: igual ao campo Destinador acima"
+                              }}
+                              placeholder="Razão social do destinatário (vale também para gravar)"
                             />
                           </div>
                           <div className="field">

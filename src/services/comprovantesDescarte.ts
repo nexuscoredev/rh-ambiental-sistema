@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ComprovanteDescarteRow, ComprovanteDescarteFiltros, ComprovanteFotoExtraItem } from '../lib/comprovantesDescarteTypes'
 import { normalizarRow } from '../lib/comprovantesDescarteUtils'
+import { resolverNomeGeradorMtr } from '../lib/mtrNomeGerador'
 
 export const BUCKET_COMPROVANTES_DESCARTE = 'comprovantes-descarte'
 
@@ -540,6 +541,8 @@ export async function buscarMtrPorId(
 
   const geradorTopo = row.gerador == null ? '' : String(row.gerador).trim()
   const geradorDet = typeof g.razao_social === 'string' ? g.razao_social.trim() : ''
+  const clienteTopo = row.cliente == null ? '' : String(row.cliente).trim()
+  const tipoResiduo = row.tipo_residuo == null ? '' : String(row.tipo_residuo).trim()
   const transTopo = row.transportador == null ? '' : String(row.transportador).trim()
   const transDet = typeof t.razao_social === 'string' ? t.razao_social.trim() : ''
 
@@ -547,7 +550,12 @@ export async function buscarMtrPorId(
     id: String(row.id),
     numero: String(row.numero ?? ''),
     cliente: String(row.cliente ?? ''),
-    gerador: geradorTopo || geradorDet,
+    gerador:
+      resolverNomeGeradorMtr({
+        gerador: geradorTopo || geradorDet,
+        cliente: clienteTopo,
+        tipoResiduo: tipoResiduo,
+      }) || geradorTopo || geradorDet,
     transportador: transTopo || transDet,
     tipo_residuo: String(row.tipo_residuo ?? ''),
     quantidade:

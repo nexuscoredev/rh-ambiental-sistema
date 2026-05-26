@@ -8,7 +8,11 @@ import {
   formatarValorTotalGerenciador,
   valorUnitarioResiduoContrato,
 } from '../../lib/gerenciadorMtrLinhaCalculo'
-import { buscarMtrPorNumero, rotaMtrGerenciadorEnvio } from '../../lib/gerenciadorMtrHistorico'
+import {
+  buscarDadosLinhaMtrPorNumero,
+  buscarMtrPorNumero,
+  rotaMtrGerenciadorEnvio,
+} from '../../lib/gerenciadorMtrHistorico'
 import {
   anexarMtrsPendentesNaRota,
   avisoToastEnvioGerenciador,
@@ -97,6 +101,17 @@ export function ClienteGerenciadorMtrTabela({
     }
     return formatarValorTotalGerenciador(soma)
   }, [linhas, residuosContrato])
+
+  async function preencherLinhaDesdeMtr(index: number, numero: string) {
+    const dados = await buscarDadosLinhaMtrPorNumero(numero)
+    if (!dados) return
+    atualizarLinha(index, {
+      gerador: dados.gerador,
+      residuo: dados.residuo || undefined,
+      quantidade: dados.quantidade || undefined,
+      data: dados.data || undefined,
+    })
+  }
 
   function atualizarLinha(
     index: number,
@@ -287,6 +302,10 @@ export function ClienteGerenciadorMtrTabela({
                   <input
                     value={linha.mtr_baixada}
                     onChange={(e) => atualizarLinha(index, { mtr_baixada: e.target.value })}
+                    onBlur={(e) => {
+                      const num = e.target.value.trim()
+                      if (num && !readOnly) void preencherLinhaDesdeMtr(index, num)
+                    }}
                     placeholder="Nº ou identificação da MTR"
                     style={inputCell}
                     readOnly={readOnly}

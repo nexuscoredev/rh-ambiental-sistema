@@ -1,3 +1,5 @@
+import { buscarNomeGeradorPorProgramacaoMtr } from './mtrCadastroClienteAutofill'
+import { resolverNomeGeradorMtr } from './mtrNomeGerador'
 import { supabase } from './supabase'
 import { mensagemErroSupabase } from './supabaseErrors'
 
@@ -83,7 +85,11 @@ export async function listarHistoricoMtrsBaixadas(): Promise<{
     return {
       id: String(r.id),
       numero: String(r.numero ?? ''),
-      gerador: String(r.gerador ?? ''),
+      gerador: resolverNomeGeradorMtr({
+        gerador: r.gerador,
+        cliente: r.cliente,
+        tipoResiduo: r.tipo_residuo,
+      }),
       residuo: String(r.tipo_residuo ?? ''),
       quantidade: formatarQuantidadeMtr(
         r.quantidade != null ? Number(r.quantidade) : null,
@@ -178,6 +184,73 @@ async function buscarMtrRowsPorNumeroExato(
     }
   }
   return { rows: [], colsUsados: cols }
+}
+
+export type DadosLinhaMtrGerenciador = {
+  gerador: string
+  residuo: string
+  quantidade: string
+  data: string
+}
+
+/** Preenche linha do cadastro Gerenciador a partir da MTR no sistema. */
+export async function buscarDadosLinhaMtrPorNumero(
+  numero: string
+): Promise<DadosLinhaMtrGerenciador | null> {
+  const n = numero.trim()
+  if (!n) return null
+
+  const cols =
+    'numero, gerador, cliente, tipo_residuo, quantidade, unidade, data_emissao, baixada_em, programacao_id'
+
+  let row: Record<string, unknown> | null = null
+  const exato = await supabase.from('mtrs').select(cols).eq('numero', n).maybeSingle()
+  if (!exato.error && exato.data) row = exato.data as Record<string, unknown>
+  if (!row) {
+    const fb = await supabase.from('mtrs').select(cols).ilike('numero', n).limit(5)
+    if (!fb.error && fb.data?.length) {
+      const match = (fb.data as Record<string, unknown>[]).find(
+        (r) => String(r.numero ?? '').trim() === n
+      )
+      row = match ?? (fb.data[0] as Record<string, unknown>)
+    }
+  }
+  if (!row) return null
+
+  const q = row.quantidade != null ? Number(row.quantidade) : null
+  const u = row.unidade != null ? String(row.unidade) : null
+
+  const dataIso = row.baixada_em
+    ? String(row.baixada_em).slice(0, 10)
+    : row.data_emissao
+      ? String(row.data_emissao).slice(0, 10)
+      : ''
+
+  let gerador = resolverNomeGeradorMtr({
+    gerador: row.gerador as string | null,
+    cliente: row.cliente as string | null,
+    tipoResiduo: row.tipo_residuo as string | null,
+  })
+
+  const programacaoId = row.programacao_id ? String(row.programacao_id).trim() : ''
+  if (programacaoId) {
+    const { data: prog } = await supabase
+      .from('programacoes')
+      .select('cliente_id, cliente')
+      .eq('id', programacaoId)
+      .maybeSingle()
+    if (prog) {
+      const nomeCad = await buscarNomeGeradorPorProgramacaoMtr(supabase, prog)
+      if (nomeCad.trim()) gerador = nomeCad
+    }
+  }
+
+  return {
+    gerador,
+    residuo: String(row.tipo_residuo ?? '').trim(),
+    quantidade: formatarQuantidadeMtr(q, u),
+    data: dataIso,
+  }
 }
 
 /** Resolve MTR do sistema pelo número exibido na linha do gerenciador. */
