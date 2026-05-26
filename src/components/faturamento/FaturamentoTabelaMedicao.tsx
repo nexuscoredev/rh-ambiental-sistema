@@ -9,9 +9,10 @@ import {
 } from '../../lib/faturamentoRelatorioMedicao'
 import { COLUNAS_RELATORIO_MEDICAO } from '../../lib/faturamentoRelatorioMedicaoColunas'
 import {
-  aplicarRascunhoBulkLinhasMedicao,
-  rascunhoEdicaoBulkMedicaoVazio,
-  type RascunhoEdicaoBulkMedicao,
+  aplicarRascunhosLinhasMedicao,
+  linhasParaRascunhosEdicao,
+  mesclarLinhasComRascunhosMedicao,
+  type RascunhoEdicaoLinhaMedicao,
 } from '../../lib/faturamentoRelatorioMedicaoEdicao'
 
 const thBase: CSSProperties = {
@@ -31,7 +32,7 @@ const tdBase: CSSProperties = {
   verticalAlign: 'middle',
 }
 
-const inputBulk: CSSProperties = {
+const inputCelula: CSSProperties = {
   width: '100%',
   minWidth: '56px',
   padding: '5px 6px',
@@ -50,6 +51,14 @@ type Props = {
   mostrarColeta?: boolean
   onLinhasChange?: (linhas: LinhaRelatorioMedicao[]) => void
 }
+
+const COLUNAS_EDITAVEIS = new Set([
+  'quantViagens',
+  'valorFrete',
+  'pesoKg',
+  'valorTaxa',
+  'total',
+])
 
 function celulaValor(
   key: (typeof COLUNAS_RELATORIO_MEDICAO)[number]['key'],
@@ -90,39 +99,52 @@ export function FaturamentoTabelaMedicao({
   onLinhasChange,
 }: Props) {
   const [linhas, setLinhas] = useState(linhasProp)
-  const [modoEdicaoTotal, setModoEdicaoTotal] = useState(false)
-  const [rascunhoBulk, setRascunhoBulk] = useState<RascunhoEdicaoBulkMedicao>(
-    rascunhoEdicaoBulkMedicaoVazio
-  )
+  const [modoEdicao, setModoEdicao] = useState(false)
+  const [rascunhos, setRascunhos] = useState<Record<string, RascunhoEdicaoLinhaMedicao>>({})
 
   useEffect(() => {
     setLinhas(linhasProp)
-    setModoEdicaoTotal(false)
-    setRascunhoBulk(rascunhoEdicaoBulkMedicaoVazio())
+    setModoEdicao(false)
+    setRascunhos({})
   }, [linhasProp])
 
-  const totais = useMemo(() => totaisRelatorioMedicao(linhas), [linhas])
+  const linhasPreview = useMemo(
+    () => (modoEdicao ? mesclarLinhasComRascunhosMedicao(linhas, rascunhos) : linhas),
+    [modoEdicao, linhas, rascunhos]
+  )
+
+  const totais = useMemo(() => totaisRelatorioMedicao(linhasPreview), [linhasPreview])
   const fontSize = compacto ? '10px' : '11px'
-  const colunasEditaveisBulk = new Set(['quantViagens', 'valorFrete', 'pesoKg', 'valorTaxa', 'total'])
 
   function publicarLinhas(next: LinhaRelatorioMedicao[]) {
     setLinhas(next)
     onLinhasChange?.(next)
   }
 
-  function aplicarEdicaoTotal() {
-    const next = aplicarRascunhoBulkLinhasMedicao(linhas, rascunhoBulk)
-    publicarLinhas(next)
-    setRascunhoBulk(rascunhoEdicaoBulkMedicaoVazio())
-    setModoEdicaoTotal(false)
+  function entrarEdicao() {
+    setRascunhos(linhasParaRascunhosEdicao(linhas))
+    setModoEdicao(true)
   }
 
-  function toggleEdicaoTotal() {
-    if (modoEdicaoTotal) {
-      aplicarEdicaoTotal()
-      return
-    }
-    setModoEdicaoTotal(true)
+  function concluirEdicao() {
+    const next = aplicarRascunhosLinhasMedicao(linhas, rascunhos)
+    publicarLinhas(next)
+    setModoEdicao(false)
+    setRascunhos({})
+  }
+
+  function atualizarRascunho(
+    coletaId: string,
+    key: keyof RascunhoEdicaoLinhaMedicao,
+    valor: string
+  ) {
+    setRascunhos((prev) => ({
+      ...prev,
+      [coletaId]: {
+        ...(prev[coletaId] ?? linhasParaRascunhosEdicao(linhas)[coletaId]!),
+        [key]: valor,
+      },
+    }))
   }
 
   return (
@@ -147,59 +169,52 @@ export function FaturamentoTabelaMedicao({
         </tr>
       </thead>
       <tbody>
-        {linhas.map((r) => (
-          <tr key={r.coleta_id}>
-            {mostrarColeta ? (
-              <td style={{ ...tdBase, fontSize, fontWeight: 600 }}>{r.numeroColeta ?? '—'}</td>
-            ) : null}
-            {COLUNAS_RELATORIO_MEDICAO.map((c) => (
-              <td
-                key={c.key}
-                style={{
-                  ...tdBase,
-                  fontSize,
-                  textAlign: c.align,
-                  fontWeight: c.key === 'total' ? 600 : undefined,
-                }}
-              >
-                {celulaValor(c.key, r)}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-      {mostrarTotais && linhas.length > 0 ? (
-        <tfoot>
-          {modoEdicaoTotal ? (
-            <tr style={{ background: '#f8fafc' }}>
+        {linhas.map((r) => {
+          const draft = rascunhos[r.coleta_id]
+          return (
+            <tr
+              key={r.coleta_id}
+              style={modoEdicao ? { background: '#f8fafc' } : undefined}
+            >
               {mostrarColeta ? (
-                <td style={{ ...tdBase, fontSize, color: '#64748b', fontStyle: 'italic' }}>
-                  Edição em massa
-                </td>
+                <td style={{ ...tdBase, fontSize, fontWeight: 600 }}>{r.numeroColeta ?? '—'}</td>
               ) : null}
               {COLUNAS_RELATORIO_MEDICAO.map((c) => (
-                <td key={`bulk-${c.key}`} style={{ ...tdBase, fontSize, textAlign: c.align }}>
-                  {colunasEditaveisBulk.has(c.key) ? (
+                <td
+                  key={c.key}
+                  style={{
+                    ...tdBase,
+                    fontSize,
+                    textAlign: c.align,
+                    fontWeight: c.key === 'total' ? 600 : undefined,
+                  }}
+                >
+                  {modoEdicao && COLUNAS_EDITAVEIS.has(c.key) && draft ? (
                     <input
                       type="text"
                       inputMode="decimal"
-                      style={inputBulk}
-                      value={rascunhoBulk[c.key as keyof RascunhoEdicaoBulkMedicao]}
-                      onChange={(e) => {
-                        const key = c.key as keyof RascunhoEdicaoBulkMedicao
-                        setRascunhoBulk((prev) => ({
-                          ...prev,
-                          [key]: e.target.value,
-                        }))
-                      }}
-                      placeholder="—"
-                      aria-label={`Editar ${c.label} em todas as linhas`}
+                      style={inputCelula}
+                      value={draft[c.key as keyof RascunhoEdicaoLinhaMedicao]}
+                      onChange={(e) =>
+                        atualizarRascunho(
+                          r.coleta_id,
+                          c.key as keyof RascunhoEdicaoLinhaMedicao,
+                          e.target.value
+                        )
+                      }
+                      aria-label={`${c.label} — coleta ${r.numeroColeta ?? r.coleta_id}`}
                     />
-                  ) : null}
+                  ) : (
+                    celulaValor(c.key, r)
+                  )}
                 </td>
               ))}
             </tr>
-          ) : null}
+          )
+        })}
+      </tbody>
+      {mostrarTotais && linhas.length > 0 ? (
+        <tfoot>
           <tr style={{ background: '#fffbeb' }}>
             {mostrarColeta ? (
               <td style={{ ...tdBase, fontSize, fontWeight: 700, textAlign: 'right' }} colSpan={1}>
@@ -220,19 +235,29 @@ export function FaturamentoTabelaMedicao({
             </td>
             <td style={{ ...tdBase, fontSize }} />
             <td style={{ ...tdBase, fontSize, textAlign: 'right' }}>
-              <button
-                type="button"
-                className="rg-btn rg-btn--outline"
+              <div
                 style={{
-                  fontSize: '11px',
-                  padding: '6px 10px',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  gap: '6px',
                 }}
-                onClick={toggleEdicaoTotal}
               >
-                {modoEdicaoTotal ? 'Aplicar a todas' : 'Editar total'}
-              </button>
+                <span style={{ fontWeight: 800 }}>{formatarMoedaMedicao(totais.total)}</span>
+                <button
+                  type="button"
+                  className="rg-btn rg-btn--outline"
+                  style={{
+                    fontSize: '11px',
+                    padding: '6px 10px',
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                  }}
+                  onClick={modoEdicao ? concluirEdicao : entrarEdicao}
+                >
+                  {modoEdicao ? 'Concluir edição' : 'Editar total'}
+                </button>
+              </div>
             </td>
           </tr>
         </tfoot>
