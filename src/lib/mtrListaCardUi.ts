@@ -2,18 +2,17 @@ import { isMtrStatusCancelado } from './mtrCicloVida'
 
 export type MtrListaCardStatusClasse =
   | 'mtr-status-cancelado'
-  | 'mtr-status-baixada'
   | 'mtr-status-emitido'
   | 'mtr-status-rascunho'
   | null
 
-/** Classe de fundo do card conforme status da MTR (cancelado tem prioridade). */
+/** Classe de fundo do card conforme status da MTR (cancelado tem prioridade). Baixada = visual padrão. */
 export function classeMtrListaCardStatus(status: string | null | undefined): MtrListaCardStatusClasse {
   if (isMtrStatusCancelado(status)) return 'mtr-status-cancelado'
   const s = String(status ?? '')
     .trim()
     .toLowerCase()
-  if (s === 'baixada') return 'mtr-status-baixada'
+  if (s === 'baixada') return null
   if (s === 'emitido') return 'mtr-status-emitido'
   if (s === 'rascunho') return 'mtr-status-rascunho'
   return null
@@ -46,22 +45,6 @@ export const MTR_LISTA_CARD_UI_CSS = `
           border-color: #dc2626;
           background: linear-gradient(180deg, #fee2e2 0%, #fef2f2 100%);
           box-shadow: 0 10px 28px rgba(220, 38, 38, 0.12);
-        }
-
-        .mtr-list-item.mtr-status-baixada {
-          background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
-          border-color: #fdba74;
-        }
-
-        .mtr-list-item.mtr-status-baixada:hover {
-          border-color: #fb923c;
-          box-shadow: 0 10px 24px rgba(234, 88, 12, 0.1);
-        }
-
-        .mtr-list-item.mtr-status-baixada.selected {
-          border-color: #ea580c;
-          background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
-          box-shadow: 0 10px 28px rgba(234, 88, 12, 0.14);
         }
 
         .mtr-list-item.mtr-status-emitido {
