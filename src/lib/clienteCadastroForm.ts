@@ -8,6 +8,10 @@ import {
   type VeiculoContratoItem,
 } from './clienteContratoCadastro'
 import type { MtrSigorOpcao } from './mtrSigorCliente'
+import {
+  empresaGrupoFaturamentoInicial,
+  type EmpresaGrupoFaturamentoForm,
+} from './clienteEmpresaGrupoFaturamento'
 
 export type ResiduoForm = ResiduoContratoItem
 
@@ -34,6 +38,7 @@ export type FormCliente = {
   gerador_dono_faturamento: string
   faturamento_titular_razao_social: string
   faturamento_titular_cnpj: string
+  empresa_grupo_faturamento: EmpresaGrupoFaturamentoForm
   email_nf: string
   margem_lucro_percentual: string
   responsavel_nome: string
@@ -91,6 +96,7 @@ export const formClienteInicial: FormCliente = {
   gerador_dono_faturamento: '',
   faturamento_titular_razao_social: '',
   faturamento_titular_cnpj: '',
+  empresa_grupo_faturamento: { ...empresaGrupoFaturamentoInicial },
   email_nf: '',
   margem_lucro_percentual: '',
   responsavel_nome: '',
@@ -162,8 +168,13 @@ export function nomeExibicaoGerenciador(form: FormCliente): string {
 
 export function formClienteFromJson(dados: unknown): FormCliente {
   if (!dados || typeof dados !== 'object') return { ...formClienteInicial }
+  const partial = dados as Partial<FormCliente>
   return normalizarListasContratoForm({
     ...formClienteInicial,
-    ...(dados as Partial<FormCliente>),
+    ...partial,
+    empresa_grupo_faturamento: {
+      ...empresaGrupoFaturamentoInicial,
+      ...(partial.empresa_grupo_faturamento ?? {}),
+    },
   })
 }

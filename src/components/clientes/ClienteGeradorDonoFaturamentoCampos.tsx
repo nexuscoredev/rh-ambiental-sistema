@@ -8,6 +8,7 @@ import {
   normalizarGeradorDonoFaturamentoOpcao,
   type GeradorDonoFaturamentoOpcao,
 } from '../../lib/clienteGeradorDonoFaturamento'
+import { ClienteEmpresaGrupoFaturamentoCampos } from './ClienteEmpresaGrupoFaturamentoCampos'
 
 type Props = {
   form: FormCliente
@@ -59,6 +60,8 @@ export function ClienteGeradorDonoFaturamentoCampos({
       >
         {tituloSecao}
       </div>
+
+      <ClienteEmpresaGrupoFaturamentoCampos form={form} setForm={setForm} />
 
       <div
         style={{

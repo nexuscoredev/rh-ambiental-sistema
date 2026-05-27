@@ -13,6 +13,8 @@ import {
   statusFaturamentoUi,
 } from '../../lib/faturamentoOperacionalFila'
 import { useRgDialog } from '../../lib/RgDialogProvider'
+import { useClienteEmpresaGrupoFaturamentoMap } from '../../hooks/useClienteEmpresaGrupoFaturamentoMap'
+import { FaturamentoEmpresaGrupoMeta } from './FaturamentoEmpresaGrupoMeta'
 
 const R = { sm: '4px', md: '6px', lg: '8px' } as const
 
@@ -237,6 +239,26 @@ function fmtValor(n: number | null | undefined) {
   return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function CelulaClienteFaturamento({
+  clienteId,
+  clienteNome,
+  rotulos,
+  indisponivel,
+}: {
+  clienteId: string
+  clienteNome: string
+  rotulos: Record<string, string>
+  indisponivel: boolean
+}) {
+  const rotulo = rotulos[clienteId.trim()] ?? null
+  return (
+    <div style={{ minWidth: '120px' }}>
+      <div>{clienteNome || '—'}</div>
+      <FaturamentoEmpresaGrupoMeta rotulo={rotulo} indisponivel={indisponivel} />
+    </div>
+  )
+}
+
 function textoPendencias(resumo: string | null | undefined, max = 56) {
   const t = (resumo ?? '').trim()
   if (!t) return '—'
@@ -265,6 +287,13 @@ export function FaturamentoFilaColetas({
     () => (agruparPorMtr ? agruparFilaFaturamentoPorMtr(linhas) : linhas.map((row) => ({ kind: 'unico' as const, row }))),
     [linhas, agruparPorMtr]
   )
+
+  const clienteIdsFila = useMemo(
+    () => linhas.map((r) => r.cliente_id).filter(Boolean),
+    [linhas]
+  )
+  const { rotulos: rotulosEmpresaGrupo, indisponivel: empresaGrupoIndisponivel } =
+    useClienteEmpresaGrupoFaturamentoMap(clienteIdsFila)
 
   async function handleDevolver(row: FaturamentoResumoViewRow) {
     if (!podeDevolverConferencia) return
@@ -380,6 +409,8 @@ export function FaturamentoFilaColetas({
                   emitindoColetaId={emitindoColetaId}
                   onDevolver={handleDevolver}
                   rotuloBotao={rotuloBotao}
+                  rotulosEmpresaGrupo={rotulosEmpresaGrupo}
+                  empresaGrupoIndisponivel={empresaGrupoIndisponivel}
                 />
               ))}
             </tbody>
@@ -399,6 +430,8 @@ function LinhaFilaFaturamento({
   emitindoColetaId,
   onDevolver,
   rotuloBotao,
+  rotulosEmpresaGrupo,
+  empresaGrupoIndisponivel,
 }: {
   item: ItemFilaFaturamento
   devolvendoId: string | null
@@ -408,6 +441,8 @@ function LinhaFilaFaturamento({
   emitindoColetaId?: string | null
   onDevolver: (row: FaturamentoResumoViewRow) => void
   rotuloBotao: string
+  rotulosEmpresaGrupo: Record<string, string>
+  empresaGrupoIndisponivel: boolean
 }) {
   if (item.kind === 'unico') {
     return (
@@ -420,6 +455,8 @@ function LinhaFilaFaturamento({
         emitindoColetaId={emitindoColetaId}
         onDevolver={onDevolver}
         rotuloBotao={rotuloBotao}
+        rotulosEmpresaGrupo={rotulosEmpresaGrupo}
+        empresaGrupoIndisponivel={empresaGrupoIndisponivel}
       />
     )
   }
@@ -444,7 +481,14 @@ function LinhaFilaFaturamento({
         <td style={{ ...td, verticalAlign: 'top', minWidth: '110px' }}>
           <CelulaColetasConsolidadas coletas={coletas} />
         </td>
-        <td style={td}>{item.cliente_nome}</td>
+        <td style={td}>
+          <CelulaClienteFaturamento
+            clienteId={coleta_lider.cliente_id}
+            clienteNome={item.cliente_nome}
+            rotulos={rotulosEmpresaGrupo}
+            indisponivel={empresaGrupoIndisponivel}
+          />
+        </td>
         <td style={{ ...td, fontWeight: 700 }}>{mtr_numero}</td>
         <td style={{ ...td, maxWidth: '260px', verticalAlign: 'top' }}>
           <CelulaResiduosConsolidados coletas={coletas} />
@@ -537,6 +581,8 @@ function LinhaColetaFaturamento({
   emitindoColetaId,
   onDevolver,
   rotuloBotao,
+  rotulosEmpresaGrupo,
+  empresaGrupoIndisponivel,
 }: {
   r: FaturamentoResumoViewRow
   devolvendoId: string | null
@@ -546,6 +592,8 @@ function LinhaColetaFaturamento({
   emitindoColetaId?: string | null
   onDevolver: (row: FaturamentoResumoViewRow) => void
   rotuloBotao: string
+  rotulosEmpresaGrupo: Record<string, string>
+  empresaGrupoIndisponivel: boolean
 }) {
   const fat = statusFaturamentoUi(r)
   const slaCritico = coletaFaturamentoSlaVencido(r) && fat === 'Pendente'
@@ -558,7 +606,14 @@ function LinhaColetaFaturamento({
       }}
     >
       <td style={{ ...td, fontWeight: 800, color: FAT.teal }}>{r.numero_coleta ?? r.numero}</td>
-      <td style={td}>{r.cliente_nome || '—'}</td>
+      <td style={td}>
+        <CelulaClienteFaturamento
+          clienteId={r.cliente_id}
+          clienteNome={r.cliente_nome || '—'}
+          rotulos={rotulosEmpresaGrupo}
+          indisponivel={empresaGrupoIndisponivel}
+        />
+      </td>
       <td style={td}>{r.mtr_numero || '—'}</td>
       <td style={{ ...td, maxWidth: '200px' }}>{r.tipo_residuo || '—'}</td>
       <td style={td}>{fmtPeso(r.peso_liquido)}</td>

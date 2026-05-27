@@ -29,6 +29,13 @@ import {
   validarGeradorDonoFaturamentoForm,
 } from "../lib/clienteGeradorDonoFaturamento";
 import {
+  empresaGrupoFaturamentoInicial,
+  normalizarEmpresaGrupoFaturamentoForm,
+  payloadEmpresaGrupoFaturamento,
+  rotuloEmpresaGrupoFaturamento,
+  type EmpresaGrupoFaturamentoForm,
+} from "../lib/clienteEmpresaGrupoFaturamento";
+import {
   descricaoVeiculoLegadoDeItens,
   equipamentoContratoInicial,
   equipamentosContratoParaJsonb,
@@ -90,6 +97,7 @@ type Cliente = {
   gerador_dono_faturamento: string | null;
   faturamento_titular_razao_social: string | null;
   faturamento_titular_cnpj: string | null;
+  empresa_grupo_faturamento?: unknown;
 
   endereco_coleta: string | null;
   endereco_faturamento: string | null;
@@ -171,6 +179,7 @@ type FormCliente = {
   gerador_dono_faturamento: string;
   faturamento_titular_razao_social: string;
   faturamento_titular_cnpj: string;
+  empresa_grupo_faturamento: EmpresaGrupoFaturamentoForm;
 
   email_nf: string;
   margem_lucro_percentual: string;
@@ -236,6 +245,7 @@ const formInicial: FormCliente = {
   gerador_dono_faturamento: "",
   faturamento_titular_razao_social: "",
   faturamento_titular_cnpj: "",
+  empresa_grupo_faturamento: { ...empresaGrupoFaturamentoInicial },
 
   email_nf: "",
   margem_lucro_percentual: "",
@@ -678,7 +688,7 @@ const CLIENTES_SELECT_CORE =
   "id, nome, razao_social, cnpj, status, cep, rua, numero, complemento, bairro, cidade, estado";
 
 const CLIENTES_SELECT_FAT_ENDERECO =
-  "cep_faturamento, rua_faturamento, numero_faturamento, complemento_faturamento, bairro_faturamento, cidade_faturamento, estado_faturamento, gerador_dono_faturamento, faturamento_titular_razao_social, faturamento_titular_cnpj";
+  "cep_faturamento, rua_faturamento, numero_faturamento, complemento_faturamento, bairro_faturamento, cidade_faturamento, estado_faturamento, gerador_dono_faturamento, faturamento_titular_razao_social, faturamento_titular_cnpj, empresa_grupo_faturamento";
 
 const CLIENTES_SELECT_TAIL_BASE =
   "endereco_coleta, endereco_faturamento, email_nf, responsavel_nome, telefone, email, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, licenca_numero, validade, codigo_ibama, descricao_veiculo, mtr_coleta, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, ajudante, solicitante, origem_planilha_cliente, mtr_sigor, cnpj_raiz, tipo_unidade_cliente, representante_rg_id, caminhao_id, equipamentos";
@@ -747,7 +757,8 @@ function isMissingFaturamentoEstruturadoColumnsError(
     msg.includes("estado_faturamento") ||
     msg.includes("gerador_dono_faturamento") ||
     msg.includes("faturamento_titular_razao_social") ||
-    msg.includes("faturamento_titular_cnpj")
+    msg.includes("faturamento_titular_cnpj") ||
+    msg.includes("empresa_grupo_faturamento")
   );
 }
 
@@ -2004,6 +2015,9 @@ export default function Clientes() {
         gerador_dono_faturamento: row.gerador_dono_faturamento ?? "",
         faturamento_titular_razao_social: row.faturamento_titular_razao_social ?? "",
         faturamento_titular_cnpj: row.faturamento_titular_cnpj ?? "",
+        empresa_grupo_faturamento: normalizarEmpresaGrupoFaturamentoForm(
+          row.empresa_grupo_faturamento
+        ),
 
         email_nf: row.email_nf || "",
         margem_lucro_percentual: margemLucroDbParaCampo(row.margem_lucro_percentual),
@@ -2187,6 +2201,7 @@ export default function Clientes() {
       cidade_faturamento: limparOuNull(form.cidade_faturamento),
       estado_faturamento: limparOuNull(form.estado_faturamento),
       ...payloadGeradorDonoFaturamento(form),
+      ...payloadEmpresaGrupoFaturamento(form.empresa_grupo_faturamento),
       endereco_coleta: limparOuNull(form.endereco_coleta || enderecoColetaEstruturado),
       endereco_faturamento: limparOuNull(
         montarEnderecoTextoLivreDosCamposEstruturados({
@@ -4380,6 +4395,10 @@ function ClienteDetalheModal({
           `Razão Social do dono do faturamento: ${(cliente.faturamento_titular_razao_social ?? "").trim() || "—"}`,
           `CNPJ do dono do faturamento: ${(cliente.faturamento_titular_cnpj ?? "").trim() || "—"}`,
         ].join(" · ");
+  const empresaGrupoRotulo =
+    rotuloEmpresaGrupoFaturamento(
+      normalizarEmpresaGrupoFaturamentoForm(cliente.empresa_grupo_faturamento)
+    ) ?? "—";
   const ativo = clienteEstaAtivo(cliente.status);
 
   return (
@@ -4565,6 +4584,11 @@ function ClienteDetalheModal({
           <DetalheSecao titulo="Endereços">
             <DetalheCampo rotulo="Endereço de coleta" valor={enderecoColeta} colunas={2} />
             <DetalheCampo rotulo="Endereço de faturamento" valor={enderecoFaturamento} colunas={2} />
+            <DetalheCampo
+              rotulo="Empresa do grupo responsável pelo faturamento"
+              valor={empresaGrupoRotulo}
+              colunas={2}
+            />
             <DetalheCampo rotulo="Gerador é dono do faturamento" valor={geradorDonoRotulo} colunas={2} />
             <DetalheCampo
               rotulo="Link Google Maps"
