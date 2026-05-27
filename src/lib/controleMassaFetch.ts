@@ -324,39 +324,38 @@ async function fetchColetasIdsMesVigente(
     return { error: null }
   }
 
-  const aplicarFiltroAtivo = (q: ReturnType<SupabaseClient['from']>) =>
-    modo === 'sem_mtr'
-      ? q.is('mtr_id', null).not('fluxo_status', 'in', FLUXO_COLETA_ENCERRADO)
-      : q.not('mtr_id', 'is', null)
-
   let err = (
-    await carregarPagina(async (from, to) =>
-      aplicarFiltroAtivo(
-        supabase
-          .from('coletas')
-          .select('id, mtr_id')
-          .gte('data_execucao', inicio)
-          .lt('data_execucao', fimExclusivo)
-      )
-        .order('data_execucao', { ascending: false })
-        .range(from, to)
-    )
+    await carregarPagina(async (from, to) => {
+      let q = supabase
+        .from('coletas')
+        .select('id, mtr_id')
+        .gte('data_execucao', inicio)
+        .lt('data_execucao', fimExclusivo)
+      if (modo === 'sem_mtr') {
+        q = q.is('mtr_id', null).not('fluxo_status', 'in', FLUXO_COLETA_ENCERRADO)
+      } else {
+        q = q.not('mtr_id', 'is', null)
+      }
+      return q.order('data_execucao', { ascending: false }).range(from, to)
+    })
   ).error
   if (err) return { ids: [], rowsComMtr: [], error: err }
 
   err = (
-    await carregarPagina(async (from, to) =>
-      aplicarFiltroAtivo(
-        supabase
-          .from('coletas')
-          .select('id, mtr_id')
-          .is('data_execucao', null)
-          .gte('data_agendada', inicio)
-          .lt('data_agendada', fimExclusivo)
-      )
-        .order('data_agendada', { ascending: false })
-        .range(from, to)
-    )
+    await carregarPagina(async (from, to) => {
+      let q = supabase
+        .from('coletas')
+        .select('id, mtr_id')
+        .is('data_execucao', null)
+        .gte('data_agendada', inicio)
+        .lt('data_agendada', fimExclusivo)
+      if (modo === 'sem_mtr') {
+        q = q.is('mtr_id', null).not('fluxo_status', 'in', FLUXO_COLETA_ENCERRADO)
+      } else {
+        q = q.not('mtr_id', 'is', null)
+      }
+      return q.order('data_agendada', { ascending: false }).range(from, to)
+    })
   ).error
   if (err) return { ids: [], rowsComMtr: [], error: err }
 
