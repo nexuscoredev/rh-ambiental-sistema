@@ -13,6 +13,13 @@ import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
 import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
 import {
+  parseEquipamentosProgramacaoJson,
+  parseResiduosProgramacaoJson,
+  tipoResiduoLegadoProgramacao,
+  type EquipamentoProgramacaoItem,
+  type ResiduoProgramacaoItem,
+} from '../lib/programacaoContratoSelecao'
+import {
   STATUS_LABELS,
   getStatusStyle,
   type ProgramacaoStatus,
@@ -32,6 +39,8 @@ type ProgramacaoRow = {
   tipo_caminhao: string | null
   tipo_servico: string | null
   tipo_residuo: string | null
+  residuos_programacao?: unknown
+  equipamentos_programacao?: unknown
   observacoes: string | null
   coleta_fixa: boolean | null
   periodicidade: string | null
@@ -48,7 +57,8 @@ type ProgramacaoItem = {
   dataProgramada: string
   tipoCaminhao: string
   tipoServico: string
-  tipoResiduo: string
+  residuosSelecionados: ResiduoProgramacaoItem[]
+  equipamentosSelecionados: EquipamentoProgramacaoItem[]
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -64,7 +74,8 @@ type FormState = {
   dataProgramada: string
   tipoCaminhao: string
   tipoServico: string
-  tipoResiduo: string
+  residuosSelecionados: ResiduoProgramacaoItem[]
+  equipamentosSelecionados: EquipamentoProgramacaoItem[]
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -79,13 +90,48 @@ type CalendarCell = {
   isToday: boolean
 }
 
+function contratoSelecaoDaProgramacaoRow(row: ProgramacaoRow): {
+  residuosSelecionados: ResiduoProgramacaoItem[]
+  equipamentosSelecionados: EquipamentoProgramacaoItem[]
+} {
+  let residuosSelecionados = parseResiduosProgramacaoJson(row.residuos_programacao)
+  if (residuosSelecionados.length === 0 && (row.tipo_residuo ?? '').trim()) {
+    residuosSelecionados = [
+      {
+        tipo_residuo: (row.tipo_residuo ?? '').trim(),
+        classificacao: '',
+        unidade_medida: '',
+        valor: '',
+        frequencia_coleta: '',
+        faturamento_minimo: '',
+        quantidade: '',
+      },
+    ]
+  }
+  return {
+    residuosSelecionados,
+    equipamentosSelecionados: parseEquipamentosProgramacaoJson(row.equipamentos_programacao),
+  }
+}
+
+function payloadContratoProgramacao(form: Pick<FormState, 'residuosSelecionados' | 'equipamentosSelecionados'>) {
+  const residuos = form.residuosSelecionados
+  const equipamentos = form.equipamentosSelecionados
+  return {
+    tipo_residuo: tipoResiduoLegadoProgramacao(residuos),
+    residuos_programacao: residuos.length > 0 ? residuos : null,
+    equipamentos_programacao: equipamentos.length > 0 ? equipamentos : null,
+  }
+}
+
 const initialFormState: FormState = {
   id: null,
   clienteId: '',
   dataProgramada: '',
   tipoCaminhao: '',
   tipoServico: '',
-  tipoResiduo: '',
+  residuosSelecionados: [],
+  equipamentosSelecionados: [],
   observacoes: '',
   coletaFixa: false,
   periodicidade: '',
@@ -575,7 +621,7 @@ export default function Programacao() {
       const { data: programacoesData, error: programacoesError } = await supabase
         .from('programacoes')
         .select(
-          'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, observacoes, coleta_fixa, periodicidade, status_programacao, coleta_id, created_at'
+          'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, residuos_programacao, equipamentos_programacao, observacoes, coleta_fixa, periodicidade, status_programacao, coleta_id, created_at'
         )
         .gte('data_programada', rangeIni)
         .lte('data_programada', rangeFim)
@@ -649,7 +695,7 @@ export default function Programacao() {
           dataProgramada: row.data_programada || '',
           tipoCaminhao: row.tipo_caminhao || '',
           tipoServico: row.tipo_servico || '',
-          tipoResiduo: row.tipo_residuo || '',
+          ...contratoSelecaoDaProgramacaoRow(row),
           observacoes: row.observacoes || '',
           coletaFixa: row.coleta_fixa ?? false,
           periodicidade: row.periodicidade || '',
@@ -770,7 +816,8 @@ export default function Programacao() {
       dataProgramada: item.dataProgramada,
       tipoCaminhao: item.tipoCaminhao,
       tipoServico: item.tipoServico,
-      tipoResiduo: item.tipoResiduo,
+      residuosSelecionados: [...item.residuosSelecionados],
+      equipamentosSelecionados: [...item.equipamentosSelecionados],
       observacoes: item.observacoes,
       coletaFixa: item.coletaFixa,
       periodicidade: item.periodicidade,
@@ -872,7 +919,7 @@ export default function Programacao() {
         data_programada: formEdicaoModal.dataProgramada,
         tipo_caminhao: formEdicaoModal.tipoCaminhao || null,
         tipo_servico: formEdicaoModal.tipoServico.trim(),
-        tipo_residuo: formEdicaoModal.tipoResiduo.trim() || null,
+        ...payloadContratoProgramacao(formEdicaoModal),
         observacoes: formEdicaoModal.observacoes.trim() || null,
         coleta_fixa: formEdicaoModal.coletaFixa,
         periodicidade: formEdicaoModal.coletaFixa ? formEdicaoModal.periodicidade.trim() || null : null,
@@ -939,7 +986,7 @@ export default function Programacao() {
         data_programada: form.dataProgramada,
         tipo_caminhao: form.tipoCaminhao || null,
         tipo_servico: form.tipoServico.trim(),
-        tipo_residuo: form.tipoResiduo.trim() || null,
+        ...payloadContratoProgramacao(form),
         observacoes: form.observacoes.trim() || null,
         coleta_fixa: form.coletaFixa,
         periodicidade: form.coletaFixa ? form.periodicidade.trim() || null : null,
@@ -1163,7 +1210,8 @@ export default function Programacao() {
             value={f.clienteId}
             onChange={(event) => {
               patch('clienteId', event.target.value)
-              patch('tipoResiduo', '')
+              patch('residuosSelecionados', [])
+              patch('equipamentosSelecionados', [])
             }}
             style={inputStyle}
           >
@@ -1236,10 +1284,11 @@ export default function Programacao() {
 
         <ProgramacaoClienteContratoCampos
           clienteId={f.clienteId}
-          tipoResiduo={f.tipoResiduo}
-          onTipoResiduoChange={(valor) => patch('tipoResiduo', valor)}
+          residuosSelecionados={f.residuosSelecionados}
+          equipamentosSelecionados={f.equipamentosSelecionados}
+          onResiduosChange={(itens) => patch('residuosSelecionados', itens)}
+          onEquipamentosChange={(itens) => patch('equipamentosSelecionados', itens)}
           labelStyle={labelStyle}
-          inputStyle={inputStyle}
         />
 
         <div>
