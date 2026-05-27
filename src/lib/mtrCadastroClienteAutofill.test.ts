@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  atividadeGeradorDesdeClienteProgramacao,
-  resolverAtividadeGeradorMtr,
   enriquecerClienteEnderecoAutofill,
   inferirCidadeEstadoEnderecoTexto,
   montarCidadeUfCliente,
@@ -10,30 +8,6 @@ import {
 } from './mtrCadastroClienteAutofill'
 
 describe('mtrCadastroClienteAutofill', () => {
-  it('resolve atividade do gerador sem usar tipo de serviço da programação', () => {
-    expect(
-      atividadeGeradorDesdeClienteProgramacao(
-        { observacoes_operacionais: 'Hospitalar' },
-        { tipo_servico: 'RSS' }
-      )
-    ).toBe('Hospitalar')
-    expect(
-      atividadeGeradorDesdeClienteProgramacao({}, { tipo_servico: 'Coleta fixa' })
-    ).toBe('')
-    expect(
-      atividadeGeradorDesdeClienteProgramacao(
-        { observacoes_operacionais: '  Cadastro  ' },
-        { tipo_servico: 'COLETA' }
-      )
-    ).toBe('Cadastro')
-  })
-
-  it('resolverAtividadeGeradorMtr ignora atividade salva com classe de resíduo ou COLETA', () => {
-    expect(resolverAtividadeGeradorMtr('Classe II | Classe II', 'Coleta RSS')).toBe('Coleta RSS')
-    expect(resolverAtividadeGeradorMtr('COLETA', 'Industrial')).toBe('Industrial')
-    expect(resolverAtividadeGeradorMtr('Laboratório', 'RSS')).toBe('Laboratório')
-  })
-
   it('monta cidade e UF do cadastro', () => {
     expect(montarCidadeUfCliente({ cidade: 'Araçariguama', estado: 'SP' })).toBe(
       'Araçariguama — SP'

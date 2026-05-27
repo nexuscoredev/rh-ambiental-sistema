@@ -50,8 +50,6 @@ import {
   type MtrEmitidaPorProgramacao,
 } from '../lib/mtrProgramacoesFetch'
 import {
-  atividadeGeradorDesdeClienteProgramacao,
-  resolverAtividadeGeradorMtr,
   buscarNomeGeradorPorProgramacaoMtr,
 } from '../lib/mtrCadastroClienteAutofill'
 import {
@@ -1065,7 +1063,6 @@ export default function MTR() {
       const dz = detalhesVazios()
       const unidade = (row.unidade_medida ?? '').trim()
       const residuosContrato = contrato?.residuos ?? prev.detalhes?.residuos_contrato_catalogo ?? []
-      const atividadeGerador = atividadeGeradorDesdeClienteProgramacao(row, programacao)
       return {
         ...prev,
         gerador: nomeGeradorParaMtr(row, programacao.cliente || prev.cliente),
@@ -1089,10 +1086,6 @@ export default function MTR() {
           gerador: {
             ...dz.gerador,
             ...(prev.detalhes?.gerador || {}),
-            atividade: resolverAtividadeGeradorMtr(
-              prev.detalhes?.gerador?.atividade ?? '',
-              atividadeGerador
-            ),
             cnpj: (row.cnpj ?? '').trim() || dz.gerador.cnpj,
             cadri: (row.licenca_numero ?? '').trim() || dz.gerador.cadri,
             responsavel: (row.responsavel_nome ?? '').trim() || dz.gerador.responsavel,
@@ -3644,24 +3637,6 @@ ${MTR_LISTA_CARD_UI_CSS}
                                 setForm((prev) => ({ ...prev, gerador: e.target.value }))
                               }
                               placeholder="Razão social do gerador (cadastro do cliente)"
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Atividade</label>
-                            <input
-                              value={form.detalhes?.gerador.atividade ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    gerador: {
-                                      ...(prev.detalhes?.gerador ?? detalhesVazios().gerador),
-                                      atividade: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
                             />
                           </div>
                           <div className="field">

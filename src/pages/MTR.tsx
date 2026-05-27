@@ -66,8 +66,6 @@ import {
   montarCidadeUfCliente,
   montarEnderecoLinhaCliente,
   parseCidadeUfCampoTopo,
-  atividadeGeradorDesdeClienteProgramacao,
-  resolverAtividadeGeradorMtr,
   buscarNomeGeradorPorProgramacaoMtr,
   patchCidadeEnderecoGeradorDesdeCliente,
   resolverClienteIdProgramacaoMtr,
@@ -670,17 +668,6 @@ function resolverMtrContexto(
   }
   return null
 }
-
-const MTR_ATIVIDADE_SUGESTOES = [
-  'Industrial',
-  'Comercial',
-  'Serviços',
-  'Residencial',
-  'Construção civil',
-  'Hospitalar',
-  'Automotivo',
-  'Agrossilvipastoril',
-]
 
 export default function MTR() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1702,7 +1689,6 @@ export default function MTR() {
         residuo: listaResiduosForm[0],
         residuos_lista: listaResiduosForm,
       })
-      const atividadeGerador = atividadeGeradorDesdeClienteProgramacao(row, programacao)
       const obsExtrasCliente = [row.observacoes_gerais, row.link_google_maps]
         .map((s) => (s ?? '').trim())
         .filter(Boolean)
@@ -1769,10 +1755,6 @@ export default function MTR() {
           gerador: {
             ...dz.gerador,
             ...(prev.detalhes?.gerador || {}),
-            atividade: resolverAtividadeGeradorMtr(
-              prev.detalhes?.gerador?.atividade ?? '',
-              atividadeGerador
-            ),
             cnpj: (row.cnpj ?? '').trim() || dz.gerador.cnpj,
             cadri: (row.licenca_numero ?? '').trim() || dz.gerador.cadri,
             responsavel: (row.responsavel_nome ?? '').trim() || dz.gerador.responsavel,
@@ -4573,11 +4555,6 @@ ${MTR_LISTA_CARD_UI_CSS}
                           Estes campos espelham o modelo de MTR (planilha) e são usados na impressão do documento.
                         </div>
 
-                        <datalist id="mtr-atividade-sugestoes">
-                          {MTR_ATIVIDADE_SUGESTOES.map((s) => (
-                            <option key={s} value={s} />
-                          ))}
-                        </datalist>
                         <datalist id="mtr-placas-frota">
                           {caminhoesPlacas.map((c) => (
                             <option key={c.id} value={c.placa} />
@@ -4596,25 +4573,6 @@ ${MTR_LISTA_CARD_UI_CSS}
                                 setForm((prev) => ({ ...prev, gerador: e.target.value }))
                               }
                               placeholder="Razão social do gerador (cadastro do cliente)"
-                            />
-                          </div>
-                          <div className="field">
-                            <label>Atividade</label>
-                            <input
-                              list="mtr-atividade-sugestoes"
-                              value={form.detalhes?.gerador.atividade ?? ''}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  detalhes: {
-                                    ...(prev.detalhes ?? detalhesVazios()),
-                                    gerador: {
-                                      ...(prev.detalhes?.gerador ?? detalhesVazios().gerador),
-                                      atividade: e.target.value,
-                                    },
-                                  },
-                                }))
-                              }
                             />
                           </div>
                           <div className="field">

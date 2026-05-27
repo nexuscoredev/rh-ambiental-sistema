@@ -161,20 +161,18 @@ export function MtrManifestoPrint({
             </td>
           </tr>
           <tr>
-            <td className="mtr-excel__k">Atividade:</td>
-            <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.atividade)}</td>
             <td className="mtr-excel__k">Nº CADRI:</td>
             <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.cadri)}</td>
             <td className="mtr-excel__k">CNPJ:</td>
             <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.cnpj)}</td>
+            <td className="mtr-excel__k">I.E:</td>
+            <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.ie)}</td>
           </tr>
           <tr>
             <td className="mtr-excel__k">Razão Social:</td>
-            <td className="mtr-excel__v" colSpan={3}>
+            <td className="mtr-excel__v" colSpan={5}>
               {mtrTextoCelula(gerador)}
             </td>
-            <td className="mtr-excel__k">I.E:</td>
-            <td className="mtr-excel__v">{mtrTextoCelula(d.gerador.ie)}</td>
           </tr>
           <tr>
             <td className="mtr-excel__k">Endereço:</td>
