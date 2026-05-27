@@ -15,6 +15,7 @@ import {
   ControleMassaMtrPicker,
   type ResumoSelecaoMtr,
 } from "../components/controleMassa/ControleMassaMtrPicker";
+import { ControleMassaTicketsSemMtrContador } from "../components/controleMassa/ControleMassaTicketsSemMtrContador";
 import { queryColetasListaFluxoControle } from "../lib/coletasSelectSeguimento";
 import {
   buscarColetasPorIdsControleMassa,
@@ -2799,6 +2800,11 @@ export default function ControleMassa() {
                 Auditoria
               </button>
             </div>
+
+            <ControleMassaTicketsSemMtrContador
+              ticketsSemMtr={statsMtrSemTicket?.ticketsSemMtr ?? null}
+              rotuloMesVigente={statsMtrSemTicket?.rotuloMesVigente}
+            />
 
             <button
               type="button"

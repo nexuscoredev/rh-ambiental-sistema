@@ -20,6 +20,7 @@ import {
   fetchUltimaPesagemPorColetaIds,
   fetchTicketOperacionalPorColetaIds,
 } from "../lib/controleMassaFetch";
+import { ControleMassaTicketsSemMtrContador } from "../components/controleMassa/ControleMassaTicketsSemMtrContador";
 import { fetchResiduosCatalogo, mapResiduosPorId, type ResiduoCatalogo } from "../lib/residuosCatalogo";
 import { supabase } from "../lib/supabase";
 import { registrarTicketImpressoColeta } from "../lib/faturamentoTicketFluxo";
@@ -1767,6 +1768,11 @@ export default function ControleMassa() {
                 Auditoria
               </button>
             </div>
+
+            <ControleMassaTicketsSemMtrContador
+              ticketsSemMtr={statsMtrSemTicket?.ticketsSemMtr ?? null}
+              rotuloMesVigente={statsMtrSemTicket?.rotuloMesVigente}
+            />
 
             <button
               type="button"

@@ -17,6 +17,7 @@ import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
+import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
 import {
   STATUS_LABELS,
   getStatusStyle,
@@ -43,6 +44,7 @@ type ProgramacaoRow = {
   data_programada: string | null
   tipo_caminhao: string | null
   tipo_servico: string | null
+  tipo_residuo: string | null
   observacoes: string | null
   coleta_fixa: boolean | null
   periodicidade: string | null
@@ -66,6 +68,7 @@ type ProgramacaoItem = {
   caminhaoId: string
   caminhaoPlaca: string
   tipoServico: string
+  tipoResiduo: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -86,6 +89,7 @@ type FormState = {
   tipoCaminhao: string
   caminhaoId: string
   tipoServico: string
+  tipoResiduo: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -111,6 +115,7 @@ const initialFormState: FormState = {
   tipoCaminhao: '',
   caminhaoId: '',
   tipoServico: '',
+  tipoResiduo: '',
   observacoes: '',
   coletaFixa: false,
   periodicidade: '',
@@ -882,7 +887,7 @@ export default function Programacao() {
       }
 
       const progSelect =
-        'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, observacoes, coleta_fixa, periodicidade, programacao_dias_semana, programacao_serie_id, status_programacao, coleta_id, caminhao_id, created_at, criado_por_user_id, criado_por_nome'
+        'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, observacoes, coleta_fixa, periodicidade, programacao_dias_semana, programacao_serie_id, status_programacao, coleta_id, caminhao_id, created_at, criado_por_user_id, criado_por_nome'
 
       const [
         { data: clientesData, error: clientesError },
@@ -907,9 +912,29 @@ export default function Programacao() {
         console.error('ERRO AO CARREGAR CAMINHÕES:', caminhoesError)
         throw caminhoesError
       }
+      let progsRows = (programacoesData || []) as ProgramacaoRow[]
       if (programacoesError) {
-        console.error('ERRO AO CARREGAR PROGRAMAÇÕES:', programacoesError)
-        throw programacoesError
+        const msg = (programacoesError.message ?? '').toLowerCase()
+        if (msg.includes('tipo_residuo') && progSelect.includes('tipo_residuo')) {
+          const progSelectLegado = progSelect.replace(', tipo_residuo', '')
+          const retry = await supabase
+            .from('programacoes')
+            .select(progSelectLegado)
+            .gte('data_programada', rangeIni)
+            .lte('data_programada', rangeFim)
+            .order('data_programada', { ascending: true })
+          if (!retry.error) {
+            progsRows = ((retry.data ?? []) as unknown as Omit<ProgramacaoRow, 'tipo_residuo'>[]).map(
+              (row) => ({ ...row, tipo_residuo: null })
+            )
+          } else {
+            console.error('ERRO AO CARREGAR PROGRAMAÇÕES:', programacoesError)
+            throw programacoesError
+          }
+        } else {
+          console.error('ERRO AO CARREGAR PROGRAMAÇÕES:', programacoesError)
+          throw programacoesError
+        }
       }
 
       const clientesLista = (clientesData || []) as ClienteOption[]
@@ -922,7 +947,7 @@ export default function Programacao() {
       setCaminhoes(caminhoesLista)
       const placaPorCaminhaoId = new Map(caminhoesLista.map((c) => [c.id, c.placa]))
 
-      const progs = (programacoesData || []) as ProgramacaoRow[]
+      const progs = progsRows
       const idsAutorSemNome = progs
         .filter((p) => !(p.criado_por_nome || '').trim() && (p.criado_por_user_id || '').trim())
         .map((p) => p.criado_por_user_id as string)
@@ -994,6 +1019,7 @@ export default function Programacao() {
           caminhaoId: row.caminhao_id || '',
           caminhaoPlaca: row.caminhao_id ? placaPorCaminhaoId.get(row.caminhao_id) || '' : '',
           tipoServico: row.tipo_servico || '',
+          tipoResiduo: row.tipo_residuo || '',
           observacoes: row.observacoes || '',
           coletaFixa: row.coleta_fixa ?? false,
           periodicidade: normalizarPeriodicidadeUi(row.periodicidade || ''),
@@ -1165,6 +1191,7 @@ export default function Programacao() {
       tipoCaminhao: item.tipoCaminhao,
       caminhaoId: item.caminhaoId,
       tipoServico: item.tipoServico,
+      tipoResiduo: item.tipoResiduo,
       observacoes: item.observacoes,
       coletaFixa: item.coletaFixa,
       periodicidade: item.periodicidade,
@@ -1288,6 +1315,7 @@ export default function Programacao() {
         tipo_caminhao: formEdicaoModal.tipoCaminhao || null,
         caminhao_id: formEdicaoModal.caminhaoId.trim() || null,
         tipo_servico: formEdicaoModal.tipoServico.trim(),
+        tipo_residuo: formEdicaoModal.tipoResiduo.trim() || null,
         observacoes: formEdicaoModal.observacoes.trim() || null,
         coleta_fixa: formEdicaoModal.coletaFixa,
         periodicidade: formEdicaoModal.coletaFixa ? (diasGravar.length > 0 ? 'Semanal' : formEdicaoModal.periodicidade.trim() || null) : null,
@@ -1389,6 +1417,7 @@ export default function Programacao() {
         tipo_caminhao: form.tipoCaminhao || null,
         caminhao_id: form.caminhaoId.trim() || null,
         tipo_servico: form.tipoServico.trim(),
+        tipo_residuo: form.tipoResiduo.trim() || null,
         observacoes: form.observacoes.trim() || null,
         coleta_fixa: form.coletaFixa,
         periodicidade: form.coletaFixa
@@ -1655,7 +1684,10 @@ export default function Programacao() {
           <label style={labelStyle}>Cliente</label>
           <select
             value={f.clienteId}
-            onChange={(event) => patch('clienteId', event.target.value)}
+            onChange={(event) => {
+              patch('clienteId', event.target.value)
+              patch('tipoResiduo', '')
+            }}
             style={inputStyle}
           >
             <option value="">Selecione um cliente</option>
@@ -1744,6 +1776,14 @@ export default function Programacao() {
             style={inputStyle}
           />
         </div>
+
+        <ProgramacaoClienteContratoCampos
+          clienteId={f.clienteId}
+          tipoResiduo={f.tipoResiduo}
+          onTipoResiduoChange={(valor) => patch('tipoResiduo', valor)}
+          labelStyle={labelStyle}
+          inputStyle={inputStyle}
+        />
 
         <div>
           <label style={labelStyle}>Observações gerais</label>
@@ -2600,7 +2640,7 @@ export default function Programacao() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="nova-programacao-titulo"
-            style={{ ...calendarPainelModalStyle, maxWidth: '520px' }}
+            style={{ ...calendarPainelModalStyle, maxWidth: '560px' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div

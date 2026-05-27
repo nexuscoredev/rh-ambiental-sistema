@@ -11,6 +11,7 @@ import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
+import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
 import {
   STATUS_LABELS,
   getStatusStyle,
@@ -30,6 +31,7 @@ type ProgramacaoRow = {
   data_programada: string | null
   tipo_caminhao: string | null
   tipo_servico: string | null
+  tipo_residuo: string | null
   observacoes: string | null
   coleta_fixa: boolean | null
   periodicidade: string | null
@@ -46,6 +48,7 @@ type ProgramacaoItem = {
   dataProgramada: string
   tipoCaminhao: string
   tipoServico: string
+  tipoResiduo: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -61,6 +64,7 @@ type FormState = {
   dataProgramada: string
   tipoCaminhao: string
   tipoServico: string
+  tipoResiduo: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -81,6 +85,7 @@ const initialFormState: FormState = {
   dataProgramada: '',
   tipoCaminhao: '',
   tipoServico: '',
+  tipoResiduo: '',
   observacoes: '',
   coletaFixa: false,
   periodicidade: '',
@@ -570,7 +575,7 @@ export default function Programacao() {
       const { data: programacoesData, error: programacoesError } = await supabase
         .from('programacoes')
         .select(
-          'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, observacoes, coleta_fixa, periodicidade, status_programacao, coleta_id, created_at'
+          'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, observacoes, coleta_fixa, periodicidade, status_programacao, coleta_id, created_at'
         )
         .gte('data_programada', rangeIni)
         .lte('data_programada', rangeFim)
@@ -644,6 +649,7 @@ export default function Programacao() {
           dataProgramada: row.data_programada || '',
           tipoCaminhao: row.tipo_caminhao || '',
           tipoServico: row.tipo_servico || '',
+          tipoResiduo: row.tipo_residuo || '',
           observacoes: row.observacoes || '',
           coletaFixa: row.coleta_fixa ?? false,
           periodicidade: row.periodicidade || '',
@@ -764,6 +770,7 @@ export default function Programacao() {
       dataProgramada: item.dataProgramada,
       tipoCaminhao: item.tipoCaminhao,
       tipoServico: item.tipoServico,
+      tipoResiduo: item.tipoResiduo,
       observacoes: item.observacoes,
       coletaFixa: item.coletaFixa,
       periodicidade: item.periodicidade,
@@ -865,6 +872,7 @@ export default function Programacao() {
         data_programada: formEdicaoModal.dataProgramada,
         tipo_caminhao: formEdicaoModal.tipoCaminhao || null,
         tipo_servico: formEdicaoModal.tipoServico.trim(),
+        tipo_residuo: formEdicaoModal.tipoResiduo.trim() || null,
         observacoes: formEdicaoModal.observacoes.trim() || null,
         coleta_fixa: formEdicaoModal.coletaFixa,
         periodicidade: formEdicaoModal.coletaFixa ? formEdicaoModal.periodicidade.trim() || null : null,
@@ -931,6 +939,7 @@ export default function Programacao() {
         data_programada: form.dataProgramada,
         tipo_caminhao: form.tipoCaminhao || null,
         tipo_servico: form.tipoServico.trim(),
+        tipo_residuo: form.tipoResiduo.trim() || null,
         observacoes: form.observacoes.trim() || null,
         coleta_fixa: form.coletaFixa,
         periodicidade: form.coletaFixa ? form.periodicidade.trim() || null : null,
@@ -1152,7 +1161,10 @@ export default function Programacao() {
           <label style={labelStyle}>Cliente</label>
           <select
             value={f.clienteId}
-            onChange={(event) => patch('clienteId', event.target.value)}
+            onChange={(event) => {
+              patch('clienteId', event.target.value)
+              patch('tipoResiduo', '')
+            }}
             style={inputStyle}
           >
             <option value="">Selecione um cliente</option>
@@ -1221,6 +1233,14 @@ export default function Programacao() {
             style={inputStyle}
           />
         </div>
+
+        <ProgramacaoClienteContratoCampos
+          clienteId={f.clienteId}
+          tipoResiduo={f.tipoResiduo}
+          onTipoResiduoChange={(valor) => patch('tipoResiduo', valor)}
+          labelStyle={labelStyle}
+          inputStyle={inputStyle}
+        />
 
         <div>
           <label style={labelStyle}>Observações gerais</label>
