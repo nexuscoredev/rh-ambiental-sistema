@@ -245,12 +245,12 @@ function CelulaClienteFaturamento({
   rotulos,
   indisponivel,
 }: {
-  clienteId: string
+  clienteId: string | null | undefined
   clienteNome: string
   rotulos: Record<string, string>
   indisponivel: boolean
 }) {
-  const rotulo = rotulos[clienteId.trim()] ?? null
+  const rotulo = rotulos[(clienteId ?? '').trim()] ?? null
   return (
     <div style={{ minWidth: '120px' }}>
       <div>{clienteNome || '—'}</div>
@@ -289,7 +289,7 @@ export function FaturamentoFilaColetas({
   )
 
   const clienteIdsFila = useMemo(
-    () => linhas.map((r) => r.cliente_id).filter(Boolean),
+    () => linhas.map((r) => r.cliente_id).filter((id): id is string => Boolean(id)),
     [linhas]
   )
   const { rotulos: rotulosEmpresaGrupo, indisponivel: empresaGrupoIndisponivel } =
