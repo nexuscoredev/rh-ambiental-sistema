@@ -756,7 +756,7 @@ export default function MTR() {
   const [statsProgramacaoSemMtr, setStatsProgramacaoSemMtr] = useState<{
     semEmitida: number
     total: number
-    mesesJanela: number
+    rotuloMesVigente: string
   } | null>(null)
 
   const atualizarStatsProgramacoes = useCallback(async () => {
@@ -768,7 +768,7 @@ export default function MTR() {
     setStatsProgramacaoSemMtr({
       semEmitida: res.semMtrEmitida,
       total: res.totalProgramacoes,
-      mesesJanela: res.mesesJanela,
+      rotuloMesVigente: res.rotuloMesVigente,
     })
   }, [])
 
@@ -3859,7 +3859,7 @@ ${MTR_LISTA_CARD_UI_CSS}
             </div>
             <div className="stat-help">
               {statsProgramacaoSemMtr != null
-                ? `De ${statsProgramacaoSemMtr.total} programações nos últimos ${statsProgramacaoSemMtr.mesesJanela} meses (não canceladas).`
+                ? `De ${statsProgramacaoSemMtr.total} programações em ${statsProgramacaoSemMtr.rotuloMesVigente} (não canceladas).`
                 : 'A calcular…'}
             </div>
           </div>

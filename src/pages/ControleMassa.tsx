@@ -18,6 +18,7 @@ import {
 import { queryColetasListaFluxoControle } from "../lib/coletasSelectSeguimento";
 import {
   buscarColetasPorIdsControleMassa,
+  contarMtrSemTicketMesVigente,
   fetchColetaIdsComPesagemRecente,
   fetchTicketOperacionalPorColetaIds,
   fetchTipoCaminhaoPorProgramacaoIds,
@@ -848,6 +849,11 @@ export default function ControleMassa() {
   const [todasColetas, setTodasColetas] = useState<ColetaOpcao[]>([]);
   const [mtrsLista, setMtrsLista] = useState<MtrResumo[]>([]);
   const [loadingVinculo, setLoadingVinculo] = useState(true);
+  const [statsMtrSemTicket, setStatsMtrSemTicket] = useState<{
+    ticketsPendentes: number
+    mtrsComPendencia: number
+    rotuloMesVigente: string
+  } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [imprimindoTicketColetaId, setImprimindoTicketColetaId] = useState<string | null>(null);
   /** Placa/motorista da última pesagem, carregados antes de `window.print()`. */
@@ -1329,6 +1335,19 @@ export default function ControleMassa() {
     navigate(`/mtr?${montarParamsFluxo(c).toString()}`);
   }
 
+  const atualizarStatsMtrSemTicket = useCallback(async () => {
+    const res = await contarMtrSemTicketMesVigente(supabase)
+    if (res.error) {
+      console.warn('[ControleMassa] contagem MTR sem ticket:', res.error.message)
+      return
+    }
+    setStatsMtrSemTicket({
+      ticketsPendentes: res.ticketsPendentes,
+      mtrsComPendencia: res.mtrsComPendencia,
+      rotuloMesVigente: res.rotuloMesVigente,
+    })
+  }, [])
+
   const enriquecerListaColetas = useCallback(async (merged: ColetaOpcao[]) => {
     const coletaIds = merged.map((c) => c.id);
     const progIds = [...new Set(merged.map((c) => c.programacao_id).filter(Boolean))] as string[];
@@ -1418,8 +1437,9 @@ export default function ControleMassa() {
       setTodasColetas(merged);
     } finally {
       setLoadingVinculo(false);
+      void atualizarStatsMtrSemTicket();
     }
-  }, []);
+  }, [atualizarStatsMtrSemTicket]);
 
 
   /** Atualiza só as coletas gravadas (evita recarregar 500+ coletas após salvar). */
@@ -1441,7 +1461,8 @@ export default function ControleMassa() {
     setUltimaPesagemPorColeta((prev) => new Map([...prev, ...ultima]));
     setTipoTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.tipoPorColeta]));
     setNumeroTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.numeroPorColeta]));
-  }, []);
+    void atualizarStatsMtrSemTicket();
+  }, [atualizarStatsMtrSemTicket]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -2677,6 +2698,35 @@ export default function ControleMassa() {
                 {!podeMutarMassa ? " · somente consulta" : " · pode lançar pesagem"}
               </p>
             ) : null}
+            <p
+              style={{
+                marginTop: "10px",
+                marginBottom: 0,
+                fontSize: "13px",
+                fontWeight: 700,
+                color:
+                  statsMtrSemTicket && statsMtrSemTicket.ticketsPendentes > 0
+                    ? "#b45309"
+                    : "#0f172a",
+                maxWidth: "720px",
+                lineHeight: 1.45,
+              }}
+            >
+              Mês vigente ({statsMtrSemTicket?.rotuloMesVigente ?? "…"}):{" "}
+              <strong>
+                {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsPendentes : "—"}
+              </strong>{" "}
+              ticket(s) a gerar
+              {statsMtrSemTicket != null && statsMtrSemTicket.mtrsComPendencia > 0
+                ? ` · ${statsMtrSemTicket.mtrsComPendencia} MTR(s) com pendência`
+                : ""}
+              {statsMtrSemTicket != null ? (
+                <span style={{ fontWeight: 600, color: "#64748b" }}>
+                  {" "}
+                  (coletas com MTR emitida, sem ticket operacional)
+                </span>
+              ) : null}
+            </p>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>

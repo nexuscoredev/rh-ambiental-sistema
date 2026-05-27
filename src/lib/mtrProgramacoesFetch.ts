@@ -51,6 +51,56 @@ export function dataLimiteIsoProgramacoesMtr(): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** Intervalo [início, fim) do mês calendário vigente (data local). */
+export function intervaloMesVigenteProgramacoesMtr(ref = new Date()): {
+  inicio: string
+  fimExclusivo: string
+  rotulo: string
+} {
+  const y = ref.getFullYear()
+  const m = ref.getMonth()
+  const inicio = `${y}-${String(m + 1).padStart(2, '0')}-01`
+  const proximoMes = new Date(y, m + 1, 1)
+  const fimExclusivo = `${proximoMes.getFullYear()}-${String(proximoMes.getMonth() + 1).padStart(2, '0')}-01`
+  const rotulo = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return { inicio, fimExclusivo, rotulo }
+}
+
+/** Programações não canceladas com `data_programada` no mês vigente. */
+export async function fetchProgramacoesMtrMesVigente(
+  supabase: SupabaseClient,
+  ref = new Date()
+): Promise<{ data: ProgramacaoMtrRow[]; error: Error | null; rotuloMes: string }> {
+  const { inicio, fimExclusivo, rotulo } = intervaloMesVigenteProgramacoesMtr(ref)
+  const acc: ProgramacaoMtrRow[] = []
+
+  for (let page = 0; page < MAX_PAGES_CATALOGO; page++) {
+    const from = page * PROG_PAGE
+    const to = from + PROG_PAGE - 1
+    const { data, error } = await supabase
+      .from('programacoes')
+      .select(MTR_PROGRAMACAO_SELECT)
+      .neq('status_programacao', 'CANCELADA')
+      .gte('data_programada', inicio)
+      .lt('data_programada', fimExclusivo)
+      .order('data_programada', { ascending: false })
+      .range(from, to)
+
+    if (error) return { data: acc, error: new Error(error.message), rotuloMes: rotulo }
+
+    const chunk = (data || []) as ProgramacaoMtrRow[]
+    acc.push(...chunk)
+    if (chunk.length < PROG_PAGE) break
+    if (page === MAX_PAGES_CATALOGO - 1) {
+      console.warn(
+        `[mtrProgramacoesFetch] Mês vigente: limite de ${MAX_PAGES_CATALOGO}×${PROG_PAGE} programações em ${rotulo}.`
+      )
+    }
+  }
+
+  return { data: acc, error: null, rotuloMes: rotulo }
+}
+
 /** Une listas por `id` (última entrada ganha). */
 export function mergeProgramacoesMtrPorId(
   ...listas: ProgramacaoMtrRow[][]
@@ -124,22 +174,21 @@ const MTR_STATUS_EMITIDA = ['Emitido', 'Baixada'] as const
 export type ContagemProgramacoesSemMtrEmitida = {
   totalProgramacoes: number
   semMtrEmitida: number
-  mesesJanela: number
+  rotuloMesVigente: string
   error: Error | null
 }
 
-/** Programações do catálogo (janela MTR) sem MTR com status Emitido ou Baixada. */
+/** Programações do mês vigente sem MTR com status Emitido ou Baixada. */
 export async function contarProgramacoesSemMtrEmitida(
   supabase: SupabaseClient
 ): Promise<ContagemProgramacoesSemMtrEmitida> {
-  const mesesJanela = mtrProgramacoesMesesJanela()
-  const { data: progs, error: errProg } = await fetchProgramacoesMtrCatalogo(supabase)
+  const { data: progs, error: errProg, rotuloMes } = await fetchProgramacoesMtrMesVigente(supabase)
   if (errProg) {
-    return { totalProgramacoes: 0, semMtrEmitida: 0, mesesJanela, error: errProg }
+    return { totalProgramacoes: 0, semMtrEmitida: 0, rotuloMesVigente: rotuloMes, error: errProg }
   }
   const ids = progs.map((p) => p.id).filter(Boolean)
   if (ids.length === 0) {
-    return { totalProgramacoes: 0, semMtrEmitida: 0, mesesJanela, error: null }
+    return { totalProgramacoes: 0, semMtrEmitida: 0, rotuloMesVigente: rotuloMes, error: null }
   }
 
   const comMtrEmitida = new Set<string>()
@@ -154,7 +203,7 @@ export async function contarProgramacoesSemMtrEmitida(
       return {
         totalProgramacoes: progs.length,
         semMtrEmitida: 0,
-        mesesJanela,
+        rotuloMesVigente: rotuloMes,
         error: new Error(error.message),
       }
     }
@@ -168,7 +217,7 @@ export async function contarProgramacoesSemMtrEmitida(
   return {
     totalProgramacoes: progs.length,
     semMtrEmitida,
-    mesesJanela,
+    rotuloMesVigente: rotuloMes,
     error: null,
   }
 }

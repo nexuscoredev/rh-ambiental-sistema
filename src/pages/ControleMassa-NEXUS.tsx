@@ -14,6 +14,7 @@ import {
 import { queryColetasListaFluxoControle } from "../lib/coletasSelectSeguimento";
 import {
   buscarColetasPorIdsControleMassa,
+  contarMtrSemTicketMesVigente,
   fetchColetaIdsComPesagemRecente,
   fetchTipoCaminhaoPorProgramacaoIds,
   fetchUltimaPesagemPorColetaIds,
@@ -486,6 +487,11 @@ export default function ControleMassa() {
   const [residuosCatalogo, setResiduosCatalogo] = useState<ResiduoCatalogo[]>([]);
   const [mtrsLista, setMtrsLista] = useState<MtrResumo[]>([]);
   const [loadingVinculo, setLoadingVinculo] = useState(true);
+  const [statsMtrSemTicket, setStatsMtrSemTicket] = useState<{
+    ticketsPendentes: number
+    mtrsComPendencia: number
+    rotuloMesVigente: string
+  } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [secaoPesagemAberta, setSecaoPesagemAberta] = useState(true);
   const [modoTela, setModoTela] = useState<"operacao" | "auditoria">("operacao");
@@ -660,6 +666,19 @@ export default function ControleMassa() {
     navigate(`/mtr?${montarParamsFluxo(c).toString()}`);
   }
 
+  const atualizarStatsMtrSemTicket = useCallback(async () => {
+    const res = await contarMtrSemTicketMesVigente(supabase)
+    if (res.error) {
+      console.warn('[ControleMassa] contagem MTR sem ticket:', res.error.message)
+      return
+    }
+    setStatsMtrSemTicket({
+      ticketsPendentes: res.ticketsPendentes,
+      mtrsComPendencia: res.mtrsComPendencia,
+      rotuloMesVigente: res.rotuloMesVigente,
+    })
+  }, [])
+
   const enriquecerListaColetas = useCallback(async (merged: ColetaOpcao[]) => {
     const coletaIds = merged.map((c) => c.id);
     const progIds = [...new Set(merged.map((c) => c.programacao_id).filter(Boolean))] as string[];
@@ -733,8 +752,9 @@ export default function ControleMassa() {
       setTodasColetas(merged);
     } finally {
       setLoadingVinculo(false);
+      void atualizarStatsMtrSemTicket();
     }
-  }, []);
+  }, [atualizarStatsMtrSemTicket]);
 
   useEffect(() => {
     if (loadingVinculo || !enriquecimentoKey || coletasParaEnriquecer.length === 0) return;
@@ -1646,6 +1666,35 @@ export default function ControleMassa() {
                 {!podeMutarMassa ? " · somente consulta" : " · pode lançar pesagem"}
               </p>
             ) : null}
+            <p
+              style={{
+                marginTop: "10px",
+                marginBottom: 0,
+                fontSize: "13px",
+                fontWeight: 700,
+                color:
+                  statsMtrSemTicket && statsMtrSemTicket.ticketsPendentes > 0
+                    ? "#b45309"
+                    : "#0f172a",
+                maxWidth: "720px",
+                lineHeight: 1.45,
+              }}
+            >
+              Mês vigente ({statsMtrSemTicket?.rotuloMesVigente ?? "…"}):{" "}
+              <strong>
+                {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsPendentes : "—"}
+              </strong>{" "}
+              ticket(s) a gerar
+              {statsMtrSemTicket != null && statsMtrSemTicket.mtrsComPendencia > 0
+                ? ` · ${statsMtrSemTicket.mtrsComPendencia} MTR(s) com pendência`
+                : ""}
+              {statsMtrSemTicket != null ? (
+                <span style={{ fontWeight: 600, color: "#64748b" }}>
+                  {" "}
+                  (coletas com MTR emitida, sem ticket operacional)
+                </span>
+              ) : null}
+            </p>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>

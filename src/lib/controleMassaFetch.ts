@@ -3,6 +3,7 @@ import {
   COLETAS_SELECT_CONTROLE_LISTA,
   COLETAS_SELECT_SEGUIMENTO,
 } from './coletasSelectSeguimento'
+import { intervaloMesVigenteProgramacoesMtr } from './mtrProgramacoesFetch'
 
 /** Alinhado à janela de `queryColetasListaFluxoControle` (120 dias). */
 export const CONTROLE_MASSA_JANELA_DIAS_PADRAO = 120
@@ -257,6 +258,173 @@ export async function fetchTicketOperacionalPorColetaIds(
     }
   }
   return { tipoPorColeta, numeroPorColeta }
+}
+
+const MTR_STATUS_EMITIDA = ['Emitido', 'Baixada'] as const
+const COLETAS_MES_PAGE = 1000
+const COLETAS_MES_MAX_PAGES = 12
+
+type ColetaMtrMesRow = {
+  id: string
+  mtr_id: string
+}
+
+export type ContagemMtrSemTicketMesVigente = {
+  ticketsPendentes: number
+  mtrsComPendencia: number
+  rotuloMesVigente: string
+  error: Error | null
+}
+
+async function fetchColetasComMtrNoMes(
+  supabase: SupabaseClient,
+  inicio: string,
+  fimExclusivo: string
+): Promise<{ rows: ColetaMtrMesRow[]; error: Error | null }> {
+  const porId = new Map<string, ColetaMtrMesRow>()
+
+  const carregarPagina = async (
+    runQuery: (
+      from: number,
+      to: number
+    ) => Promise<{ data: unknown; error: { message: string } | null }>
+  ) => {
+    for (let page = 0; page < COLETAS_MES_MAX_PAGES; page++) {
+      const from = page * COLETAS_MES_PAGE
+      const to = from + COLETAS_MES_PAGE - 1
+      const { data, error } = await runQuery(from, to)
+      if (error) return { error: new Error(error.message) }
+      const chunk = (data ?? []) as Array<{
+        id?: string
+        mtr_id?: string | null
+      }>
+      for (const row of chunk) {
+        const id = String(row.id ?? '').trim()
+        const mtr_id = String(row.mtr_id ?? '').trim()
+        if (!id || !mtr_id) continue
+        porId.set(id, { id, mtr_id })
+      }
+      if (chunk.length < COLETAS_MES_PAGE) break
+      if (page === COLETAS_MES_MAX_PAGES - 1) {
+        console.warn('[controleMassaFetch] Limite de páginas ao listar coletas com MTR no mês.')
+      }
+    }
+    return { error: null }
+  }
+
+  let err = (
+    await carregarPagina(async (from, to) =>
+      supabase
+        .from('coletas')
+        .select('id, mtr_id')
+        .not('mtr_id', 'is', null)
+        .gte('data_execucao', inicio)
+        .lt('data_execucao', fimExclusivo)
+        .order('data_execucao', { ascending: false })
+        .range(from, to)
+    )
+  ).error
+  if (err) return { rows: [], error: err }
+
+  err = (
+    await carregarPagina(async (from, to) =>
+      supabase
+        .from('coletas')
+        .select('id, mtr_id')
+        .not('mtr_id', 'is', null)
+        .is('data_execucao', null)
+        .gte('data_agendada', inicio)
+        .lt('data_agendada', fimExclusivo)
+        .order('data_agendada', { ascending: false })
+        .range(from, to)
+    )
+  ).error
+  if (err) return { rows: [], error: err }
+
+  return { rows: [...porId.values()], error: null }
+}
+
+/** Coletas com MTR emitida no mês vigente que ainda não têm ticket operacional. */
+export async function contarMtrSemTicketMesVigente(
+  supabase: SupabaseClient
+): Promise<ContagemMtrSemTicketMesVigente> {
+  const { inicio, fimExclusivo, rotulo } = intervaloMesVigenteProgramacoesMtr()
+  const { rows: coletas, error: errColetas } = await fetchColetasComMtrNoMes(
+    supabase,
+    inicio,
+    fimExclusivo
+  )
+  if (errColetas) {
+    return {
+      ticketsPendentes: 0,
+      mtrsComPendencia: 0,
+      rotuloMesVigente: rotulo,
+      error: errColetas,
+    }
+  }
+  if (coletas.length === 0) {
+    return { ticketsPendentes: 0, mtrsComPendencia: 0, rotuloMesVigente: rotulo, error: null }
+  }
+
+  const mtrIds = [...new Set(coletas.map((c) => c.mtr_id))]
+  const mtrEmitida = new Set<string>()
+  for (let i = 0; i < mtrIds.length; i += CHUNK_COLETAS) {
+    const chunk = mtrIds.slice(i, i + CHUNK_COLETAS)
+    const { data, error } = await supabase
+      .from('mtrs')
+      .select('id')
+      .in('id', chunk)
+      .in('status', [...MTR_STATUS_EMITIDA])
+    if (error) {
+      return {
+        ticketsPendentes: 0,
+        mtrsComPendencia: 0,
+        rotuloMesVigente: rotulo,
+        error: new Error(error.message),
+      }
+    }
+    for (const row of data ?? []) {
+      const id = String((row as { id?: string }).id ?? '').trim()
+      if (id) mtrEmitida.add(id)
+    }
+  }
+
+  const coletasMtrEmitida = coletas.filter((c) => mtrEmitida.has(c.mtr_id))
+  if (coletasMtrEmitida.length === 0) {
+    return { ticketsPendentes: 0, mtrsComPendencia: 0, rotuloMesVigente: rotulo, error: null }
+  }
+
+  const coletaIds = coletasMtrEmitida.map((c) => c.id)
+  const comTicket = new Set<string>()
+  for (let i = 0; i < coletaIds.length; i += CHUNK_TICKETS) {
+    const chunk = coletaIds.slice(i, i + CHUNK_TICKETS)
+    const { data, error } = await supabase
+      .from('tickets_operacionais')
+      .select('coleta_id')
+      .in('coleta_id', chunk)
+    if (error) {
+      return {
+        ticketsPendentes: 0,
+        mtrsComPendencia: 0,
+        rotuloMesVigente: rotulo,
+        error: new Error(error.message),
+      }
+    }
+    for (const row of data ?? []) {
+      const cid = String((row as { coleta_id?: string }).coleta_id ?? '').trim()
+      if (cid) comTicket.add(cid)
+    }
+  }
+
+  const semTicket = coletasMtrEmitida.filter((c) => !comTicket.has(c.id))
+  const mtrsComPendencia = new Set(semTicket.map((c) => c.mtr_id)).size
+
+  return {
+    ticketsPendentes: semTicket.length,
+    mtrsComPendencia,
+    rotuloMesVigente: rotulo,
+    error: null,
+  }
 }
 
 export async function fetchTipoCaminhaoPorProgramacaoIds(
