@@ -488,6 +488,7 @@ export default function ControleMassa() {
   const [mtrsLista, setMtrsLista] = useState<MtrResumo[]>([]);
   const [loadingVinculo, setLoadingVinculo] = useState(true);
   const [statsMtrSemTicket, setStatsMtrSemTicket] = useState<{
+    ticketsSemMtr: number
     ticketsPendentes: number
     mtrsComPendencia: number
     rotuloMesVigente: string
@@ -669,12 +670,12 @@ export default function ControleMassa() {
   const atualizarStatsMtrSemTicket = useCallback(async () => {
     const res = await contarMtrSemTicketMesVigente(supabase)
     if (res.error) {
-      console.warn('[ControleMassa] contagem MTR sem ticket:', res.error.message)
-      return
+      console.warn('[ControleMassa] indicadores mês vigente:', res.error.message)
     }
     setStatsMtrSemTicket({
-      ticketsPendentes: res.ticketsPendentes,
-      mtrsComPendencia: res.mtrsComPendencia,
+      ticketsSemMtr: res.error ? 0 : res.ticketsSemMtr,
+      ticketsPendentes: res.error ? 0 : res.ticketsPendentes,
+      mtrsComPendencia: res.error ? 0 : res.mtrsComPendencia,
       rotuloMesVigente: res.rotuloMesVigente,
     })
   }, [])
@@ -1666,35 +1667,59 @@ export default function ControleMassa() {
                 {!podeMutarMassa ? " · somente consulta" : " · pode lançar pesagem"}
               </p>
             ) : null}
-            <p
+            <div
               style={{
                 marginTop: "10px",
                 marginBottom: 0,
                 fontSize: "13px",
                 fontWeight: 700,
-                color:
-                  statsMtrSemTicket && statsMtrSemTicket.ticketsPendentes > 0
-                    ? "#b45309"
-                    : "#0f172a",
                 maxWidth: "720px",
-                lineHeight: 1.45,
+                lineHeight: 1.5,
               }}
             >
-              Mês vigente ({statsMtrSemTicket?.rotuloMesVigente ?? "…"}):{" "}
-              <strong>
-                {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsPendentes : "—"}
-              </strong>{" "}
-              ticket(s) a gerar
-              {statsMtrSemTicket != null && statsMtrSemTicket.mtrsComPendencia > 0
-                ? ` · ${statsMtrSemTicket.mtrsComPendencia} MTR(s) com pendência`
-                : ""}
-              {statsMtrSemTicket != null ? (
+              <p style={{ margin: 0, color: "#0f172a" }}>
+                Mês vigente ({statsMtrSemTicket?.rotuloMesVigente ?? "…"})
+              </p>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color:
+                    statsMtrSemTicket && statsMtrSemTicket.ticketsSemMtr > 0
+                      ? "#b45309"
+                      : "#0f172a",
+                }}
+              >
+                <strong>
+                  {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsSemMtr : "…"}
+                </strong>{" "}
+                coleta(s) sem MTR vinculada
                 <span style={{ fontWeight: 600, color: "#64748b" }}>
                   {" "}
-                  (coletas com MTR emitida, sem ticket operacional)
+                  (tickets a lançar na esteira MTR)
                 </span>
-              ) : null}
-            </p>
+              </p>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  color:
+                    statsMtrSemTicket && statsMtrSemTicket.ticketsPendentes > 0
+                      ? "#b45309"
+                      : "#0f172a",
+                }}
+              >
+                <strong>
+                  {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsPendentes : "…"}
+                </strong>{" "}
+                ticket(s) a gerar
+                {statsMtrSemTicket != null && statsMtrSemTicket.mtrsComPendencia > 0
+                  ? ` · ${statsMtrSemTicket.mtrsComPendencia} MTR(s) com pendência`
+                  : ""}
+                <span style={{ fontWeight: 600, color: "#64748b" }}>
+                  {" "}
+                  (MTR emitida, falta ticket operacional)
+                </span>
+              </p>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>

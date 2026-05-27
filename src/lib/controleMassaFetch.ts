@@ -269,18 +269,24 @@ type ColetaMtrMesRow = {
   mtr_id: string
 }
 
+const FLUXO_COLETA_ENCERRADO = '("FINALIZADO","CANCELADA","FATURADO_CONCLUIDO")'
+
 export type ContagemMtrSemTicketMesVigente = {
+  /** Coletas do mês sem `mtr_id` — precisam de MTR antes de pesagem/ticket. */
+  ticketsSemMtr: number
+  /** Coletas com MTR emitida no mês, ainda sem ticket operacional. */
   ticketsPendentes: number
   mtrsComPendencia: number
   rotuloMesVigente: string
   error: Error | null
 }
 
-async function fetchColetasComMtrNoMes(
+async function fetchColetasIdsMesVigente(
   supabase: SupabaseClient,
   inicio: string,
-  fimExclusivo: string
-): Promise<{ rows: ColetaMtrMesRow[]; error: Error | null }> {
+  fimExclusivo: string,
+  modo: 'com_mtr' | 'sem_mtr'
+): Promise<{ ids: string[]; rowsComMtr: ColetaMtrMesRow[]; error: Error | null }> {
   const porId = new Map<string, ColetaMtrMesRow>()
 
   const carregarPagina = async (
@@ -300,70 +306,104 @@ async function fetchColetasComMtrNoMes(
       }>
       for (const row of chunk) {
         const id = String(row.id ?? '').trim()
+        if (!id) continue
         const mtr_id = String(row.mtr_id ?? '').trim()
-        if (!id || !mtr_id) continue
-        porId.set(id, { id, mtr_id })
+        if (modo === 'com_mtr') {
+          if (!mtr_id) continue
+          porId.set(id, { id, mtr_id })
+        } else {
+          if (mtr_id) continue
+          porId.set(id, { id, mtr_id: '' })
+        }
       }
       if (chunk.length < COLETAS_MES_PAGE) break
       if (page === COLETAS_MES_MAX_PAGES - 1) {
-        console.warn('[controleMassaFetch] Limite de páginas ao listar coletas com MTR no mês.')
+        console.warn('[controleMassaFetch] Limite de páginas ao listar coletas do mês vigente.')
       }
     }
     return { error: null }
   }
 
+  const aplicarFiltroAtivo = (q: ReturnType<SupabaseClient['from']>) =>
+    modo === 'sem_mtr'
+      ? q.is('mtr_id', null).not('fluxo_status', 'in', FLUXO_COLETA_ENCERRADO)
+      : q.not('mtr_id', 'is', null)
+
   let err = (
     await carregarPagina(async (from, to) =>
-      supabase
-        .from('coletas')
-        .select('id, mtr_id')
-        .not('mtr_id', 'is', null)
-        .gte('data_execucao', inicio)
-        .lt('data_execucao', fimExclusivo)
+      aplicarFiltroAtivo(
+        supabase
+          .from('coletas')
+          .select('id, mtr_id')
+          .gte('data_execucao', inicio)
+          .lt('data_execucao', fimExclusivo)
+      )
         .order('data_execucao', { ascending: false })
         .range(from, to)
     )
   ).error
-  if (err) return { rows: [], error: err }
+  if (err) return { ids: [], rowsComMtr: [], error: err }
 
   err = (
     await carregarPagina(async (from, to) =>
-      supabase
-        .from('coletas')
-        .select('id, mtr_id')
-        .not('mtr_id', 'is', null)
-        .is('data_execucao', null)
-        .gte('data_agendada', inicio)
-        .lt('data_agendada', fimExclusivo)
+      aplicarFiltroAtivo(
+        supabase
+          .from('coletas')
+          .select('id, mtr_id')
+          .is('data_execucao', null)
+          .gte('data_agendada', inicio)
+          .lt('data_agendada', fimExclusivo)
+      )
         .order('data_agendada', { ascending: false })
         .range(from, to)
     )
   ).error
-  if (err) return { rows: [], error: err }
+  if (err) return { ids: [], rowsComMtr: [], error: err }
 
-  return { rows: [...porId.values()], error: null }
+  const rowsComMtr = [...porId.values()].filter((r) => r.mtr_id)
+  return { ids: [...porId.keys()], rowsComMtr, error: null }
 }
 
-/** Coletas com MTR emitida no mês vigente que ainda não têm ticket operacional. */
+/** Indicadores do mês vigente para a esteira pesagem → MTR → ticket. */
 export async function contarMtrSemTicketMesVigente(
   supabase: SupabaseClient
 ): Promise<ContagemMtrSemTicketMesVigente> {
   const { inicio, fimExclusivo, rotulo } = intervaloMesVigenteProgramacoesMtr()
-  const { rows: coletas, error: errColetas } = await fetchColetasComMtrNoMes(
-    supabase,
-    inicio,
-    fimExclusivo
-  )
-  if (errColetas) {
+
+  const [semMtrRes, comMtrRes] = await Promise.all([
+    fetchColetasIdsMesVigente(supabase, inicio, fimExclusivo, 'sem_mtr'),
+    fetchColetasIdsMesVigente(supabase, inicio, fimExclusivo, 'com_mtr'),
+  ])
+
+  if (semMtrRes.error) {
     return {
+      ticketsSemMtr: 0,
       ticketsPendentes: 0,
       mtrsComPendencia: 0,
       rotuloMesVigente: rotulo,
-      error: errColetas,
+      error: semMtrRes.error,
     }
   }
+  if (comMtrRes.error) {
+    return {
+      ticketsSemMtr: semMtrRes.ids.length,
+      ticketsPendentes: 0,
+      mtrsComPendencia: 0,
+      rotuloMesVigente: rotulo,
+      error: comMtrRes.error,
+    }
+  }
+
+  const ticketsSemMtr = semMtrRes.ids.length
+  const coletas = comMtrRes.rowsComMtr
   if (coletas.length === 0) {
-    return { ticketsPendentes: 0, mtrsComPendencia: 0, rotuloMesVigente: rotulo, error: null }
+    return {
+      ticketsSemMtr,
+      ticketsPendentes: 0,
+      mtrsComPendencia: 0,
+      rotuloMesVigente: rotulo,
+      error: null,
+    }
   }
 
   const mtrIds = [...new Set(coletas.map((c) => c.mtr_id))]
@@ -377,6 +417,7 @@ export async function contarMtrSemTicketMesVigente(
       .in('status', [...MTR_STATUS_EMITIDA])
     if (error) {
       return {
+        ticketsSemMtr,
         ticketsPendentes: 0,
         mtrsComPendencia: 0,
         rotuloMesVigente: rotulo,
@@ -391,7 +432,13 @@ export async function contarMtrSemTicketMesVigente(
 
   const coletasMtrEmitida = coletas.filter((c) => mtrEmitida.has(c.mtr_id))
   if (coletasMtrEmitida.length === 0) {
-    return { ticketsPendentes: 0, mtrsComPendencia: 0, rotuloMesVigente: rotulo, error: null }
+    return {
+      ticketsSemMtr,
+      ticketsPendentes: 0,
+      mtrsComPendencia: 0,
+      rotuloMesVigente: rotulo,
+      error: null,
+    }
   }
 
   const coletaIds = coletasMtrEmitida.map((c) => c.id)
@@ -404,6 +451,7 @@ export async function contarMtrSemTicketMesVigente(
       .in('coleta_id', chunk)
     if (error) {
       return {
+        ticketsSemMtr,
         ticketsPendentes: 0,
         mtrsComPendencia: 0,
         rotuloMesVigente: rotulo,
@@ -420,6 +468,7 @@ export async function contarMtrSemTicketMesVigente(
   const mtrsComPendencia = new Set(semTicket.map((c) => c.mtr_id)).size
 
   return {
+    ticketsSemMtr,
     ticketsPendentes: semTicket.length,
     mtrsComPendencia,
     rotuloMesVigente: rotulo,
