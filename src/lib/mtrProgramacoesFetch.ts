@@ -171,6 +171,56 @@ export async function fetchProgramacoesMtrCatalogo(
 
 const MTR_STATUS_EMITIDA = ['Emitido', 'Baixada'] as const
 
+export type MtrEmitidaPorProgramacao = {
+  mtrId: string
+  numero: string
+}
+
+/** MTRs Emitido/Baixada indexadas por `programacao_id` (consulta global, não depende da lista paginada). */
+export async function fetchMtrsEmitidasPorProgramacaoIds(
+  supabase: SupabaseClient,
+  programacaoIds: string[]
+): Promise<{ byProgramacaoId: Map<string, MtrEmitidaPorProgramacao>; error: Error | null }> {
+  const uniq = [...new Set(programacaoIds.map((id) => id.trim()).filter(Boolean))]
+  const byProgramacaoId = new Map<string, MtrEmitidaPorProgramacao>()
+  if (uniq.length === 0) return { byProgramacaoId, error: null }
+
+  for (let i = 0; i < uniq.length; i += CHUNK_IDS) {
+    const chunk = uniq.slice(i, i + CHUNK_IDS)
+    const { data, error } = await supabase
+      .from('mtrs')
+      .select('id, numero, programacao_id')
+      .in('programacao_id', chunk)
+      .in('status', [...MTR_STATUS_EMITIDA])
+    if (error) return { byProgramacaoId, error: new Error(error.message) }
+    for (const row of data ?? []) {
+      const pid = String((row as { programacao_id?: string | null }).programacao_id ?? '').trim()
+      const mtrId = String((row as { id?: string }).id ?? '').trim()
+      if (!pid || !mtrId || byProgramacaoId.has(pid)) continue
+      byProgramacaoId.set(pid, {
+        mtrId,
+        numero: String((row as { numero?: string | null }).numero ?? '').trim(),
+      })
+    }
+  }
+
+  return { byProgramacaoId, error: null }
+}
+
+/** Programações elegíveis no calendário «Nova MTR» (sem MTR emitida, exceto a em edição). */
+export function filtrarProgramacoesCalendarioNovaMtr<T extends { id: string }>(
+  programacoes: T[],
+  mtrsEmitidasPorProgramacao: Map<string, MtrEmitidaPorProgramacao>,
+  editingId: string | null
+): T[] {
+  return programacoes.filter((programacao) => {
+    const emitida = mtrsEmitidasPorProgramacao.get(programacao.id)
+    if (!emitida) return true
+    if (editingId && emitida.mtrId === editingId) return true
+    return false
+  })
+}
+
 export type ContagemProgramacoesSemMtrEmitida = {
   totalProgramacoes: number
   semMtrEmitida: number
@@ -191,25 +241,16 @@ export async function contarProgramacoesSemMtrEmitida(
     return { totalProgramacoes: 0, semMtrEmitida: 0, rotuloMesVigente: rotuloMes, error: null }
   }
 
-  const comMtrEmitida = new Set<string>()
-  for (let i = 0; i < ids.length; i += CHUNK_IDS) {
-    const chunk = ids.slice(i, i + CHUNK_IDS)
-    const { data, error } = await supabase
-      .from('mtrs')
-      .select('programacao_id')
-      .in('programacao_id', chunk)
-      .in('status', [...MTR_STATUS_EMITIDA])
-    if (error) {
-      return {
-        totalProgramacoes: progs.length,
-        semMtrEmitida: 0,
-        rotuloMesVigente: rotuloMes,
-        error: new Error(error.message),
-      }
-    }
-    for (const row of data ?? []) {
-      const pid = String((row as { programacao_id?: string | null }).programacao_id ?? '').trim()
-      if (pid) comMtrEmitida.add(pid)
+  const { byProgramacaoId: comMtrEmitida, error } = await fetchMtrsEmitidasPorProgramacaoIds(
+    supabase,
+    ids
+  )
+  if (error) {
+    return {
+      totalProgramacoes: progs.length,
+      semMtrEmitida: 0,
+      rotuloMesVigente: rotuloMes,
+      error,
     }
   }
 

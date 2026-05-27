@@ -43,8 +43,11 @@ import {
   contarProgramacoesSemMtrEmitida,
   fetchProgramacoesMtrCatalogo,
   fetchProgramacoesMtrPorIds,
+  fetchMtrsEmitidasPorProgramacaoIds,
+  filtrarProgramacoesCalendarioNovaMtr,
   mergeProgramacoesMtrPorId,
   mtrProgramacoesMesesJanela,
+  type MtrEmitidaPorProgramacao,
 } from '../lib/mtrProgramacoesFetch'
 import {
   atividadeGeradorDesdeClienteProgramacao,
@@ -467,6 +470,10 @@ export default function MTR() {
   const [programacoesCatalogo, setProgramacoesCatalogo] = useState<Programacao[]>([])
   const [catalogoProgramacoesCarregado, setCatalogoProgramacoesCarregado] = useState(false)
   const [carregandoCatalogoProgramacoes, setCarregandoCatalogoProgramacoes] = useState(false)
+  const [mtrsEmitidasPorProgramacao, setMtrsEmitidasPorProgramacao] = useState<
+    Map<string, MtrEmitidaPorProgramacao>
+  >(() => new Map())
+  const mtrsEmitidasLoadGenRef = useRef(0)
   const programacoes = useMemo(
     () => mergeProgramacoesMtrPorId(programacoesVinculadas, programacoesCatalogo) as Programacao[],
     [programacoesVinculadas, programacoesCatalogo]
@@ -554,6 +561,17 @@ export default function MTR() {
     setProgramacoesCatalogo(data as Programacao[])
     setCatalogoProgramacoesCarregado(true)
   }, [catalogoProgramacoesCarregado])
+
+  const atualizarMtrsEmitidasPorProgramacao = useCallback(async (ids: string[]) => {
+    const gen = ++mtrsEmitidasLoadGenRef.current
+    const { byProgramacaoId, error } = await fetchMtrsEmitidasPorProgramacaoIds(supabase, ids)
+    if (gen !== mtrsEmitidasLoadGenRef.current) return
+    if (error) {
+      console.warn('[MTR] MTRs emitidas por programação:', error.message)
+      return
+    }
+    setMtrsEmitidasPorProgramacao(byProgramacaoId)
+  }, [])
 
   function resetForm() {
     setForm({
@@ -866,14 +884,10 @@ export default function MTR() {
     selectedMTR?.id,
   ])
 
-  const eligibleProgramacoes = useMemo(() => {
-    return programacoes.filter((programacao) => {
-      const existingMTR = mtrMapByProgramacaoId.get(programacao.id)
-      if (!existingMTR) return true
-      if (editingId && existingMTR.id === editingId) return true
-      return false
-    })
-  }, [programacoes, mtrMapByProgramacaoId, editingId])
+  const eligibleProgramacoes = useMemo(
+    () => filtrarProgramacoesCalendarioNovaMtr(programacoes, mtrsEmitidasPorProgramacao, editingId),
+    [programacoes, mtrsEmitidasPorProgramacao, editingId]
+  )
 
   useEffect(() => {
     if (!showForm) return
@@ -881,6 +895,15 @@ export default function MTR() {
       void ensureCatalogoProgramacoes()
     })
   }, [showForm, ensureCatalogoProgramacoes])
+
+  useEffect(() => {
+    const ids = programacoes.map((p) => p.id).filter(Boolean)
+    if (ids.length === 0) {
+      setMtrsEmitidasPorProgramacao(new Map())
+      return
+    }
+    void atualizarMtrsEmitidasPorProgramacao(ids)
+  }, [programacoes, atualizarMtrsEmitidasPorProgramacao])
 
   async function openNewForm() {
     if (!podeMutarMtr) {
@@ -1096,15 +1119,15 @@ export default function MTR() {
     })
   }
 
-  function getDuplicateMTRForSelectedProgramacao() {
+  function getDuplicateMTRForSelectedProgramacao(): Pick<MTR, 'id' | 'numero'> | null {
     if (!form.programacao_id) return null
 
-    const linkedMTR = mtrMapByProgramacaoId.get(form.programacao_id)
-    if (!linkedMTR) return null
+    const emitida = mtrsEmitidasPorProgramacao.get(form.programacao_id)
+    if (!emitida) return null
 
-    if (editingId && linkedMTR.id === editingId) return null
+    if (editingId && emitida.mtrId === editingId) return null
 
-    return linkedMTR
+    return { id: emitida.mtrId, numero: emitida.numero }
   }
 
   async function updateProgramacaoStatusAfterMTR(programacaoId: string) {
@@ -1360,6 +1383,7 @@ export default function MTR() {
     setShowForm(false)
     resetForm()
     await loadData(paramsListaMtrAtual())
+    void atualizarMtrsEmitidasPorProgramacao(programacoes.map((p) => p.id))
   }
 
   async function handleDelete(item: MTR) {
@@ -1414,6 +1438,7 @@ export default function MTR() {
       variant: 'success',
     })
     await loadData(paramsListaMtrAtual())
+    void atualizarMtrsEmitidasPorProgramacao(programacoes.map((p) => p.id))
   }
 
   async function handleDeleteColetasDaMtr(
