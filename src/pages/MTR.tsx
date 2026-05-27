@@ -98,6 +98,7 @@ import {
 } from '../lib/excluirOperacionalCascata'
 import {
   coletarProgramacaoIdsVinculadasMtr,
+  contarProgramacoesSemMtrEmitida,
   fetchProgramacoesMtrCatalogo,
   fetchProgramacoesMtrPorIds,
   mergeProgramacoesMtrPorId,
@@ -752,6 +753,24 @@ export default function MTR() {
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
   const catalogoProgLoadGenRef = useRef(0)
+  const [statsProgramacaoSemMtr, setStatsProgramacaoSemMtr] = useState<{
+    semEmitida: number
+    total: number
+    mesesJanela: number
+  } | null>(null)
+
+  const atualizarStatsProgramacoes = useCallback(async () => {
+    const res = await contarProgramacoesSemMtrEmitida(supabase)
+    if (res.error) {
+      console.warn('[MTR] contagem programações sem MTR emitida:', res.error.message)
+      return
+    }
+    setStatsProgramacaoSemMtr({
+      semEmitida: res.semMtrEmitida,
+      total: res.totalProgramacoes,
+      mesesJanela: res.mesesJanela,
+    })
+  }, [])
 
   const carregarProgramacoesVinculadas = useCallback(
     async (
@@ -950,6 +969,7 @@ export default function MTR() {
     if (gen === loadDataGenRef.current) {
       if (append) setCarregandoMaisLista(false)
       else if (!silent) setLoading(false)
+      void atualizarStatsProgramacoes()
     }
   }
 
@@ -2339,9 +2359,13 @@ export default function MTR() {
 
         .mtr-stats {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 16px;
           margin-bottom: 22px;
+        }
+
+        .stat-card--alerta .stat-value {
+          color: #b45309;
         }
 
         .stat-card {
@@ -3823,7 +3847,21 @@ ${MTR_LISTA_CARD_UI_CSS}
           <div className="stat-card">
             <div className="stat-label">Vinculadas à programação</div>
             <div className="stat-value">{totalVinculadas}</div>
-            <div className="stat-help">Com programação vinculada.</div>
+            <div className="stat-help">Com programação vinculada (lista atual).</div>
+          </div>
+
+          <div
+            className={`stat-card${statsProgramacaoSemMtr && statsProgramacaoSemMtr.semEmitida > 0 ? ' stat-card--alerta' : ''}`}
+          >
+            <div className="stat-label">Programações sem MTR emitida</div>
+            <div className="stat-value">
+              {statsProgramacaoSemMtr != null ? statsProgramacaoSemMtr.semEmitida : '—'}
+            </div>
+            <div className="stat-help">
+              {statsProgramacaoSemMtr != null
+                ? `De ${statsProgramacaoSemMtr.total} programações nos últimos ${statsProgramacaoSemMtr.mesesJanela} meses (não canceladas).`
+                : 'A calcular…'}
+            </div>
           </div>
         </div>
 

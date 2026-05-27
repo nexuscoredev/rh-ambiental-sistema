@@ -119,6 +119,60 @@ export async function fetchProgramacoesMtrCatalogo(
   return { data: acc, error: null }
 }
 
+const MTR_STATUS_EMITIDA = ['Emitido', 'Baixada'] as const
+
+export type ContagemProgramacoesSemMtrEmitida = {
+  totalProgramacoes: number
+  semMtrEmitida: number
+  mesesJanela: number
+  error: Error | null
+}
+
+/** Programações do catálogo (janela MTR) sem MTR com status Emitido ou Baixada. */
+export async function contarProgramacoesSemMtrEmitida(
+  supabase: SupabaseClient
+): Promise<ContagemProgramacoesSemMtrEmitida> {
+  const mesesJanela = mtrProgramacoesMesesJanela()
+  const { data: progs, error: errProg } = await fetchProgramacoesMtrCatalogo(supabase)
+  if (errProg) {
+    return { totalProgramacoes: 0, semMtrEmitida: 0, mesesJanela, error: errProg }
+  }
+  const ids = progs.map((p) => p.id).filter(Boolean)
+  if (ids.length === 0) {
+    return { totalProgramacoes: 0, semMtrEmitida: 0, mesesJanela, error: null }
+  }
+
+  const comMtrEmitida = new Set<string>()
+  for (let i = 0; i < ids.length; i += CHUNK_IDS) {
+    const chunk = ids.slice(i, i + CHUNK_IDS)
+    const { data, error } = await supabase
+      .from('mtrs')
+      .select('programacao_id')
+      .in('programacao_id', chunk)
+      .in('status', [...MTR_STATUS_EMITIDA])
+    if (error) {
+      return {
+        totalProgramacoes: progs.length,
+        semMtrEmitida: 0,
+        mesesJanela,
+        error: new Error(error.message),
+      }
+    }
+    for (const row of data ?? []) {
+      const pid = String((row as { programacao_id?: string | null }).programacao_id ?? '').trim()
+      if (pid) comMtrEmitida.add(pid)
+    }
+  }
+
+  const semMtrEmitida = progs.filter((p) => !comMtrEmitida.has(p.id)).length
+  return {
+    totalProgramacoes: progs.length,
+    semMtrEmitida,
+    mesesJanela,
+    error: null,
+  }
+}
+
 /** IDs de programação referenciadas por MTRs / coletas já carregadas + URL. */
 export function coletarProgramacaoIdsVinculadasMtr(
   mtrs: { programacao_id?: string | null }[],
