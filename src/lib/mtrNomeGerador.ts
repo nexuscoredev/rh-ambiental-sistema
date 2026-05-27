@@ -29,6 +29,16 @@ function normTexto(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+/** Tipo de serviço da programação (ex.: COLETA, RSS) — não é «Atividade» do gerador no MTR. */
+export function textoPareceTipoServicoProgramacaoLegado(texto: string): boolean {
+  const t = texto.trim()
+  if (!t) return false
+  if (textoPareceClassificacaoResiduoLegado(t)) return true
+  const norm = t.toLowerCase().replace(/\s+/g, ' ')
+  if (/^coleta(\s+fixa)?$/.test(norm)) return true
+  if (/^(rss|transporte|destinação|destinacao|coleta rss)$/.test(norm)) return true
+  return false
+}
 /** Texto legado de classificação de resíduo (ex.: «Classe II | Classe II») — não é atividade do gerador. */
 export function textoPareceClassificacaoResiduoLegado(texto: string): boolean {
   const t = texto.trim()

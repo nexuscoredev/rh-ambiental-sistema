@@ -4561,6 +4561,16 @@ ${MTR_LISTA_CARD_UI_CSS}
                           <div className="field field-full">
                             <div style={{ fontWeight: 800 }}>1. Gerador</div>
                           </div>
+                          <div className="field field-full">
+                            <label>Razão Social</label>
+                            <input
+                              value={form.gerador}
+                              onChange={(e) =>
+                                setForm((prev) => ({ ...prev, gerador: e.target.value }))
+                              }
+                              placeholder="Razão social do gerador (cadastro do cliente)"
+                            />
+                          </div>
                           <div className="field">
                             <label>Atividade</label>
                             <input

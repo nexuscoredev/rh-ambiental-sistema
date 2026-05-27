@@ -10,26 +10,27 @@ import {
 } from './mtrCadastroClienteAutofill'
 
 describe('mtrCadastroClienteAutofill', () => {
-  it('resolve atividade do gerador sem usar classificação de resíduo', () => {
+  it('resolve atividade do gerador sem usar tipo de serviço da programação', () => {
     expect(
       atividadeGeradorDesdeClienteProgramacao(
         { observacoes_operacionais: 'Hospitalar' },
         { tipo_servico: 'RSS' }
       )
-    ).toBe('RSS')
+    ).toBe('Hospitalar')
     expect(
       atividadeGeradorDesdeClienteProgramacao({}, { tipo_servico: 'Coleta fixa' })
-    ).toBe('Coleta fixa')
+    ).toBe('')
     expect(
       atividadeGeradorDesdeClienteProgramacao(
         { observacoes_operacionais: '  Cadastro  ' },
-        { tipo_servico: '' }
+        { tipo_servico: 'COLETA' }
       )
     ).toBe('Cadastro')
   })
 
-  it('resolverAtividadeGeradorMtr ignora atividade salva com classe de resíduo', () => {
+  it('resolverAtividadeGeradorMtr ignora atividade salva com classe de resíduo ou COLETA', () => {
     expect(resolverAtividadeGeradorMtr('Classe II | Classe II', 'Coleta RSS')).toBe('Coleta RSS')
+    expect(resolverAtividadeGeradorMtr('COLETA', 'Industrial')).toBe('Industrial')
     expect(resolverAtividadeGeradorMtr('Laboratório', 'RSS')).toBe('Laboratório')
   })
 

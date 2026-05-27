@@ -3,6 +3,7 @@ import { formClienteFromJson } from './clienteCadastroForm'
 import {
   nomeGeradorParaMtr,
   textoPareceClassificacaoResiduoLegado,
+  textoPareceTipoServicoProgramacaoLegado,
   type ClienteNomeAutofill,
 } from './mtrNomeGerador'
 import { MTR_PROGRAMACAO_SELECT, type ProgramacaoMtrRow } from './mtrProgramacoesFetch'
@@ -287,31 +288,38 @@ export type GeradorCidadePatch = {
   cep?: string
 }
 
-/** Campo «Atividade» (secção 1. Gerador) — não usar classificação/tipo de resíduo do contrato. */
+/** Campo «Atividade» (secção 1. Gerador) — observações do cadastro; não usar tipo de serviço da programação. */
 export function atividadeGeradorDesdeClienteProgramacao(
   row: {
     observacoes_operacionais?: string | null
     observacoes_gerais?: string | null
   },
-  programacao: { tipo_servico?: string | null }
+  _programacao: { tipo_servico?: string | null }
 ): string {
   const obs = (s: string | null | undefined, max = 120) => (s ?? '').trim().slice(0, max)
-  const candidatos = [
-    (programacao.tipo_servico ?? '').trim(),
-    obs(row.observacoes_operacionais),
-    obs(row.observacoes_gerais),
-  ].filter(Boolean)
+  const candidatos = [obs(row.observacoes_operacionais), obs(row.observacoes_gerais)].filter(Boolean)
   for (const c of candidatos) {
-    if (!textoPareceClassificacaoResiduoLegado(c)) return c
+    if (
+      !textoPareceClassificacaoResiduoLegado(c) &&
+      !textoPareceTipoServicoProgramacaoLegado(c)
+    ) {
+      return c
+    }
   }
   return ''
 }
 
-/** Mantém atividade já digitada; substitui valor legado que veio de classificação de resíduo. */
+/** Mantém atividade já digitada; substitui valor legado (classe de resíduo ou tipo de serviço). */
 export function resolverAtividadeGeradorMtr(atividadeSalva: string, atividadeSugerida: string): string {
   const salva = atividadeSalva.trim()
   const sugerida = atividadeSugerida.trim()
-  if (salva && !textoPareceClassificacaoResiduoLegado(salva)) return salva
+  if (
+    salva &&
+    !textoPareceClassificacaoResiduoLegado(salva) &&
+    !textoPareceTipoServicoProgramacaoLegado(salva)
+  ) {
+    return salva
+  }
   return sugerida
 }
 
