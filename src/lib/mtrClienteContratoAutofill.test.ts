@@ -74,6 +74,39 @@ describe('mtrClienteContratoAutofill', () => {
     expect(expandida[1]?.texto).toContain('Óleo')
   })
 
+  it('expandirListaResiduosMtrParaContrato preserva linhas gravadas na edição', () => {
+    const contrato = parseContratoClienteMtr({
+      residuos_contrato: [
+        { tipo_residuo: 'Solventes', classificacao: 'Classe I', unidade_medida: 'kg' },
+        { tipo_residuo: 'Borras Diversas', classificacao: 'Classe I', unidade_medida: 'kg' },
+      ],
+    }).residuos
+    const gravada = [
+      {
+        ...residuoDetalhesVazio(),
+        fonte_origem: 'Industrial',
+        caracterizacao: 'Solventes editado',
+        estado_fisico: 'Classe I',
+        acondicionamento: 'Tambor',
+        quantidade_aproximada: '2.500',
+      },
+      {
+        ...residuoDetalhesVazio(),
+        fonte_origem: 'Industrial',
+        caracterizacao: 'Borra customizada',
+        estado_fisico: 'Classe I',
+        acondicionamento: 'Big bag',
+        quantidade_aproximada: '800',
+      },
+    ]
+    const expandida = expandirListaResiduosMtrParaContrato(gravada, contrato, 'BAU', {
+      preservarLinhasGravadas: true,
+    })
+    expect(expandida[0]?.caracterizacao).toBe('Solventes editado')
+    expect(expandida[0]?.acondicionamento).toBe('Tambor')
+    expect(expandida[1]?.caracterizacao).toBe('Borra customizada')
+  })
+
   it('expandirListaResiduosMtrParaContrato abre linhas conforme cadastro do cliente', () => {
     const contrato = parseContratoClienteMtr({
       residuos_contrato: [

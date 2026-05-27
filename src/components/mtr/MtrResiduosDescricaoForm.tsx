@@ -102,7 +102,8 @@ export function MtrResiduosDescricaoForm({
     const expandida = expandirListaResiduosMtrParaContrato(
       lista,
       catalogoValidos,
-      acondicionamentoPadrao
+      acondicionamentoPadrao,
+      { preservarLinhasGravadas: true }
     )
     aplicarLista(expandida)
   }

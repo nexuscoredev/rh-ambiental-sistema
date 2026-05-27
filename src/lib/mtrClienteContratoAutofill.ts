@@ -263,7 +263,7 @@ export async function fetchClienteRowContratoMtr(
   return { row: (res.data as ClienteRowContratoMtr) ?? null, error: null }
 }
 
-function linhaResiduoMtrTemDadosPreenchidos(l: MtrResiduoDetalhesCampos): boolean {
+export function linhaResiduoMtrTemDadosPreenchidos(l: MtrResiduoDetalhesCampos): boolean {
   return Boolean(
     l.caracterizacao.trim() ||
       l.estado_fisico.trim() ||
@@ -276,8 +276,16 @@ function linhaResiduoMtrTemDadosPreenchidos(l: MtrResiduoDetalhesCampos): boolea
 
 function mesclarLinhaResiduoMtrComModelo(
   existente: MtrResiduoDetalhesCampos | undefined,
-  modelo: MtrResiduoDetalhesCampos
+  modelo: MtrResiduoDetalhesCampos,
+  opts?: { preservarLinhaGravada?: boolean }
 ): MtrResiduoDetalhesCampos {
+  if (
+    opts?.preservarLinhaGravada &&
+    existente &&
+    linhaResiduoMtrTemDadosPreenchidos(existente)
+  ) {
+    return { ...existente }
+  }
   if (!existente || !linhaResiduoMtrTemDadosPreenchidos(existente)) return modelo
   return {
     fonte_origem: existente.fonte_origem.trim() || modelo.fonte_origem,
@@ -296,7 +304,8 @@ function mesclarLinhaResiduoMtrComModelo(
 export function expandirListaResiduosMtrParaContrato(
   listaAtual: MtrResiduoDetalhesCampos[],
   residuosContrato: ResiduoContratoItem[],
-  acondicionamentoPadrao: string
+  acondicionamentoPadrao: string,
+  opts?: { preservarLinhasGravadas?: boolean }
 ): MtrResiduoDetalhesCampos[] {
   const validos = residuosContrato.filter(residuoContratoTemConteudo)
   if (validos.length === 0) {
@@ -304,12 +313,20 @@ export function expandirListaResiduosMtrParaContrato(
   }
 
   const modelo = residuosContratoParaListaDetalhesMtr(validos, acondicionamentoPadrao)
+  const mergeOpts = { preservarLinhaGravada: opts?.preservarLinhasGravadas === true }
+
   if (modelo.length <= 1) {
-    const unica = mesclarLinhaResiduoMtrComModelo(listaAtual[0], modelo[0]!)
+    const unica = mesclarLinhaResiduoMtrComModelo(listaAtual[0], modelo[0]!, mergeOpts)
     return [unica]
   }
 
-  return modelo.map((mod, i) => mesclarLinhaResiduoMtrComModelo(listaAtual[i], mod))
+  const mescladas = modelo.map((mod, i) =>
+    mesclarLinhaResiduoMtrComModelo(listaAtual[i], mod, mergeOpts)
+  )
+  if (opts?.preservarLinhasGravadas && listaAtual.length > mescladas.length) {
+    return [...mescladas, ...listaAtual.slice(mescladas.length)]
+  }
+  return mescladas
 }
 
 /** Resolve cliente da programação e devolve snapshot de contrato. */

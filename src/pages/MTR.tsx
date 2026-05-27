@@ -48,6 +48,7 @@ import {
   acondicionamentoFromContratoVeiculoEquipamento,
   expandirListaResiduosMtrParaContrato,
   fetchContratoClienteMtrPorProgramacao,
+  linhaResiduoMtrTemDadosPreenchidos,
   listaResiduosFromDetalhesMtr,
   listaResiduosParaDocumentoMtr,
   parseContratoClienteMtr,
@@ -1289,36 +1290,43 @@ export default function MTR() {
       })
       return
     }
-    setEditingId(item.id)
-    setMtrEdicaoCreatedAtIso(item.created_at || '')
-    setMtrDevCriadoPorNome(item.criado_por_nome || '')
+
+    const fresh = await fetchMtrListaPorId<MTR>(supabase, item.id)
+    const mtr = fresh ?? item
+    const detalhesCarregados = mergeMtrDetalhesProfundo(mtr.detalhes ?? null)
+    const listaGravada = listaResiduosFromDetalhesMtr(detalhesCarregados)
+    const temResiduosGravados = listaGravada.some(linhaResiduoMtrTemDadosPreenchidos)
+
+    setEditingId(mtr.id)
+    setMtrEdicaoCreatedAtIso(mtr.created_at || '')
+    setMtrDevCriadoPorNome(mtr.criado_por_nome || '')
     setForm({
-      numero: item.numero || '',
-      programacao_id: item.programacao_id || null,
-      cliente: item.cliente || '',
+      numero: mtr.numero || '',
+      programacao_id: mtr.programacao_id || null,
+      cliente: mtr.cliente || '',
       gerador: resolverNomeGeradorMtr({
-        gerador: item.gerador,
-        cliente: item.cliente,
-        tipoResiduo: item.tipo_residuo,
+        gerador: mtr.gerador,
+        cliente: mtr.cliente,
+        tipoResiduo: mtr.tipo_residuo,
       }),
-      endereco: item.endereco || '',
-      cidade: item.cidade || '',
-      tipo_residuo: item.tipo_residuo || '',
-      quantidade: quantidadeMtrLegadaParaKg(item.quantidade, item.unidade),
-      unidade: unidadeMedidaEhTonelada(item.unidade) ? 'kg' : item.unidade || 'kg',
+      endereco: mtr.endereco || '',
+      cidade: mtr.cidade || '',
+      tipo_residuo: mtr.tipo_residuo || '',
+      quantidade: quantidadeMtrLegadaParaKg(mtr.quantidade, mtr.unidade),
+      unidade: unidadeMedidaEhTonelada(mtr.unidade) ? 'kg' : mtr.unidade || 'kg',
       destinador:
         resolverDestinadorMtrForm({
-          destinador: item.destinador,
-          detalhes: item.detalhes ?? null,
-        }) || item.destinador || '',
-      transportador: item.transportador || 'RG Ambiental',
-      detalhes: mergeMtrDetalhesProfundo(item.detalhes ?? null),
-      data_emissao: item.data_emissao || new Date().toISOString().slice(0, 10),
-      observacoes: item.observacoes || '',
+          destinador: mtr.destinador,
+          detalhes: mtr.detalhes ?? null,
+        }) || mtr.destinador || '',
+      transportador: mtr.transportador || 'RG Ambiental',
+      detalhes: detalhesCarregados,
+      data_emissao: mtr.data_emissao || new Date().toISOString().slice(0, 10),
+      observacoes: mtr.observacoes || '',
     })
     setShowForm(true)
-    if (item.programacao_id) {
-      void fetchProgramacoesMtrPorIds(supabase, [item.programacao_id]).then(({ data, error }) => {
+    if (mtr.programacao_id) {
+      void fetchProgramacoesMtrPorIds(supabase, [mtr.programacao_id]).then(({ data, error }) => {
         if (error || data.length === 0) return
         setProgramacoesVinculadas((prev) =>
           mergeProgramacoesMtrPorId(prev, data) as Programacao[]
@@ -1326,15 +1334,20 @@ export default function MTR() {
       })
     }
     void ensureCatalogoProgramacoes()
-    if (item.programacao_id) {
-      void preencherRazaoSocialGeradorDesdeCadastro(item.programacao_id)
-      void preencherCidadeEnderecoDesdeCadastroSeVazio(item.programacao_id)
-      void expandirResiduosMtrDesdeProgramacao(item.programacao_id)
+    if (mtr.programacao_id) {
+      void preencherRazaoSocialGeradorDesdeCadastro(mtr.programacao_id)
+      void preencherCidadeEnderecoDesdeCadastroSeVazio(mtr.programacao_id)
+      void expandirResiduosMtrDesdeProgramacao(mtr.programacao_id, {
+        apenasCatalogo: temResiduosGravados,
+      })
     }
   }
 
   /** Abre linhas de resíduo na MTR conforme `residuos_contrato` do cliente (edição / cadastro incompleto). */
-  async function expandirResiduosMtrDesdeProgramacao(programacaoId: string) {
+  async function expandirResiduosMtrDesdeProgramacao(
+    programacaoId: string,
+    opts?: { apenasCatalogo?: boolean }
+  ) {
     const pid = programacaoId.trim()
     if (!pid) return
 
@@ -1358,11 +1371,29 @@ export default function MTR() {
     setForm((prev) => {
       if (prev.programacao_id !== pid) return prev
       const dz = detalhesVazios()
+
+      if (opts?.apenasCatalogo) {
+        return {
+          ...prev,
+          detalhes: {
+            ...(prev.detalhes ?? dz),
+            residuos_contrato_catalogo: contrato.residuos,
+            contrato_veiculos: prev.detalhes?.contrato_veiculos?.length
+              ? prev.detalhes.contrato_veiculos
+              : contrato.veiculos,
+            contrato_equipamentos: prev.detalhes?.contrato_equipamentos?.length
+              ? prev.detalhes.contrato_equipamentos
+              : contrato.equipamentos,
+          },
+        }
+      }
+
       const listaAtual = listaResiduosFromDetalhesMtr(prev.detalhes ?? dz)
       const listaExp = expandirListaResiduosMtrParaContrato(
         listaAtual,
         contrato.residuos,
-        acondContrato
+        acondContrato,
+        { preservarLinhasGravadas: true }
       )
       const syncResiduos = syncResiduoPrincipalComLista({
         residuo: listaExp[0] ?? dz.residuo,
@@ -1651,24 +1682,20 @@ export default function MTR() {
       const listaResiduosForm = expandirListaResiduosMtrParaContrato(
         listaAtual,
         contrato.residuos,
-        acondContrato
+        acondContrato,
+        { preservarLinhasGravadas: Boolean(editingId) }
       ).map((rowRes, i) => {
         if (i !== 0) return rowRes
-        const prevR = prev.detalhes?.residuo
-        if (!prevR) {
-          return {
-            ...rowRes,
-            onu: codigoIbama || rowRes.onu,
-          }
-        }
+        const prevLinha = listaAtual[0] ?? prev.detalhes?.residuo
         return {
           ...rowRes,
-          fonte_origem: (prevR.fonte_origem ?? '').trim() || rowRes.fonte_origem,
-          caracterizacao: (prevR.caracterizacao ?? '').trim() || rowRes.caracterizacao,
-          estado_fisico: (prevR.estado_fisico ?? '').trim() || rowRes.estado_fisico,
-          acondicionamento: (prevR.acondicionamento ?? '').trim() || rowRes.acondicionamento,
-          quantidade_aproximada: (prevR.quantidade_aproximada ?? '').trim() || rowRes.quantidade_aproximada,
-          onu: (prevR.onu ?? '').trim() || codigoIbama || rowRes.onu,
+          fonte_origem: (prevLinha?.fonte_origem ?? '').trim() || rowRes.fonte_origem,
+          caracterizacao: (prevLinha?.caracterizacao ?? '').trim() || rowRes.caracterizacao,
+          estado_fisico: (prevLinha?.estado_fisico ?? '').trim() || rowRes.estado_fisico,
+          acondicionamento: (prevLinha?.acondicionamento ?? '').trim() || rowRes.acondicionamento,
+          quantidade_aproximada:
+            (prevLinha?.quantidade_aproximada ?? '').trim() || rowRes.quantidade_aproximada,
+          onu: (prevLinha?.onu ?? '').trim() || codigoIbama || rowRes.onu,
         }
       })
       const syncResiduos = syncResiduoPrincipalComLista({
