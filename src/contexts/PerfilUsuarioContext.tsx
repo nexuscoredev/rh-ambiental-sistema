@@ -35,3 +35,8 @@ export function usePerfilUsuario(): PerfilUsuarioContextValue {
   }
   return v
 }
+
+/** Perfil quando o provider existe; null fora da árvore (ex.: testes). */
+export function usePerfilUsuarioOpcional(): PerfilUsuarioContextValue | null {
+  return useContext(PerfilUsuarioContext)
+}

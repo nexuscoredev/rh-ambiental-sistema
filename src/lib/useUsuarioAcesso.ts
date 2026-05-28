@@ -1,5 +1,5 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
-import { PerfilUsuarioContext } from '../contexts/PerfilUsuarioContext'
+import { useEffect, useMemo, useState } from 'react'
+import { usePerfilUsuarioOpcional } from '../contexts/PerfilUsuarioContext'
 import { supabase } from './supabase'
 import type { UsuarioAcessoContext } from './rbac'
 
@@ -10,7 +10,7 @@ const vazio: UsuarioAcessoContext = { cargo: null, nome: null, email: null }
  * Preferência: perfil já carregado no `PerfilUsuarioProvider` (evita corrida com cargo vazio).
  */
 export function useUsuarioAcesso(): UsuarioAcessoContext {
-  const perfilCtx = useContext(PerfilUsuarioContext)
+  const perfilCtx = usePerfilUsuarioOpcional()
   const [fallback, setFallback] = useState<UsuarioAcessoContext>(vazio)
 
   const doPerfil = perfilCtx?.usuario

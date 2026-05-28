@@ -387,7 +387,7 @@ async function decidirPedidoAjusteLegado(
 
   const { data: reg, error: regErr } = await supabase
     .from('chat_pedido_ajuste_resolvido')
-    .select('mensagem_id, status, ciclo')
+    .select('mensagem_id, status')
     .eq('mensagem_id', mensagemPedidoId)
     .maybeSingle()
 
@@ -395,8 +395,6 @@ async function decidirPedidoAjusteLegado(
   if (!reg || reg.status !== 'aguardando_solicitante') {
     throw new Error('Não há ajuste pendente da sua confirmação para este pedido.')
   }
-
-  const ciclo = Number(reg.ciclo ?? 1) || 1
 
   if (aprovado) {
     const { error } = await supabase
