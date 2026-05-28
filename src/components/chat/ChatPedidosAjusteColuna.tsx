@@ -111,7 +111,7 @@ function PedidoCard({
         disabled={Boolean(marcandoId)}
         onClick={() => onMarcar(item)}
       >
-        {marcando ? 'A enviar resposta…' : '✓ Marcar como resolvido'}
+        {marcando ? 'A enviar resposta…' : 'Marcar como resolvido'}
       </button>
     </article>
   )
@@ -172,53 +172,55 @@ export function ChatPedidosAjusteColuna({
       </div>
 
       <div className="chat-interno-pedidos-col__tabs" role="tablist" aria-label="Secções de solicitações">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={aba === 'fila'}
-          className={
-            aba === 'fila'
-              ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on'
-              : 'chat-interno-pedidos-tab'
-          }
-          onClick={() => setAba('fila')}
-        >
-          Fila
-          {filaNovos.length > 0 ? (
-            <span className="chat-interno-pedidos-tab__badge">{filaNovos.length}</span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={aba === 'negados'}
-          className={
-            aba === 'negados'
-              ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on'
-              : 'chat-interno-pedidos-tab'
-          }
-          onClick={() => setAba('negados')}
-        >
-          Negados
-          {negados.length > 0 ? (
-            <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
-              {negados.length}
-            </span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={aba === 'historico'}
-          className={
-            aba === 'historico'
-              ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on'
-              : 'chat-interno-pedidos-tab'
-          }
-          onClick={() => setAba('historico')}
-        >
-          Histórico
-        </button>
+        <div className="chat-interno-pedidos-col__tabs-track">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={aba === 'fila'}
+            className={
+              aba === 'fila'
+                ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on'
+                : 'chat-interno-pedidos-tab'
+            }
+            onClick={() => setAba('fila')}
+          >
+            <span className="chat-interno-pedidos-tab__label">Fila</span>
+            {filaNovos.length > 0 ? (
+              <span className="chat-interno-pedidos-tab__badge">{filaNovos.length}</span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={aba === 'negados'}
+            className={
+              aba === 'negados'
+                ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--negados'
+                : 'chat-interno-pedidos-tab'
+            }
+            onClick={() => setAba('negados')}
+          >
+            <span className="chat-interno-pedidos-tab__label">Negados</span>
+            {negados.length > 0 ? (
+              <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
+                {negados.length}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={aba === 'historico'}
+            className={
+              aba === 'historico'
+                ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--historico'
+                : 'chat-interno-pedidos-tab'
+            }
+            onClick={() => setAba('historico')}
+          >
+            <span className="chat-interno-pedidos-tab__label">Histórico</span>
+          </button>
+        </div>
       </div>
 
       <p className="chat-interno-pedidos-col__hint">{hintPorAba[aba]}</p>
@@ -226,9 +228,9 @@ export function ChatPedidosAjusteColuna({
       <div className="chat-interno-pedidos-col__list" role="tabpanel">
         {aba === 'fila' ? (
           carregando ? (
-            <p className="chat-interno-muted">A carregar…</p>
+            <p className="chat-interno-pedidos-col__empty">A carregar…</p>
           ) : filaNovos.length === 0 ? (
-            <p className="chat-interno-muted">Nenhum pedido novo na fila.</p>
+            <p className="chat-interno-pedidos-col__empty">Nenhum pedido novo na fila.</p>
           ) : (
             filaNovos.map((item) => (
               <PedidoCard
@@ -245,9 +247,9 @@ export function ChatPedidosAjusteColuna({
 
         {aba === 'negados' ? (
           carregando ? (
-            <p className="chat-interno-muted">A carregar…</p>
+            <p className="chat-interno-pedidos-col__empty">A carregar…</p>
           ) : negados.length === 0 ? (
-            <p className="chat-interno-muted">Nenhum pedido negado no momento.</p>
+            <p className="chat-interno-pedidos-col__empty">Nenhum pedido negado no momento.</p>
           ) : (
             negados.map((item) => (
               <PedidoCard
@@ -264,9 +266,9 @@ export function ChatPedidosAjusteColuna({
 
         {aba === 'historico' ? (
           carregandoHistorico ? (
-            <p className="chat-interno-muted">A carregar histórico…</p>
+            <p className="chat-interno-pedidos-col__empty">A carregar histórico…</p>
           ) : historicoLimpo.length === 0 ? (
-            <p className="chat-interno-muted">Sem registos ainda.</p>
+            <p className="chat-interno-pedidos-col__empty">Sem registos ainda.</p>
           ) : (
             <ul className="chat-interno-pedidos-col__historico-list">
               {historicoLimpo.map((h) => {
