@@ -26,6 +26,9 @@ import {
   fetchTipoCaminhaoPorProgramacaoIds,
   fetchUltimaPesagemPorColetaIds,
   formatarDataProgramacaoExibicao,
+  horaDbParaInputTime,
+  horaInputTimeParaDb,
+  normalizarDataIsoCampo,
 } from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { isoDataHojeLocal } from "../lib/ticketOperacionalData";
@@ -185,6 +188,8 @@ type FormRegistro = {
   tipo_ticket: "entrada" | "saida" | "frete";
   descricao_ticket: string;
   data: string;
+  hora_entrada: string;
+  hora_saida: string;
   empresa: string;
   residuo: string;
   residuo_catalogo_id: string;
@@ -203,6 +208,8 @@ const formInicial: FormRegistro = {
   tipo_ticket: "saida",
   descricao_ticket: "",
   data: "",
+  hora_entrada: "",
+  hora_saida: "",
   empresa: "",
   residuo: "",
   residuo_catalogo_id: "",
@@ -371,6 +378,19 @@ function formatarDataIsoCurta(iso: string | null | undefined): string {
   return iso;
 }
 
+function resolverDataCampoPesagem(
+  prev: FormRegistro,
+  coletaId: string,
+  pesagemPrev?: { data: string | null } | null
+): string {
+  if (prev.coleta_id === coletaId && prev.data.trim()) {
+    return prev.data.trim().slice(0, 10);
+  }
+  const fromPesagem = normalizarDataIsoCampo(pesagemPrev?.data);
+  if (fromPesagem) return fromPesagem;
+  return isoDataHojeLocal();
+}
+
 async function buscarColetasPorIds(ids: string[]): Promise<ColetaOpcao[]> {
   const rows = await buscarColetasPorIdsControleMassa(supabase, ids);
   return rows.map((row) => mapRowToColetaOpcao(row));
@@ -493,6 +513,8 @@ async function persistirPesagemUmSegmento(params: {
   tipoTicket: "entrada" | "saida" | "frete";
   descricaoTicket: string;
   data: string;
+  hora_entrada: string;
+  hora_saida: string;
   empresa: string;
   placa: string;
   motorista: string;
@@ -517,6 +539,8 @@ async function persistirPesagemUmSegmento(params: {
   const payloadCampos: Record<string, unknown> = {
     numero_ticket: params.numeroTicket.trim(),
     data: params.data,
+    hora_entrada: horaInputTimeParaDb(params.hora_entrada),
+    hora_saida: horaInputTimeParaDb(params.hora_saida),
     empresa: params.empresa,
     residuo: resolvido.texto,
     residuos_itens: resolvido.residuos_itens,
@@ -1739,8 +1763,15 @@ export default function ControleMassa() {
       mtrsLista.find((m) => m.id === coletaSelecionada.mtr_id)?.numero ?? null;
     const ticketEx = numeroTicketPorColeta.get(coletaSelecionada.id);
     const pesagemPrev = ultimaPesagemPorColeta.get(coletaSelecionada.id);
-    const dataCampo =
-      (pesagemPrev?.data?.trim().slice(0, 10) ?? "") || isoDataHojeLocal();
+    const dataCampo = resolverDataCampoPesagem(prev, coletaSelecionada.id, pesagemPrev);
+    const horaEntrada =
+      prev.coleta_id === coletaSelecionada.id && prev.hora_entrada.trim()
+        ? prev.hora_entrada
+        : horaDbParaInputTime(pesagemPrev?.hora_entrada);
+    const horaSaida =
+      prev.coleta_id === coletaSelecionada.id && prev.hora_saida.trim()
+        ? prev.hora_saida
+        : horaDbParaInputTime(pesagemPrev?.hora_saida);
 
     return preencherNumeroTicketNoForm(
       mergeFormResiduosLinhas(
@@ -1748,6 +1779,8 @@ export default function ControleMassa() {
           ...prev,
           coleta_id: coletaSelecionada.id,
           data: dataCampo,
+          hora_entrada: horaEntrada,
+          hora_saida: horaSaida,
           empresa: coletaSelecionada.cliente || prev.empresa,
           placa: campos.placa || prev.placa,
           motorista: campos.motorista || prev.motorista,
@@ -1852,6 +1885,8 @@ export default function ControleMassa() {
         peso_tara: "",
         peso_bruto: "",
         peso_liquido: "",
+        hora_entrada: "",
+        hora_saida: "",
       }));
       return;
     }
@@ -1905,6 +1940,30 @@ export default function ControleMassa() {
       dataInputRef.current?.focus();
     }, 60);
   }, [secaoPesagemAberta, form.coleta_id, mtrSemColetaSelecionado]);
+
+  /** Preenche data/horas gravadas quando a última pesagem chega após seleccionar a coleta. */
+  useEffect(() => {
+    const cid = form.coleta_id.trim();
+    if (!cid) return;
+    const up = ultimaPesagemPorColeta.get(cid);
+    if (!up) return;
+
+    setForm((prev) => {
+      if (prev.coleta_id !== cid) return prev;
+      const patch: Partial<FormRegistro> = {};
+      const dataDb = normalizarDataIsoCampo(up.data);
+      const hoje = isoDataHojeLocal();
+      if (dataDb && (!prev.data.trim() || (prev.data === hoje && dataDb !== hoje))) {
+        patch.data = dataDb;
+      }
+      const he = horaDbParaInputTime(up.hora_entrada);
+      const hs = horaDbParaInputTime(up.hora_saida);
+      if (he && !prev.hora_entrada.trim()) patch.hora_entrada = he;
+      if (hs && !prev.hora_saida.trim()) patch.hora_saida = hs;
+      if (Object.keys(patch).length === 0) return prev;
+      return { ...prev, ...patch };
+    });
+  }, [ultimaPesagemPorColeta, form.coleta_id]);
 
   function selecionarColetaParaPesagem(c: ColetaOpcao) {
     setMtrSemColetaSelecionado(null);
@@ -2300,6 +2359,8 @@ export default function ControleMassa() {
           tipoTicket: form.tipo_ticket,
           descricaoTicket: form.descricao_ticket,
           data: form.data,
+          hora_entrada: form.hora_entrada,
+          hora_saida: form.hora_saida,
           empresa: empresaFinal,
           placa: form.placa,
           motorista: form.motorista,
@@ -2413,6 +2474,8 @@ export default function ControleMassa() {
     const payloadCampos: Record<string, unknown> = {
       numero_ticket: numeroTicketTrim,
       data: form.data,
+      hora_entrada: horaInputTimeParaDb(form.hora_entrada),
+      hora_saida: horaInputTimeParaDb(form.hora_saida),
       empresa: empresaFinal,
       residuo: residuoParaInsert,
       residuos_itens: residuosItensPersist,
@@ -3581,6 +3644,32 @@ export default function ControleMassa() {
                     <div style={{ fontSize: 10, color: "#64748b", marginTop: 4, lineHeight: 1.35 }}>
                       Data da operação (aparece no ticket impresso).
                     </div>
+                  </div>
+
+                  <div style={{ gridColumn: "span 3" }} className="field">
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                      Hora entrada
+                    </label>
+                    <input
+                      type="time"
+                      name="hora_entrada"
+                      value={form.hora_entrada}
+                      onChange={handleInputChange}
+                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: "span 3" }} className="field">
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                      Hora saída
+                    </label>
+                    <input
+                      type="time"
+                      name="hora_saida"
+                      value={form.hora_saida}
+                      onChange={handleInputChange}
+                      style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
+                    />
                   </div>
 
                   <div style={{ gridColumn: "span 3" }} className="field">

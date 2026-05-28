@@ -1895,6 +1895,9 @@ export default function Clientes() {
       const lista = [...prev.veiculos_contrato];
       const atual = { ...lista[index], [campo]: valor };
       if (campo === "sem_custo" && valor === true) atual.valor = "";
+      if (campo === "valor" && typeof valor === "string" && valor.trim()) {
+        atual.sem_custo = false;
+      }
       lista[index] = atual;
       return { ...prev, veiculos_contrato: lista };
     });
@@ -1928,6 +1931,9 @@ export default function Clientes() {
       const lista = [...prev.equipamentos_contrato];
       const atual = { ...lista[index], [campo]: valor };
       if (campo === "com_custo" && valor === false) atual.valor = "";
+      if (campo === "valor" && typeof valor === "string" && valor.trim()) {
+        atual.com_custo = true;
+      }
       lista[index] = atual;
       return { ...prev, equipamentos_contrato: lista };
     });
@@ -2386,14 +2392,14 @@ export default function Clientes() {
       });
     }
 
-    if (
-      contratoJsonIgnoradoNoSalvar &&
-      residuosValidos.some((r) => (r.faturamento_minimo ?? "").trim())
-    ) {
+    const veiculoComValorNaoGravado = form.veiculos_contrato.some(
+      (v) => v.tipo_veiculo.trim() && (v.valor.trim() || !v.sem_custo)
+    );
+    if (contratoJsonIgnoradoNoSalvar && (residuosValidos.some((r) => (r.faturamento_minimo ?? "").trim()) || veiculoComValorNaoGravado)) {
       await rgAlert({
         title: "Cliente salvo — contrato/resíduos pendentes",
         message:
-          "Cliente salvo, mas veículos, equipamentos, resíduos e faturamento mínimo (kg) não foram gravados — falta a coluna residuos_contrato no Supabase.\n\n" +
+          "Cliente salvo, mas veículos (valores de transporte), equipamentos, resíduos e faturamento mínimo (kg) não foram gravados — faltam colunas de contrato no Supabase.\n\n" +
           "No SQL Editor, execute a migração:\n" +
           "supabase/migrations/20260519140000_clientes_contrato_veiculos_equipamentos_residuos.sql\n\n" +
           "Depois recarregue a página e salve novamente.",

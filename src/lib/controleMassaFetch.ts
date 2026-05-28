@@ -475,6 +475,38 @@ export async function contarMtrSemTicketMesVigente(
   }
 }
 
+/** `yyyy-mm-dd` ou ISO/timestamptz → `yyyy-mm-dd` para `<input type="date">`. */
+export function normalizarDataIsoCampo(raw: string | null | undefined): string {
+  if (!raw?.trim()) return ''
+  const s = raw.trim()
+  const t = s.includes('T') ? s.split('T')[0]! : s.slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : ''
+}
+
+/** Valor `time` do Postgres → `HH:mm` para `<input type="time">`. */
+export function horaDbParaInputTime(raw: string | null | undefined): string {
+  if (!raw?.trim()) return ''
+  const s = raw.trim()
+  if (s.includes('T')) {
+    const d = new Date(s)
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })
+    }
+  }
+  const m = s.match(/^(\d{1,2}):(\d{2})/)
+  if (!m) return ''
+  return `${m[1]!.padStart(2, '0')}:${m[2]!}`
+}
+
+/** `HH:mm` do formulário → `HH:mm:ss` para coluna `time`. */
+export function horaInputTimeParaDb(value: string | null | undefined): string | null {
+  const t = (value ?? '').trim()
+  if (!t) return null
+  const m = t.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  return `${m[1]!.padStart(2, '0')}:${m[2]!}:00`
+}
+
 /** `yyyy-mm-dd` ou ISO → dd/mm/aaaa para exibição. */
 export function formatarDataProgramacaoExibicao(iso: string | null | undefined): string {
   if (!iso) return ''

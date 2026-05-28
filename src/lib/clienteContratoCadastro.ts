@@ -232,12 +232,31 @@ function itemResiduoValido(item: ResiduoContratoItem): boolean {
   return Boolean(item.tipo_residuo.trim())
 }
 
+function semCustoVeiculoExplicito(raw: unknown): boolean {
+  if (raw === true || raw === 'true' || raw === 1 || raw === '1') return true
+  return false
+}
+
+/** Veículo com valor preenchido nunca grava como «sem custo». */
+function normalizarVeiculoContratoParaGravacao(item: VeiculoContratoItem): VeiculoContratoItem {
+  const valorNum = formatarMoedaBanco(item.valor)
+  const semCusto = item.sem_custo && valorNum == null
+  return {
+    ...item,
+    sem_custo: semCusto,
+    valor: semCusto ? '' : item.valor,
+  }
+}
+
 export function veiculosContratoParaJsonb(itens: VeiculoContratoItem[]): unknown {
-  return itens.filter(itemVeiculoValido).map((item) => ({
-    tipo_veiculo: item.tipo_veiculo.trim(),
-    sem_custo: item.sem_custo,
-    valor: item.sem_custo ? null : formatarMoedaBanco(item.valor),
-  }))
+  return itens
+    .filter(itemVeiculoValido)
+    .map(normalizarVeiculoContratoParaGravacao)
+    .map((item) => ({
+      tipo_veiculo: item.tipo_veiculo.trim(),
+      sem_custo: item.sem_custo,
+      valor: item.sem_custo ? null : formatarMoedaBanco(item.valor),
+    }))
 }
 
 export function equipamentosContratoParaJsonb(itens: EquipamentoContratoItem[]): unknown {
@@ -273,11 +292,12 @@ export function parseVeiculosContratoJsonb(raw: unknown, descricaoLegado?: strin
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.map((row) => {
       const o = row as Record<string, unknown>
-      const semCusto = o.sem_custo === true
+      const valorCampo = moedaParaCampo(o.valor)
+      const semCusto = semCustoVeiculoExplicito(o.sem_custo) && !valorCampo
       return {
         tipo_veiculo: asTextoFormulario(o.tipo_veiculo).trim(),
         sem_custo: semCusto,
-        valor: semCusto ? '' : moedaParaCampo(o.valor),
+        valor: semCusto ? '' : valorCampo,
       }
     })
   }
@@ -293,11 +313,13 @@ export function parseEquipamentosContratoJsonb(
   if (Array.isArray(raw) && raw.length > 0) {
     return raw.map((row) => {
       const o = row as Record<string, unknown>
-      const comCusto = o.com_custo === true
+      const valorCampo = moedaParaCampo(o.valor)
+      const comCusto =
+        o.com_custo === true || o.com_custo === 'true' || o.com_custo === 1 || Boolean(valorCampo)
       return {
         descricao: asTextoFormulario(o.descricao).trim(),
         com_custo: comCusto,
-        valor: comCusto ? moedaParaCampo(o.valor) : '',
+        valor: comCusto ? valorCampo : '',
       }
     })
   }

@@ -99,6 +99,9 @@ export function useClienteCadastroForm(initial?: Partial<FormCliente>) {
       const lista = [...prev.veiculos_contrato]
       const atual = { ...lista[index], [campo]: valor }
       if (campo === 'sem_custo' && valor === true) atual.valor = ''
+      if (campo === 'valor' && typeof valor === 'string' && valor.trim()) {
+        atual.sem_custo = false
+      }
       lista[index] = atual
       return { ...prev, veiculos_contrato: lista }
     })
@@ -129,6 +132,9 @@ export function useClienteCadastroForm(initial?: Partial<FormCliente>) {
       const lista = [...prev.equipamentos_contrato]
       const atual = { ...lista[index], [campo]: valor }
       if (campo === 'com_custo' && valor === false) atual.valor = ''
+      if (campo === 'valor' && typeof valor === 'string' && valor.trim()) {
+        atual.com_custo = true
+      }
       lista[index] = atual
       return { ...prev, equipamentos_contrato: lista }
     })

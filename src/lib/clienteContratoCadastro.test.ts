@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   normalizarResiduoContratoParaKg,
   parseResiduosContratoJsonb,
+  parseVeiculosContratoJsonb,
   residuosContratoParaJsonb,
+  veiculosContratoParaJsonb,
 } from './clienteContratoCadastro'
 
 describe('normalizarResiduoContratoParaKg', () => {
@@ -66,6 +68,25 @@ describe('normalizarResiduoContratoParaKg', () => {
     ])
     expect(itens[0]?.unidade_medida).toBe('kg')
     expect(itens[0]?.valor).toContain('2')
+  })
+
+  it('veículos: grava valor de transporte e reidrata no formulário', () => {
+    const json = veiculosContratoParaJsonb([
+      { tipo_veiculo: 'BAÚ', sem_custo: false, valor: '1.540,00' },
+    ]) as Array<Record<string, unknown>>
+    expect(json[0]?.sem_custo).toBe(false)
+    expect(json[0]?.valor).toBe(1540)
+    const back = parseVeiculosContratoJsonb(json)
+    expect(back[0]?.sem_custo).toBe(false)
+    expect(back[0]?.valor).toBe('1.540,00')
+  })
+
+  it('veículos: valor preenchido ignora sem_custo marcado por engano', () => {
+    const json = veiculosContratoParaJsonb([
+      { tipo_veiculo: 'BAÚ', sem_custo: true, valor: '750,00' },
+    ]) as Array<Record<string, unknown>>
+    expect(json[0]?.sem_custo).toBe(false)
+    expect(json[0]?.valor).toBe(750)
   })
 
   it('residuosContratoParaJsonb grava sempre kg', () => {
