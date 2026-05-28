@@ -1,4 +1,5 @@
 import { useMemo, type CSSProperties, type RefObject } from "react";
+import { formatarDataProgramacaoExibicao } from "../../lib/controleMassaFetch";
 import { formatarEtapaParaUI, type EtapaFluxo } from "../../lib/fluxoEtapas";
 
 export type MtrPickerMtr = {
@@ -7,6 +8,8 @@ export type MtrPickerMtr = {
   cliente: string;
   tipo_residuo: string;
   status: string;
+  /** Data da programação vinculada (`programacoes.data_programada`). */
+  data_programada?: string | null;
 };
 
 export type MtrPickerColeta = {
@@ -108,6 +111,17 @@ const badgeBase: CSSProperties = {
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
+
+function LinhaDataProgramacao({ data }: { data?: string | null }) {
+  const fmt = formatarDataProgramacaoExibicao(data);
+  if (!fmt) return null;
+  return (
+    <div style={{ fontSize: "12px", color: C.inkSoft, marginTop: "4px" }}>
+      Programação:{" "}
+      <strong style={{ fontWeight: 700, color: C.inkMuted }}>{fmt}</strong>
+    </div>
+  );
+}
 
 type Props = {
   comboRef: RefObject<HTMLDivElement | null>;
@@ -356,6 +370,7 @@ function ResumoTrigger({ resumo }: { resumo: ResumoSelecaoMtr }) {
           <span style={badgeTodosStyle}>{resumo.qtdTickets} tickets</span>
         </div>
         <div style={resumoLinha2Style}>{resumo.mtr.cliente}</div>
+        <LinhaDataProgramacao data={resumo.mtr.data_programada} />
         <div style={resumoLinha3Style}>Pesar todos os resíduos</div>
       </div>
     );
@@ -384,6 +399,7 @@ function ResumoTrigger({ resumo }: { resumo: ResumoSelecaoMtr }) {
           <span style={badgeSemColetaStyle}>Nova pesagem</span>
         </div>
         <div style={resumoLinha2Style}>{resumo.mtr.cliente}</div>
+        <LinhaDataProgramacao data={resumo.mtr.data_programada} />
       </div>
     );
   }
@@ -429,6 +445,7 @@ function GrupoMtrCard({
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={grupoMtrNumStyle}>{mtr.numero}</div>
           <div style={grupoClienteStyle}>{mtr.cliente}</div>
+          <LinhaDataProgramacao data={mtr.data_programada} />
         </div>
         {varios ? (
           <span style={badgeContagemStyle}>{qtd} tickets</span>

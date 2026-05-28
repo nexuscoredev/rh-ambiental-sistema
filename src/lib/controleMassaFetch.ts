@@ -475,6 +475,45 @@ export async function contarMtrSemTicketMesVigente(
   }
 }
 
+/** `yyyy-mm-dd` ou ISO → dd/mm/aaaa para exibição. */
+export function formatarDataProgramacaoExibicao(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const t = iso.includes('T') ? iso.split('T')[0]! : iso.trim()
+  if (t.length >= 10) {
+    const [y, m, d] = t.slice(0, 10).split('-')
+    if (y && m && d) return `${d}/${m}/${y}`
+  }
+  return iso
+}
+
+export async function fetchDataProgramadaPorProgramacaoIds(
+  supabase: SupabaseClient,
+  progIds: string[]
+): Promise<Record<string, string>> {
+  const map: Record<string, string> = {}
+  const uniq = [...new Set(progIds.map((id) => id.trim()).filter(Boolean))]
+  if (uniq.length === 0) return map
+
+  const fatias: string[][] = []
+  for (let pi = 0; pi < uniq.length; pi += CHUNK_PROG) {
+    fatias.push(uniq.slice(pi, pi + CHUNK_PROG))
+  }
+
+  const respostas = await Promise.all(
+    fatias.map((slice) =>
+      supabase.from('programacoes').select('id, data_programada').in('id', slice)
+    )
+  )
+  for (const { data: rows, error } of respostas) {
+    if (error || !rows) continue
+    for (const p of rows as { id: string; data_programada?: string | null }[]) {
+      const raw = (p.data_programada ?? '').trim()
+      if (raw) map[p.id] = raw.includes('T') ? raw.split('T')[0]! : raw.slice(0, 10)
+    }
+  }
+  return map
+}
+
 export async function fetchTipoCaminhaoPorProgramacaoIds(
   supabase: SupabaseClient,
   progIds: string[]

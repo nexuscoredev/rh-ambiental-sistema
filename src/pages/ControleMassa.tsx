@@ -21,9 +21,11 @@ import {
   buscarColetasPorIdsControleMassa,
   contarMtrSemTicketMesVigente,
   fetchColetaIdsComPesagemRecente,
+  fetchDataProgramadaPorProgramacaoIds,
   fetchTicketOperacionalPorColetaIds,
   fetchTipoCaminhaoPorProgramacaoIds,
   fetchUltimaPesagemPorColetaIds,
+  formatarDataProgramacaoExibicao,
 } from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { isoDataHojeLocal } from "../lib/ticketOperacionalData";
@@ -158,7 +160,24 @@ type MtrResumo = {
   cliente: string;
   tipo_residuo: string;
   status: string;
+  programacao_id?: string | null;
+  data_programada?: string | null;
 };
+
+function mtrComDataProgramacao(
+  m: MtrResumo,
+  coletasMtr: ColetaOpcao[],
+  map: Record<string, string>
+): MtrResumo {
+  const progId = (m.programacao_id ?? coletasMtr[0]?.programacao_id ?? "").trim();
+  if (!progId) return m;
+  const raw = map[progId] ?? m.data_programada ?? null;
+  return {
+    ...m,
+    programacao_id: progId,
+    data_programada: raw,
+  };
+}
 
 type FormRegistro = {
   coleta_id: string;
@@ -874,6 +893,9 @@ export default function ControleMassa() {
   const [tipoCaminhaoPorProgramacao, setTipoCaminhaoPorProgramacao] = useState<Record<string, string>>(
     {}
   );
+  const [dataProgramadaPorProgramacao, setDataProgramadaPorProgramacao] = useState<
+    Record<string, string>
+  >({});
   const [ultimaPesagemPorColeta, setUltimaPesagemPorColeta] = useState<
     Map<string, { data: string | null; hora_entrada: string | null; hora_saida: string | null }>
   >(() => new Map());
@@ -1353,12 +1375,14 @@ export default function ControleMassa() {
   const enriquecerListaColetas = useCallback(async (merged: ColetaOpcao[]) => {
     const coletaIds = merged.map((c) => c.id);
     const progIds = [...new Set(merged.map((c) => c.programacao_id).filter(Boolean))] as string[];
-    const [tipoCam, ultima, ticketPorColeta] = await Promise.all([
+    const [tipoCam, dataProg, ultima, ticketPorColeta] = await Promise.all([
       fetchTipoCaminhaoPorProgramacaoIds(supabase, progIds),
+      fetchDataProgramadaPorProgramacaoIds(supabase, progIds),
       fetchUltimaPesagemPorColetaIds(supabase, coletaIds),
       fetchTicketOperacionalPorColetaIds(supabase, coletaIds),
     ]);
     setTipoCaminhaoPorProgramacao(tipoCam);
+    setDataProgramadaPorProgramacao((prev) => ({ ...prev, ...dataProg }));
     setUltimaPesagemPorColeta(ultima);
     setTipoTicketPorColeta(ticketPorColeta.tipoPorColeta);
     setNumeroTicketPorColeta(ticketPorColeta.numeroPorColeta);
@@ -1388,27 +1412,27 @@ export default function ControleMassa() {
       const [mRes, cRes, idsMassa] = await Promise.all([
         supabase
           .from("mtrs")
-          .select("id, numero, cliente, tipo_residuo, status, created_at")
+          .select("id, numero, cliente, tipo_residuo, status, created_at, programacao_id")
           .order("created_at", { ascending: false })
           .limit(300),
         queryColetasListaFluxoControle(500),
         fetchColetaIdsComPesagemRecente(supabase),
       ]);
 
+      let mrows: MtrResumo[] = [];
       if (mRes.error) {
         console.error("Erro ao buscar MTRs:", mRes.error);
         setMtrsLista([]);
       } else {
-        const mrows = ((mRes.data as Record<string, unknown>[]) || []).map(
-          (item) => ({
-            id: String(item.id),
-            numero: String(item.numero ?? ""),
-            cliente: String(item.cliente ?? ""),
-            tipo_residuo: String(item.tipo_residuo ?? ""),
-            status: String(item.status ?? "Rascunho"),
-          })
-        );
-        setMtrsLista(mrows);
+        mrows = ((mRes.data as Record<string, unknown>[]) || []).map((item) => ({
+          id: String(item.id),
+          numero: String(item.numero ?? ""),
+          cliente: String(item.cliente ?? ""),
+          tipo_residuo: String(item.tipo_residuo ?? ""),
+          status: String(item.status ?? "Rascunho"),
+          programacao_id:
+            item.programacao_id != null ? String(item.programacao_id) : null,
+        }));
       }
 
       let base: ColetaOpcao[] = [];
@@ -1437,6 +1461,30 @@ export default function ControleMassa() {
       }
 
       setTodasColetas(merged);
+
+      if (mrows.length > 0) {
+        const progIds = [
+          ...new Set(
+            [
+              ...mrows.map((m) => m.programacao_id),
+              ...merged.map((c) => c.programacao_id),
+            ].filter(Boolean) as string[]
+          ),
+        ];
+        const dataProg = await fetchDataProgramadaPorProgramacaoIds(supabase, progIds);
+        setDataProgramadaPorProgramacao(dataProg);
+        setMtrsLista(
+          mrows.map((m) =>
+            mtrComDataProgramacao(
+              m,
+              merged.filter((c) => c.mtr_id === m.id),
+              dataProg
+            )
+          )
+        );
+      } else if (!mRes.error) {
+        setMtrsLista([]);
+      }
     } finally {
       setLoadingVinculo(false);
       void atualizarStatsMtrSemTicket();
@@ -1493,14 +1541,15 @@ export default function ControleMassa() {
     for (const m of mtrsLista) {
       if (m.status === "Cancelado") continue;
       const coletasMtr = todasColetas.filter((c) => c.mtr_id === m.id);
+      const mtr = mtrComDataProgramacao(m, coletasMtr, dataProgramadaPorProgramacao);
       if (coletasMtr.length === 0) {
-        linhas.push({ mtr: m, coleta: null });
+        linhas.push({ mtr, coleta: null });
       } else if (coletasMtr.length === 1) {
-        linhas.push({ mtr: m, coleta: coletasMtr[0]! });
+        linhas.push({ mtr, coleta: coletasMtr[0]! });
       } else {
-        linhas.push({ mtr: m, coleta: null });
+        linhas.push({ mtr, coleta: null });
         for (const c of coletasMtr) {
-          linhas.push({ mtr: m, coleta: c });
+          linhas.push({ mtr, coleta: c });
         }
       }
     }
@@ -1519,7 +1568,7 @@ export default function ControleMassa() {
     });
 
     return linhas;
-  }, [mtrsLista, todasColetas]);
+  }, [mtrsLista, todasColetas, dataProgramadaPorProgramacao]);
 
   /** Valor do `<select>`: id da MTR ou `coleta:uuid` para coleta sem MTR. */
   const valorSelectVinculo = useMemo(() => {
@@ -1545,6 +1594,7 @@ export default function ControleMassa() {
         mtr.cliente,
         mtr.tipo_residuo,
         mtr.status,
+        formatarDataProgramacaoExibicao(mtr.data_programada),
         coleta?.numero ?? "",
         coleta?.cliente ?? "",
         coleta ? formatarEtapaParaUI(coleta.etapaFluxo) : "",
