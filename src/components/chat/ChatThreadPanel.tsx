@@ -3,10 +3,14 @@ import { ChatAvatar } from './ChatAvatar'
 import { ChatComposerPicker } from './ChatComposerPicker'
 import { chatUrlAssinadaAnexo } from '../../lib/chat'
 import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatStickers'
-import { chatMensagemEhPedidoAjuste } from '../../lib/chatPedidoAjuste'
+import {
+  chatMensagemEhPedidoAjuste,
+  type PedidoAjusteAguardandoFeedback,
+} from '../../lib/chatPedidoAjuste'
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
 import type { ChatMensagem } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
+import { ChatPedidoAjusteFeedback } from './ChatPedidoAjusteFeedback'
 
 type Props = {
   meuId: string
@@ -27,6 +31,14 @@ type Props = {
   onEnviarFigurinha: (sticker: ChatSticker) => Promise<void>
   /** Desenvolvedor: pedidos ficam na coluna «Solicitações», não no histórico. */
   ocultarPedidosAjusteNoHistorico?: boolean
+  /** Solicitante: confirmação após resposta do desenvolvedor (por mensagem de resposta). */
+  pedidosAguardandoFeedback?: PedidoAjusteAguardandoFeedback[]
+  decidindoPedidoAjusteId?: string | null
+  onDecidirPedidoAjuste?: (
+    mensagemPedidoId: string,
+    aprovado: boolean,
+    justificativa?: string
+  ) => Promise<void>
 }
 
 export function ChatThreadPanel({
@@ -45,7 +57,13 @@ export function ChatThreadPanel({
   onEnviarFicheiro,
   onEnviarFigurinha,
   ocultarPedidosAjusteNoHistorico = false,
+  pedidosAguardandoFeedback = [],
+  decidindoPedidoAjusteId = null,
+  onDecidirPedidoAjuste,
 }: Props) {
+  const feedbackPorResposta = new Map(
+    pedidosAguardandoFeedback.map((p) => [p.respostaMensagemId, p])
+  )
   const mensagensVisiveis = ocultarPedidosAjusteNoHistorico
     ? mensagens.filter((m) => !chatMensagemEhPedidoAjuste(m))
     : mensagens
@@ -211,7 +229,27 @@ export function ChatThreadPanel({
               : 'Sem mensagens. Escreva abaixo.'}
           </div>
         ) : (
-          mensagensVisiveis.map((m) => <MensagemBolha key={m.id} m={m} meuId={meuId} />)
+          mensagensVisiveis.map((m) => {
+            const feedback = feedbackPorResposta.get(m.id)
+            return (
+              <MensagemBolha
+                key={m.id}
+                m={m}
+                meuId={meuId}
+                feedbackPedido={
+                  feedback && onDecidirPedidoAjuste
+                    ? {
+                        mensagemPedidoId: feedback.mensagemPedidoId,
+                        ciclo: feedback.ciclo,
+                        decidindo: decidindoPedidoAjusteId === feedback.mensagemPedidoId,
+                        onDecidir: (aprovado, justificativa) =>
+                          onDecidirPedidoAjuste(feedback.mensagemPedidoId, aprovado, justificativa),
+                      }
+                    : undefined
+                }
+              />
+            )
+          })
         )}
       </div>
 
@@ -310,7 +348,22 @@ export function ChatThreadPanel({
   )
 }
 
-function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
+type FeedbackPedidoProps = {
+  mensagemPedidoId: string
+  ciclo: number
+  decidindo: boolean
+  onDecidir: (aprovado: boolean, justificativa?: string) => Promise<void>
+}
+
+function MensagemBolha({
+  m,
+  meuId,
+  feedbackPedido,
+}: {
+  m: ChatMensagem
+  meuId: string
+  feedbackPedido?: FeedbackPedidoProps
+}) {
   const meu = m.remetente_id === meuId
   const [url, setUrl] = useState<string | null>(null)
   const ehPedidoAjuste = chatMensagemEhPedidoAjuste(m)
@@ -385,6 +438,25 @@ function MensagemBolha({ m, meuId }: { m: ChatMensagem; meuId: string }) {
           {hora}
         </time>
       </div>
+      {feedbackPedido ? (
+        <ChatPedidoAjusteFeedback
+          ciclo={feedbackPedido.ciclo}
+          decidindo={feedbackPedido.decidindo}
+          onDecidir={async (aprovado, justificativa) => {
+            try {
+              await feedbackPedido.onDecidir(aprovado, justificativa)
+            } catch (e) {
+              void rgAlert({
+                title: 'Pedido de ajuste',
+                message:
+                  e instanceof Error ? e.message : 'Não foi possível registar a sua decisão.',
+                variant: 'warning',
+              })
+              throw e
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }

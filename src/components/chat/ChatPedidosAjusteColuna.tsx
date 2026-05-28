@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { ChatAvatar } from './ChatAvatar'
-import type { PedidoAjusteFilaItem } from '../../lib/chatPedidoAjuste'
+import {
+  etiquetaEventoPedidoAjusteHistorico,
+  type PedidoAjusteFilaItem,
+  type PedidoAjusteHistoricoItem,
+} from '../../lib/chatPedidoAjuste'
 import type { ChatUsuarioLista } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
 
 type Props = {
   itens: PedidoAjusteFilaItem[]
+  historico: PedidoAjusteHistoricoItem[]
   usuariosPorId: Map<string, ChatUsuarioLista>
   carregando: boolean
+  carregandoHistorico: boolean
   marcandoId: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcarResolvido: (item: PedidoAjusteFilaItem) => Promise<void>
@@ -33,12 +40,16 @@ function formatarDataHora(iso: string): string {
 
 export function ChatPedidosAjusteColuna({
   itens,
+  historico,
   usuariosPorId,
   carregando,
+  carregandoHistorico,
   marcandoId,
   onAbrirConversa,
   onMarcarResolvido,
 }: Props) {
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+
   async function handleMarcar(item: PedidoAjusteFilaItem) {
     try {
       await onMarcarResolvido(item)
@@ -62,7 +73,8 @@ export function ChatPedidosAjusteColuna({
         ) : null}
       </div>
       <p className="chat-interno-pedidos-col__hint">
-        Marque como resolvido para enviar a resposta automática ao utilizador.
+        Marque como resolvido para enviar a resposta ao solicitante. Ele deve aprovar ou negar; se
+        negar, o pedido volta aqui com a justificativa.
       </p>
 
       <div className="chat-interno-pedidos-col__list">
@@ -80,7 +92,20 @@ export function ChatPedidosAjusteColuna({
             const marcando = marcandoId === item.mensagemId
 
             return (
-              <article key={item.mensagemId} className="chat-interno-pedido-card">
+              <article
+                key={item.mensagemId}
+                className={
+                  item.situacao === 'reaberto'
+                    ? 'chat-interno-pedido-card chat-interno-pedido-card--reaberto'
+                    : 'chat-interno-pedido-card'
+                }
+              >
+                {item.situacao === 'reaberto' ? (
+                  <p className="chat-interno-pedido-card__badge-reaberto" role="status">
+                    Reaberto pelo solicitante
+                    {item.ciclo > 1 ? ` · ciclo ${item.ciclo}` : ''}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   className="chat-interno-pedido-card__top"
@@ -99,6 +124,11 @@ export function ChatPedidosAjusteColuna({
                 {item.parseado?.pagina ? (
                   <p className="chat-interno-pedido-card__pagina">Página: {item.parseado.pagina}</p>
                 ) : null}
+                {item.justificativaSolicitante ? (
+                  <blockquote className="chat-interno-pedido-card__justificativa">
+                    <strong>Justificativa:</strong> {item.justificativaSolicitante}
+                  </blockquote>
+                ) : null}
                 <button
                   type="button"
                   className="chat-interno-pedido-card__btn"
@@ -111,6 +141,45 @@ export function ChatPedidosAjusteColuna({
             )
           })
         )}
+      </div>
+
+      <div className="chat-interno-pedidos-col__historico">
+        <button
+          type="button"
+          className="chat-interno-pedidos-col__historico-toggle"
+          aria-expanded={historicoAberto}
+          onClick={() => setHistoricoAberto((v) => !v)}
+        >
+          Histórico {historico.length > 0 ? `(${historico.length})` : ''}
+        </button>
+        {historicoAberto ? (
+          <ul className="chat-interno-pedidos-col__historico-list">
+            {carregandoHistorico ? (
+              <li className="chat-interno-muted">A carregar histórico…</li>
+            ) : historico.length === 0 ? (
+              <li className="chat-interno-muted">Sem registos ainda.</li>
+            ) : (
+              historico.map((h) => {
+                const actor = usuariosPorId.get(h.actorId)
+                const actorNome = actor?.nome || actor?.email || 'Utilizador'
+                return (
+                  <li key={h.id} className="chat-interno-pedidos-historico-item">
+                    <span className="chat-interno-pedidos-historico-item__evento">
+                      {etiquetaEventoPedidoAjusteHistorico(h.evento)}
+                    </span>
+                    <span className="chat-interno-pedidos-historico-item__meta">
+                      {actorNome} · {formatarDataHora(h.createdAt)}
+                      {h.ciclo > 1 ? ` · ciclo ${h.ciclo}` : ''}
+                    </span>
+                    {h.texto ? (
+                      <p className="chat-interno-pedidos-historico-item__texto">{h.texto}</p>
+                    ) : null}
+                  </li>
+                )
+              })
+            )}
+          </ul>
+        ) : null}
       </div>
     </aside>
   )

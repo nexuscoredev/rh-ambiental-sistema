@@ -35,6 +35,11 @@ describe('rbac — setores do organograma', () => {
 })
 
 describe('rbac — equipe comercial (mesmo acesso)', () => {
+  it('equipe comercial mantém edição mesmo com cargo Visualizador (legado/sessão)', () => {
+    expect(rbacPode('cliente', 'editar', ctx('Rafaela Thomaz', 'Visualizador'))).toBe(true)
+    expect(rbacPode('cliente', 'editar', ctx('Rose', 'Visualizador'))).toBe(true)
+  })
+
   it('Rafaela, Rose e Raquel têm o mesmo acesso que Thais', () => {
     for (const nome of ['Thais', 'Rafaela', 'Rose', 'Raquel']) {
       expect(usuarioEhEquipeComercial(ctx(nome, 'Comercial'))).toBe(true)

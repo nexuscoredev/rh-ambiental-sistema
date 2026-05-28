@@ -1,5 +1,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import type { UsuarioPerfilApp } from '../contexts/PerfilUsuarioContext'
+import { nomeEhThais, resolverSetorUsuario } from './rbac/rbacAcesso'
+import { CARGO_COMERCIAL_ADM } from './rbac/rbacManifest'
 
 const TENTATIVAS = 3
 const TIMEOUT_MS = 12_000
@@ -59,15 +61,34 @@ function normalizarLinhaPerfil(row: Record<string, unknown> | null): UsuarioPerf
   }
 }
 
+function cargoCanonicoParaSetor(
+  setor: ReturnType<typeof resolverSetorUsuario>,
+  cargoMeta: string
+): string {
+  if (cargoMeta) return cargoMeta
+  if (setor === 'comercial') return 'Comercial'
+  if (setor === 'desenvolvedor') return 'Desenvolvedor'
+  if (setor === 'diretoria_financeiro') return 'Diretoria'
+  if (setor === 'operacao') return 'Operacional'
+  return 'Visualizador'
+}
+
 /** Perfil mínimo a partir da sessão Auth (entrada degradada se a BD não responder). */
 export function perfilMinimoDaSessao(session: Session, userId: string): UsuarioPerfilApp {
   const meta = (session.user.user_metadata ?? {}) as Record<string, unknown>
   const email = session.user.email ?? ''
+  const nome = String(meta.nome ?? meta.full_name ?? email.split('@')[0] ?? 'Utilizador')
+  const cargoMeta = typeof meta.cargo === 'string' ? meta.cargo.trim() : ''
+  const setor = resolverSetorUsuario({ nome, cargo: cargoMeta || null, email })
+  let cargo = cargoCanonicoParaSetor(setor, cargoMeta)
+  if (setor === 'comercial' && nomeEhThais({ nome, cargo: cargoMeta || null, email })) {
+    cargo = CARGO_COMERCIAL_ADM
+  }
   return {
     id: userId,
-    nome: String(meta.nome ?? meta.full_name ?? email.split('@')[0] ?? 'Utilizador'),
+    nome,
     email,
-    cargo: String(meta.cargo ?? 'Visualizador'),
+    cargo,
     status: 'ativo',
     foto_url: (meta.foto_url as string | null) ?? null,
     paginas_permitidas: null,

@@ -58,6 +58,7 @@ import {
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
 import { normalizarEmailNfLista } from "../lib/emailNfLista";
+import { usePerfilUsuario } from "../contexts/PerfilUsuarioContext";
 import { useUsuarioAcesso } from "../lib/useUsuarioAcesso";
 import {
   usuarioPodeEditarCliente,
@@ -906,10 +907,12 @@ function clienteAtendeFiltroVencCadri(c: Cliente, filtro: FiltroVencCadri): bool
 }
 
 export default function Clientes() {
+  const { carregandoUsuario } = usePerfilUsuario();
   const acessoUsuario = useUsuarioAcesso();
-  const podeIncluirCliente = usuarioPodeIncluirCliente(acessoUsuario);
-  const podeEditarCliente = usuarioPodeEditarCliente(acessoUsuario);
-  const podeExcluirCliente = usuarioPodeExcluirCliente(acessoUsuario);
+  const acessoPronto = !carregandoUsuario;
+  const podeIncluirCliente = acessoPronto && usuarioPodeIncluirCliente(acessoUsuario);
+  const podeEditarCliente = acessoPronto && usuarioPodeEditarCliente(acessoUsuario);
+  const podeExcluirCliente = acessoPronto && usuarioPodeExcluirCliente(acessoUsuario);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1965,6 +1968,7 @@ export default function Clientes() {
   }
 
   function abrirCadastroNovo() {
+    if (carregandoUsuario) return;
     if (!podeIncluirCliente) {
       void rgAlert({
         title: "Clientes",
@@ -1979,6 +1983,7 @@ export default function Clientes() {
   }
 
   async function handleEditar(cliente: Cliente) {
+    if (carregandoUsuario) return;
     if (!podeEditarCliente) {
       void rgAlert({
         title: "Clientes",

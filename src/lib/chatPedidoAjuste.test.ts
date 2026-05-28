@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CHAT_PEDIDO_AJUSTE_PREFIX,
+  etiquetaEventoPedidoAjusteHistorico,
   montarRespostaPedidoAjusteResolvido,
   parsePedidoAjusteConteudo,
 } from './chatPedidoAjuste'
@@ -26,5 +27,13 @@ Página: /programacao
     expect(msg).toContain('Referente a: ajusta qualquer coisa')
     expect(msg).toContain('Página: /programacao')
     expect(msg).toContain('Solicitado por: Rafaela Thomaz')
+  })
+
+  it('etiqueta eventos do histórico', () => {
+    expect(etiquetaEventoPedidoAjusteHistorico('resolvido_dev')).toBe('Desenvolvedor enviou ajuste')
+    expect(etiquetaEventoPedidoAjusteHistorico('aprovado_solicitante')).toBe('Solicitante aprovou')
+    expect(etiquetaEventoPedidoAjusteHistorico('negado_solicitante')).toBe(
+      'Solicitante reabriu o pedido'
+    )
   })
 })

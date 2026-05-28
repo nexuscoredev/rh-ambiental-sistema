@@ -8,6 +8,8 @@ export const CHAT_PEDIDO_AJUSTE_PREFIX = '[Solicitação de ajuste no sistema]'
 export const CHAT_RESPOSTA_AJUSTE_RESOLVIDO =
   'Ajustamos conforme a sua solicitação, pode testar por gentileza?'
 
+export type PedidoAjusteStatus = 'aguardando_solicitante' | 'reaberto' | 'aprovado'
+
 export type PedidoAjusteParseado = {
   descricao: string
   pagina?: string
@@ -56,12 +58,33 @@ export function montarRespostaPedidoAjusteResolvido(conteudoPedido: string): str
   return linhas.join('\n')
 }
 
+export function etiquetaEventoPedidoAjusteHistorico(
+  evento: PedidoAjusteHistoricoItem['evento']
+): string {
+  switch (evento) {
+    case 'resolvido_dev':
+      return 'Desenvolvedor enviou ajuste'
+    case 'aprovado_solicitante':
+      return 'Solicitante aprovou'
+    case 'negado_solicitante':
+      return 'Solicitante reabriu o pedido'
+    default:
+      return evento
+  }
+}
+
 function rpcIndisponivel(err: PostgrestError | null): boolean {
   if (!err) return false
   const msg = `${err.message || ''} ${err.details || ''}`.toLowerCase()
   if (err.code === 'PGRST202' || err.code === '42883') return true
   if (msg.includes('404') || msg.includes('not found') || msg.includes('could not find')) return true
   return false
+}
+
+function colunaInexistente(err: PostgrestError | null): boolean {
+  if (!err) return false
+  const msg = `${err.message || ''} ${err.details || ''}`.toLowerCase()
+  return msg.includes('column') && msg.includes('does not exist')
 }
 
 function mensagemErroPedidoAjuste(err: unknown): string {
@@ -72,7 +95,7 @@ function mensagemErroPedidoAjuste(err: unknown): string {
     const joined = [m, d].filter(Boolean).join(' — ')
     if (joined) return joined
   }
-  return 'Não foi possível marcar como resolvido.'
+  return 'Não foi possível concluir a operação no pedido de ajuste.'
 }
 
 function mensagemPrimeiraLinhaRpc(data: unknown): ChatMensagem {
@@ -94,22 +117,61 @@ export type PedidoAjusteFilaItem = {
   conteudo: string
   createdAt: string
   parseado: PedidoAjusteParseado | null
+  /** Novo pedido ou reaberto pelo solicitante após negar. */
+  situacao: 'novo' | 'reaberto'
+  justificativaSolicitante?: string
+  ciclo: number
 }
 
-/** Pedidos de ajuste recebidos ainda não marcados como resolvidos (fila do desenvolvedor). */
+export type PedidoAjusteAguardandoFeedback = {
+  mensagemPedidoId: string
+  respostaMensagemId: string
+  conversaId: string
+  ciclo: number
+}
+
+export type PedidoAjusteHistoricoItem = {
+  id: string
+  mensagemPedidoId: string
+  conversaId: string
+  evento: 'resolvido_dev' | 'aprovado_solicitante' | 'negado_solicitante'
+  actorId: string
+  texto: string | null
+  ciclo: number
+  createdAt: string
+}
+
+type ResolvidoRow = {
+  mensagem_id: string
+  conversa_id: string
+  status?: string | null
+  justificativa_solicitante?: string | null
+  ciclo?: number | null
+}
+
+function pedidoEstaNaFilaDev(row: ResolvidoRow | undefined): boolean {
+  if (!row) return true
+  const status = (row.status ?? 'aguardando_solicitante') as PedidoAjusteStatus
+  return status === 'reaberto'
+}
+
+/** Pedidos na fila do desenvolvedor (novos ou reabertos pelo solicitante). */
 export async function chatListarPedidosAjustePendentes(meuId: string): Promise<PedidoAjusteFilaItem[]> {
   const uid = meuId.trim()
   if (!uid) return []
 
-  const resolvidos = await supabase.from('chat_pedido_ajuste_resolvido').select('mensagem_id')
-  const resolvidoSet = new Set<string>()
+  const resolvidos = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, status, justificativa_solicitante, ciclo')
+
+  const resolvidoPorMensagem = new Map<string, ResolvidoRow>()
   if (resolvidos.error) {
     if (!/does not exist|relation|42P01/i.test(resolvidos.error.message)) {
       throw new Error(mensagemErroPedidoAjuste(resolvidos.error))
     }
   } else {
     for (const row of resolvidos.data ?? []) {
-      resolvidoSet.add(String(row.mensagem_id))
+      resolvidoPorMensagem.set(String(row.mensagem_id), row as ResolvidoRow)
     }
   }
 
@@ -125,8 +187,11 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
   const itens: PedidoAjusteFilaItem[] = []
   for (const row of data ?? []) {
     const mensagemId = String(row.id)
-    if (resolvidoSet.has(mensagemId)) continue
+    const reg = resolvidoPorMensagem.get(mensagemId)
+    if (!pedidoEstaNaFilaDev(reg)) continue
+
     const conteudo = String(row.conteudo ?? '')
+    const reaberto = reg?.status === 'reaberto'
     itens.push({
       mensagemId,
       conversaId: String(row.conversa_id),
@@ -134,9 +199,87 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
       conteudo,
       createdAt: String(row.created_at),
       parseado: parsePedidoAjusteConteudo(conteudo),
+      situacao: reaberto ? 'reaberto' : 'novo',
+      justificativaSolicitante: reaberto
+        ? String(reg?.justificativa_solicitante ?? '').trim() || undefined
+        : undefined,
+      ciclo: Number(reg?.ciclo ?? 1) || 1,
     })
   }
   return itens
+}
+
+/** Pedidos desta conversa à espera de aprovação/negativa do solicitante. */
+export async function chatListarPedidosAguardandoFeedbackSolicitante(
+  conversaId: string,
+  meuId: string
+): Promise<PedidoAjusteAguardandoFeedback[]> {
+  const cid = conversaId.trim()
+  const uid = meuId.trim()
+  if (!cid || !uid) return []
+
+  const { data: pedidos, error: pedErr } = await supabase
+    .from('chat_mensagens')
+    .select('id')
+    .eq('conversa_id', cid)
+    .eq('remetente_id', uid)
+    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+
+  if (pedErr) throw new Error(mensagemErroPedidoAjuste(pedErr))
+  const ids = (pedidos ?? []).map((p) => String(p.id))
+  if (ids.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, resposta_mensagem_id, conversa_id, status, ciclo')
+    .eq('conversa_id', cid)
+    .in('mensagem_id', ids)
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return []
+    if (colunaInexistente(error)) return []
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  const out: PedidoAjusteAguardandoFeedback[] = []
+  for (const row of data ?? []) {
+    const status = (row.status ?? 'aguardando_solicitante') as PedidoAjusteStatus
+    if (status !== 'aguardando_solicitante') continue
+    const respostaId = row.resposta_mensagem_id ? String(row.resposta_mensagem_id) : ''
+    if (!respostaId) continue
+    out.push({
+      mensagemPedidoId: String(row.mensagem_id),
+      respostaMensagemId: respostaId,
+      conversaId: String(row.conversa_id),
+      ciclo: Number(row.ciclo ?? 1) || 1,
+    })
+  }
+  return out
+}
+
+/** Histórico recente de decisões (desenvolvedor). */
+export async function chatListarHistoricoPedidosAjuste(limite = 40): Promise<PedidoAjusteHistoricoItem[]> {
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_historico')
+    .select('id, mensagem_pedido_id, conversa_id, evento, actor_id, texto, ciclo, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limite)
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return []
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    mensagemPedidoId: String(row.mensagem_pedido_id),
+    conversaId: String(row.conversa_id),
+    evento: row.evento as PedidoAjusteHistoricoItem['evento'],
+    actorId: String(row.actor_id),
+    texto: row.texto != null ? String(row.texto) : null,
+    ciclo: Number(row.ciclo ?? 1) || 1,
+    createdAt: String(row.created_at),
+  }))
 }
 
 export async function chatListarPedidosAjusteResolvidos(
@@ -144,7 +287,7 @@ export async function chatListarPedidosAjusteResolvidos(
 ): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('chat_pedido_ajuste_resolvido')
-    .select('mensagem_id')
+    .select('mensagem_id, status')
     .eq('conversa_id', conversaId)
 
   if (error) {
@@ -152,7 +295,14 @@ export async function chatListarPedidosAjusteResolvidos(
     throw new Error(mensagemErroPedidoAjuste(error))
   }
 
-  return new Set((data ?? []).map((r) => String(r.mensagem_id)))
+  const fechados = new Set<string>()
+  for (const row of data ?? []) {
+    const status = (row.status ?? 'aguardando_solicitante') as PedidoAjusteStatus
+    if (status === 'aprovado' || status === 'aguardando_solicitante') {
+      fechados.add(String(row.mensagem_id))
+    }
+  }
+  return fechados
 }
 
 async function marcarPedidoAjusteResolvidoLegado(
@@ -168,9 +318,15 @@ async function marcarPedidoAjusteResolvidoLegado(
   if (!uid) throw new Error('Sessão inválida.')
   if (uid !== meuId) console.warn('[chat] marcar ajuste: JWT difere do estado da UI')
 
-  const ja = await chatListarPedidosAjusteResolvidos(conversaId)
-  if (ja.has(mensagemPedidoId)) {
-    throw new Error('Este pedido já foi marcado como resolvido.')
+  const { data: existente } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, status, ciclo')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  const status = (existente?.status ?? null) as PedidoAjusteStatus | null
+  if (existente && status && status !== 'reaberto') {
+    throw new Error('Este pedido já foi tratado (aguarda o solicitante ou está encerrado).')
   }
 
   const resposta = await chatEnviarTexto(
@@ -179,28 +335,99 @@ async function marcarPedidoAjusteResolvidoLegado(
     montarRespostaPedidoAjusteResolvido(conteudoPedido)
   )
 
-  const { error: insErr } = await supabase.from('chat_pedido_ajuste_resolvido').insert({
+  const ciclo = status === 'reaberto' ? Number(existente?.ciclo ?? 1) + 1 : 1
+  const payload = {
     mensagem_id: mensagemPedidoId,
     conversa_id: conversaId,
     resolvido_por: uid,
     resposta_mensagem_id: resposta.id,
-  })
+    status: 'aguardando_solicitante' as const,
+    justificativa_solicitante: null,
+    decidido_por: null,
+    decidido_em: null,
+    ciclo,
+  }
 
-  if (insErr) {
-    if (/does not exist|relation|42P01/i.test(insErr.message)) {
-      throw new Error(
-        'A tabela de pedidos resolvidos ainda não existe no Supabase. Execute: npm run db:apply:chat-pedido-ajuste-resolvido'
-      )
-    }
-    if (/row-level security|42501|policy/i.test(insErr.message)) {
-      throw new Error(
-        'Sem permissão no servidor para registar a resolução. Aplique a migração chat_pedido_ajuste_resolvido (fix RPC) no Supabase.'
-      )
-    }
-    throw new Error(mensagemErroPedidoAjuste(insErr))
+  if (existente) {
+    const { error: upErr } = await supabase
+      .from('chat_pedido_ajuste_resolvido')
+      .update(payload)
+      .eq('mensagem_id', mensagemPedidoId)
+    if (upErr) throw new Error(mensagemErroPedidoAjuste(upErr))
+  } else {
+    const { error: insErr } = await supabase.from('chat_pedido_ajuste_resolvido').insert(payload)
+    if (insErr) throw new Error(mensagemErroPedidoAjuste(insErr))
   }
 
   return resposta
+}
+
+async function decidirPedidoAjusteLegado(
+  mensagemPedidoId: string,
+  aprovado: boolean,
+  justificativa?: string
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const uid = user?.id
+  if (!uid) throw new Error('Sessão inválida.')
+
+  const { data: msg, error: msgErr } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id, conteudo')
+    .eq('id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (msgErr) throw new Error(mensagemErroPedidoAjuste(msgErr))
+  if (!msg) throw new Error('Pedido não encontrado.')
+  if (String(msg.remetente_id) !== uid) {
+    throw new Error('Apenas quem abriu o pedido pode aprovar ou negar o ajuste.')
+  }
+
+  const { data: reg, error: regErr } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, status, ciclo')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (regErr) throw new Error(mensagemErroPedidoAjuste(regErr))
+  if (!reg || reg.status !== 'aguardando_solicitante') {
+    throw new Error('Não há ajuste pendente da sua confirmação para este pedido.')
+  }
+
+  const ciclo = Number(reg.ciclo ?? 1) || 1
+
+  if (aprovado) {
+    const { error } = await supabase
+      .from('chat_pedido_ajuste_resolvido')
+      .update({
+        status: 'aprovado',
+        decidido_por: uid,
+        decidido_em: new Date().toISOString(),
+        justificativa_solicitante: null,
+      })
+      .eq('mensagem_id', mensagemPedidoId)
+    if (error) throw new Error(mensagemErroPedidoAjuste(error))
+    return
+  }
+
+  const just = (justificativa ?? '').trim()
+  if (just.length < 3) {
+    throw new Error('Indique a justificativa ao negar o ajuste.')
+  }
+
+  const { error } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .update({
+      status: 'reaberto',
+      decidido_por: uid,
+      decidido_em: new Date().toISOString(),
+      justificativa_solicitante: just,
+    })
+    .eq('mensagem_id', mensagemPedidoId)
+
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
 }
 
 /** Envia resposta padrão e regista o pedido como resolvido (desenvolvedor / desenvolvedor master). */
@@ -247,7 +474,7 @@ export async function chatMarcarPedidoAjusteResolvido(
     const msg = mensagemErroPedidoAjuste(rpc.error)
     if (/does not exist|relation|42P01/i.test(msg)) {
       throw new Error(
-        'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-fix (ou a migração 20260527120000 no SQL Editor).'
+        'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-feedback (ou a migração 20260601120000 no SQL Editor).'
       )
     }
     throw new Error(msg)
@@ -259,4 +486,24 @@ export async function chatMarcarPedidoAjusteResolvido(
     meuId,
     conteudoPedido
   )
+}
+
+export async function chatDecidirPedidoAjusteSolicitante(
+  mensagemPedidoId: string,
+  aprovado: boolean,
+  justificativa?: string
+): Promise<void> {
+  const rpc = await supabase.rpc('chat_decidir_pedido_ajuste_solicitante', {
+    p_mensagem_pedido_id: mensagemPedidoId,
+    p_aprovado: aprovado,
+    p_justificativa: justificativa ?? null,
+  })
+
+  if (!rpc.error) return
+
+  if (!rpcIndisponivel(rpc.error)) {
+    throw new Error(mensagemErroPedidoAjuste(rpc.error))
+  }
+
+  await decidirPedidoAjusteLegado(mensagemPedidoId, aprovado, justificativa)
 }

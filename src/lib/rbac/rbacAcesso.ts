@@ -165,7 +165,14 @@ export function rbacPode(
   ctx: UsuarioAcessoContext
 ): boolean {
   if (usuarioEhDesenvolvedorMaster(ctx)) return true
-  if (cargoEhVisualizador(ctx.cargo)) return false
+  // Cargo «Visualizador» não revoga quem está no organograma comercial/diretoria (nome tem prioridade).
+  if (
+    cargoEhVisualizador(ctx.cargo) &&
+    !usuarioEhEquipeComercial(ctx) &&
+    !diretoriaAcessoNegocio(ctx)
+  ) {
+    return false
+  }
 
   switch (recurso) {
     case 'cliente':
