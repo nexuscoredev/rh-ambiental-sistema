@@ -3386,11 +3386,13 @@ a.rg-btn {
 
 .chat-interno-bubble-wrap {
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
 }
 
 .chat-interno-bubble-wrap--meu {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 .chat-interno-bubble {
@@ -3815,93 +3817,7 @@ a.rg-btn {
   word-break: break-word;
 }
 
-.chat-pedido-feedback {
-  margin: 6px 0 0 48px;
-  max-width: min(100%, 340px);
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid #fcd34d;
-  background: #fffbeb;
-}
-
-.chat-interno-bubble-wrap--meu + .chat-pedido-feedback,
-.chat-interno-bubble-wrap--meu .chat-pedido-feedback {
-  margin-left: auto;
-  margin-right: 0;
-}
-
-.chat-pedido-feedback__titulo {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #92400e;
-}
-
-.chat-pedido-feedback__ciclo {
-  margin: -4px 0 8px;
-  font-size: 10px;
-  color: #a16207;
-}
-
-.chat-pedido-feedback__acoes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chat-pedido-feedback__btn {
-  flex: 1 1 auto;
-  min-width: 120px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 8px 10px;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.chat-pedido-feedback__btn--ok {
-  background: #f0fdf4;
-  border-color: #16a34a;
-  color: #15803d;
-}
-
-.chat-pedido-feedback__btn--neg {
-  background: #fff7ed;
-  border-color: #ea580c;
-  color: #c2410c;
-}
-
-.chat-pedido-feedback__btn--ghost {
-  background: #fff;
-  border-color: #cbd5e1;
-  color: #64748b;
-}
-
-.chat-pedido-feedback__btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.chat-pedido-feedback__label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: #78350f;
-  margin-bottom: 4px;
-}
-
-.chat-pedido-feedback__textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 12px;
-  font-family: inherit;
-  resize: vertical;
-  margin-bottom: 8px;
-}
+/* Ver index-NEXUS.css — estilos activos em produção (import em main.tsx) */
 
 .chat-interno-bubble__text {
   margin: 0;
