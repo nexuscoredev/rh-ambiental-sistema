@@ -29,9 +29,9 @@ import {
   horaDbParaInputTime,
   horaInputTimeParaDb,
   normalizarDataIsoCampo,
+  resolverDataCampoPesagemForm,
 } from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
-import { isoDataHojeLocal } from "../lib/ticketOperacionalData";
 import { waitForTicketPrintRoot } from "../lib/waitForTicketPrintRoot";
 import { atualizarColetaAposPesagemControleMassa } from "../lib/controleMassaAtualizarColeta";
 import { supabase } from "../lib/supabase";
@@ -153,6 +153,8 @@ type ColetaOpcao = {
   cliente_id?: string | null;
   /** Para ordenar a lista (mais recente primeiro). */
   created_at?: string | null;
+  data_execucao?: string | null;
+  data_agendada?: string | null;
   residuos_itens?: ResiduoPesagemItem[] | null;
 };
 
@@ -347,6 +349,14 @@ function mapRowToColetaOpcao(item: Record<string, unknown>): ColetaOpcao {
     programacao_id: item.programacao_id != null ? String(item.programacao_id) : null,
     cliente_id: item.cliente_id != null ? String(item.cliente_id) : null,
     created_at: item.created_at != null ? String(item.created_at) : null,
+    data_execucao:
+      item.data_execucao != null && String(item.data_execucao).trim() !== ""
+        ? String(item.data_execucao)
+        : null,
+    data_agendada:
+      item.data_agendada != null && String(item.data_agendada).trim() !== ""
+        ? String(item.data_agendada)
+        : null,
     residuos_itens: parseResiduosItensJson(item.residuos_itens),
   };
 }
@@ -376,19 +386,6 @@ function formatarDataIsoCurta(iso: string | null | undefined): string {
     if (y && m && d) return `${d}/${m}/${y}`;
   }
   return iso;
-}
-
-function resolverDataCampoPesagem(
-  prev: FormRegistro,
-  coletaId: string,
-  pesagemPrev?: { data: string | null } | null
-): string {
-  if (prev.coleta_id === coletaId && prev.data.trim()) {
-    return prev.data.trim().slice(0, 10);
-  }
-  const fromPesagem = normalizarDataIsoCampo(pesagemPrev?.data);
-  if (fromPesagem) return fromPesagem;
-  return isoDataHojeLocal();
 }
 
 async function buscarColetasPorIds(ids: string[]): Promise<ColetaOpcao[]> {
@@ -1763,7 +1760,14 @@ export default function ControleMassa() {
       mtrsLista.find((m) => m.id === coletaSelecionada.mtr_id)?.numero ?? null;
     const ticketEx = numeroTicketPorColeta.get(coletaSelecionada.id);
     const pesagemPrev = ultimaPesagemPorColeta.get(coletaSelecionada.id);
-    const dataCampo = resolverDataCampoPesagem(prev, coletaSelecionada.id, pesagemPrev);
+    const dataCampo = resolverDataCampoPesagemForm({
+      coletaId: coletaSelecionada.id,
+      prevColetaId: prev.coleta_id,
+      prevData: prev.data,
+      pesagem: pesagemPrev,
+      coletaDataExecucao: coletaSelecionada.data_execucao,
+      coletaDataAgendada: coletaSelecionada.data_agendada,
+    });
     const horaEntrada =
       prev.coleta_id === coletaSelecionada.id && prev.hora_entrada.trim()
         ? prev.hora_entrada
@@ -1844,6 +1848,7 @@ export default function ControleMassa() {
             {
               ...prev,
               coleta_id: "",
+              data: "",
               empresa: clienteMtr || prev.empresa,
               placa: heranca?.placa ?? "",
               motorista: heranca?.motorista ?? "",
@@ -1876,6 +1881,7 @@ export default function ControleMassa() {
       setForm((prev) => ({
         ...prev,
         coleta_id: "",
+        data: "",
         empresa: "",
         residuo: "",
         residuo_catalogo_id: "",
@@ -1952,8 +1958,7 @@ export default function ControleMassa() {
       if (prev.coleta_id !== cid) return prev;
       const patch: Partial<FormRegistro> = {};
       const dataDb = normalizarDataIsoCampo(up.data);
-      const hoje = isoDataHojeLocal();
-      if (dataDb && (!prev.data.trim() || (prev.data === hoje && dataDb !== hoje))) {
+      if (dataDb && prev.data.trim() !== dataDb) {
         patch.data = dataDb;
       }
       const he = horaDbParaInputTime(up.hora_entrada);

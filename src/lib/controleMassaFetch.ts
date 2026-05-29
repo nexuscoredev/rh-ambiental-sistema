@@ -483,6 +483,34 @@ export function normalizarDataIsoCampo(raw: string | null | undefined): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : ''
 }
 
+/**
+ * Data do formulário de pesagem/ticket no Controle de Massa.
+ * Prioridade: última pesagem → data execução/agendada da coleta → valor já editado na mesma coleta → vazio (novo ticket).
+ */
+export function resolverDataCampoPesagemForm(opts: {
+  coletaId: string
+  prevColetaId: string
+  prevData: string
+  pesagem?: { data: string | null } | null
+  coletaDataExecucao?: string | null
+  coletaDataAgendada?: string | null
+}): string {
+  const fromPesagem = normalizarDataIsoCampo(opts.pesagem?.data)
+  if (fromPesagem) return fromPesagem
+
+  const fromExecucao = normalizarDataIsoCampo(opts.coletaDataExecucao)
+  if (fromExecucao) return fromExecucao
+
+  const fromAgendada = normalizarDataIsoCampo(opts.coletaDataAgendada)
+  if (fromAgendada) return fromAgendada
+
+  if (opts.prevColetaId === opts.coletaId && opts.prevData.trim()) {
+    return opts.prevData.trim().slice(0, 10)
+  }
+
+  return ''
+}
+
 /** Valor `time` do Postgres → `HH:mm` para `<input type="time">`. */
 export function horaDbParaInputTime(raw: string | null | undefined): string {
   if (!raw?.trim()) return ''
