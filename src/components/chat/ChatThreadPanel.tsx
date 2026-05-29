@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ChatAvatar } from './ChatAvatar'
 import { ChatComposerPicker } from './ChatComposerPicker'
-import { chatUrlAssinadaAnexo } from '../../lib/chat'
+import { chatUrlAssinadaAnexo, chatMensagemLidaPeloOutro } from '../../lib/chat'
 import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatMensagemEhPedidoAjuste,
@@ -26,6 +26,8 @@ type Props = {
   podeGerirFigurinhas?: boolean
   apagandoHistorico?: boolean
   onApagarHistorico?: () => void
+  /** `last_read_at` do destinatário — confirmação de leitura nas mensagens enviadas. */
+  outroLastReadAt?: string | null
   onEnviarTexto: (texto: string) => Promise<void>
   onEnviarFicheiro: (f: File, legenda: string) => Promise<void>
   onEnviarFigurinha: (sticker: ChatSticker) => Promise<void>
@@ -60,6 +62,7 @@ export function ChatThreadPanel({
   pedidosAguardandoFeedback = [],
   decidindoPedidoAjusteId = null,
   onDecidirPedidoAjuste,
+  outroLastReadAt = null,
 }: Props) {
   const feedbackPorResposta = new Map(
     pedidosAguardandoFeedback.map((p) => [p.respostaMensagemId, p])
@@ -236,6 +239,7 @@ export function ChatThreadPanel({
                 key={m.id}
                 m={m}
                 meuId={meuId}
+                outroLastReadAt={outroLastReadAt}
                 feedbackPedido={
                   feedback && onDecidirPedidoAjuste
                     ? {
@@ -358,10 +362,12 @@ type FeedbackPedidoProps = {
 function MensagemBolha({
   m,
   meuId,
+  outroLastReadAt,
   feedbackPedido,
 }: {
   m: ChatMensagem
   meuId: string
+  outroLastReadAt?: string | null
   feedbackPedido?: FeedbackPedidoProps
 }) {
   const meu = m.remetente_id === meuId
@@ -393,6 +399,7 @@ function MensagemBolha({
     hour: '2-digit',
     minute: '2-digit',
   })
+  const lida = meu && chatMensagemLidaPeloOutro(m.created_at, outroLastReadAt)
 
   const mostrarTexto = !!(
     m.conteudo &&
@@ -434,9 +441,50 @@ function MensagemBolha({
             {url ? <span className="chat-interno-anexo__hint">Aberto num novo separador</span> : null}
           </button>
         ) : null}
-        <time className="chat-interno-bubble__time" dateTime={m.created_at}>
-          {hora}
-        </time>
+        <div className="chat-interno-bubble__meta">
+          {meu ? (
+            <span
+              className={`chat-interno-bubble__read${lida ? ' chat-interno-bubble__read--lida' : ''}`}
+              title={lida ? 'Lida' : 'Enviada'}
+              aria-label={lida ? 'Lida' : 'Enviada'}
+            >
+              {lida ? (
+                <svg width="16" height="11" viewBox="0 0 18 12" aria-hidden>
+                  <path
+                    d="M1 6.5 4 9.5 9.5 3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M5.5 6.5 8.5 9.5 16 2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="12" height="11" viewBox="0 0 12 11" aria-hidden>
+                  <path
+                    d="M1 5.5 4 8.5 11 1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </span>
+          ) : null}
+          <time className="chat-interno-bubble__time" dateTime={m.created_at}>
+            {hora}
+          </time>
+        </div>
       </div>
       {feedbackPedido ? (
         <ChatPedidoAjusteFeedback

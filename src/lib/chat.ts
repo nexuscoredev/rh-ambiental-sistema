@@ -393,6 +393,30 @@ export async function chatMarcarLida(conversaId: string, meuId: string): Promise
   if (uid !== meuId) console.warn('[chat] marcar lida: JWT difere do meuId')
 }
 
+/** Indica se o outro participante já leu a mensagem (comparando `last_read_at` da conversa 1:1). */
+export function chatMensagemLidaPeloOutro(
+  createdAt: string,
+  outroLastReadAt: string | null | undefined
+): boolean {
+  if (!outroLastReadAt) return false
+  return new Date(outroLastReadAt).getTime() >= new Date(createdAt).getTime()
+}
+
+export async function chatObterLastReadAtParticipante(
+  conversaId: string,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('chat_participantes')
+    .select('last_read_at')
+    .eq('conversa_id', conversaId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data?.last_read_at ?? null
+}
+
 export async function chatCarregarMensagens(conversaId: string, limite = 200): Promise<ChatMensagem[]> {
   const { data, error } = await supabase
     .from('chat_mensagens')

@@ -11,6 +11,7 @@ import {
   chatGetOrCreateDirect,
   chatListarUsuariosAtivos,
   chatMarcarLida,
+  chatObterLastReadAtParticipante,
 } from '../../lib/chat'
 import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
@@ -149,6 +150,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
   const [abrindoComPessoa, setAbrindoComPessoa] = useState(false)
+  const [outroLastReadAt, setOutroLastReadAt] = useState<string | null>(null)
 
   const [temaCabecalho, setTemaCabecalho] = useState<ChatHeadThemeId>(() =>
     typeof window !== 'undefined' ? parseChatHeadTheme(localStorage.getItem(CHAT_HEAD_THEME_STORAGE_KEY)) : 'verde'
@@ -677,6 +679,49 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     }
   }, [conversaId, conversas, outroIdPainel])
 
+  useEffect(() => {
+    if (!conversaId || !outroIdEfectivo || !open) {
+      queueMicrotask(() => setOutroLastReadAt(null))
+      return
+    }
+
+    const cid = conversaId
+    const oid = outroIdEfectivo
+    let cancel = false
+
+    void chatObterLastReadAtParticipante(cid, oid)
+      .then((ts) => {
+        if (!cancel) setOutroLastReadAt(ts)
+      })
+      .catch((e) => {
+        console.warn('[chat] last_read outro', e)
+      })
+
+    const ch = supabase
+      .channel(`chat-float-read-${cid}-${oid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_participantes',
+          filter: `conversa_id=eq.${cid}`,
+        },
+        (payload) => {
+          const row = payload.new as { user_id?: string; last_read_at?: string | null }
+          if (row?.user_id === oid) {
+            setOutroLastReadAt(row.last_read_at ?? null)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      cancel = true
+      void ch.unsubscribe()
+    }
+  }, [conversaId, outroIdEfectivo, open])
+
   async function handleEnviarTexto(t: string) {
     if (!conversaId || !meuId) return
     setEnviando(true)
@@ -968,6 +1013,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   outroNome={outroNome}
                   outroFoto={outroMeta?.foto_url ?? null}
                   presencaOutro={presencaOutro}
+                  outroLastReadAt={outroLastReadAt}
                   mensagens={mensagens}
                   carregandoMensagens={carregandoMensagens}
                   enviando={enviando || apagandoHistorico}
