@@ -1213,7 +1213,7 @@ export default function Programacao() {
   /** Abre o formulário flutuante; `isoDate` opcional (defeito: hoje). */
   function abrirModalNovaProgramacao(isoDate?: string) {
     if (!podeMutarProgramacao) {
-      setErro('Seu perfil não pode criar programações. Apenas operacional ou administrador.')
+      setErro('Seu perfil não pode criar programações. Equipe Comercial ou administrador.')
       return
     }
     const data = isoDate ?? todayIsoLocal()
@@ -1312,7 +1312,7 @@ export default function Programacao() {
     if (!formEdicaoModal) return
 
     if (!podeMutarProgramacao) {
-      setErro('Seu perfil não pode criar ou editar programações. Apenas operacional ou administrador.')
+      setErro('Seu perfil não pode criar ou editar programações. Equipe Comercial ou administrador.')
       return
     }
 
@@ -1416,7 +1416,7 @@ export default function Programacao() {
     event.preventDefault()
 
     if (!podeMutarProgramacao) {
-      setErro('Seu perfil não pode criar ou editar programações. Apenas operacional ou administrador.')
+      setErro('Seu perfil não pode criar ou editar programações. Equipe Comercial ou administrador.')
       return
     }
 
@@ -2458,7 +2458,7 @@ export default function Programacao() {
                   title={
                     podeMutarProgramacao
                       ? 'Preencher o formulário «Nova programação» com esta data'
-                      : 'Apenas operacional ou administrador pode criar programações.'
+                      : 'Equipe Comercial ou administrador pode criar programações.'
                   }
                   style={{
                     width: '100%',
@@ -2669,7 +2669,7 @@ export default function Programacao() {
                 title={
                   podeMutarProgramacao
                     ? 'Incluir outra programação nesta data'
-                    : 'Apenas operacional ou administrador pode criar programações.'
+                    : 'Equipe Comercial ou administrador pode criar programações.'
                 }
                 style={{
                   width: '100%',
@@ -2755,7 +2755,7 @@ export default function Programacao() {
                     disabled={salvando || !podeMutarProgramacao}
                     title={
                       !podeMutarProgramacao
-                        ? 'Apenas operacional ou administrador pode salvar.'
+                        ? 'Equipe Comercial ou administrador pode salvar.'
                         : undefined
                     }
                   >
@@ -3137,7 +3137,7 @@ export default function Programacao() {
                   disabled={salvandoEdicaoModal || !podeMutarProgramacao}
                   title={
                     !podeMutarProgramacao
-                      ? 'Apenas operacional ou administrador pode salvar.'
+                      ? 'Equipe Comercial ou administrador pode salvar.'
                       : undefined
                   }
                 >

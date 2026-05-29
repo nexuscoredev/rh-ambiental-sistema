@@ -186,7 +186,14 @@ export function rbacPode(
     }
     case 'programacao': {
       if (acao === 'ler') return leituraGeralSistema(ctx)
-      if (acao === 'criar' || acao === 'editar' || acao === 'excluir') {
+      if (acao === 'criar' || acao === 'editar') {
+        return (
+          usuarioEhEquipeComercial(ctx) ||
+          usuarioEhOperacao(ctx) ||
+          diretoriaAcessoNegocio(ctx)
+        )
+      }
+      if (acao === 'excluir') {
         return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
       }
       return false
@@ -197,7 +204,14 @@ export function rbacPode(
       return false
     }
     case 'pesagem_ticket': {
-      if (acao === 'ler' || acao === 'editar' || acao === 'criar') return leituraGeralSistema(ctx)
+      if (acao === 'ler') return leituraGeralSistema(ctx)
+      if (acao === 'criar' || acao === 'editar') {
+        return (
+          usuarioEhOperacao(ctx) ||
+          usuarioEhEquipeComercial(ctx) ||
+          diretoriaAcessoNegocio(ctx)
+        )
+      }
       if (acao === 'excluir') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
       return false
     }

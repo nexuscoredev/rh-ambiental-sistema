@@ -54,6 +54,14 @@ describe('rbac — equipe comercial (mesmo acesso)', () => {
     expect(rbacPode('faturamento', 'ler', ctx('Matheus', 'Operadores (Time R)'))).toBe(false)
     expect(rbacPode('programacao', 'excluir', ctx('Rafael', 'Operadores (Time R)'))).toBe(false)
   })
+
+  it('operação pode lançar programação e pesagem/ticket', () => {
+    const matheus = ctx('Matheus', 'Operadores (Time R)')
+    expect(rbacPode('programacao', 'criar', matheus)).toBe(true)
+    expect(rbacPode('programacao', 'editar', matheus)).toBe(true)
+    expect(rbacPode('pesagem_ticket', 'criar', matheus)).toBe(true)
+    expect(rbacPode('pesagem_ticket', 'editar', matheus)).toBe(true)
+  })
 })
 
 describe('rbac — conferência transporte', () => {

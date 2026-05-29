@@ -13,6 +13,8 @@ import {
   cargoPodeEditarResumosFinanceirosFaturamento,
   cargoPodeEditarMtr,
   cargoPodeExcluirMtr,
+  cargoPodeCriarProgramacao,
+  cargoPodeEditarProgramacao,
   cargoPodeLancarPesagem,
   cargoPodeMutarFaturamentoFluxo,
   cargoPodeMutarFinanceiro,
@@ -57,8 +59,9 @@ describe("workflowPermissions — Operadores (Time R)", () => {
     expect(cargoEhOperadoresTimeR("Operadores")).toBe(true);
   });
 
-  it("operação edita MTR/pesagem; exclusões só Thais; sem faturamento", () => {
-    expect(cargoPodeMutarProgramacao(CARGO_OPERADORES_TIME_R)).toBe(false);
+  it("operação lança programação, MTR/pesagem; exclusões só comercial; sem faturamento", () => {
+    expect(cargoPodeMutarProgramacao(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(true);
+    expect(cargoPodeCriarProgramacao(CARGO_OPERADORES_TIME_R, "Gabriel")).toBe(true);
     expect(cargoPodeEditarMtr(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(true);
     expect(cargoPodeExcluirMtr(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(false);
     expect(cargoPodeLancarPesagem(CARGO_OPERADORES_TIME_R)).toBe(true);
@@ -127,6 +130,21 @@ describe("workflowPermissions — Cancelar / Baixar MTR (lista)", () => {
   it("autoriza cargo Comercial Adm (Thais) mesmo sem nome no perfil", () => {
     expect(cargoPodeCancelarBaixarMtr("Comercial Adm", null)).toBe(true);
     expect(cargoPodeCancelarBaixarMtr("Comercial", null)).toBe(false);
+  });
+});
+
+describe("workflowPermissions — Equipe Comercial (programação e pesagem)", () => {
+  it("Rafaela, Rose e Raquel podem criar programação e lançar pesagem/ticket", () => {
+    for (const nome of ["Rafaela Thomaz", "Rose", "Raquel"]) {
+      expect(cargoPodeCriarProgramacao("Comercial", nome)).toBe(true);
+      expect(cargoPodeEditarProgramacao("Comercial", nome)).toBe(true);
+      expect(cargoPodeLancarPesagem("Comercial", nome)).toBe(true);
+    }
+  });
+
+  it("mantém pesagem para operadores e nega visualizador fora do organograma", () => {
+    expect(cargoPodeLancarPesagem(CARGO_OPERADORES_TIME_R, "Matheus")).toBe(true);
+    expect(cargoPodeLancarPesagem("Visualizador", "Visitante Externo")).toBe(false);
   });
 });
 

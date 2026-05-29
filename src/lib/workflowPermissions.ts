@@ -193,7 +193,7 @@ export function cargoPodeVerDashboardExecutivo(cargo: string | null | undefined)
   return cargoEhDiretoria(cargo)
 }
 
-/** Programação — criar/editar: setor Comercial (matriz RBAC). */
+/** Programação — criar/editar: Comercial + Operação (matriz RBAC). */
 export function usuarioPodeCriarProgramacao(ctx: UsuarioAcessoCtx): boolean {
   return rbacPode('programacao', 'criar', ctx)
 }
@@ -221,8 +221,13 @@ export function cargoPodeMutarMtr(
   return usuarioPodeEditarMtr(ctxDeArgs(cargo, nome))
 }
 
-/** Lançamento de pesagem — balanceiro, Operadores, operacional, logística e admin. */
-export function cargoPodeMutarControleMassa(cargo: string | null | undefined): boolean {
+/** Pesagem / ticket no Controle de Massa — Operação + Comercial (RBAC) + perfis legados. */
+export function usuarioPodeLancarPesagemTicket(ctx: UsuarioAcessoCtx): boolean {
+  if (rbacPode('pesagem_ticket', 'criar', ctx)) return true
+  return cargoPodeMutarControleMassaOperacional(ctx.cargo)
+}
+
+function cargoPodeMutarControleMassaOperacional(cargo: string | null | undefined): boolean {
   if (liberadoSeAutoridadeMaxima(cargo)) return true
   if (cargoEhVisualizador(cargo)) return false
   if (cargoEhDiretoria(cargo)) return true
@@ -238,6 +243,14 @@ export function cargoPodeMutarControleMassa(cargo: string | null | undefined): b
     c.includes('logistica') ||
     c.includes('faturamento')
   )
+}
+
+/** Lançamento de pesagem — balanceiro, Operadores, operacional, logística, comercial e admin. */
+export function cargoPodeMutarControleMassa(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return usuarioPodeLancarPesagemTicket(ctxDeArgs(cargo, nome))
 }
 
 /** Conferência operacional (documentos / dados após pesagem) — Operacional + Admin. */
@@ -264,8 +277,11 @@ export function cargoPodeMutarChecklistTransporte(cargo: string | null | undefin
  * Ticket operacional — mesmo universo do Controle de Massa
  * (inclui Operadores para gravar/imprimir o ticket padrão).
  */
-export function cargoPodeMutarTicketOperacional(cargo: string | null | undefined): boolean {
-  return cargoPodeMutarControleMassa(cargo)
+export function cargoPodeMutarTicketOperacional(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return cargoPodeMutarControleMassa(cargo, nome)
 }
 
 /** Tipo/número manual do ticket, reabrir após «ticket gerado». */

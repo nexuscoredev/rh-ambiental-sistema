@@ -990,7 +990,7 @@ export default function ControleMassa() {
 
   const ehOperadoresTimeR = cargoEhOperadoresTimeR(usuarioCargo);
   const somenteTicketPadrao = cargoPerfilSomenteLancamentoTicketPadrao(usuarioCargo);
-  const podeMutarMassa = cargoPodeLancarPesagem(usuarioCargo);
+  const podeMutarMassa = cargoPodeLancarPesagem(usuarioCargo, usuarioNome);
   const podeEditarOuExcluirColeta = cargoPodeExcluirTicketPesagem(
     usuarioCargo,
     usuarioNome,
@@ -2183,7 +2183,7 @@ export default function ControleMassa() {
 
     if (!podeMutarMassa) {
       setErroTela(
-        "Seu perfil não pode lançar pesagem. Apenas balanceiro ou administrador."
+        "Seu perfil não pode lançar pesagem. Equipe Comercial, operação (pesagem) ou administrador."
       );
       return;
     }
