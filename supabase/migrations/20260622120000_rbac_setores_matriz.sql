@@ -141,6 +141,25 @@ AS $$
   SELECT public.rg_is_comercial_adm();
 $$;
 
+/** Operadores (Time R) — pesagem / ticket padrão. */
+CREATE OR REPLACE FUNCTION public.rg_is_operadores_time_r()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    public.rg_cargo_like('operadores')
+    AND (
+      public.rg_cargo_like('time r')
+      OR public.rg_cargo_like('rafael')
+      OR public.rg_cargo_like('operadores time rafael')
+    )
+    OR public.rg_cargo_like('meninos')
+    OR lower(btrim(public.rg_user_cargo())) = 'operadores';
+$$;
+
 CREATE OR REPLACE FUNCTION public.rg_rbac_setor_usuario()
 RETURNS text
 LANGUAGE plpgsql

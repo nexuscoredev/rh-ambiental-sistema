@@ -1,5 +1,27 @@
 -- Operação: lançar programação e pesagem/ticket (alinhado ao RBAC no frontend).
 
+/** Operadores (Time R) — pesagem / ticket padrão (Matheus, Gabriel, etc.). */
+CREATE OR REPLACE FUNCTION public.rg_is_operadores_time_r()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    public.rg_cargo_like('operadores')
+    AND (
+      public.rg_cargo_like('time r')
+      OR public.rg_cargo_like('rafael')
+      OR public.rg_cargo_like('operadores time rafael')
+    )
+    OR public.rg_cargo_like('meninos')
+    OR lower(btrim(public.rg_user_cargo())) = 'operadores';
+$$;
+
+COMMENT ON FUNCTION public.rg_is_operadores_time_r() IS
+  'Perfil Operadores (Time R) — lançamento de pesagem e ticket no Controle de Massa.';
+
 CREATE OR REPLACE FUNCTION public.rg_rbac_pode(p_recurso text, p_acao text)
 RETURNS boolean
 LANGUAGE plpgsql
