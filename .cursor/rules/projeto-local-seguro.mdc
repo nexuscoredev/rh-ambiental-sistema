@@ -1,0 +1,42 @@
+---
+description: Local de desenvolvimento seguro — nunca OneDrive; backup e integridade
+alwaysApply: true
+---
+
+# Projeto local seguro (RG Ambiental)
+
+## Local canónico
+
+- **Desenvolver sempre em** `C:\dev\rh-ambiental-sistema`
+- **Nunca** clonar, abrir ou correr `npm install` / `npm run dev` dentro de `OneDrive\` — corrompe `node_modules` e apaga ficheiros versionados.
+
+## Antes de pedir ajuda com "localhost não funciona"
+
+1. Confirmar pasta: `pwd` não pode conter `OneDrive`.
+2. `npm run guard:projeto` — deve terminar com `OK`.
+3. Se ficheiros em falta: `git restore .` ou clone limpo em `C:\dev\`.
+
+## Backup (código + segredos locais)
+
+| O quê | Como |
+|-------|------|
+| Código | GitHub (`git push`) — fonte de verdade |
+| `.env` (chaves locais) | `npm run backup:local` → `C:\dev\backups\rh-ambiental-sistema\` |
+| Deploy | Vercel + variáveis na plataforma |
+
+O agente **não** deve sugerir commitar `.env`. Após alterações importantes, lembrar: `npm run backup:local` e `git push`.
+
+## Recuperação rápida
+
+```powershell
+git clone https://github.com/rafaelsantoscavalcante22-jpg/rh-ambiental-sistema.git C:\dev\rh-ambiental-sistema
+cd C:\dev\rh-ambiental-sistema
+copy C:\dev\backups\rh-ambiental-sistema\env-MAIS-RECENTE.txt .env
+npm install
+npm run dev
+```
+
+## Scripts automáticos
+
+- `predev` / `prebuild`: `guard:projeto` (bloqueia OneDrive e corrupção)
+- `postinstall`: verifica links em `node_modules/.bin`

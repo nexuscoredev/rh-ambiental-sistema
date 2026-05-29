@@ -7,6 +7,11 @@
     "node": ">=20.19.0"
   },
   "scripts": {
+    "predev": "node scripts/guard-projeto-integridade.mjs",
+    "prebuild": "node scripts/guard-projeto-integridade.mjs",
+    "postinstall": "node scripts/guard-projeto-integridade.mjs",
+    "guard:projeto": "node scripts/guard-projeto-integridade.mjs",
+    "backup:local": "node scripts/backup-projeto-local.mjs",
     "dev": "vite --port 4173",
     "build": "npm run build:brand && node scripts/write-public-version.mjs && tsc -b && vite build",
     "build:brand": "node scripts/generate-brand-assets.mjs",
