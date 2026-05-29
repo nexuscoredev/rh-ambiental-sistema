@@ -3,7 +3,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { NEXUS_CARGOS_POR_ROTA } from './lib/nexusCargosPorRota'
-import { usuarioPodeAcessarRota } from './lib/paginasSistema'
+import { usuarioPodeAcessarRota, usuarioTemExcecaoCadastroCliente } from './lib/paginasSistema'
 import { carregarPerfilUsuario } from './lib/carregarPerfilUsuario'
 import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
@@ -206,7 +206,8 @@ function ProtectedRoute({
   if (
     !apenasAutenticado &&
     !allowedRoles.includes(usuario.cargo) &&
-    !cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)
+    !cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email) &&
+    !usuarioTemExcecaoCadastroCliente(usuario, location.pathname)
   ) {
     return <Navigate to="/bem-vindo" replace />
   }

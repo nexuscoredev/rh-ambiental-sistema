@@ -9,6 +9,7 @@ export {
   cargoEhComercialAdm,
   nomeContemToken,
   nomeEhThais,
+  nomeEhMatheus,
   normalizarNomePessoa,
   rbacPode,
   rbacPodeExcluir,

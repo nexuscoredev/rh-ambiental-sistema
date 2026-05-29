@@ -57,6 +57,11 @@ export function nomeEhThais(ctx: UsuarioAcessoContext): boolean {
   return nomeContemToken(normalizarNomePessoa(ctx.nome), 'thais')
 }
 
+/** Matheus (Operação): cadastro de clientes liberado por exceção de negócio. */
+export function nomeEhMatheus(ctx: UsuarioAcessoContext): boolean {
+  return nomeContemToken(normalizarNomePessoa(ctx.nome), 'matheus')
+}
+
 /** Equipe comercial com o mesmo acesso operacional (Thais, Rafaela, Rose, Raquel). */
 export function usuarioEhEquipeComercial(ctx: UsuarioAcessoContext): boolean {
   if (usuarioEhDesenvolvedorMaster(ctx)) return true
@@ -176,7 +181,7 @@ export function rbacPode(
 
   switch (recurso) {
     case 'cliente':
-      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx) || nomeEhMatheus(ctx)
     case 'motorista':
     case 'veiculo':
       return setorComercialOuOperacao(ctx) || diretoriaAcessoNegocio(ctx)

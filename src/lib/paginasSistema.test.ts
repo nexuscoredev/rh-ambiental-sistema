@@ -94,6 +94,16 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/controle-massa')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/chat')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/faturamento')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes')).toBe(false)
+  })
+
+  it('Matheus (Operadores Time R): cadastro de clientes e gerenciador', () => {
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', 'Matheus')).toBe(true)
+    expect(
+      cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes/gerenciador', 'Matheus Silva')
+    ).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/motoristas', 'Matheus')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', 'Gabriel')).toBe(false)
   })
 
 

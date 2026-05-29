@@ -3,7 +3,8 @@
  *
  * Um único logótipo horizontal (PNG com transparência) em todo o sistema:
  * login, sidebar, boas-vindas, impressões, etc.
- * Ícones PWA/favicon: `npm run build:brand` recorta a sigla Rg deste wordmark e gera o círculo.
+ * Ícones PWA: `npm run build:brand` recorta a sigla Rg do wordmark em círculo.
+ * Favicon da aba: gerado a partir de `rg-app-icon-source.png`.
  */
 export const BRAND_RG_WORDMARK = '/assets/logo/rg-ambiental-wordmark.png'
 

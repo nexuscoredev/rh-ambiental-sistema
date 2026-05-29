@@ -1,5 +1,5 @@
 /**
- * - Favicon (aba do browser): `favicon-source.png` — logótipo horizontal RG Ambiental.
+ * - Favicon (aba do browser): `rg-app-icon-source.png` — sigla Rg (legível em 16×16).
  * - PWA / Apple touch / ícone app: recorte Rg do `rg-ambiental-wordmark.png` em círculo navy.
  * Executar: npm run build:brand
  */
@@ -13,11 +13,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const dir = join(root, 'public', 'assets', 'logo')
 const wordmarkPath = join(dir, 'rg-ambiental-wordmark.png')
-const faviconSourcePath = join(dir, 'favicon-source.png')
+const tabIconSourcePath = join(dir, 'rg-app-icon-source.png')
 
 const requiredSources = [
   [wordmarkPath, 'rg-ambiental-wordmark.png'],
-  [faviconSourcePath, 'favicon-source.png'],
+  [tabIconSourcePath, 'rg-app-icon-source.png'],
 ]
 for (const [path, name] of requiredSources) {
   if (!existsSync(path)) {
@@ -31,15 +31,15 @@ for (const [path, name] of requiredSources) {
 
 const NAVY = { r: 18, g: 30, b: 38 }
 
-const faviconSrcBuf = readFileSync(faviconSourcePath)
+const tabIconSrcBuf = readFileSync(tabIconSourcePath)
 
 /**
- * Favicon quadrado: marca horizontal centrada (legível na aba).
+ * Favicon quadrado: sigla Rg centrada (legível na aba do browser).
  */
 async function writeTabFavicon(size, outPath) {
-  const pad = Math.max(1, Math.round(size * 0.06))
+  const pad = Math.max(1, Math.round(size * 0.1))
   const inner = size - pad * 2
-  const fg = await sharp(faviconSrcBuf)
+  const fg = await sharp(tabIconSrcBuf)
     .resize(inner, inner, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -148,4 +148,4 @@ await sharp(circle512)
   .png({ compressionLevel: 9 })
   .toFile(join(dir, 'pwa-maskable-512.png'))
 
-console.log('Brand: favicon ← favicon-source.png | PWA ← wordmark (Rg)')
+console.log('Brand: favicon ← rg-app-icon-source.png | PWA ← wordmark (Rg)')

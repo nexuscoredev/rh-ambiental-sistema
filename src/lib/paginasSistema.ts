@@ -1,4 +1,5 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
+import { nomeEhMatheus } from './rbac'
 import {
   cargoEhOperacionalTimeT,
   cargoTemAutoridadeMaximaSistema,
@@ -142,6 +143,19 @@ const PREFIXOS_ROTA_PARA_CARGO = Object.keys(CARGOS_POR_PREFIXO_ROTA).sort(
  * Indica se o cargo pode aceder à rota segundo as regras do `App` (menu e CTAs).
  * Prefixo mais longo ganha (ex.: `/financeiro/contas-receber` antes de `/financeiro`).
  */
+export function rotaEhCadastroCliente(pathname: string): boolean {
+  const path = normalizarPath(pathname)
+  return path === '/clientes' || path.startsWith('/clientes/')
+}
+
+/** Exceções por nome (ex.: Matheus → cadastro de clientes). */
+export function usuarioTemExcecaoCadastroCliente(
+  usuario: UsuarioComPaginas,
+  pathname: string
+): boolean {
+  return rotaEhCadastroCliente(pathname) && nomeEhMatheus({ nome: usuario.nome, cargo: usuario.cargo })
+}
+
 export function cargoPodeAcessarRotaMenu(
   cargo: string | null | undefined,
   pathname: string,
@@ -150,6 +164,7 @@ export function cargoPodeAcessarRotaMenu(
 ): boolean {
   if (cargoTemAutoridadeMaximaSistema(cargo, nome, email)) return true
   const path = normalizarPath(pathname)
+  if (rotaEhCadastroCliente(path) && nomeEhMatheus({ nome, cargo })) return true
   if (cargoEhOperacionalTimeT(cargo)) {
     if (path === '/usuarios' || path.startsWith('/usuarios/')) return false
     return true
