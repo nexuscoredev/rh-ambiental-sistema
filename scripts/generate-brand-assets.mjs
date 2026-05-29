@@ -3,7 +3,7 @@
  * - PWA / Apple touch / ícone app: recorte Rg do `rg-ambiental-wordmark.png` em círculo navy.
  * Executar: npm run build:brand
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
@@ -14,6 +14,20 @@ const root = join(__dirname, '..')
 const dir = join(root, 'public', 'assets', 'logo')
 const wordmarkPath = join(dir, 'rg-ambiental-wordmark.png')
 const faviconSourcePath = join(dir, 'favicon-source.png')
+
+const requiredSources = [
+  [wordmarkPath, 'rg-ambiental-wordmark.png'],
+  [faviconSourcePath, 'favicon-source.png'],
+]
+for (const [path, name] of requiredSources) {
+  if (!existsSync(path)) {
+    console.error(
+      `Brand build falhou: falta public/assets/logo/${name}.\n` +
+        'Restaure a partir do git (git checkout -- public/assets/logo) ou copie do deploy.',
+    )
+    process.exit(1)
+  }
+}
 
 const NAVY = { r: 18, g: 30, b: 38 }
 
