@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react'
 import { ChatAvatar } from './ChatAvatar'
 import {
+  chatListarSolicitacoesAjusteParaRelatorio,
   etiquetaEventoPedidoAjusteHistorico,
+  nomeSolicitantePedidoAjuste,
+  type FiltroSituacaoRelatorioSolicitacoes,
   type PedidoAjusteFilaItem,
   type PedidoAjusteHistoricoItem,
 } from '../../lib/chatPedidoAjuste'
+import {
+  exportarCsvSolicitacoesAjuste,
+  gerarRelatorioSolicitacoesPdf,
+} from '../../lib/gerarRelatorioSolicitacoesPdf'
 import type { ChatUsuarioLista } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
 
@@ -40,6 +47,192 @@ function formatarDataHora(iso: string): string {
   })
 }
 
+function hojeIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function inicioMesIso(): string {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-01`
+}
+
+function nomeSolicitanteHistorico(
+  h: PedidoAjusteHistoricoItem,
+  usuariosPorId: Map<string, ChatUsuarioLista>
+): string {
+  return nomeSolicitantePedidoAjuste(h.solicitanteId, h.parseado, usuariosPorId)
+}
+
+function SolicitacoesRelatorioModal({
+  usuariosPorId,
+  onFechar,
+}: {
+  usuariosPorId: Map<string, ChatUsuarioLista>
+  onFechar: () => void
+}) {
+  const [dataDe, setDataDe] = useState(inicioMesIso())
+  const [dataAte, setDataAte] = useState(hojeIso())
+  const [situacao, setSituacao] = useState<FiltroSituacaoRelatorioSolicitacoes>('todas')
+  const [gerando, setGerando] = useState(false)
+
+  async function carregarLinhas() {
+    return chatListarSolicitacoesAjusteParaRelatorio(
+      { dataDe, dataAte, situacao, limite: 500 },
+      usuariosPorId
+    )
+  }
+
+  async function handlePdf() {
+    setGerando(true)
+    try {
+      const linhas = await carregarLinhas()
+      if (linhas.length === 0) {
+        void rgAlert({
+          title: 'Relatório de solicitações',
+          message: 'Nenhuma solicitação encontrada com os filtros seleccionados.',
+          variant: 'warning',
+        })
+        return
+      }
+      gerarRelatorioSolicitacoesPdf({
+        linhas,
+        filtros: {
+          dataDe,
+          dataAte,
+          situacao:
+            situacao === 'todas'
+              ? 'Todas'
+              : situacao === 'novo'
+                ? 'Novo (na fila)'
+                : situacao === 'negado'
+                  ? 'Negado'
+                  : situacao === 'aguardando'
+                    ? 'Aguardando confirmação'
+                    : 'Aprovado',
+        },
+      })
+      onFechar()
+    } catch (e) {
+      void rgAlert({
+        title: 'Relatório de solicitações',
+        message: e instanceof Error ? e.message : 'Não foi possível gerar o relatório.',
+        variant: 'warning',
+      })
+    } finally {
+      setGerando(false)
+    }
+  }
+
+  async function handleCsv() {
+    setGerando(true)
+    try {
+      const linhas = await carregarLinhas()
+      if (linhas.length === 0) {
+        void rgAlert({
+          title: 'Relatório de solicitações',
+          message: 'Nenhuma solicitação encontrada com os filtros seleccionados.',
+          variant: 'warning',
+        })
+        return
+      }
+      exportarCsvSolicitacoesAjuste(linhas)
+      onFechar()
+    } catch (e) {
+      void rgAlert({
+        title: 'Relatório de solicitações',
+        message: e instanceof Error ? e.message : 'Não foi possível exportar o CSV.',
+        variant: 'warning',
+      })
+    } finally {
+      setGerando(false)
+    }
+  }
+
+  return (
+    <div
+      className="chat-interno-pedidos-historico-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chat-solicitacoes-relatorio-titulo"
+      onClick={onFechar}
+    >
+      <div
+        className="chat-interno-pedidos-historico-modal__card chat-interno-pedidos-relatorio-modal__card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="chat-interno-pedidos-historico-modal__head">
+          <h4 id="chat-solicitacoes-relatorio-titulo" className="chat-interno-pedidos-historico-modal__title">
+            Relatório de solicitações
+          </h4>
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__close"
+            onClick={onFechar}
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="chat-interno-pedidos-relatorio-modal__body">
+          <p className="chat-interno-pedidos-relatorio-modal__hint">
+            Exporte pedidos de ajuste enviados pelos utilizadores (PDF ou CSV).
+          </p>
+          <label className="chat-interno-pedidos-relatorio-modal__field">
+            <span>Data inicial</span>
+            <input type="date" value={dataDe} onChange={(e) => setDataDe(e.target.value)} />
+          </label>
+          <label className="chat-interno-pedidos-relatorio-modal__field">
+            <span>Data final</span>
+            <input type="date" value={dataAte} onChange={(e) => setDataAte(e.target.value)} />
+          </label>
+          <label className="chat-interno-pedidos-relatorio-modal__field">
+            <span>Situação</span>
+            <select
+              value={situacao}
+              onChange={(e) => setSituacao(e.target.value as FiltroSituacaoRelatorioSolicitacoes)}
+            >
+              <option value="todas">Todas</option>
+              <option value="novo">Novo (na fila)</option>
+              <option value="negado">Negado — reaberto</option>
+              <option value="aguardando">Aguardando confirmação</option>
+              <option value="aprovado">Aprovado</option>
+            </select>
+          </label>
+        </div>
+
+        <footer className="chat-interno-pedidos-historico-modal__foot chat-interno-pedidos-relatorio-modal__foot">
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__btn"
+            disabled={gerando}
+            onClick={() => void handlePdf()}
+          >
+            {gerando ? 'A gerar…' : 'PDF'}
+          </button>
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__btn chat-interno-pedidos-relatorio-modal__btn-csv"
+            disabled={gerando}
+            onClick={() => void handleCsv()}
+          >
+            CSV
+          </button>
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__btn chat-interno-pedidos-historico-modal__btn--ghost"
+            disabled={gerando}
+            onClick={onFechar}
+          >
+            Cancelar
+          </button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
 function formatarData(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
@@ -54,17 +247,6 @@ function formatarHorario(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function nomeSolicitanteHistorico(
-  h: PedidoAjusteHistoricoItem,
-  usuariosPorId: Map<string, ChatUsuarioLista>
-): string {
-  if (h.solicitanteId) {
-    const meta = usuariosPorId.get(h.solicitanteId)
-    if (meta?.nome || meta?.email) return meta.nome || meta.email || 'Utilizador'
-  }
-  return h.parseado?.solicitante || 'Utilizador'
 }
 
 function HistoricoDetalheModal({
@@ -288,6 +470,7 @@ export function ChatPedidosAjusteColuna({
   const [historicoSelecionado, setHistoricoSelecionado] = useState<PedidoAjusteHistoricoItem | null>(
     null
   )
+  const [relatorioAberto, setRelatorioAberto] = useState(false)
 
   async function handleMarcar(item: PedidoAjusteFilaItem) {
     try {
@@ -319,6 +502,15 @@ export function ChatPedidosAjusteColuna({
             {filaNovos.length + negados.length}
           </span>
         ) : null}
+        <button
+          type="button"
+          className="chat-interno-pedidos-col__relatorio-btn"
+          onClick={() => setRelatorioAberto(true)}
+          title="Gerar relatório das solicitações"
+          aria-label="Gerar relatório das solicitações"
+        >
+          Relatório
+        </button>
       </div>
 
       <div className="chat-interno-pedidos-col__tabs" role="tablist" aria-label="Secções de solicitações">
@@ -473,6 +665,13 @@ export function ChatPedidosAjusteColuna({
           usuariosPorId={usuariosPorId}
           onFechar={() => setHistoricoSelecionado(null)}
           onAbrirConversa={onAbrirConversa}
+        />
+      ) : null}
+
+      {relatorioAberto ? (
+        <SolicitacoesRelatorioModal
+          usuariosPorId={usuariosPorId}
+          onFechar={() => setRelatorioAberto(false)}
         />
       ) : null}
     </aside>

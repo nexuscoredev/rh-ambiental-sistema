@@ -4,6 +4,7 @@ import {
   etiquetaEventoPedidoAjusteHistorico,
   montarRespostaPedidoAjusteResolvido,
   parsePedidoAjusteConteudo,
+  rotuloSituacaoPedidoAjuste,
 } from './chatPedidoAjuste'
 
 describe('chatPedidoAjuste', () => {
@@ -35,5 +36,12 @@ Página: /programacao
     expect(etiquetaEventoPedidoAjusteHistorico('negado_solicitante')).toBe(
       'Solicitante reabriu o pedido'
     )
+  })
+
+  it('rotula situação do pedido para relatório', () => {
+    expect(rotuloSituacaoPedidoAjuste(null)).toBe('Novo (na fila)')
+    expect(rotuloSituacaoPedidoAjuste('reaberto')).toBe('Negado — reaberto')
+    expect(rotuloSituacaoPedidoAjuste('aguardando_solicitante')).toBe('Aguardando confirmação')
+    expect(rotuloSituacaoPedidoAjuste('aprovado')).toBe('Aprovado')
   })
 })

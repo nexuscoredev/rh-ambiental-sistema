@@ -146,6 +146,80 @@ export type PedidoAjusteHistoricoItem = {
   parseado?: PedidoAjusteParseado | null
 }
 
+export type SolicitacaoAjusteRelatorioLinha = {
+  mensagemId: string
+  solicitante: string
+  dataPedido: string
+  horaPedido: string
+  pagina: string
+  descricao: string
+  situacao: string
+  ciclo: number
+  ultimaAtualizacao: string | null
+  pedidoCreatedAtIso: string
+}
+
+export type FiltroSituacaoRelatorioSolicitacoes =
+  | 'todas'
+  | 'novo'
+  | 'negado'
+  | 'aguardando'
+  | 'aprovado'
+
+type UsuarioNomeLookup = Map<string, { nome?: string | null; email?: string | null }>
+
+export function nomeSolicitantePedidoAjuste(
+  remetenteId: string | undefined,
+  parseado: PedidoAjusteParseado | null | undefined,
+  usuariosPorId: UsuarioNomeLookup
+): string {
+  if (remetenteId) {
+    const meta = usuariosPorId.get(remetenteId)
+    const n = (meta?.nome || meta?.email || '').trim()
+    if (n) return n
+  }
+  return parseado?.solicitante?.trim() || 'Utilizador'
+}
+
+export function rotuloSituacaoPedidoAjuste(status: PedidoAjusteStatus | null | undefined): string {
+  if (!status) return 'Novo (na fila)'
+  switch (status) {
+    case 'reaberto':
+      return 'Negado — reaberto'
+    case 'aguardando_solicitante':
+      return 'Aguardando confirmação'
+    case 'aprovado':
+      return 'Aprovado'
+    default:
+      return status
+  }
+}
+
+function formatarDataPedidoRelatorio(iso: string): { data: string; hora: string } {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return { data: '—', hora: '—' }
+  return {
+    data: d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }),
+    hora: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  }
+}
+
+function situacaoCoincideFiltro(
+  status: PedidoAjusteStatus | null | undefined,
+  filtro: FiltroSituacaoRelatorioSolicitacoes
+): boolean {
+  if (filtro === 'todas') return true
+  if (filtro === 'novo') return !status
+  if (filtro === 'negado') return status === 'reaberto'
+  if (filtro === 'aguardando') return status === 'aguardando_solicitante'
+  if (filtro === 'aprovado') return status === 'aprovado'
+  return true
+}
+
 type ResolvidoRow = {
   mensagem_id: string
   conversa_id: string
@@ -320,6 +394,96 @@ export async function chatListarHistoricoPedidosAjuste(limite = 40): Promise<Ped
       parseado: parsePedidoAjusteConteudo(msg.conteudo),
     }
   })
+}
+
+/** Lista solicitações para relatório (PDF/CSV) — visão do desenvolvedor. */
+export async function chatListarSolicitacoesAjusteParaRelatorio(
+  opts: {
+    dataDe?: string
+    dataAte?: string
+    situacao?: FiltroSituacaoRelatorioSolicitacoes
+    limite?: number
+  },
+  usuariosPorId: UsuarioNomeLookup
+): Promise<SolicitacaoAjusteRelatorioLinha[]> {
+  const limite = opts.limite ?? 500
+  const situacaoFiltro = opts.situacao ?? 'todas'
+
+  let query = supabase
+    .from('chat_mensagens')
+    .select('id, remetente_id, conteudo, created_at')
+    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .order('created_at', { ascending: false })
+    .limit(limite)
+
+  if (opts.dataDe?.trim()) {
+    query = query.gte('created_at', `${opts.dataDe.trim()}T00:00:00`)
+  }
+  if (opts.dataAte?.trim()) {
+    query = query.lte('created_at', `${opts.dataAte.trim()}T23:59:59.999`)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
+
+  const mensagens = data ?? []
+  const ids = mensagens.map((m) => String(m.id))
+  const resolvidoPorMensagem = new Map<
+    string,
+    { status?: string | null; ciclo?: number | null; decidido_em?: string | null; resolvido_em?: string | null }
+  >()
+
+  if (ids.length > 0) {
+    const { data: resolvidos, error: resErr } = await supabase
+      .from('chat_pedido_ajuste_resolvido')
+      .select('mensagem_id, status, ciclo, decidido_em, resolvido_em')
+      .in('mensagem_id', ids)
+
+    if (resErr && !/does not exist|relation|42P01/i.test(resErr.message)) {
+      throw new Error(mensagemErroPedidoAjuste(resErr))
+    }
+
+    for (const row of resolvidos ?? []) {
+      resolvidoPorMensagem.set(String(row.mensagem_id), row)
+    }
+  }
+
+  const linhas: SolicitacaoAjusteRelatorioLinha[] = []
+
+  for (const row of mensagens) {
+    const mensagemId = String(row.id)
+    const reg = resolvidoPorMensagem.get(mensagemId)
+    const status = (reg?.status ?? null) as PedidoAjusteStatus | null
+
+    if (!situacaoCoincideFiltro(status, situacaoFiltro)) continue
+
+    const conteudo = String(row.conteudo ?? '')
+    const parseado = parsePedidoAjusteConteudo(conteudo)
+    const remetenteId = String(row.remetente_id)
+    const createdAt = String(row.created_at)
+    const { data: dataPedido, hora: horaPedido } = formatarDataPedidoRelatorio(createdAt)
+
+    const ultimaAtualizacao =
+      (reg?.decidido_em ? String(reg.decidido_em) : null) ||
+      (reg?.resolvido_em ? String(reg.resolvido_em) : null) ||
+      createdAt
+
+    linhas.push({
+      mensagemId,
+      solicitante: nomeSolicitantePedidoAjuste(remetenteId, parseado, usuariosPorId),
+      dataPedido,
+      horaPedido,
+      pagina: parseado?.pagina ?? '',
+      descricao: parseado?.descricao ?? conteudo.replace(/^\[Solicitação de ajuste no sistema\]\s*/i, '').trim(),
+      situacao: rotuloSituacaoPedidoAjuste(status),
+      ciclo: Number(reg?.ciclo ?? 1) || 1,
+      ultimaAtualizacao,
+      pedidoCreatedAtIso: createdAt,
+    })
+  }
+
+  linhas.sort((a, b) => b.pedidoCreatedAtIso.localeCompare(a.pedidoCreatedAtIso))
+  return linhas
 }
 
 export async function chatListarPedidosAjusteResolvidos(

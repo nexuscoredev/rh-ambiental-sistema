@@ -3616,6 +3616,26 @@ a.rg-btn {
   align-items: center;
   gap: 8px;
   padding: 14px 12px 8px;
+  flex-wrap: wrap;
+}
+
+.chat-interno-pedidos-col__relatorio-btn {
+  margin-left: auto;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.chat-interno-pedidos-col__relatorio-btn:hover {
+  background: #ccfbf1;
+  border-color: #5eead4;
 }
 
 .chat-interno-pedidos-col__title {
@@ -4103,6 +4123,54 @@ a.rg-btn {
   background: #fff;
   color: #475569;
   border-color: #cbd5e1;
+}
+
+.chat-interno-pedidos-relatorio-modal__card {
+  width: min(100%, 320px);
+}
+
+.chat-interno-pedidos-relatorio-modal__body {
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-interno-pedidos-relatorio-modal__hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.chat-interno-pedidos-relatorio-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.chat-interno-pedidos-relatorio-modal__field input,
+.chat-interno-pedidos-relatorio-modal__field select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+}
+
+.chat-interno-pedidos-relatorio-modal__foot {
+  flex-wrap: wrap;
+}
+
+.chat-interno-pedidos-relatorio-modal__btn-csv {
+  background: #fff !important;
+  color: #0f766e !important;
+  border: 1px solid #0f766e !important;
 }
 
 /* Confirmação do solicitante (após resposta do desenvolvedor) */
