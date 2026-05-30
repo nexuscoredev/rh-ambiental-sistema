@@ -47,6 +47,7 @@ const ControleMassa = lazyWithRetry(() => import('./pages/ControleMassa'))
 const ComprovantesDescarte = lazyWithRetry(() => import('./pages/ComprovantesDescarte'))
 const ComprovanteDescarteForm = lazyWithRetry(() => import('./pages/ComprovanteDescarteForm'))
 const Chat = lazyWithRetry(() => import('./pages/Chat'))
+const RhArea = lazyWithRetry(() => import('./pages/rh/RhArea'))
 
 const routeSuspenseFallback = (
   <div
@@ -875,6 +876,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro/contas-pagar']]}
                 >
                   <FinanceiroContasPagar />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/rh/*"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/rh']]}
+                >
+                  <RhArea />
                 </ProtectedRoute>
               }
             />

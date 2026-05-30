@@ -17,6 +17,7 @@ import {
 } from '../lib/presencaStatus'
 import { chatTotalMensagensNaoLidas } from '../lib/chat'
 import { ROTAS_SISTEMA, cargoPodeAcessarRotaMenu, usuarioPodeAcessarRota } from '../lib/paginasSistema'
+import { RH_HUB_PATH, RH_MENU_CHILDREN } from '../lib/rhModulos'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
@@ -128,6 +129,16 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
     ],
   },
   {
+    title: 'RH',
+    items: [
+      {
+        label: 'RH',
+        path: RH_HUB_PATH,
+        children: RH_MENU_CHILDREN,
+      },
+    ],
+  },
+  {
     title: 'Pós-venda',
     items: [{ label: 'Pós-venda', path: '/pos-venda' }],
   },
@@ -144,7 +155,8 @@ const navLinkEndExact = (path: string) =>
   path !== '/mtr' &&
   path !== '/mtr/gerenciador' &&
   path !== '/controle-massa' &&
-  path !== '/comprovantes-descarte'
+  path !== '/comprovantes-descarte' &&
+  path !== '/rh'
 
 function formatarDataHora(date: Date) {
   const data = new Intl.DateTimeFormat('pt-BR', {

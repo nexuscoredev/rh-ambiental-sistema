@@ -1,4 +1,5 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
+import { RH_ROTAS_SISTEMA } from './rhModulos'
 import { nomeEhMatheus } from './rbac'
 import {
   cargoEhOperacionalTimeT,
@@ -37,6 +38,7 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/financeiro/contas-receber', label: 'Contas a receber' },
   { path: '/financeiro/contas-pagar', label: 'Contas a pagar' },
   { path: '/pos-venda', label: 'Pós-venda' },
+  ...RH_ROTAS_SISTEMA,
   { path: '/usuarios', label: 'Usuários' },
   { path: '/chat', label: 'Chat' },
 ]

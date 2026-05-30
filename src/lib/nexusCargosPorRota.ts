@@ -17,6 +17,7 @@ import {
   CARGO_OPERACIONAL_TIME_T,
   CARGO_OPERADORES_TIME_R,
 } from './workflowPermissions'
+import { RH_ROTAS_SISTEMA } from './rhModulos'
 
 export const CARGO_NEXUS = {
   desenvolvedor: 'Desenvolvedor',
@@ -132,9 +133,16 @@ const FATURAMENTO = [
 
 const FINANCEIRO = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador] as const
 
+/** RH: gestão de pessoas — perfis administrativos e diretoria (sem operação/comercial). */
+const RH = [...ACESSO_TOTAL, C.diretoria] as const
+
 const ENVIO_NF = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador, C.comercial] as const
 
 const USUARIOS = [C.desenvolvedor] as const
+
+const RH_CARGOS_POR_ROTA = Object.fromEntries(
+  RH_ROTAS_SISTEMA.map(({ path }) => [path, RH])
+) as Record<string, readonly string[]>
 
 export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/dashboard': [...DASHBOARD_E_CHAT],
@@ -162,4 +170,5 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/envio-nf': [...ENVIO_NF],
   '/usuarios': [...USUARIOS],
   '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
+  ...RH_CARGOS_POR_ROTA,
 }
