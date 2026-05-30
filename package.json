@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.137",
+  "version": "1.2.138",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -54,7 +54,7 @@
     "db:apply:comercial-pesagem-tickets": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260627120000_comercial_lancar_pesagem_tickets.sql",
     "db:apply:operacao-programacao-pesagem": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260627140000_operacao_programacao_pesagem_lancar.sql",
     "db:apply:mtr-baixa-comercial-adm": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260726130000_mtr_baixa_comercial_adm.sql",
-    "db:apply:usuarios-perfil-login": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260622120000_usuarios_select_own_rpc_perfil.sql",
+    "db:apply:rh-colaboradores": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260530140000_rh_colaboradores.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
     "functions:deploy:admin-delete": "supabase functions deploy admin-delete-user",
