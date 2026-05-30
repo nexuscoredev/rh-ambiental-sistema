@@ -40,6 +40,153 @@ function formatarDataHora(iso: string): string {
   })
 }
 
+function formatarData(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+function formatarHorario(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function nomeSolicitanteHistorico(
+  h: PedidoAjusteHistoricoItem,
+  usuariosPorId: Map<string, ChatUsuarioLista>
+): string {
+  if (h.solicitanteId) {
+    const meta = usuariosPorId.get(h.solicitanteId)
+    if (meta?.nome || meta?.email) return meta.nome || meta.email || 'Utilizador'
+  }
+  return h.parseado?.solicitante || 'Utilizador'
+}
+
+function HistoricoDetalheModal({
+  item,
+  usuariosPorId,
+  onFechar,
+  onAbrirConversa,
+}: {
+  item: PedidoAjusteHistoricoItem
+  usuariosPorId: Map<string, ChatUsuarioLista>
+  onFechar: () => void
+  onAbrirConversa: (conversaId: string, outroId: string) => void
+}) {
+  const solicitante = nomeSolicitanteHistorico(item, usuariosPorId)
+  const actor = usuariosPorId.get(item.actorId)
+  const actorNome = actor?.nome || actor?.email || 'Utilizador'
+  const pedidoData = item.pedidoCreatedAt ? formatarData(item.pedidoCreatedAt) : '—'
+  const pedidoHora = item.pedidoCreatedAt ? formatarHorario(item.pedidoCreatedAt) : '—'
+  const eventoData = formatarData(item.createdAt)
+  const eventoHora = formatarHorario(item.createdAt)
+  const descricao =
+    item.parseado?.descricao ||
+    item.texto?.trim() ||
+    'Sem descrição registada.'
+
+  function abrirConversa() {
+    const outroId = item.solicitanteId || item.actorId
+    onAbrirConversa(item.conversaId, outroId)
+    onFechar()
+  }
+
+  return (
+    <div
+      className="chat-interno-pedidos-historico-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chat-pedido-historico-titulo"
+      onClick={onFechar}
+    >
+      <div
+        className="chat-interno-pedidos-historico-modal__card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="chat-interno-pedidos-historico-modal__head">
+          <h4 id="chat-pedido-historico-titulo" className="chat-interno-pedidos-historico-modal__title">
+            Detalhe da solicitação
+          </h4>
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__close"
+            onClick={onFechar}
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </header>
+
+        <dl className="chat-interno-pedidos-historico-modal__dl">
+          <div>
+            <dt>Solicitante</dt>
+            <dd>{solicitante}</dd>
+          </div>
+          <div>
+            <dt>Data do pedido</dt>
+            <dd>{pedidoData}</dd>
+          </div>
+          <div>
+            <dt>Horário do pedido</dt>
+            <dd>{pedidoHora}</dd>
+          </div>
+          {item.parseado?.pagina ? (
+            <div>
+              <dt>Página</dt>
+              <dd>{item.parseado.pagina}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Descrição</dt>
+            <dd className="chat-interno-pedidos-historico-modal__descricao">{descricao}</dd>
+          </div>
+          <div className="chat-interno-pedidos-historico-modal__sep" aria-hidden />
+          <div>
+            <dt>Evento</dt>
+            <dd>{etiquetaEventoPedidoAjusteHistorico(item.evento)}</dd>
+          </div>
+          <div>
+            <dt>Registado por</dt>
+            <dd>{actorNome}</dd>
+          </div>
+          <div>
+            <dt>Data do evento</dt>
+            <dd>{eventoData}</dd>
+          </div>
+          <div>
+            <dt>Horário do evento</dt>
+            <dd>{eventoHora}</dd>
+          </div>
+          {item.ciclo > 1 ? (
+            <div>
+              <dt>Ciclo</dt>
+              <dd>{item.ciclo}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        <footer className="chat-interno-pedidos-historico-modal__foot">
+          <button type="button" className="chat-interno-pedidos-historico-modal__btn" onClick={abrirConversa}>
+            Abrir conversa
+          </button>
+          <button
+            type="button"
+            className="chat-interno-pedidos-historico-modal__btn chat-interno-pedidos-historico-modal__btn--ghost"
+            onClick={onFechar}
+          >
+            Fechar
+          </button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
 function resumoHistorico(h: PedidoAjusteHistoricoItem): string | null {
   if (h.evento === 'resolvido_dev') return 'Resposta automática enviada ao solicitante.'
   if (h.evento === 'aprovado_solicitante') return 'Pedido encerrado com aprovação.'
@@ -138,6 +285,9 @@ export function ChatPedidosAjusteColuna({
   )
 
   const [aba, setAba] = useState<AbaPedidos>('fila')
+  const [historicoSelecionado, setHistoricoSelecionado] = useState<PedidoAjusteHistoricoItem | null>(
+    null
+  )
 
   async function handleMarcar(item: PedidoAjusteFilaItem) {
     try {
@@ -274,21 +424,41 @@ export function ChatPedidosAjusteColuna({
               {historicoLimpo.map((h) => {
                 const actor = usuariosPorId.get(h.actorId)
                 const actorNome = actor?.nome || actor?.email || 'Utilizador'
+                const solicitante = nomeSolicitanteHistorico(h, usuariosPorId)
                 const resumo = resumoHistorico(h)
                 return (
-                  <li key={h.id} className="chat-interno-pedidos-historico-item">
-                    <div className="chat-interno-pedidos-historico-item__evento">
-                      {etiquetaEventoPedidoAjusteHistorico(h.evento)}
-                    </div>
-                    <div className="chat-interno-pedidos-historico-item__meta">
-                      <span>{actorNome}</span>
-                      <span aria-hidden> · </span>
-                      <time dateTime={h.createdAt}>{formatarDataHora(h.createdAt)}</time>
-                      {h.ciclo > 1 ? <span>{` · ciclo ${h.ciclo}`}</span> : null}
-                    </div>
-                    {resumo ? (
-                      <p className="chat-interno-pedidos-historico-item__texto">{resumo}</p>
-                    ) : null}
+                  <li key={h.id}>
+                    <button
+                      type="button"
+                      className="chat-interno-pedidos-historico-item"
+                      onClick={() => setHistoricoSelecionado(h)}
+                      title="Ver detalhes da solicitação"
+                    >
+                      <div className="chat-interno-pedidos-historico-item__evento">
+                        {etiquetaEventoPedidoAjusteHistorico(h.evento)}
+                      </div>
+                      <div className="chat-interno-pedidos-historico-item__meta">
+                        <span>{actorNome}</span>
+                        <span aria-hidden> · </span>
+                        <time dateTime={h.createdAt}>{formatarDataHora(h.createdAt)}</time>
+                        {h.ciclo > 1 ? <span>{` · ciclo ${h.ciclo}`}</span> : null}
+                      </div>
+                      <p className="chat-interno-pedidos-historico-item__solicitante">
+                        Solicitante: {solicitante}
+                        {h.pedidoCreatedAt ? (
+                          <>
+                            {' · '}
+                            <time dateTime={h.pedidoCreatedAt}>
+                              {formatarData(h.pedidoCreatedAt)} às {formatarHorario(h.pedidoCreatedAt)}
+                            </time>
+                          </>
+                        ) : null}
+                      </p>
+                      {resumo ? (
+                        <p className="chat-interno-pedidos-historico-item__texto">{resumo}</p>
+                      ) : null}
+                      <span className="chat-interno-pedidos-historico-item__hint">Toque para ver detalhes</span>
+                    </button>
                   </li>
                 )
               })}
@@ -296,6 +466,15 @@ export function ChatPedidosAjusteColuna({
           )
         ) : null}
       </div>
+
+      {historicoSelecionado ? (
+        <HistoricoDetalheModal
+          item={historicoSelecionado}
+          usuariosPorId={usuariosPorId}
+          onFechar={() => setHistoricoSelecionado(null)}
+          onAbrirConversa={onAbrirConversa}
+        />
+      ) : null}
     </aside>
   )
 }

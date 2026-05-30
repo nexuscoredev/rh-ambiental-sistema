@@ -139,6 +139,11 @@ export type PedidoAjusteHistoricoItem = {
   texto: string | null
   ciclo: number
   createdAt: string
+  /** Quem abriu o pedido (mensagem original). */
+  solicitanteId?: string
+  /** Data/hora em que o pedido foi enviado. */
+  pedidoCreatedAt?: string
+  parseado?: PedidoAjusteParseado | null
 }
 
 type ResolvidoRow = {
@@ -270,7 +275,7 @@ export async function chatListarHistoricoPedidosAjuste(limite = 40): Promise<Ped
     throw new Error(mensagemErroPedidoAjuste(error))
   }
 
-  return (data ?? []).map((row) => ({
+  const itens = (data ?? []).map((row) => ({
     id: String(row.id),
     mensagemPedidoId: String(row.mensagem_pedido_id),
     conversaId: String(row.conversa_id),
@@ -280,6 +285,41 @@ export async function chatListarHistoricoPedidosAjuste(limite = 40): Promise<Ped
     ciclo: Number(row.ciclo ?? 1) || 1,
     createdAt: String(row.created_at),
   }))
+
+  const pedidoIds = [...new Set(itens.map((i) => i.mensagemPedidoId))]
+  if (pedidoIds.length === 0) return itens
+
+  const { data: msgs, error: msgErr } = await supabase
+    .from('chat_mensagens')
+    .select('id, remetente_id, conteudo, created_at')
+    .in('id', pedidoIds)
+
+  if (msgErr) {
+    console.warn('[chat] histórico pedidos: não foi possível carregar mensagens originais', msgErr.message)
+    return itens
+  }
+
+  const msgPorId = new Map(
+    (msgs ?? []).map((m) => [
+      String(m.id),
+      {
+        remetenteId: String(m.remetente_id),
+        conteudo: String(m.conteudo ?? ''),
+        createdAt: String(m.created_at),
+      },
+    ])
+  )
+
+  return itens.map((item) => {
+    const msg = msgPorId.get(item.mensagemPedidoId)
+    if (!msg) return item
+    return {
+      ...item,
+      solicitanteId: msg.remetenteId,
+      pedidoCreatedAt: msg.createdAt,
+      parseado: parsePedidoAjusteConteudo(msg.conteudo),
+    }
+  })
 }
 
 export async function chatListarPedidosAjusteResolvidos(
