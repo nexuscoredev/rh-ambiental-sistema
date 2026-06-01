@@ -1,0 +1,28 @@
+---
+description: Fluxo Cursor Cloud, secrets e deploy Vercel/Supabase
+alwaysApply: true
+---
+
+# Desenvolvimento Cloud (RG Ambiental)
+
+## O agente pode fazer sem pedir confirmação extra
+
+- Editar código, correr `npm ci`, `npm run build`, `npm test`, `npm run lint`, `npm run guard:faturamento`
+- Branch `cursor/<nome>-aee2`, commit, push, criar/atualizar PR
+- Bump de `package.json` `version` quando o PR for para produção com alteração visível (ver `deploy-versao-sistema.mdc`)
+
+## O agente não consegue fazer sozinho (utilizador configura nos painéis)
+
+- Secrets no Cursor Cloud: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (mínimo)
+- Variáveis na Vercel (mesmos nomes `VITE_*`)
+- Supabase Auth URL / Redirect para `https://rh-ambiental-sistema.vercel.app`
+- MCP Supabase: requer autenticação no Cursor Desktop
+- Merge em `main` (aprovação humana), salvo instrução explícita em contrário
+
+## Deploy
+
+- **Frontend:** merge em `main` → Vercel (Git integration). Não depender de `C:\dev\` ou OneDrive.
+- **SQL:** ficheiros em `supabase/migrations/` não aplicam sozinhos; avisar no PR se o utilizador deve correr SQL Editor ou `db:apply:*`.
+- **Edge Functions:** avisar se precisa `supabase:secrets:edge` + `functions:deploy:*`.
+
+Documentação para o utilizador: `docs/desenvolvimento-cloud.md`
