@@ -227,6 +227,23 @@ export function linhasComConteudo(linhas: ResiduoPesagemItem[]): ResiduoPesagemI
   return linhas.filter((l) => l.texto.trim());
 }
 
+/** Converte itens gravados (coleta / controle_massa) de volta para o formulário de pesagem. */
+export function residuosItensDbParaLinhasForm(itens: ResiduoPesagemItemDb[]): ResiduoPesagemItem[] {
+  return itens.map((i) => ({
+    catalogo_id: "",
+    texto: i.texto.trim(),
+    peso_tara: pesoNumeroParaInput(i.peso_tara),
+    peso_bruto: pesoNumeroParaInput(i.peso_bruto),
+    peso_liquido: pesoNumeroParaInput(i.peso_liquido),
+  }));
+}
+
+export function linhaResiduoTemPesoLancado(l: ResiduoPesagemItem): boolean {
+  return Boolean(
+    l.peso_tara.trim() || l.peso_bruto.trim() || l.peso_liquido.trim()
+  );
+}
+
 export function serializarResiduosItensDb(linhas: ResiduoPesagemItem[]): ResiduoPesagemItemDb[] {
   return linhasComConteudo(linhas)
     .map((l) => enriquecerLinhaResiduo(l))

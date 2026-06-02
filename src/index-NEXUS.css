@@ -4194,6 +4194,42 @@ a.rg-btn {
   filter: grayscale(0.2);
 }
 
+.chat-interno-pedido-card__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-interno-pedido-card__btn--secundario {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.chat-interno-pedido-card__btn--secundario:hover:not(:disabled) {
+  filter: brightness(1.02);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.chat-interno-pedido-card--aprovado-thais {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.12);
+}
+
+.chat-interno-pedido-card__badge-aprovado-thais {
+  margin: 0 0 8px;
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #166534;
+  background: #dcfce7;
+}
+
 .chat-interno-pedido-card--reaberto {
   border-color: #fdba74;
   background: linear-gradient(180deg, #fff7ed 0%, #fff 100%);
@@ -7766,4 +7802,386 @@ a.rg-btn {
   color: #b91c1c !important;
   background: #fee2e2 !important;
   border: 1px solid #f87171 !important;
+}
+
+/* —— Gestão de solicitações (desenvolvedor) —— */
+.solicitacoes-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1280px;
+}
+
+.solicitacoes-admin__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  background: linear-gradient(135deg, #f0fdfa 0%, #fff 55%, #f8fafc 100%);
+}
+
+.solicitacoes-admin__eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0d9488;
+}
+
+.solicitacoes-admin__title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.solicitacoes-admin__lead {
+  margin: 0;
+  max-width: 640px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.solicitacoes-admin__hero-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.solicitacoes-admin__alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.solicitacoes-admin__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .solicitacoes-admin__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.solicitacoes-admin__stat {
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.solicitacoes-admin__stat--thais {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #fff 100%);
+}
+
+.solicitacoes-admin__stat--hist {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #eff6ff 0%, #fff 100%);
+}
+
+.solicitacoes-admin__stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.solicitacoes-admin__stat-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.solicitacoes-admin__stat-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.solicitacoes-admin__tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.solicitacoes-admin__tab {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.solicitacoes-admin__tab--on {
+  border-color: #0d9488;
+  background: #0d9488;
+  color: #fff;
+}
+
+.solicitacoes-admin__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .solicitacoes-admin__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.solicitacoes-admin__panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.solicitacoes-admin__panel-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.solicitacoes-admin__panel-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.solicitacoes-admin__panel-head p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.solicitacoes-admin__coluna-wrap .chat-interno-pedidos-col {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  border-right: none;
+  border: none;
+  border-radius: 0;
+  min-height: 420px;
+}
+
+.solicitacoes-admin__thais-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.solicitacoes-admin__thais-card {
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fffbeb;
+}
+
+.solicitacoes-admin__thais-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.solicitacoes-admin__thais-card header strong {
+  font-size: 13px;
+  color: #78350f;
+}
+
+.solicitacoes-admin__thais-pagina {
+  font-size: 10px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.solicitacoes-admin__thais-card p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #44403c;
+}
+
+.solicitacoes-admin__thais-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.solicitacoes-admin__empty {
+  margin: 0;
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.solicitacoes-admin__nota {
+  margin: 0 16px 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+}
+
+.solicitacoes-admin__nota h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.solicitacoes-admin__nota p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.solicitacoes-admin__link {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0d9488;
+  text-decoration: none;
+}
+
+.solicitacoes-admin__link:hover {
+  text-decoration: underline;
+}
+
+.solicitacoes-admin__btn {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.solicitacoes-admin__btn--ghost {
+  background: #fff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.solicitacoes-admin__btn--sm {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.solicitacoes-admin__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.solicitacoes-admin__config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.solicitacoes-admin__config-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+}
+
+.solicitacoes-admin__config-card h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.solicitacoes-admin__config-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.solicitacoes-admin__config-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.solicitacoes-admin__pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #334155;
+}
+
+.solicitacoes-admin__dl {
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.solicitacoes-admin__dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.solicitacoes-admin__dl dt {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.solicitacoes-admin__dl dd {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.solicitacoes-admin__dl code {
+  font-size: 11px;
+  background: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 4px;
 }

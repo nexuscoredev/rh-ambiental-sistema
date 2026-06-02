@@ -10,6 +10,7 @@ export {
   nomeContemToken,
   nomeEhThais,
   nomeEhMatheus,
+  nomeEhOperacaoTimeRCadastroEstendido,
   normalizarNomePessoa,
   rbacPode,
   rbacPodeExcluir,

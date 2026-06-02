@@ -16,14 +16,17 @@ import type { ChatUsuarioLista } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
 
 type Props = {
+  modo: 'dev' | 'thais'
   itens: PedidoAjusteFilaItem[]
   historico: PedidoAjusteHistoricoItem[]
   usuariosPorId: Map<string, ChatUsuarioLista>
   carregando: boolean
   carregandoHistorico: boolean
   marcandoId: string | null
+  aprovandoId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcarResolvido: (item: PedidoAjusteFilaItem) => Promise<void>
+  onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => Promise<void>
 }
 
 type AbaPedidos = 'fila' | 'negados' | 'historico'
@@ -372,21 +375,29 @@ function HistoricoDetalheModal({
 function resumoHistorico(h: PedidoAjusteHistoricoItem): string | null {
   if (h.evento === 'resolvido_dev') return 'Resposta automática enviada ao solicitante.'
   if (h.evento === 'aprovado_solicitante') return 'Pedido encerrado com aprovação.'
+  if (h.evento === 'enviado_fila_thais') return 'Encaminhado automaticamente para aprovação da Thais.'
+  if (h.evento === 'aprovado_fila_thais') return 'Thais aprovou — aguarda tratamento do desenvolvedor.'
   return null
 }
 
 function PedidoCard({
   item,
+  modo,
   usuariosPorId,
   marcandoId,
+  aprovandoId,
   onAbrirConversa,
   onMarcar,
+  onAprovarFilaThais,
 }: {
   item: PedidoAjusteFilaItem
+  modo: 'dev' | 'thais'
   usuariosPorId: Map<string, ChatUsuarioLista>
   marcandoId: string | null
+  aprovandoId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcar: (item: PedidoAjusteFilaItem) => void
+  onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => void
 }) {
   const meta = usuariosPorId.get(item.remetenteId)
   const nome = meta?.nome || meta?.email || item.parseado?.solicitante || 'Utilizador'
@@ -394,20 +405,30 @@ function PedidoCard({
     item.parseado?.descricao ||
     item.conteudo.replace(/^\[Solicitação de ajuste no sistema\]\s*/i, '').trim().slice(0, 200)
   const marcando = marcandoId === item.mensagemId
+  const aprovando = aprovandoId === item.mensagemId
   const reaberto = item.situacao === 'reaberto'
+  const aprovadoThais = item.situacao === 'aprovado_thais'
+  const acaoBloqueada = Boolean(marcandoId || aprovandoId)
 
   return (
     <article
       className={
         reaberto
           ? 'chat-interno-pedido-card chat-interno-pedido-card--reaberto'
-          : 'chat-interno-pedido-card'
+          : aprovadoThais
+            ? 'chat-interno-pedido-card chat-interno-pedido-card--aprovado-thais'
+            : 'chat-interno-pedido-card'
       }
     >
       {reaberto ? (
         <p className="chat-interno-pedido-card__badge-reaberto" role="status">
           Negado pelo solicitante
           {item.ciclo > 1 ? ` · ciclo ${item.ciclo}` : ''}
+        </p>
+      ) : null}
+      {aprovadoThais ? (
+        <p className="chat-interno-pedido-card__badge-aprovado-thais" role="status">
+          Aprovado pela Thais — tratar o caso
         </p>
       ) : null}
       <button
@@ -434,34 +455,58 @@ function PedidoCard({
           <p>{item.justificativaSolicitante}</p>
         </blockquote>
       ) : null}
-      <button
-        type="button"
-        className="chat-interno-pedido-card__btn"
-        disabled={Boolean(marcandoId)}
-        onClick={() => onMarcar(item)}
-      >
-        {marcando ? 'A enviar resposta…' : 'Marcar como resolvido'}
-      </button>
+      <div className="chat-interno-pedido-card__acoes">
+        {modo === 'thais' ? (
+          <button
+            type="button"
+            className="chat-interno-pedido-card__btn"
+            disabled={acaoBloqueada}
+            onClick={() => onAprovarFilaThais?.(item)}
+          >
+            {aprovando ? 'A aprovar…' : 'Aprovar pedido'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="chat-interno-pedido-card__btn"
+            disabled={acaoBloqueada}
+            onClick={() => onMarcar(item)}
+          >
+            {marcando ? 'A enviar resposta…' : 'Marcar como resolvido'}
+          </button>
+        )}
+      </div>
     </article>
   )
 }
 
 export function ChatPedidosAjusteColuna({
+  modo,
   itens,
   historico,
   usuariosPorId,
   carregando,
   carregandoHistorico,
   marcandoId,
+  aprovandoId,
   onAbrirConversa,
   onMarcarResolvido,
+  onAprovarFilaThais,
 }: Props) {
-  const filaNovos = useMemo(() => itens.filter((i) => i.situacao === 'novo'), [itens])
+  const filaNovos = useMemo(
+    () => itens.filter((i) => i.situacao === 'novo' || i.situacao === 'aprovado_thais'),
+    [itens]
+  )
   const negados = useMemo(() => itens.filter((i) => i.situacao === 'reaberto'), [itens])
+  const filaExibida = modo === 'thais' ? itens : filaNovos
   const historicoLimpo = useMemo(
     () =>
       historico.filter(
-        (h) => h.evento === 'resolvido_dev' || h.evento === 'aprovado_solicitante'
+        (h) =>
+          h.evento === 'resolvido_dev' ||
+          h.evento === 'aprovado_solicitante' ||
+          h.evento === 'enviado_fila_thais' ||
+          h.evento === 'aprovado_fila_thais'
       ),
     [historico]
   )
@@ -484,22 +529,44 @@ export function ChatPedidosAjusteColuna({
     }
   }
 
-  const hintPorAba: Record<AbaPedidos, string> = {
-    fila: 'Pedidos novos à espera da sua resposta.',
-    negados: 'O solicitante negou o último ajuste. Leia a justificativa e marque como resolvido após corrigir.',
-    historico: 'Registo de respostas enviadas e pedidos aprovados.',
+  async function handleAprovarFilaThais(item: PedidoAjusteFilaItem) {
+    if (!onAprovarFilaThais) return
+    try {
+      await onAprovarFilaThais(item)
+    } catch (e) {
+      void rgAlert({
+        title: 'Pedido de ajuste',
+        message: e instanceof Error ? e.message : 'Não foi possível aprovar o pedido.',
+        variant: 'warning',
+      })
+    }
   }
+
+  const hintPorAba: Record<AbaPedidos, string> =
+    modo === 'thais'
+      ? {
+          fila: 'Pedidos escalados pelos desenvolvedores à espera da sua aprovação.',
+          negados: '',
+          historico: 'Registo de escalamentos e aprovações.',
+        }
+      : {
+          fila: 'Pedidos novos à espera da sua resposta.',
+          negados:
+            'O solicitante negou o último ajuste. Leia a justificativa e marque como resolvido após corrigir.',
+          historico: 'Registo de respostas enviadas e pedidos aprovados.',
+        }
+
+  const totalFila = modo === 'thais' ? filaExibida.length : filaNovos.length + negados.length
 
   return (
     <aside className="chat-interno-pedidos-col" aria-label="Fila de solicitações de ajuste">
       <div className="chat-interno-pedidos-col__head">
-        <h3 className="chat-interno-pedidos-col__title">Solicitações</h3>
-        {filaNovos.length + negados.length > 0 ? (
-          <span
-            className="chat-interno-pedidos-col__count"
-            aria-label={`${filaNovos.length + negados.length} na fila`}
-          >
-            {filaNovos.length + negados.length}
+        <h3 className="chat-interno-pedidos-col__title">
+          {modo === 'thais' ? 'Aprovações' : 'Solicitações'}
+        </h3>
+        {totalFila > 0 ? (
+          <span className="chat-interno-pedidos-col__count" aria-label={`${totalFila} na fila`}>
+            {totalFila}
           </span>
         ) : null}
         <button
@@ -527,28 +594,30 @@ export function ChatPedidosAjusteColuna({
             onClick={() => setAba('fila')}
           >
             <span className="chat-interno-pedidos-tab__label">Fila</span>
-            {filaNovos.length > 0 ? (
-              <span className="chat-interno-pedidos-tab__badge">{filaNovos.length}</span>
+            {filaExibida.length > 0 ? (
+              <span className="chat-interno-pedidos-tab__badge">{filaExibida.length}</span>
             ) : null}
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={aba === 'negados'}
-            className={
-              aba === 'negados'
-                ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--negados'
-                : 'chat-interno-pedidos-tab'
-            }
-            onClick={() => setAba('negados')}
-          >
-            <span className="chat-interno-pedidos-tab__label">Negados</span>
-            {negados.length > 0 ? (
-              <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
-                {negados.length}
-              </span>
-            ) : null}
-          </button>
+          {modo === 'dev' ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={aba === 'negados'}
+              className={
+                aba === 'negados'
+                  ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--negados'
+                  : 'chat-interno-pedidos-tab'
+              }
+              onClick={() => setAba('negados')}
+            >
+              <span className="chat-interno-pedidos-tab__label">Negados</span>
+              {negados.length > 0 ? (
+                <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
+                  {negados.length}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
           <button
             type="button"
             role="tab"
@@ -571,23 +640,28 @@ export function ChatPedidosAjusteColuna({
         {aba === 'fila' ? (
           carregando ? (
             <p className="chat-interno-pedidos-col__empty">A carregar…</p>
-          ) : filaNovos.length === 0 ? (
-            <p className="chat-interno-pedidos-col__empty">Nenhum pedido novo na fila.</p>
+          ) : filaExibida.length === 0 ? (
+            <p className="chat-interno-pedidos-col__empty">
+              {modo === 'thais' ? 'Nenhum pedido aguarda a sua aprovação.' : 'Nenhum pedido novo na fila.'}
+            </p>
           ) : (
-            filaNovos.map((item) => (
+            filaExibida.map((item) => (
               <PedidoCard
                 key={item.mensagemId}
                 item={item}
+                modo={modo}
                 usuariosPorId={usuariosPorId}
                 marcandoId={marcandoId}
+                aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />
             ))
           )
         ) : null}
 
-        {aba === 'negados' ? (
+        {aba === 'negados' && modo === 'dev' ? (
           carregando ? (
             <p className="chat-interno-pedidos-col__empty">A carregar…</p>
           ) : negados.length === 0 ? (
@@ -597,10 +671,13 @@ export function ChatPedidosAjusteColuna({
               <PedidoCard
                 key={item.mensagemId}
                 item={item}
+                modo={modo}
                 usuariosPorId={usuariosPorId}
                 marcandoId={marcandoId}
+                aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />
             ))
           )

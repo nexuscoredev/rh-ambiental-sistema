@@ -3399,7 +3399,7 @@ ${MTR_LISTA_CARD_UI_CSS}
         @media print {
           @page {
             size: A4 portrait;
-            margin: 7mm;
+            margin: 3mm;
           }
 
           html,
@@ -3505,8 +3505,8 @@ ${MTR_LISTA_CARD_UI_CSS}
           .mtr-excel {
             font-family: Arial, Helvetica, sans-serif !important;
             color: #000 !important;
-            font-size: 10.5px !important;
-            line-height: 1.18 !important;
+            font-size: 12.75px !important;
+            line-height: 1.08 !important;
           }
 
           .mtr-excel__header {
@@ -3518,39 +3518,39 @@ ${MTR_LISTA_CARD_UI_CSS}
           }
 
           .mtr-excel__logo img {
-            max-height: 30px !important;
+            max-height: 22px !important;
             width: auto !important;
           }
 
           .mtr-excel__title {
             text-align: center !important;
             font-weight: 800 !important;
-            font-size: 11px !important;
+            font-size: 13px !important;
             align-self: center !important;
           }
 
           .mtr-excel__mtrno {
             text-align: right !important;
-            font-size: 9px !important;
+            font-size: 11px !important;
             align-self: center !important;
           }
 
           .mtr-excel__mtrno-label {
             font-weight: 800 !important;
-            font-size: 9px !important;
+            font-size: 11px !important;
             color: #334155 !important;
             margin-bottom: 1px !important;
           }
 
           .mtr-excel__mtrno-value {
-            font-size: 10pt !important;
+            font-size: 16pt !important;
             font-weight: 800 !important;
-            line-height: 1.15 !important;
-            letter-spacing: 0.02em !important;
+            line-height: 1.04 !important;
+            letter-spacing: 0.018em !important;
             color: #000 !important;
             border: 1px solid #000 !important;
             border-radius: 4px !important;
-            padding: 2px 6px !important;
+            padding: 1px 5px !important;
             display: inline-block !important;
             max-width: 100% !important;
             text-align: center !important;
@@ -3567,7 +3567,7 @@ ${MTR_LISTA_CARD_UI_CSS}
 
           .mtr-excel__table td {
             border: 1px solid #111 !important;
-            padding: 4px 6px !important;
+            padding: 0 2px !important;
             vertical-align: top !important;
           }
 
@@ -3593,8 +3593,8 @@ ${MTR_LISTA_CARD_UI_CSS}
           }
 
           .mtr-excel__doc-footer {
-            font-size: 8.5px !important;
-            line-height: 1.28 !important;
+            font-size: 8px !important;
+            line-height: 1.18 !important;
           }
 
           .mtr-excel__k {
@@ -3626,8 +3626,8 @@ ${MTR_LISTA_CARD_UI_CSS}
 
           .mtr-excel__inner td {
             border: 1px solid #111 !important;
-            padding: 3px 5px !important;
-            font-size: 10px !important;
+            padding: 0 2px !important;
+            font-size: 12.75px !important;
           }
 
           .mtr-excel__signrow {

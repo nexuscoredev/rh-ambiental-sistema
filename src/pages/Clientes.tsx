@@ -1972,7 +1972,7 @@ export default function Clientes() {
     if (!podeIncluirCliente) {
       void rgAlert({
         title: "Clientes",
-        message: "Seu perfil não pode incluir clientes. Acesso ao cadastro: equipe Comercial ou Matheus (Operação).",
+        message: "Seu perfil não pode incluir clientes. Acesso ao cadastro: equipe Comercial, Matheus ou Gabriel (Operação).",
         variant: "warning",
       });
       return;
@@ -1987,7 +1987,7 @@ export default function Clientes() {
     if (!podeEditarCliente) {
       void rgAlert({
         title: "Clientes",
-        message: "Edição de clientes restrita à equipe Comercial, Matheus (Operação) ou Desenvolvedor.",
+        message: "Edição de clientes restrita à equipe Comercial, Matheus/Gabriel (Operação) ou Desenvolvedor.",
         variant: "warning",
       });
       return;
@@ -2592,7 +2592,7 @@ export default function Clientes() {
               title={
                 podeIncluirCliente
                   ? undefined
-                  : "Inclusão: equipe Comercial ou Matheus (Operação)"
+                  : "Inclusão: equipe Comercial, Matheus ou Gabriel (Operação)"
               }
             >
               Novo cliente

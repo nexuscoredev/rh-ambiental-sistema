@@ -62,6 +62,12 @@ export function nomeEhMatheus(ctx: UsuarioAcessoContext): boolean {
   return nomeContemToken(normalizarNomePessoa(ctx.nome), 'matheus')
 }
 
+/** Matheus e Gabriel (Operação Time R): cadastros estendidos (clientes, motoristas, veículos). */
+export function nomeEhOperacaoTimeRCadastroEstendido(ctx: UsuarioAcessoContext): boolean {
+  const n = normalizarNomePessoa(ctx.nome)
+  return nomeContemToken(n, 'matheus') || nomeContemToken(n, 'gabriel')
+}
+
 /** Equipe comercial com o mesmo acesso operacional (Thais, Rafaela, Rose, Raquel). */
 export function usuarioEhEquipeComercial(ctx: UsuarioAcessoContext): boolean {
   if (usuarioEhDesenvolvedorMaster(ctx)) return true
@@ -181,10 +187,18 @@ export function rbacPode(
 
   switch (recurso) {
     case 'cliente':
-      return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx) || nomeEhMatheus(ctx)
+      return (
+        usuarioEhEquipeComercial(ctx) ||
+        diretoriaAcessoNegocio(ctx) ||
+        nomeEhOperacaoTimeRCadastroEstendido(ctx)
+      )
     case 'motorista':
     case 'veiculo':
-      return setorComercialOuOperacao(ctx) || diretoriaAcessoNegocio(ctx)
+      return (
+        setorComercialOuOperacao(ctx) ||
+        diretoriaAcessoNegocio(ctx) ||
+        nomeEhOperacaoTimeRCadastroEstendido(ctx)
+      )
     case 'representante': {
       if (acao === 'ler') return usuarioEhComercial(ctx) || diretoriaAcessoNegocio(ctx)
       return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)

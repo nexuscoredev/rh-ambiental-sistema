@@ -8,6 +8,7 @@
 
 import {
   nomeContemToken,
+  nomeEhThais,
   normalizarNomePessoa,
   rbacPode,
   usuarioEhDesenvolvedorMaster,
@@ -96,6 +97,38 @@ export function cargoPodeApagarHistoricoChat(
   email?: string | null
 ): boolean {
   return temAutoridadeMaximaSistema(cargo, nome, email)
+}
+
+/** Thais — fila de aprovação de solicitações de ajuste escaladas pelos desenvolvedores. */
+export function usuarioEhAprovadorSolicitacoesThais(
+  nome?: string | null,
+  cargo?: string | null
+): boolean {
+  return (
+    nomeEhThais({ nome: nome ?? null, cargo: cargo ?? null, email: null }) ||
+    cargoEhOperacionalTimeT(cargo)
+  )
+}
+
+/** Apenas desenvolvedores podem escalar pedidos para a fila da Thais. */
+export function usuarioPodeEnviarSolicitacaoFilaThais(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return temAutoridadeMaximaSistema(cargo, nome, email)
+}
+
+/** Coluna «Solicitações» no chat interno (fila dev ou fila Thais). */
+export function usuarioVeColunaSolicitacoesChat(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return (
+    usuarioPodeEnviarSolicitacaoFilaThais(cargo, nome, email) ||
+    usuarioEhAprovadorSolicitacoesThais(nome, cargo)
+  )
 }
 
 /** Operacional genérico (sem sufixo Time T). */

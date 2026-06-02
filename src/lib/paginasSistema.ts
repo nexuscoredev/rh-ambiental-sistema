@@ -1,6 +1,6 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
-import { nomeEhMatheus } from './rbac'
+import { nomeEhOperacaoTimeRCadastroEstendido } from './rbac'
 import {
   cargoEhOperacionalTimeT,
   cargoTemAutoridadeMaximaSistema,
@@ -40,6 +40,7 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/pos-venda', label: 'Pós-venda' },
   ...RH_ROTAS_SISTEMA,
   { path: '/usuarios', label: 'Usuários' },
+  { path: '/sistema/solicitacoes-ajuste', label: 'Gestão de solicitações' },
   { path: '/chat', label: 'Chat' },
 ]
 
@@ -150,12 +151,34 @@ export function rotaEhCadastroCliente(pathname: string): boolean {
   return path === '/clientes' || path.startsWith('/clientes/')
 }
 
-/** Exceções por nome (ex.: Matheus → cadastro de clientes). */
+/** Rotas de cadastro de motoristas e veículos. */
+export function rotaEhCadastroMotoristaVeiculo(pathname: string): boolean {
+  const path = normalizarPath(pathname)
+  return (
+    path === '/motoristas' ||
+    path.startsWith('/motoristas/') ||
+    path === '/caminhoes' ||
+    path.startsWith('/caminhoes/')
+  )
+}
+
+/** Exceções por nome — Matheus e Gabriel (Operação Time R): clientes, motoristas e veículos. */
+export function usuarioTemExcecaoCadastroOperacaoTimeR(
+  usuario: UsuarioComPaginas,
+  pathname: string
+): boolean {
+  if (!nomeEhOperacaoTimeRCadastroEstendido({ nome: usuario.nome, cargo: usuario.cargo })) {
+    return false
+  }
+  return rotaEhCadastroCliente(pathname) || rotaEhCadastroMotoristaVeiculo(pathname)
+}
+
+/** @deprecated Preferir `usuarioTemExcecaoCadastroOperacaoTimeR`. */
 export function usuarioTemExcecaoCadastroCliente(
   usuario: UsuarioComPaginas,
   pathname: string
 ): boolean {
-  return rotaEhCadastroCliente(pathname) && nomeEhMatheus({ nome: usuario.nome, cargo: usuario.cargo })
+  return usuarioTemExcecaoCadastroOperacaoTimeR(usuario, pathname)
 }
 
 export function cargoPodeAcessarRotaMenu(
@@ -166,7 +189,10 @@ export function cargoPodeAcessarRotaMenu(
 ): boolean {
   if (cargoTemAutoridadeMaximaSistema(cargo, nome, email)) return true
   const path = normalizarPath(pathname)
-  if (rotaEhCadastroCliente(path) && nomeEhMatheus({ nome, cargo })) return true
+  if (rotaEhCadastroCliente(path) && nomeEhOperacaoTimeRCadastroEstendido({ nome, cargo })) return true
+  if (rotaEhCadastroMotoristaVeiculo(path) && nomeEhOperacaoTimeRCadastroEstendido({ nome, cargo })) {
+    return true
+  }
   if (cargoEhOperacionalTimeT(cargo)) {
     if (path === '/usuarios' || path.startsWith('/usuarios/')) return false
     return true

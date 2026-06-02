@@ -142,6 +142,20 @@ export function expandirLinhasPesagemComContrato(
     return linhasAtuais
   }
 
+  /** Utilizador removeu linhas (tinha várias, ficou com menos) — não repor as do contrato. */
+  if (
+    modeloCom.length > 1 &&
+    atuais.length >= 2 &&
+    atuais.length < modeloCom.length &&
+    atuais.every((a) => a.texto.trim()) &&
+    atuais.some((a) => a.peso_liquido.trim() || a.peso_bruto.trim() || a.peso_tara.trim()) &&
+    atuais.every((a) =>
+      modeloCom.some((mod) => linhasPesagemTextoCoincide(a.texto, mod.texto))
+    )
+  ) {
+    return atuais
+  }
+
   if (modeloCom.length === 1) {
     const mod = modeloCom[0]!
     const match = atuais[0]

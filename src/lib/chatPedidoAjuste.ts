@@ -10,6 +10,18 @@ export const CHAT_RESPOSTA_AJUSTE_RESOLVIDO =
 
 export type PedidoAjusteStatus = 'aguardando_solicitante' | 'reaberto' | 'aprovado'
 
+export type PedidoAjusteEscalacaoThaisStatus = 'aguardando' | 'aprovado'
+
+export type PedidoAjusteEscalacaoThaisRow = {
+  mensagem_id: string
+  conversa_id: string
+  dev_id: string
+  status: PedidoAjusteEscalacaoThaisStatus
+  enviado_em?: string | null
+  aprovado_em?: string | null
+  aprovado_por?: string | null
+}
+
 export type PedidoAjusteParseado = {
   descricao: string
   pagina?: string
@@ -68,6 +80,10 @@ export function etiquetaEventoPedidoAjusteHistorico(
       return 'Solicitante aprovou'
     case 'negado_solicitante':
       return 'Solicitante reabriu o pedido'
+    case 'enviado_fila_thais':
+      return 'Encaminhado para aprovação da Thais'
+    case 'aprovado_fila_thais':
+      return 'Thais aprovou — devolver à fila do desenvolvedor'
     default:
       return evento
   }
@@ -117,10 +133,12 @@ export type PedidoAjusteFilaItem = {
   conteudo: string
   createdAt: string
   parseado: PedidoAjusteParseado | null
-  /** Novo pedido ou reaberto pelo solicitante após negar. */
-  situacao: 'novo' | 'reaberto'
+  /** Novo pedido, reaberto pelo solicitante ou devolvido após aprovação da Thais. */
+  situacao: 'novo' | 'reaberto' | 'aprovado_thais'
   justificativaSolicitante?: string
   ciclo: number
+  /** Preenchido quando o pedido voltou da fila da Thais para o dev que escalou. */
+  escaladoPorDevId?: string
 }
 
 export type PedidoAjusteAguardandoFeedback = {
@@ -134,7 +152,7 @@ export type PedidoAjusteHistoricoItem = {
   id: string
   mensagemPedidoId: string
   conversaId: string
-  evento: 'resolvido_dev' | 'aprovado_solicitante' | 'negado_solicitante'
+  evento: 'resolvido_dev' | 'aprovado_solicitante' | 'negado_solicitante' | 'enviado_fila_thais' | 'aprovado_fila_thais'
   actorId: string
   texto: string | null
   ciclo: number
@@ -228,10 +246,96 @@ type ResolvidoRow = {
   ciclo?: number | null
 }
 
-function pedidoEstaNaFilaDev(row: ResolvidoRow | undefined): boolean {
-  if (!row) return true
-  const status = (row.status ?? 'aguardando_solicitante') as PedidoAjusteStatus
-  return status === 'reaberto'
+function pedidoEstaNaFilaDev(
+  row: ResolvidoRow | undefined,
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined,
+  meuId: string
+): boolean {
+  if (escalacao?.status === 'aguardando') return false
+  if (escalacao?.status === 'aprovado') {
+    if (escalacao.dev_id.trim().toLowerCase() !== meuId.trim().toLowerCase()) return false
+    if (!row) return true
+    return row.status === 'reaberto'
+  }
+  return false
+}
+
+/** Desenvolvedor só pode resolver após aprovação da Thais. */
+export function pedidoPodeSerMarcadoResolvidoPeloDev(
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined,
+  meuId: string
+): boolean {
+  if (!escalacao || escalacao.status !== 'aprovado') return false
+  return escalacao.dev_id.trim().toLowerCase() === meuId.trim().toLowerCase()
+}
+
+/** Usado nos testes e na listagem da fila do desenvolvedor. */
+export function pedidoVisivelNaFilaDesenvolvedor(
+  reg: ResolvidoRow | undefined,
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined,
+  meuId: string
+): boolean {
+  return pedidoEstaNaFilaDev(reg, escalacao, meuId)
+}
+
+async function carregarEscalacoesThaisPorMensagens(
+  mensagemIds: string[]
+): Promise<Map<string, PedidoAjusteEscalacaoThaisRow>> {
+  const map = new Map<string, PedidoAjusteEscalacaoThaisRow>()
+  if (mensagemIds.length === 0) return map
+
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('mensagem_id, conversa_id, dev_id, status, enviado_em, aprovado_em, aprovado_por')
+    .in('mensagem_id', mensagemIds)
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return map
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  for (const row of data ?? []) {
+    map.set(String(row.mensagem_id), {
+      mensagem_id: String(row.mensagem_id),
+      conversa_id: String(row.conversa_id),
+      dev_id: String(row.dev_id),
+      status: row.status as PedidoAjusteEscalacaoThaisStatus,
+      enviado_em: row.enviado_em != null ? String(row.enviado_em) : null,
+      aprovado_em: row.aprovado_em != null ? String(row.aprovado_em) : null,
+      aprovado_por: row.aprovado_por != null ? String(row.aprovado_por) : null,
+    })
+  }
+  return map
+}
+
+function montarItemFilaPedido(
+  row: {
+    id: string
+    conversa_id: string
+    remetente_id: string
+    conteudo: string
+    created_at: string
+  },
+  reg: ResolvidoRow | undefined,
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined
+): PedidoAjusteFilaItem {
+  const conteudo = String(row.conteudo ?? '')
+  const reaberto = reg?.status === 'reaberto'
+  const aprovadoThais = escalacao?.status === 'aprovado'
+  return {
+    mensagemId: String(row.id),
+    conversaId: String(row.conversa_id),
+    remetenteId: String(row.remetente_id),
+    conteudo,
+    createdAt: String(row.created_at),
+    parseado: parsePedidoAjusteConteudo(conteudo),
+    situacao: reaberto ? 'reaberto' : aprovadoThais ? 'aprovado_thais' : 'novo',
+    justificativaSolicitante: reaberto
+      ? String(reg?.justificativa_solicitante ?? '').trim() || undefined
+      : undefined,
+    ciclo: Number(reg?.ciclo ?? 1) || 1,
+    escaladoPorDevId: escalacao?.dev_id,
+  }
 }
 
 /** Pedidos na fila do desenvolvedor (novos ou reabertos pelo solicitante). */
@@ -263,29 +367,169 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
 
   if (error) throw new Error(mensagemErroPedidoAjuste(error))
 
+  const mensagemIds = (data ?? []).map((row) => String(row.id))
+  const escalacaoPorMensagem = await carregarEscalacoesThaisPorMensagens(mensagemIds)
+
   const itens: PedidoAjusteFilaItem[] = []
   for (const row of data ?? []) {
     const mensagemId = String(row.id)
     const reg = resolvidoPorMensagem.get(mensagemId)
-    if (!pedidoEstaNaFilaDev(reg)) continue
+    const escalacao = escalacaoPorMensagem.get(mensagemId)
+    if (!pedidoEstaNaFilaDev(reg, escalacao, uid)) continue
 
-    const conteudo = String(row.conteudo ?? '')
-    const reaberto = reg?.status === 'reaberto'
-    itens.push({
-      mensagemId,
-      conversaId: String(row.conversa_id),
-      remetenteId: String(row.remetente_id),
-      conteudo,
-      createdAt: String(row.created_at),
-      parseado: parsePedidoAjusteConteudo(conteudo),
-      situacao: reaberto ? 'reaberto' : 'novo',
-      justificativaSolicitante: reaberto
-        ? String(reg?.justificativa_solicitante ?? '').trim() || undefined
-        : undefined,
-      ciclo: Number(reg?.ciclo ?? 1) || 1,
-    })
+    itens.push(montarItemFilaPedido(row, reg, escalacao))
   }
   return itens
+}
+
+/** Pedidos à espera de aprovação da Thais. */
+export async function chatListarPedidosAjusteFilaThais(): Promise<PedidoAjusteFilaItem[]> {
+  const { data: escalacoes, error: escErr } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('mensagem_id, conversa_id, dev_id, status, enviado_em')
+    .eq('status', 'aguardando')
+    .order('enviado_em', { ascending: true })
+
+  if (escErr) {
+    if (/does not exist|relation|42P01/i.test(escErr.message)) return []
+    throw new Error(mensagemErroPedidoAjuste(escErr))
+  }
+
+  const ids = (escalacoes ?? []).map((e) => String(e.mensagem_id)).filter(Boolean)
+  if (ids.length === 0) return []
+
+  const { data: msgs, error: msgErr } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id, conteudo, created_at')
+    .in('id', ids)
+
+  if (msgErr) throw new Error(mensagemErroPedidoAjuste(msgErr))
+
+  const msgPorId = new Map((msgs ?? []).map((m) => [String(m.id), m]))
+  const itens: PedidoAjusteFilaItem[] = []
+
+  for (const esc of escalacoes ?? []) {
+    const msg = msgPorId.get(String(esc.mensagem_id))
+    if (!msg) continue
+    itens.push(
+      montarItemFilaPedido(
+        msg as {
+          id: string
+          conversa_id: string
+          remetente_id: string
+          conteudo: string
+          created_at: string
+        },
+        undefined,
+        {
+          mensagem_id: String(esc.mensagem_id),
+          conversa_id: String(esc.conversa_id),
+          dev_id: String(esc.dev_id),
+          status: 'aguardando',
+          enviado_em: esc.enviado_em != null ? String(esc.enviado_em) : null,
+        }
+      )
+    )
+  }
+  return itens
+}
+
+export async function chatEnviarPedidoAjusteFilaThais(
+  conversaId: string,
+  mensagemPedidoId: string
+): Promise<void> {
+  const rpc = await supabase.rpc('chat_enviar_pedido_fila_thais', {
+    p_conversa_id: conversaId,
+    p_mensagem_pedido_id: mensagemPedidoId,
+  })
+
+  if (!rpc.error) return
+
+  if (!rpcIndisponivel(rpc.error)) {
+    const msg = mensagemErroPedidoAjuste(rpc.error)
+    if (/does not exist|relation|42P01/i.test(msg)) {
+      throw new Error(
+        'Funcionalidade ainda não activa no Supabase. Execute a migração 20260702120000_chat_pedido_ajuste_aprovacao_thais.'
+      )
+    }
+    throw new Error(msg)
+  }
+
+  await chatEnviarPedidoAjusteFilaThaisLegado(conversaId, mensagemPedidoId)
+}
+
+async function chatEnviarPedidoAjusteFilaThaisLegado(
+  conversaId: string,
+  mensagemPedidoId: string
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const uid = user?.id
+  if (!uid) throw new Error('Sessão inválida.')
+
+  await carregarConteudoPedidoAjuste(conversaId, mensagemPedidoId)
+
+  const { data: existente } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('mensagem_id, status')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (existente?.status === 'aguardando') {
+    throw new Error('Este pedido já está na fila da Thais.')
+  }
+  if (existente?.status === 'aprovado') {
+    throw new Error('Este pedido já foi aprovado pela Thais.')
+  }
+
+  const { error } = await supabase.from('chat_pedido_ajuste_aprovacao_thais').insert({
+    mensagem_id: mensagemPedidoId,
+    conversa_id: conversaId,
+    dev_id: uid,
+    status: 'aguardando',
+  })
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
+}
+
+export async function chatAprovarPedidoAjusteFilaThais(mensagemPedidoId: string): Promise<void> {
+  const rpc = await supabase.rpc('chat_aprovar_pedido_fila_thais', {
+    p_mensagem_pedido_id: mensagemPedidoId,
+  })
+
+  if (!rpc.error) return
+
+  if (!rpcIndisponivel(rpc.error)) {
+    throw new Error(mensagemErroPedidoAjuste(rpc.error))
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const uid = user?.id
+  if (!uid) throw new Error('Sessão inválida.')
+
+  const { data: row, error: findErr } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('mensagem_id, status')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (findErr) throw new Error(mensagemErroPedidoAjuste(findErr))
+  if (!row || row.status !== 'aguardando') {
+    throw new Error('Pedido não encontrado na fila de aprovação.')
+  }
+
+  const { error } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .update({
+      status: 'aprovado',
+      aprovado_em: new Date().toISOString(),
+      aprovado_por: uid,
+    })
+    .eq('mensagem_id', mensagemPedidoId)
+
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
 }
 
 /** Pedidos desta conversa à espera de aprovação/negativa do solicitante. */
@@ -630,6 +874,64 @@ async function decidirPedidoAjusteLegado(
     .eq('mensagem_id', mensagemPedidoId)
 
   if (error) throw new Error(mensagemErroPedidoAjuste(error))
+
+  await reescalarPedidoAjusteThaisLegado(
+    String(msg.conversa_id),
+    mensagemPedidoId,
+    String(msg.remetente_id)
+  )
+}
+
+async function reescalarPedidoAjusteThaisLegado(
+  conversaId: string,
+  mensagemPedidoId: string,
+  remetentePedidoId: string
+): Promise<void> {
+  const { data: participantes, error: partErr } = await supabase
+    .from('chat_participantes')
+    .select('user_id')
+    .eq('conversa_id', conversaId)
+
+  if (partErr) {
+    if (/does not exist|relation|42P01/i.test(partErr.message)) return
+    throw new Error(mensagemErroPedidoAjuste(partErr))
+  }
+
+  const devId = (participantes ?? [])
+    .map((p) => String(p.user_id))
+    .find((id) => id !== remetentePedidoId)
+  if (!devId) return
+
+  const { data: existente } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('mensagem_id, status')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (existente?.status === 'aguardando') return
+
+  if (existente) {
+    const { error } = await supabase
+      .from('chat_pedido_ajuste_aprovacao_thais')
+      .update({
+        status: 'aguardando',
+        dev_id: devId,
+        enviado_em: new Date().toISOString(),
+        aprovado_em: null,
+        aprovado_por: null,
+      })
+      .eq('mensagem_id', mensagemPedidoId)
+    if (error) throw new Error(mensagemErroPedidoAjuste(error))
+    return
+  }
+
+  const { error } = await supabase.from('chat_pedido_ajuste_aprovacao_thais').insert({
+    mensagem_id: mensagemPedidoId,
+    conversa_id: conversaId,
+    dev_id: devId,
+    status: 'aguardando',
+  })
+  if (error) throw new Error(mensagemErroPedidoAjuste(error))
 }
 
 /** Envia resposta padrão e regista o pedido como resolvido (desenvolvedor / desenvolvedor master). */
@@ -654,11 +956,36 @@ async function carregarConteudoPedidoAjuste(
   return String(msg.conteudo ?? '')
 }
 
+async function validarEscalacaoThaisAntesResolver(
+  mensagemPedidoId: string,
+  meuId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_aprovacao_thais')
+    .select('dev_id, status')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  if (!data || data.status !== 'aprovado') {
+    throw new Error('Este pedido aguarda aprovação da Thais antes de ser tratado.')
+  }
+  if (String(data.dev_id).trim().toLowerCase() !== meuId.trim().toLowerCase()) {
+    throw new Error('Este pedido foi aprovado para outro desenvolvedor tratar.')
+  }
+}
+
 export async function chatMarcarPedidoAjusteResolvido(
   conversaId: string,
   mensagemPedidoId: string,
   meuId: string
 ): Promise<ChatMensagem> {
+  await validarEscalacaoThaisAntesResolver(mensagemPedidoId, meuId)
+
   const conteudoPedido = await carregarConteudoPedidoAjuste(conversaId, mensagemPedidoId)
   const textoResposta = montarRespostaPedidoAjusteResolvido(conteudoPedido)
 

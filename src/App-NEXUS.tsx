@@ -48,6 +48,7 @@ const ComprovantesDescarte = lazyWithRetry(() => import('./pages/ComprovantesDes
 const ComprovanteDescarteForm = lazyWithRetry(() => import('./pages/ComprovanteDescarteForm'))
 const Chat = lazyWithRetry(() => import('./pages/Chat'))
 const RhArea = lazyWithRetry(() => import('./pages/rh/RhArea'))
+const SolicitacoesAjusteAdmin = lazyWithRetry(() => import('./pages/sistema/SolicitacoesAjusteAdmin'))
 
 const routeSuspenseFallback = (
   <div
@@ -906,6 +907,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/envio-nf']]}
                 >
                   <EnvioNF />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/sistema/solicitacoes-ajuste"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/sistema/solicitacoes-ajuste']]}
+                >
+                  <SolicitacoesAjusteAdmin />
                 </ProtectedRoute>
               }
             />

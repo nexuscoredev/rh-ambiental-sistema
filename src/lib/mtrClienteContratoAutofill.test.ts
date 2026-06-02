@@ -74,6 +74,37 @@ describe('mtrClienteContratoAutofill', () => {
     expect(expandida[1]?.texto).toContain('Óleo')
   })
 
+  it('expandirLinhasPesagemComContrato não repõe linhas removidas pelo utilizador', () => {
+    const contrato = parseContratoClienteMtr({
+      residuos_contrato: [
+        { tipo_residuo: 'Resíduo A', classificacao: 'Classe I', unidade_medida: 'kg' },
+        { tipo_residuo: 'Resíduo B', classificacao: 'Classe I', unidade_medida: 'kg' },
+        { tipo_residuo: 'Resíduo C', classificacao: 'Classe I', unidade_medida: 'kg' },
+      ],
+    }).residuos
+    const duasLinhasAposRemover = expandirLinhasPesagemComContrato(
+      [
+        {
+          catalogo_id: '',
+          texto: 'Resíduo A',
+          peso_tara: '10',
+          peso_bruto: '100',
+          peso_liquido: '90',
+        },
+        {
+          catalogo_id: '',
+          texto: 'Resíduo C',
+          peso_tara: '',
+          peso_bruto: '',
+          peso_liquido: '',
+        },
+      ],
+      contrato
+    )
+    expect(duasLinhasAposRemover).toHaveLength(2)
+    expect(duasLinhasAposRemover.map((l) => l.texto)).toEqual(['Resíduo A', 'Resíduo C'])
+  })
+
   it('expandirListaResiduosMtrParaContrato preserva linhas gravadas na edição', () => {
     const contrato = parseContratoClienteMtr({
       residuos_contrato: [

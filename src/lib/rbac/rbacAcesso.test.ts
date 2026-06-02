@@ -63,6 +63,21 @@ describe('rbac — equipe comercial (mesmo acesso)', () => {
     expect(rbacPode('pesagem_ticket', 'editar', matheus)).toBe(true)
   })
 
+  it('Matheus e Gabriel podem cadastrar clientes, motoristas e veículos', () => {
+    for (const nome of ['Matheus', 'Gabriel']) {
+      const ctxUser = ctx(nome, 'Operadores (Time R)')
+      expect(rbacPode('cliente', 'criar', ctxUser)).toBe(true)
+      expect(rbacPode('cliente', 'editar', ctxUser)).toBe(true)
+      expect(rbacPode('cliente', 'excluir', ctxUser)).toBe(true)
+      expect(rbacPode('motorista', 'criar', ctxUser)).toBe(true)
+      expect(rbacPode('motorista', 'editar', ctxUser)).toBe(true)
+      expect(rbacPode('motorista', 'excluir', ctxUser)).toBe(true)
+      expect(rbacPode('veiculo', 'criar', ctxUser)).toBe(true)
+      expect(rbacPode('veiculo', 'editar', ctxUser)).toBe(true)
+      expect(rbacPode('veiculo', 'excluir', ctxUser)).toBe(true)
+    }
+  })
+
   it('Matheus pode cadastrar e editar clientes', () => {
     const matheus = ctx('Matheus', 'Operadores (Time R)')
     expect(rbacPode('cliente', 'criar', matheus)).toBe(true)

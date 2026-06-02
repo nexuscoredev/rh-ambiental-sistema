@@ -16,8 +16,10 @@ import {
 import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatDecidirPedidoAjusteSolicitante,
+  chatAprovarPedidoAjusteFilaThais,
   chatListarHistoricoPedidosAjuste,
   chatListarPedidosAguardandoFeedbackSolicitante,
+  chatListarPedidosAjusteFilaThais,
   chatListarPedidosAjustePendentes,
   chatMarcarPedidoAjusteResolvido,
   type PedidoAjusteAguardandoFeedback,
@@ -25,7 +27,12 @@ import {
   type PedidoAjusteHistoricoItem,
 } from '../../lib/chatPedidoAjuste'
 import { ChatPedidosAjusteColuna } from './ChatPedidosAjusteColuna'
-import { cargoPodeApagarHistoricoChat } from '../../lib/workflowPermissions'
+import {
+  cargoPodeApagarHistoricoChat,
+  usuarioEhAprovadorSolicitacoesThais,
+  usuarioPodeEnviarSolicitacaoFilaThais,
+  usuarioVeColunaSolicitacoesChat,
+} from '../../lib/workflowPermissions'
 import { usePerfilUsuario } from '../../contexts/PerfilUsuarioContext'
 import { normalizarPresencaStatus } from '../../lib/presencaStatus'
 import type { ChatConversaLista, ChatMensagem, ChatUsuarioLista } from '../../types/chat'
@@ -106,7 +113,24 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   const { open, setOpen, pendingUserId, clearPendingUserId } = useChatFloat()
   const { isOnline } = usePresencaAoVivo()
   const { usuario } = usePerfilUsuario()
-  const podeApagarHistoricoChat = cargoPodeApagarHistoricoChat(usuario?.cargo)
+  const podeApagarHistoricoChat = cargoPodeApagarHistoricoChat(
+    usuario?.cargo,
+    usuario?.nome,
+    usuario?.email
+  )
+  const veColunaSolicitacoes = usuarioVeColunaSolicitacoesChat(
+    usuario?.cargo,
+    usuario?.nome,
+    usuario?.email
+  )
+  const podeEnviarFilaThais = usuarioPodeEnviarSolicitacaoFilaThais(
+    usuario?.cargo,
+    usuario?.nome,
+    usuario?.email
+  )
+  const ehAprovadorThais = usuarioEhAprovadorSolicitacoesThais(usuario?.nome, usuario?.cargo)
+  const modoPedidosColuna: 'dev' | 'thais' =
+    ehAprovadorThais && !podeEnviarFilaThais ? 'thais' : 'dev'
 
   const fabRef = useRef<HTMLButtonElement | null>(null)
   const [fabPos, setFabPos] = useState<FabPos | null>(() => {
@@ -147,6 +171,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     PedidoAjusteAguardandoFeedback[]
   >([])
   const [decidindoPedidoAjusteId, setDecidindoPedidoAjusteId] = useState<string | null>(null)
+  const [aprovandoThaisId, setAprovandoThaisId] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
   const [abrindoComPessoa, setAbrindoComPessoa] = useState(false)
@@ -349,7 +374,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
 
   const recarregarPedidosAjustePendentes = useCallback(async () => {
     const uid = meuIdRef.current
-    if (!uid || !podeApagarHistoricoChat) {
+    if (!uid || !veColunaSolicitacoes) {
       setPedidosAjustePendentes([])
       setHistoricoPedidosAjuste([])
       return
@@ -357,10 +382,11 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     setCarregandoPedidosAjuste(true)
     setCarregandoHistoricoPedidosAjuste(true)
     try {
-      const [list, hist] = await Promise.all([
-        chatListarPedidosAjustePendentes(uid),
-        chatListarHistoricoPedidosAjuste(50),
-      ])
+      const listPromise =
+        modoPedidosColuna === 'thais'
+          ? chatListarPedidosAjusteFilaThais()
+          : chatListarPedidosAjustePendentes(uid)
+      const [list, hist] = await Promise.all([listPromise, chatListarHistoricoPedidosAjuste(50)])
       setPedidosAjustePendentes(list)
       setHistoricoPedidosAjuste(hist)
     } catch (e) {
@@ -369,7 +395,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       setCarregandoPedidosAjuste(false)
       setCarregandoHistoricoPedidosAjuste(false)
     }
-  }, [podeApagarHistoricoChat])
+  }, [modoPedidosColuna, veColunaSolicitacoes])
 
   const recarregarPedidosAguardandoFeedback = useCallback(async (conversaId: string) => {
     const uid = meuIdRef.current
@@ -533,12 +559,12 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   }, [meuId, recarregarConversas, recarregarPedidosAjustePendentes, tocarNotificacao])
 
   useEffect(() => {
-    if (!open || !meuId || !podeApagarHistoricoChat) {
+    if (!open || !meuId || !veColunaSolicitacoes) {
       queueMicrotask(() => setPedidosAjustePendentes([]))
       return
     }
     void recarregarPedidosAjustePendentes()
-  }, [open, meuId, podeApagarHistoricoChat, recarregarPedidosAjustePendentes])
+  }, [open, meuId, veColunaSolicitacoes, recarregarPedidosAjustePendentes])
 
   useEffect(() => {
     if (!conversaId) {
@@ -794,7 +820,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
         if (conversaIdRef.current) {
           void recarregarPedidosAguardandoFeedback(conversaIdRef.current)
         }
-        if (podeApagarHistoricoChat) {
+        if (veColunaSolicitacoes && modoPedidosColuna === 'dev') {
           void recarregarPedidosAjustePendentes()
         }
       } catch (e) {
@@ -806,10 +832,29 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     },
     [
       meuId,
-      podeApagarHistoricoChat,
+      modoPedidosColuna,
+      veColunaSolicitacoes,
       recarregarPedidosAguardandoFeedback,
       recarregarPedidosAjustePendentes,
     ]
+  )
+
+  const handleAprovarPedidoFilaThais = useCallback(
+    async (item: PedidoAjusteFilaItem) => {
+      setAprovandoThaisId(item.mensagemId)
+      setErro('')
+      try {
+        await chatAprovarPedidoAjusteFilaThais(item.mensagemId)
+        setPedidosAjustePendentes((prev) => prev.filter((p) => p.mensagemId !== item.mensagemId))
+        void recarregarPedidosAjustePendentes()
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível aprovar o pedido.')
+        throw e
+      } finally {
+        setAprovandoThaisId(null)
+      }
+    },
+    [recarregarPedidosAjustePendentes]
   )
 
   async function handleEnviarFigurinha(sticker: ChatSticker) {
@@ -994,16 +1039,19 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                 carregandoLista={carregandoPainelLateral || abrindoComPessoa}
               />
 
-              {podeApagarHistoricoChat ? (
+              {veColunaSolicitacoes ? (
                 <ChatPedidosAjusteColuna
+                  modo={modoPedidosColuna}
                   itens={pedidosAjustePendentes}
                   historico={historicoPedidosAjuste}
                   usuariosPorId={usuariosPorId}
                   carregando={carregandoPedidosAjuste}
                   carregandoHistorico={carregandoHistoricoPedidosAjuste}
                   marcandoId={marcandoPedidoAjusteId}
+                  aprovandoId={aprovandoThaisId}
                   onAbrirConversa={(id, outroId) => abrirConversa(id, { outroId })}
                   onMarcarResolvido={handleMarcarPedidoAjusteResolvido}
+                  onAprovarFilaThais={handleAprovarPedidoFilaThais}
                 />
               ) : null}
 

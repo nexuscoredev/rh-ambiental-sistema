@@ -220,7 +220,10 @@ export default function SolicitarAjusteSistemaFloat({
 
                   {sucessoId ? (
                     <div className="suporte-float-ok">
-                      <p>Solicitação enviada. Pode acompanhar no Chat Interno.</p>
+                      <p>
+                        Solicitação enviada. A Thais irá aprovar antes do desenvolvedor tratar o
+                        pedido. Pode acompanhar no Chat Interno.
+                      </p>
                       <div className="suporte-float-ok__actions">
                         <button type="button" className="suporte-float-btn suporte-float-btn--primary" onClick={abrirNoChat}>
                           Abrir conversa

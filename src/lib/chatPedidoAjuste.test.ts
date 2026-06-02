@@ -4,6 +4,7 @@ import {
   etiquetaEventoPedidoAjusteHistorico,
   montarRespostaPedidoAjusteResolvido,
   parsePedidoAjusteConteudo,
+  pedidoVisivelNaFilaDesenvolvedor,
   rotuloSituacaoPedidoAjuste,
 } from './chatPedidoAjuste'
 
@@ -36,6 +37,84 @@ Página: /programacao
     expect(etiquetaEventoPedidoAjusteHistorico('negado_solicitante')).toBe(
       'Solicitante reabriu o pedido'
     )
+    expect(etiquetaEventoPedidoAjusteHistorico('enviado_fila_thais')).toBe(
+      'Encaminhado para aprovação da Thais'
+    )
+    expect(etiquetaEventoPedidoAjusteHistorico('aprovado_fila_thais')).toBe(
+      'Thais aprovou — devolver à fila do desenvolvedor'
+    )
+  })
+
+  it('filtra pedidos visíveis na fila do desenvolvedor', () => {
+    const devA = '11111111-1111-1111-1111-111111111111'
+    const devB = '22222222-2222-2222-2222-222222222222'
+
+    expect(pedidoVisivelNaFilaDesenvolvedor(undefined, undefined, devA)).toBe(false)
+
+    expect(
+      pedidoVisivelNaFilaDesenvolvedor(undefined, {
+        mensagem_id: 'm1',
+        conversa_id: 'c1',
+        dev_id: devA,
+        status: 'aguardando',
+      }, devA)
+    ).toBe(false)
+
+    expect(
+      pedidoVisivelNaFilaDesenvolvedor(undefined, {
+        mensagem_id: 'm1',
+        conversa_id: 'c1',
+        dev_id: devA,
+        status: 'aprovado',
+      }, devA)
+    ).toBe(true)
+
+    expect(
+      pedidoVisivelNaFilaDesenvolvedor(undefined, {
+        mensagem_id: 'm1',
+        conversa_id: 'c1',
+        dev_id: devA,
+        status: 'aprovado',
+      }, devB)
+    ).toBe(false)
+
+    expect(
+      pedidoVisivelNaFilaDesenvolvedor(
+        {
+          mensagem_id: 'm1',
+          conversa_id: 'c1',
+          status: 'reaberto',
+          justificativa_solicitante: 'x',
+          ciclo: 2,
+        },
+        {
+          mensagem_id: 'm1',
+          conversa_id: 'c1',
+          dev_id: devA,
+          status: 'aprovado',
+        },
+        devA
+      )
+    ).toBe(true)
+
+    expect(
+      pedidoVisivelNaFilaDesenvolvedor(
+        {
+          mensagem_id: 'm1',
+          conversa_id: 'c1',
+          status: 'reaberto',
+          justificativa_solicitante: 'x',
+          ciclo: 2,
+        },
+        {
+          mensagem_id: 'm1',
+          conversa_id: 'c1',
+          dev_id: devA,
+          status: 'aguardando',
+        },
+        devA
+      )
+    ).toBe(false)
   })
 
   it('rotula situação do pedido para relatório', () => {

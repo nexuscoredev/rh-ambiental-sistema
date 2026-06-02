@@ -64,8 +64,10 @@ import {
   parseResiduosFromRow,
   parseResiduosItensJson,
   residuoCatalogoIdParaDb,
+  residuosItensDbParaLinhasForm,
   resolverResiduosParaGravacao,
   type ResiduoPesagemItem,
+  type ResiduoPesagemItemDb,
 } from "../lib/residuosPesagem";
 import type { ResiduoContratoItem } from "../lib/clienteContratoCadastro";
 import {
@@ -122,6 +124,19 @@ function mergeFormResiduosLinhas(
     ...linhasParaFormLegacy(linhas),
     ...agregarPesosDasLinhas(linhas),
   };
+}
+
+/** Mantém no formulário apenas o que foi gravado (evita reabrir linhas da MTR/contrato). */
+function linhasFormAposGravacao(
+  itens: ResiduoPesagemItemDb[] | undefined,
+  fallback: ResiduoPesagemItem[]
+): ResiduoPesagemItem[] {
+  if (itens?.length) {
+    const fromDb = residuosItensDbParaLinhasForm(itens);
+    if (linhasComConteudo(fromDb).length > 0) return fromDb;
+  }
+  const fb = linhasComConteudo(fallback);
+  return fb.length > 0 ? fb : [linhaVaziaResiduoPesagem()];
 }
 
 /** Busca insensível a maiúsculas e acentos (MTR / cliente / coleta). */
@@ -313,6 +328,33 @@ const massaImpressaoLabelStyle: CSSProperties = {
 function limparOuNull(valor: string) {
   const texto = valor.trim();
   return texto === "" ? null : texto;
+}
+
+/** Linhas já gravadas em controle_massa (fonte de verdade após salvar). */
+async function buscarLinhasPesagemGravadaColeta(
+  coletaId: string
+): Promise<ResiduoPesagemItem[] | null> {
+  const { data, error } = await supabase
+    .from("controle_massa")
+    .select("residuos_itens, residuo")
+    .eq("coleta_id", coletaId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const fromJson = parseResiduosItensJson(
+    (data as { residuos_itens?: unknown }).residuos_itens
+  );
+  if (fromJson && linhasComConteudo(fromJson).length > 0) return fromJson;
+
+  const textoResiduo = String((data as { residuo?: string }).residuo ?? "").trim();
+  if (textoResiduo) {
+    return parseResiduosFromRow({ tipo_residuo: textoResiduo, residuo: textoResiduo });
+  }
+
+  return null;
 }
 
 function mapRowToColetaOpcao(item: Record<string, unknown>): ColetaOpcao {
@@ -1711,44 +1753,67 @@ export default function ControleMassa() {
   function montarFormPesagemComColeta(
     prev: FormRegistro,
     coletaSelecionada: ColetaOpcao,
-    heranca: MtrHerancaPesagem | null
+    heranca: MtrHerancaPesagem | null,
+    linhasPesagemGravada: ResiduoPesagemItem[] | null = null
   ): FormRegistro {
+    const pesagemPrev = ultimaPesagemPorColeta.get(coletaSelecionada.id);
+    const temPesagemGravada =
+      Boolean(pesagemPrev) ||
+      (linhasPesagemGravada != null && linhasComConteudo(linhasPesagemGravada).length > 0);
+
+    let linhas: ResiduoPesagemItem[];
     let herancaEfetiva = heranca;
-    if (heranca) {
-      const linhasMtr = linhasComConteudo(heranca.linhas_residuo);
-      if (linhasMtr.length > 1) {
-        const filtradas = heranca.linhas_residuo.filter((l) =>
-          coletaCorrespondeResiduo(coletaSelecionada, l.texto)
-        );
-        const filtradasCom = linhasComConteudo(filtradas);
-        const coletaItens = linhasComConteudo(
-          coletaSelecionada.residuos_itens ??
-            parseResiduosFromRow({
+
+    if (temPesagemGravada) {
+      const linhasSalvas =
+        linhasPesagemGravada && linhasComConteudo(linhasPesagemGravada).length > 0
+          ? linhasPesagemGravada
+          : parseResiduosFromRow({
+              residuos_itens: coletaSelecionada.residuos_itens,
               tipo_residuo: coletaSelecionada.tipo_residuo,
               residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
-            })
-        );
-        // Coleta já é de um único resíduo → mantém só a linha correspondente da MTR
-        if (filtradasCom.length === 1 && coletaItens.length === 1) {
-          herancaEfetiva = { ...heranca, linhas_residuo: filtradas };
-        }
-      }
-    }
-
-    const linhasBase =
-      coletaSelecionada.residuos_itens ??
-      parseResiduosFromRow({
-        tipo_residuo: coletaSelecionada.tipo_residuo,
-        residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
-      });
-    const linhas = aplicarPesosColetaNasLinhas(
-      linhasResiduoHerancaOuColeta(linhasBase, herancaEfetiva),
-      {
+            });
+      linhas = aplicarPesosColetaNasLinhas(linhasSalvas, {
         peso_tara: coletaSelecionada.peso_tara,
         peso_bruto: coletaSelecionada.peso_bruto,
         peso_liquido: coletaSelecionada.peso_liquido,
+      });
+    } else {
+      if (heranca) {
+        const linhasMtr = linhasComConteudo(heranca.linhas_residuo);
+        if (linhasMtr.length > 1) {
+          const filtradas = heranca.linhas_residuo.filter((l) =>
+            coletaCorrespondeResiduo(coletaSelecionada, l.texto)
+          );
+          const filtradasCom = linhasComConteudo(filtradas);
+          const coletaItens = linhasComConteudo(
+            coletaSelecionada.residuos_itens ??
+              parseResiduosFromRow({
+                tipo_residuo: coletaSelecionada.tipo_residuo,
+                residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
+              })
+          );
+          if (filtradasCom.length === 1 && coletaItens.length === 1) {
+            herancaEfetiva = { ...heranca, linhas_residuo: filtradas };
+          }
+        }
       }
-    );
+
+      const linhasBase =
+        coletaSelecionada.residuos_itens ??
+        parseResiduosFromRow({
+          tipo_residuo: coletaSelecionada.tipo_residuo,
+          residuo_catalogo_id: coletaSelecionada.residuo_catalogo_id,
+        });
+      linhas = aplicarPesosColetaNasLinhas(
+        linhasResiduoHerancaOuColeta(linhasBase, herancaEfetiva),
+        {
+          peso_tara: coletaSelecionada.peso_tara,
+          peso_bruto: coletaSelecionada.peso_bruto,
+          peso_liquido: coletaSelecionada.peso_liquido,
+        }
+      );
+    }
     const campos = herancaEfetiva
       ? aplicarHerancaMtrEmCamposPesagem(
           { placa: coletaSelecionada.placa, motorista: coletaSelecionada.motorista },
@@ -1759,7 +1824,6 @@ export default function ControleMassa() {
     const mtrNo =
       mtrsLista.find((m) => m.id === coletaSelecionada.mtr_id)?.numero ?? null;
     const ticketEx = numeroTicketPorColeta.get(coletaSelecionada.id);
-    const pesagemPrev = ultimaPesagemPorColeta.get(coletaSelecionada.id);
     const dataCampo = resolverDataCampoPesagemForm({
       coletaId: coletaSelecionada.id,
       prevColetaId: prev.coleta_id,
@@ -1803,9 +1867,14 @@ export default function ControleMassa() {
     setMtrSemColetaSelecionado(null);
     setTipoVeiculoMtrSelecionada("");
 
-    const aplicar = (heranca: MtrHerancaPesagem | null) => {
+    const aplicar = async (heranca: MtrHerancaPesagem | null) => {
       registrarTipoCaminhaoHeranca(heranca);
-      setForm((prev) => montarFormPesagemComColeta(prev, coletaSelecionada, heranca));
+      const linhasGravadas = ultimaPesagemPorColeta.has(coletaSelecionada.id)
+        ? await buscarLinhasPesagemGravadaColeta(coletaSelecionada.id)
+        : null;
+      setForm((prev) =>
+        montarFormPesagemComColeta(prev, coletaSelecionada, heranca, linhasGravadas)
+      );
       const empresa = (coletaSelecionada.cliente || "").trim();
       if (empresa) {
         void aplicarContratoResiduosNaPesagem(
@@ -1818,12 +1887,12 @@ export default function ControleMassa() {
 
     if (coletaSelecionada.mtr_id) {
       void buscarMtrHerancaPesagem(coletaSelecionada.mtr_id).then((heranca) => {
-        aplicar(heranca);
+        void aplicar(heranca);
       });
       return;
     }
 
-    aplicar(null);
+    void aplicar(null);
   }
 
   function aplicarHerancaMtrSemColeta(mtrId: string, clienteMtr: string) {
@@ -1842,8 +1911,18 @@ export default function ControleMassa() {
 
       const mtrNo = mtrsLista.find((m) => m.id === mtrId)?.numero ?? null;
 
-      setForm((prev) =>
-        preencherNumeroTicketNoForm(
+      setForm((prev) => {
+        const prevCom = linhasComConteudo(prev.residuos_linhas);
+        const linhasHerancaCom = linhasComConteudo(linhas);
+        const preservarEdicaoUsuario =
+          prevCom.length > 0 &&
+          linhasHerancaCom.length > prevCom.length &&
+          prevCom.some(
+            (l) => l.peso_bruto.trim() || l.peso_liquido.trim() || l.peso_tara.trim()
+          );
+        const linhasForm = preservarEdicaoUsuario ? prev.residuos_linhas : linhas;
+
+        return preencherNumeroTicketNoForm(
           mergeFormResiduosLinhas(
             {
               ...prev,
@@ -1856,14 +1935,14 @@ export default function ControleMassa() {
               peso_bruto: "",
               peso_liquido: "",
             },
-            linhas
+            linhasForm
           ),
           {
             numeroMtr: mtrNo,
-            totalSegmentos: linhasComConteudo(linhas).length || 1,
+            totalSegmentos: linhasComConteudo(linhasForm).length || 1,
           }
-        )
-      );
+        );
+      });
       const empresa = (clienteMtr || "").trim();
       if (empresa) {
         void aplicarContratoResiduosNaPesagem(empresa, "", mtrId);
@@ -2391,13 +2470,28 @@ export default function ControleMassa() {
         coletasGravadas.push(coletaIdSeg);
       }
 
+      const linhasSalvasSeg = linhasFormAposGravacao(undefined, segmentos);
+      const coletaPrincipal = coletasGravadas[0] ?? form.coleta_id.trim();
+      ultimoEnriquecimentoKeyRef.current = `${coletaPrincipal}|${mtrIdSegmentacao ?? ""}|${empresaFinal}`;
+      setUltimaPesagemPorColeta((prev) => {
+        const next = new Map(prev);
+        const up = {
+          data: form.data.trim().slice(0, 10) || null,
+          hora_entrada: horaInputTimeParaDb(form.hora_entrada),
+          hora_saida: horaInputTimeParaDb(form.hora_saida),
+        };
+        for (const id of coletasGravadas) next.set(id, up);
+        return next;
+      });
       setMtrSemColetaSelecionado(null);
+      setForm((prev) =>
+        mergeFormResiduosLinhas(
+          { ...prev, coleta_id: coletaPrincipal || prev.coleta_id },
+          linhasSalvasSeg
+        )
+      );
       await atualizarColetasAposSalvar(coletasGravadas);
       setColetasImpressaoSessao(coletasGravadas);
-      setForm((prev) => ({
-        ...prev,
-        coleta_id: coletasGravadas[0] ?? prev.coleta_id,
-      }));
       setSalvando(false);
 
       setSucesso(
@@ -2610,13 +2704,32 @@ export default function ControleMassa() {
       }
     }
 
+    const mtrIdPos =
+      coletaVinculo?.mtr_id ?? mtrIdParaEmpresa ?? mtrSemColetaSelecionado ?? "";
+    const linhasSalvas = linhasFormAposGravacao(resolvido.residuos_itens, form.residuos_linhas);
+    ultimoEnriquecimentoKeyRef.current = `${coletaId}|${mtrIdPos}|${empresaFinal}`;
+    setUltimaPesagemPorColeta((prev) => {
+      const next = new Map(prev);
+      next.set(coletaId, {
+        data: form.data.trim().slice(0, 10) || null,
+        hora_entrada: horaInputTimeParaDb(form.hora_entrada),
+        hora_saida: horaInputTimeParaDb(form.hora_saida),
+      });
+      return next;
+    });
     setMtrSemColetaSelecionado(null);
+    setForm((prev) =>
+      mergeFormResiduosLinhas(
+        {
+          ...prev,
+          coleta_id: coletaId,
+          numero_ticket: numeroTicketTrim || prev.numero_ticket,
+        },
+        linhasSalvas
+      )
+    );
     await atualizarColetasAposSalvar([coletaId]);
     setColetasImpressaoSessao([coletaId]);
-    setForm((prev) => ({
-      ...prev,
-      coleta_id: coletaId,
-    }));
     setSalvando(false);
 
     setTimeout(() => {

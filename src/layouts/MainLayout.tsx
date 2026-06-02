@@ -144,7 +144,10 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
   },
   {
     title: 'Sistema',
-    items: [{ label: 'Usuários', path: '/usuarios' }],
+    items: [
+      { label: 'Gestão de solicitações', path: '/sistema/solicitacoes-ajuste' },
+      { label: 'Usuários', path: '/usuarios' },
+    ],
   },
 ]
 

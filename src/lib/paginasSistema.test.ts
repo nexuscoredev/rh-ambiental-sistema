@@ -97,13 +97,30 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes')).toBe(false)
   })
 
-  it('Matheus (Operadores Time R): cadastro de clientes e gerenciador', () => {
-    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', 'Matheus')).toBe(true)
-    expect(
-      cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes/gerenciador', 'Matheus Silva')
-    ).toBe(true)
-    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/motoristas', 'Matheus')).toBe(false)
-    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', 'Gabriel')).toBe(false)
+  it('Matheus e Gabriel (Operadores Time R): cadastros estendidos', () => {
+    for (const nome of ['Matheus', 'Gabriel']) {
+      expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', nome)).toBe(true)
+      expect(
+        cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes/gerenciador', `${nome} Silva`)
+      ).toBe(true)
+      expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/motoristas', nome)).toBe(true)
+      expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/caminhoes', nome)).toBe(true)
+    }
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/clientes', 'Rafael')).toBe(false)
+  })
+
+  it('Gestão de solicitações: apenas Desenvolvedor', () => {
+    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/sistema/solicitacoes-ajuste')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Administrador', '/sistema/solicitacoes-ajuste')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/sistema/solicitacoes-ajuste')).toBe(false)
+  })
+
+  it('RH: apenas Desenvolvedor acede às rotas', () => {
+    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/rh')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/rh/departamento-pessoal')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Administrador', '/rh')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/rh')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Financeiro', '/rh/departamento-pessoal')).toBe(false)
   })
 
 

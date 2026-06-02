@@ -16,7 +16,7 @@ import {
   normalizarPresencaStatus,
 } from '../lib/presencaStatus'
 import { chatTotalMensagensNaoLidas } from '../lib/chat-NEXUS'
-import { ROTAS_SISTEMA, usuarioPodeAcessarRota } from '../lib/paginasSistema'
+import { ROTAS_SISTEMA, cargoPodeAcessarRotaMenu, usuarioPodeAcessarRota } from '../lib/paginasSistema'
 import { RH_HUB_PATH, RH_MENU_CHILDREN } from '../lib/rhModulos'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
@@ -144,7 +144,10 @@ const menuGroups: { title: string; items: MenuItem[] }[] = [
   },
   {
     title: 'Sistema',
-    items: [{ label: 'Usuários', path: '/usuarios' }],
+    items: [
+      { label: 'Gestão de solicitações', path: '/sistema/solicitacoes-ajuste' },
+      { label: 'Usuários', path: '/usuarios' },
+    ],
   },
 ]
 
@@ -237,11 +240,14 @@ function salvarSecoesSidebar(next: Record<string, boolean>) {
 
 function filtrarItemMenuPorPaginas(item: MenuItem, u: UsuarioLogado | null): MenuItem | null {
   if (!u) return item
+  const podeRota = (path: string) =>
+    usuarioPodeAcessarRota(u, path) &&
+    cargoPodeAcessarRotaMenu(u.cargo, path, u.nome, u.email)
   if (!isMenuBranch(item)) {
-    return usuarioPodeAcessarRota(u, item.path) ? item : null
+    return podeRota(item.path) ? item : null
   }
-  const ch = item.children.filter((c) => usuarioPodeAcessarRota(u, c.path))
-  const parentOk = usuarioPodeAcessarRota(u, item.path)
+  const ch = item.children.filter((c) => podeRota(c.path))
+  const parentOk = podeRota(item.path)
   if (!parentOk && ch.length === 0) return null
   return { ...item, children: ch }
 }
