@@ -2,7 +2,7 @@
 /**
  * Verifica integridade do projeto antes de dev/build.
  * Bloqueia execução se:
- * - pasta estiver dentro do OneDrive (risco de corrupção de node_modules e ficheiros);
+ * - pasta estiver dentro de OneDrive/Google Drive (risco de corrupção de node_modules e ficheiros);
  * - ficheiros críticos estiverem em falta;
  * - links em node_modules/.bin estiverem quebrados;
  * - muitos ficheiros versionados tiverem desaparecido do disco.
@@ -31,7 +31,7 @@ const CRITICAL_FILES = [
   'public/assets/logo/favicon.svg',
 ]
 
-const ONEDRIVE_MARKERS = ['onedrive', 'one drive']
+const CLOUD_SYNC_MARKERS = ['onedrive', 'one drive', 'google drive', 'googledrive', 'my drive']
 
 function fail(message) {
   console.error(`\n[guard:projeto] ${message}\n`)
@@ -52,11 +52,11 @@ const errors = []
 const warnings = []
 
 const rootLower = resolve(root).toLowerCase()
-if (ONEDRIVE_MARKERS.some((m) => rootLower.includes(m))) {
+if (CLOUD_SYNC_MARKERS.some((m) => rootLower.includes(m))) {
   errors.push(
-    'Projeto dentro do OneDrive — alto risco de corrupção.\n' +
-      '  Use a cópia em C:\\dev\\rh-ambiental-sistema e abra essa pasta no Cursor.\n' +
-      '  Para recuperar: git clone + npm install em C:\\dev\\',
+    'Projeto em pasta sincronizada (OneDrive/Google Drive) — alto risco de corrupção.\n' +
+      '  Use C:\\dev\\rh-ambiental-sistema e abra essa pasta no Cursor.\n' +
+      '  Para recuperar: git clone https://github.com/nexuscoredev/rh-ambiental-sistema.git C:\\dev\\rh-ambiental-sistema',
   )
 }
 

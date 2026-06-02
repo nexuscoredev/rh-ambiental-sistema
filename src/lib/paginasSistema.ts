@@ -1,4 +1,6 @@
 import { NEXUS_CARGOS_POR_ROTA } from './nexusCargosPorRota'
+import { FROTA_ROTAS_SISTEMA } from './frotaModulos'
+import { FINANCEIRO_ROTAS_SISTEMA } from './financeiroModulos'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
 import { nomeEhOperacaoTimeRCadastroEstendido } from './rbac'
 import {
@@ -32,14 +34,13 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: '/comprovantes-descarte', label: 'Comprovante de Descarte' },
   { path: '/checklist-transporte', label: 'Checklist de transportes' },
   { path: '/conferencia-transporte', label: 'Conferência de transportes' },
+  ...FROTA_ROTAS_SISTEMA,
   { path: '/ticket-operacional', label: 'Ticket operacional' },
   { path: '/clinicas', label: 'Clínicas' },
   { path: '/faturamento', label: 'Faturamento' },
   { path: '/faturamento-clinicas', label: 'Faturar clínicas' },
   { path: '/envio-nf', label: 'Mala Direta' },
-  { path: '/financeiro', label: 'Financeiro' },
-  { path: '/financeiro/contas-receber', label: 'Contas a receber' },
-  { path: '/financeiro/contas-pagar', label: 'Contas a pagar' },
+  ...FINANCEIRO_ROTAS_SISTEMA,
   { path: '/pos-venda', label: 'Pós-venda' },
   ...RH_ROTAS_SISTEMA,
   { path: '/usuarios', label: 'Usuários' },

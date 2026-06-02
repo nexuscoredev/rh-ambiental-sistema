@@ -22,7 +22,14 @@ import {
   cargoPodeAcessarRotaMenu,
   usuarioPodeAcessarRota,
 } from '../lib/paginasSistema'
-import { RH_HUB_PATH, RH_MENU_CHILDREN } from '../lib/rhModulos'
+import {
+  ALL_MENU_LEAVES,
+  MENU_GROUPS,
+  type MenuItem,
+  type MenuLeaf,
+  isMenuBranch,
+  navLinkEndExact,
+} from '../lib/menuNavegacao'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
@@ -44,127 +51,8 @@ type UsuarioLogado = {
   paginas_permitidas?: string[] | null
 }
 
-type MenuLeaf = { label: string; path: string }
-
-/** Item com subitens (ex.: Faturamento → Mala Direta). */
-type MenuBranch = { label: string; path: string; children: MenuLeaf[] }
-
-type MenuItem = MenuLeaf | MenuBranch
-
-function isMenuBranch(item: MenuItem): item is MenuBranch {
-  return 'children' in item && Array.isArray((item as MenuBranch).children)
-}
-
-function flattenMenuLeaves(items: MenuItem[]): MenuLeaf[] {
-  const out: MenuLeaf[] = []
-  for (const item of items) {
-    if (isMenuBranch(item)) {
-      out.push({ label: item.label, path: item.path })
-      out.push(...item.children)
-    } else {
-      out.push(item)
-    }
-  }
-  return out
-}
-
-const menuGroups: { title: string; items: MenuItem[] }[] = [
-  {
-    title: 'Visão geral',
-    items: [
-      { label: 'Bem-vindo', path: '/bem-vindo' },
-      { label: 'Dashboard', path: '/dashboard' },
-    ],
-  },
-  {
-    title: 'Cadastros',
-    items: [
-      {
-        label: 'Clientes',
-        path: '/clientes',
-        children: [{ label: 'Gerenciador', path: '/clientes/gerenciador' }],
-      },
-      { label: 'Motoristas', path: '/motoristas' },
-      { label: 'Representante RG', path: '/representantes-rg' },
-      { label: 'Veículos', path: '/caminhoes' },
-    ],
-  },
-  {
-    title: 'Fluxo operacional',
-    items: [
-      { label: 'Programação', path: '/programacao' },
-      {
-        label: 'MTR',
-        path: '/mtr',
-        children: [{ label: 'MTR Gerenciador', path: '/mtr/gerenciador' }],
-      },
-      { label: 'Pesagem e Ticket', path: '/controle-massa' },
-      { label: 'Comprovante de Descarte', path: '/comprovantes-descarte' },
-      { label: 'Conferência de transportes', path: '/conferencia-transporte' },
-    ],
-  },
-  {
-    title: 'Clínicas',
-    items: [{ label: 'Clínicas', path: '/clinicas' }],
-  },
-  {
-    title: 'Faturamento',
-    items: [
-      {
-        label: 'Faturamento',
-        path: '/faturamento',
-        children: [
-          { label: 'Faturar clínicas', path: '/faturamento-clinicas' },
-          { label: 'Mala Direta', path: '/envio-nf' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Financeiro',
-    items: [
-      {
-        label: 'Financeiro',
-        path: '/financeiro',
-        children: [
-          { label: 'Contas a receber', path: '/financeiro/contas-receber' },
-          { label: 'Contas a pagar', path: '/financeiro/contas-pagar' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'RH',
-    items: [
-      {
-        label: 'RH',
-        path: RH_HUB_PATH,
-        children: RH_MENU_CHILDREN,
-      },
-    ],
-  },
-  {
-    title: 'Pós-venda',
-    items: [{ label: 'Pós-venda', path: '/pos-venda' }],
-  },
-  {
-    title: 'Sistema',
-    items: [
-      { label: 'Gestão de solicitações', path: '/sistema/solicitacoes-ajuste' },
-      { label: 'Usuários', path: '/usuarios' },
-    ],
-  },
-]
-
-const allMenuItems = menuGroups.flatMap((g) => flattenMenuLeaves(g.items))
-
-/** Itens de menu cujo path pode ter sufixo (/mtr/:id, /controle-massa/:id) usam prefix match. */
-const navLinkEndExact = (path: string) =>
-  path !== '/mtr' &&
-  path !== '/mtr/gerenciador' &&
-  path !== '/controle-massa' &&
-  path !== '/comprovantes-descarte' &&
-  path !== '/rh'
+const menuGroups = MENU_GROUPS
+const allMenuItems = ALL_MENU_LEAVES
 
 function formatarDataHora(date: Date) {
   const data = new Intl.DateTimeFormat('pt-BR', {

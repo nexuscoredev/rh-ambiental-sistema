@@ -590,7 +590,7 @@ export default function Programacao() {
   }
 
   function irFinanceiro(item: ProgramacaoItem) {
-    navigate(`/financeiro?${montarParamsFluxo(item).toString()}`)
+    navigate(`/financeiro/cobranca?${montarParamsFluxo(item).toString()}`)
   }
 
   const anoCalendario = mesSelecionado.slice(0, 4)

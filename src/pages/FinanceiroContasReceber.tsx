@@ -538,7 +538,7 @@ export default function FinanceiroContasReceber() {
               ) : (
                 <>
                   Relatório por título: saldos em aberto, vencidos e faixa de vencimento. Use a{' '}
-                  <Link to="/financeiro">cobrança por coleta</Link> para alterar vencimento, NF e baixas.
+                  <Link to="/financeiro/cobranca">cobrança por coleta</Link> para alterar vencimento, NF e baixas.
                 </>
               )}
             </p>
@@ -951,7 +951,7 @@ export default function FinanceiroContasReceber() {
                             ) : (
                               <>
                                 <Link
-                                  to={`/financeiro?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
+                                  to={`/financeiro/cobranca?coleta=${encodeURIComponent(r.referencia_coleta_id)}`}
                                   style={{ fontWeight: 700, color: '#0d9488' }}
                                 >
                                   Cobrança

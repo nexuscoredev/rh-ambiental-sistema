@@ -1249,7 +1249,7 @@ export function ExecutiveDashboard() {
               type="button"
               className="exec-kpi-card exec-kpi-card--clickable exec-kpi-card--hero exec-kpi-card--tier-a exec-col"
               style={{ ...execKpi, ...execKpiHeroShell, gridColumn: 'span 3' }}
-              onClick={() => navigate('/financeiro')}
+              onClick={() => navigate('/financeiro/cobranca')}
             >
               <span style={execKpiLab}>Receita total</span>
               <span style={{ ...execKpiVal, fontSize: 30 }}>{formatBRL(kpis.receita)}</span>
@@ -1290,7 +1290,7 @@ export function ExecutiveDashboard() {
                 ...execKpiHeroShell,
                 gridColumn: 'span 3',
               }}
-              onClick={() => navigate('/financeiro?vencidos=1')}
+              onClick={() => navigate('/financeiro/cobranca?vencidos=1')}
               title="Financeiro — filtro «Só vencidos»"
             >
               <span style={{ ...execKpiLab, color: '#991b1b' }}>Valores em aberto vencidos</span>
@@ -1661,7 +1661,7 @@ export function ExecutiveDashboard() {
                 <button
                   type="button"
                   className={`exec-gargalo-row exec-gargalo-row--click ${kpis.vencidosQtd > 0 ? 'exec-gargalo-row--crit' : ''}`}
-                  onClick={() => navigate('/financeiro?vencidos=1')}
+                  onClick={() => navigate('/financeiro/cobranca?vencidos=1')}
                 >
                   <div>
                     <span className="exec-gargalo-row__title">Valores vencidos</span>
@@ -1864,7 +1864,7 @@ export function ExecutiveDashboard() {
                           type="button"
                           style={execModalLink}
                           onClick={() => {
-                            navigate(`/financeiro?${q}`)
+                            navigate(`/financeiro/cobranca?${q}`)
                             setDiaModal(null)
                           }}
                         >

@@ -42,6 +42,7 @@ import {
 } from '../lib/faturamentoResumoFetch'
 import type { FaturamentoResumoViewRow } from '../lib/faturamentoResumo'
 import { mensagemErroSupabase } from '../lib/supabaseErrors'
+import { FINANCEIRO_HUB_PATH } from '../lib/financeiroModulos'
 
 type StatusPagamento = 'Pendente' | 'Parcial' | 'Pago'
 
@@ -856,6 +857,13 @@ export default function Financeiro() {
         }}
       >
         <div>
+          <nav className="rh-modulo__breadcrumb" aria-label="Navegação Financeiro">
+            <Link to={FINANCEIRO_HUB_PATH}>Financeiro</Link>
+            <span className="rh-modulo__breadcrumb-sep" aria-hidden>
+              /
+            </span>
+            <span>Cobrança e documentos</span>
+          </nav>
           <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
             Financeiro — cobrança e documentos
           </h1>

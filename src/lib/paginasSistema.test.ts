@@ -80,6 +80,7 @@ describe('paginasSistema', () => {
 
   it('rotas de UI alinhadas com a lista válida', () => {
     expect(pathEstaNaListaValida('/faturamento')).toBe(true)
+    expect(pathEstaNaListaValida('/financeiro/cobranca')).toBe(true)
     expect(pathEstaNaListaValida('/financeiro/contas-receber')).toBe(true)
     expect(pathEstaNaListaValida('/financeiro/contas-pagar')).toBe(true)
   })
@@ -87,6 +88,7 @@ describe('paginasSistema', () => {
   it('rotasCheckboxDesdePaginasGuardadas: prefixo expande filhos e aceita path sem slash inicial', () => {
     const a = rotasCheckboxDesdePaginasGuardadas(['/financeiro'])
     expect(a).toContain('/financeiro')
+    expect(a).toContain('/financeiro/cobranca')
     expect(a).toContain('/financeiro/contas-receber')
     expect(a).toContain('/financeiro/contas-pagar')
     const b = rotasCheckboxDesdePaginasGuardadas(['financeiro/contas-pagar'])

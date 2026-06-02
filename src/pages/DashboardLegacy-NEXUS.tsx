@@ -531,7 +531,7 @@ export default function DashboardLegacy() {
                 const q = montarParams(p as unknown as DashboardItem).toString()
                 const destino =
                   p.destino === 'financeiro'
-                    ? `/financeiro?${q}`
+                    ? `/financeiro/cobranca?${q}`
                     : p.destino === 'controle-massa'
                       ? `/controle-massa?${q}`
                       : p.destino === 'faturamento'
@@ -972,7 +972,7 @@ export default function DashboardLegacy() {
                       <button
                         type="button"
                         onClick={() =>
-                          navigate(`/financeiro?${(() => {
+                          navigate(`/financeiro/cobranca?${(() => {
                             const p = new URLSearchParams()
                             p.set('coleta', item.id)
                             if (item.mtrId) p.set('mtr', item.mtrId)

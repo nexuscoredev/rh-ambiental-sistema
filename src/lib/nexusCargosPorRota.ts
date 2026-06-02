@@ -17,6 +17,8 @@ import {
   CARGO_OPERACIONAL_TIME_T,
   CARGO_OPERADORES_TIME_R,
 } from './workflowPermissions'
+import { FROTA_ROTAS_SISTEMA } from './frotaModulos'
+import { FINANCEIRO_ROTAS_SISTEMA } from './financeiroModulos'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
 
 export const CARGO_NEXUS = {
@@ -147,6 +149,15 @@ const RH_CARGOS_POR_ROTA = Object.fromEntries(
   RH_ROTAS_SISTEMA.map(({ path }) => [path, RH])
 ) as Record<string, readonly string[]>
 
+/** Frota (transportes + manutenção) — perfis do fluxo operacional e gestão. */
+const FROTA_CARGOS_POR_ROTA = Object.fromEntries(
+  FROTA_ROTAS_SISTEMA.map(({ path }) => [path, [...FLUXO_COM_LOGISTICA]])
+) as Record<string, readonly string[]>
+
+const FINANCEIRO_CARGOS_POR_ROTA = Object.fromEntries(
+  FINANCEIRO_ROTAS_SISTEMA.map(({ path }) => [path, FINANCEIRO])
+) as Record<string, readonly string[]>
+
 export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/dashboard': [...DASHBOARD_E_CHAT],
   '/clientes': [...CADASTRO],
@@ -167,12 +178,11 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/clinicas': [...FATURAMENTO],
   '/faturamento': [...FATURAMENTO],
   '/faturamento-clinicas': [...FATURAMENTO],
-  '/financeiro': [...FINANCEIRO],
-  '/financeiro/contas-receber': [...FINANCEIRO],
-  '/financeiro/contas-pagar': [...FINANCEIRO],
+  ...FINANCEIRO_CARGOS_POR_ROTA,
   '/envio-nf': [...ENVIO_NF],
   '/usuarios': [...USUARIOS],
   '/sistema/solicitacoes-ajuste': [...SOLICITACOES_AJUSTE_ADMIN],
   '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
   ...RH_CARGOS_POR_ROTA,
+  ...FROTA_CARGOS_POR_ROTA,
 }

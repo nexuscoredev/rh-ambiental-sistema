@@ -689,6 +689,12 @@ a.rg-btn {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-bottom: 4px;
+}
+
+.layout-sidebar__nav-branch > .sidebar-nav-link:first-child {
+  font-weight: 600;
+  color: var(--sidebar-link-strong, #e2e8f0);
 }
 
 .layout-sidebar__nav-branch-children {

@@ -43,6 +43,7 @@ const ROTAS_VALIDAS = new Set([
   "/faturamento",
   "/envio-nf",
   "/financeiro",
+  "/financeiro/cobranca",
   "/financeiro/contas-receber",
   "/financeiro/contas-pagar",
   "/pos-venda",

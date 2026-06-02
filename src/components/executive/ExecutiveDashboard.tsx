@@ -39,6 +39,7 @@ import {
   type ExecutivePrintReportProps,
 } from './ExecutiveDashboardPrintReport'
 import { ExecutiveLinhaTempoModal } from './ExecutiveLinhaTempoModal'
+import { FrotaDashboardResumo } from '../frota/FrotaDashboardResumo'
 
 /** Paleta BI premium — teal RG refinado + neutros frios */
 const CHART_COLORS = [
@@ -1264,7 +1265,7 @@ export function ExecutiveDashboard() {
               type="button"
               className="exec-kpi-card exec-kpi-card--clickable exec-kpi-card--hero exec-kpi-card--tier-a exec-col"
               style={{ ...execKpi, ...execKpiHeroShell, gridColumn: 'span 3' }}
-              onClick={() => navigate('/financeiro')}
+              onClick={() => navigate('/financeiro/cobranca')}
             >
               <span style={execKpiLab}>Receita total</span>
               <span style={{ ...execKpiVal, fontSize: 30 }}>{formatBRL(kpis.receita)}</span>
@@ -1305,7 +1306,7 @@ export function ExecutiveDashboard() {
                 ...execKpiHeroShell,
                 gridColumn: 'span 3',
               }}
-              onClick={() => navigate('/financeiro?vencidos=1')}
+              onClick={() => navigate('/financeiro/cobranca?vencidos=1')}
               title="Financeiro — filtro «Só vencidos»"
             >
               <span style={{ ...execKpiLab, color: '#991b1b' }}>Valores em aberto vencidos</span>
@@ -1410,6 +1411,22 @@ export function ExecutiveDashboard() {
                   : `${kpis.pesoTotal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kg`}
               </span>
               <span style={execKpiHintSm}>Peso líquido no período</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="exec-section" aria-labelledby="exec-h-sec-frota">
+          <div style={execSectionIntro}>
+            <span id="exec-h-sec-frota" style={execRegionLabel}>
+              Frota e manutenção
+            </span>
+            <p style={execSectionSubtitle}>
+              Visão gerencial de veículos, diários do dia, movimentações e alertas de troca de óleo.
+            </p>
+          </div>
+          <div className="exec-grid-12">
+            <div className="exec-col" style={{ gridColumn: 'span 12' }}>
+              <FrotaDashboardResumo />
             </div>
           </div>
         </section>
@@ -1676,7 +1693,7 @@ export function ExecutiveDashboard() {
                 <button
                   type="button"
                   className={`exec-gargalo-row exec-gargalo-row--click ${kpis.vencidosQtd > 0 ? 'exec-gargalo-row--crit' : ''}`}
-                  onClick={() => navigate('/financeiro?vencidos=1')}
+                  onClick={() => navigate('/financeiro/cobranca?vencidos=1')}
                 >
                   <div>
                     <span className="exec-gargalo-row__title">Valores vencidos</span>
@@ -1879,7 +1896,7 @@ export function ExecutiveDashboard() {
                           type="button"
                           style={execModalLink}
                           onClick={() => {
-                            navigate(`/financeiro?${q}`)
+                            navigate(`/financeiro/cobranca?${q}`)
                             setDiaModal(null)
                           }}
                         >

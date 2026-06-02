@@ -482,8 +482,9 @@ export default function FinanceiroContasPagar() {
             <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
               Lançamentos de despesas e fornecedores. Títulos pendentes com vencimento ultrapassado aparecem como{' '}
               <strong>Atrasado</strong> e destacados em vermelho. Integrado ao{' '}
-              <Link to="/financeiro">Financeiro</Link> e à{' '}
-              <Link to="/financeiro/contas-receber">cobrança (contas a receber)</Link>.
+              <Link to="/financeiro">Financeiro</Link>,{' '}
+              <Link to="/financeiro/cobranca">cobrança por coleta</Link> e{' '}
+              <Link to="/financeiro/contas-receber">contas a receber</Link>.
             </p>
             {!podeMutar ? (
               <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>

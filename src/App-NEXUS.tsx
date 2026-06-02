@@ -24,9 +24,7 @@ const PosVenda = lazyWithRetry(() => import('./pages/PosVenda'))
 const Motoristas = lazyWithRetry(() => import('./pages/Motoristas'))
 const RepresentantesRG = lazyWithRetry(() => import('./pages/RepresentantesRG'))
 const Caminhoes = lazyWithRetry(() => import('./pages/Caminhoes'))
-const Financeiro = lazyWithRetry(() => import('./pages/Financeiro'))
-const FinanceiroContasReceber = lazyWithRetry(() => import('./pages/FinanceiroContasReceber'))
-const FinanceiroContasPagar = lazyWithRetry(() => import('./pages/FinanceiroContasPagar'))
+const FinanceiroArea = lazyWithRetry(() => import('./pages/financeiro/FinanceiroArea'))
 const EnvioNF = lazyWithRetry(() => import('./pages/EnvioNF'))
 const Usuarios = lazyWithRetry(() => import('./pages/Usuarios'))
 const ChecklistTransporte = lazyWithRetry(() => import('./pages/ChecklistTransporte'))
@@ -49,6 +47,7 @@ const ComprovantesDescarte = lazyWithRetry(() => import('./pages/ComprovantesDes
 const ComprovanteDescarteForm = lazyWithRetry(() => import('./pages/ComprovanteDescarteForm'))
 const Chat = lazyWithRetry(() => import('./pages/Chat'))
 const RhArea = lazyWithRetry(() => import('./pages/rh/RhArea'))
+const FrotaArea = lazyWithRetry(() => import('./pages/frota/FrotaArea'))
 const SolicitacoesAjusteAdmin = lazyWithRetry(() => import('./pages/sistema/SolicitacoesAjusteAdmin'))
 
 const routeSuspenseFallback = (
@@ -854,7 +853,7 @@ function App() {
             />
 
             <Route
-              path="/financeiro"
+              path="/financeiro/*"
               element={
                 <ProtectedRoute
                   session={session}
@@ -863,37 +862,7 @@ function App() {
                   erroPerfil={erroPerfil}
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro']]}
                 >
-                  <Financeiro />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/financeiro/contas-receber"
-              element={
-                <ProtectedRoute
-                  session={session}
-                  usuario={usuario}
-                  carregandoUsuario={carregandoUsuario}
-                  erroPerfil={erroPerfil}
-                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro/contas-receber']]}
-                >
-                  <FinanceiroContasReceber />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/financeiro/contas-pagar"
-              element={
-                <ProtectedRoute
-                  session={session}
-                  usuario={usuario}
-                  carregandoUsuario={carregandoUsuario}
-                  erroPerfil={erroPerfil}
-                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/financeiro/contas-pagar']]}
-                >
-                  <FinanceiroContasPagar />
+                  <FinanceiroArea />
                 </ProtectedRoute>
               }
             />
@@ -909,6 +878,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/rh']]}
                 >
                   <RhArea />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/operacional-frota/*"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/operacional-frota']]}
+                >
+                  <FrotaArea />
                 </ProtectedRoute>
               }
             />
