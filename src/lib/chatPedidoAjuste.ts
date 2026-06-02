@@ -394,8 +394,48 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
   return itens
 }
 
+type FilaThaisRpcRow = {
+  mensagem_id: string
+  conversa_id: string
+  remetente_id: string
+  conteudo: string
+  created_at: string
+  dev_id: string
+  enviado_em: string | null
+}
+
 /** Pedidos à espera de aprovação da Thais. */
 export async function chatListarPedidosAjusteFilaThais(): Promise<PedidoAjusteFilaItem[]> {
+  const rpc = await supabase.rpc('chat_listar_pedidos_ajuste_fila_thais')
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    return (rpc.data as FilaThaisRpcRow[]).map((row) =>
+      montarItemFilaPedido(
+        {
+          id: String(row.mensagem_id),
+          conversa_id: String(row.conversa_id),
+          remetente_id: String(row.remetente_id),
+          conteudo: String(row.conteudo ?? ''),
+          created_at: String(row.created_at),
+        },
+        undefined,
+        {
+          mensagem_id: String(row.mensagem_id),
+          conversa_id: String(row.conversa_id),
+          dev_id: String(row.dev_id),
+          status: 'aguardando',
+          enviado_em: row.enviado_em != null ? String(row.enviado_em) : null,
+        }
+      )
+    )
+  }
+
+  if (rpc.error && !rpcIndisponivel(rpc.error)) {
+    const msg = mensagemErroPedidoAjuste(rpc.error)
+    if (!/does not exist|relation|42P01|PGRST202/i.test(msg)) {
+      throw new Error(msg)
+    }
+  }
+
   const { data: escalacoes, error: escErr } = await supabase
     .from('chat_pedido_ajuste_aprovacao_thais')
     .select('mensagem_id, conversa_id, dev_id, status, enviado_em')
@@ -491,8 +531,20 @@ async function chatEnviarPedidoAjusteFilaThaisLegado(
   if (existente?.status === 'aguardando') {
     throw new Error('Este pedido já está na fila da Thais.')
   }
-  if (existente?.status === 'aprovado') {
-    throw new Error('Este pedido já foi aprovado pela Thais.')
+
+  if (existente) {
+    const { error } = await supabase
+      .from('chat_pedido_ajuste_aprovacao_thais')
+      .update({
+        status: 'aguardando',
+        dev_id: uid,
+        enviado_em: new Date().toISOString(),
+        aprovado_em: null,
+        aprovado_por: null,
+      })
+      .eq('mensagem_id', mensagemPedidoId)
+    if (error) throw new Error(mensagemErroPedidoAjuste(error))
+    return
   }
 
   const { error } = await supabase.from('chat_pedido_ajuste_aprovacao_thais').insert({
