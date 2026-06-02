@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.144",
+  "version": "1.2.145",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -54,6 +54,8 @@
     "db:apply:operacao-time-r-cadastro": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260801120000_operacao_time_r_cadastro_matheus_gabriel.sql",
     "db:apply:chat-pedido-ajuste-config": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260802120000_chat_pedido_ajuste_config.sql",
     "db:apply:chat-pedido-ajuste-escalacao-automatica-thais": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260803120000_chat_pedido_ajuste_escalacao_automatica_thais.sql",
+    "db:apply:chat-pedido-ajuste-sem-escalacao-automatica": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260804120000_chat_pedido_ajuste_sem_escalacao_automatica.sql",
+    "db:apply:release-1-2-144": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_release_1_2_144_completo.sql",
     "db:apply:rbac-visualizador-comercial": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260601140000_rbac_visualizador_nao_revoga_comercial.sql",
     "db:apply:comercial-pesagem-tickets": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260627120000_comercial_lancar_pesagem_tickets.sql",
     "db:apply:operacao-programacao-pesagem": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260627140000_operacao_programacao_pesagem_lancar.sql",

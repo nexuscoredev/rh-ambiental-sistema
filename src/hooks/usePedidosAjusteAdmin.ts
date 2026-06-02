@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { chatListarUsuariosAtivos } from '../lib/chat'
 import {
   chatAprovarPedidoAjusteFilaThais,
+  chatEnviarPedidoAjusteFilaThais,
   chatListarHistoricoPedidosAjuste,
   chatListarPedidosAjusteFilaThais,
   chatListarPedidosAjustePendentes,
@@ -23,6 +24,7 @@ export function usePedidosAjusteAdmin() {
   const [erro, setErro] = useState('')
   const [marcandoId, setMarcandoId] = useState<string | null>(null)
   const [aprovandoThaisId, setAprovandoThaisId] = useState<string | null>(null)
+  const [enviandoThaisId, setEnviandoThaisId] = useState<string | null>(null)
 
   const usuariosPorId = useMemo(
     () => new Map(usuarios.map((u) => [u.id, u])),
@@ -113,6 +115,23 @@ export function usePedidosAjusteAdmin() {
     [meuId, recarregar]
   )
 
+  const enviarFilaThais = useCallback(
+    async (item: PedidoAjusteFilaItem) => {
+      setEnviandoThaisId(item.mensagemId)
+      setErro('')
+      try {
+        await chatEnviarPedidoAjusteFilaThais(item.conversaId, item.mensagemId)
+        await recarregar()
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível enviar para a fila da Thais.')
+        throw e
+      } finally {
+        setEnviandoThaisId(null)
+      }
+    },
+    [recarregar]
+  )
+
   const aprovarFilaThais = useCallback(
     async (item: PedidoAjusteFilaItem) => {
       setAprovandoThaisId(item.mensagemId)
@@ -143,8 +162,10 @@ export function usePedidosAjusteAdmin() {
     setErro,
     marcandoId,
     aprovandoThaisId,
+    enviandoThaisId,
     recarregar,
     marcarResolvido,
+    enviarFilaThais,
     aprovarFilaThais,
   }
 }

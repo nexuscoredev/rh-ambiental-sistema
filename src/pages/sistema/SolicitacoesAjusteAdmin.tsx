@@ -34,9 +34,11 @@ export default function SolicitacoesAjusteAdmin() {
     carregandoHistorico,
     erro,
     marcandoId,
+    enviandoThaisId,
     aprovandoThaisId,
     recarregar,
     marcarResolvido,
+    enviarFilaThais,
     aprovarFilaThais,
   } = usePedidosAjusteAdmin()
 
@@ -135,7 +137,10 @@ export default function SolicitacoesAjusteAdmin() {
             <section className="solicitacoes-admin__panel solicitacoes-admin__panel--principal">
               <div className="solicitacoes-admin__panel-head">
                 <h2>Fila de desenvolvimento</h2>
-                <p>Tratar pedidos aprovados pela Thais ou marcar como resolvido.</p>
+                <p>
+                  Novos pedidos chegam aqui primeiro. Envie à Thais quando precisar de aprovação, ou
+                  marque como resolvido directamente.
+                </p>
               </div>
               <div className="solicitacoes-admin__coluna-wrap">
                 <ChatPedidosAjusteColuna
@@ -146,9 +151,12 @@ export default function SolicitacoesAjusteAdmin() {
                   carregando={carregando}
                   carregandoHistorico={carregandoHistorico}
                   marcandoId={marcandoId}
+                  podeEnviarFilaThais
+                  enviandoThaisId={enviandoThaisId}
                   aprovandoId={aprovandoThaisId}
                   onAbrirConversa={abrirConversa}
                   onMarcarResolvido={marcarResolvido}
+                  onEnviarFilaThais={enviarFilaThais}
                   onAprovarFilaThais={aprovarFilaThais}
                 />
               </div>

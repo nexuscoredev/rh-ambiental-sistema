@@ -17,6 +17,7 @@ import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatDecidirPedidoAjusteSolicitante,
   chatAprovarPedidoAjusteFilaThais,
+  chatEnviarPedidoAjusteFilaThais,
   chatListarHistoricoPedidosAjuste,
   chatListarPedidosAguardandoFeedbackSolicitante,
   chatListarPedidosAjusteFilaThais,
@@ -172,6 +173,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   >([])
   const [decidindoPedidoAjusteId, setDecidindoPedidoAjusteId] = useState<string | null>(null)
   const [aprovandoThaisId, setAprovandoThaisId] = useState<string | null>(null)
+  const [enviandoThaisId, setEnviandoThaisId] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [apagandoHistorico, setApagandoHistorico] = useState(false)
   const [abrindoComPessoa, setAbrindoComPessoa] = useState(false)
@@ -839,6 +841,25 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     ]
   )
 
+  const handleEnviarPedidoFilaThais = useCallback(
+    async (item: PedidoAjusteFilaItem) => {
+      if (!podeEnviarFilaThais) return
+      setEnviandoThaisId(item.mensagemId)
+      setErro('')
+      try {
+        await chatEnviarPedidoAjusteFilaThais(item.conversaId, item.mensagemId)
+        setPedidosAjustePendentes((prev) => prev.filter((p) => p.mensagemId !== item.mensagemId))
+        void recarregarPedidosAjustePendentes()
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível enviar para a fila da Thais.')
+        throw e
+      } finally {
+        setEnviandoThaisId(null)
+      }
+    },
+    [podeEnviarFilaThais, recarregarPedidosAjustePendentes]
+  )
+
   const handleAprovarPedidoFilaThais = useCallback(
     async (item: PedidoAjusteFilaItem) => {
       setAprovandoThaisId(item.mensagemId)
@@ -1048,9 +1069,12 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   carregando={carregandoPedidosAjuste}
                   carregandoHistorico={carregandoHistoricoPedidosAjuste}
                   marcandoId={marcandoPedidoAjusteId}
+                  podeEnviarFilaThais={podeEnviarFilaThais}
+                  enviandoThaisId={enviandoThaisId}
                   aprovandoId={aprovandoThaisId}
                   onAbrirConversa={(id, outroId) => abrirConversa(id, { outroId })}
                   onMarcarResolvido={handleMarcarPedidoAjusteResolvido}
+                  onEnviarFilaThais={handleEnviarPedidoFilaThais}
                   onAprovarFilaThais={handleAprovarPedidoFilaThais}
                 />
               ) : null}

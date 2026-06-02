@@ -81,7 +81,7 @@ export function etiquetaEventoPedidoAjusteHistorico(
     case 'negado_solicitante':
       return 'Solicitante reabriu o pedido'
     case 'enviado_fila_thais':
-      return 'Encaminhado para aprovação da Thais'
+      return 'Enviado para aprovação da Thais'
     case 'aprovado_fila_thais':
       return 'Thais aprovou — devolver à fila do desenvolvedor'
     default:
@@ -257,16 +257,28 @@ function pedidoEstaNaFilaDev(
     if (!row) return true
     return row.status === 'reaberto'
   }
-  return false
+  if (!row) return true
+  return row.status === 'reaberto'
 }
 
-/** Desenvolvedor só pode resolver após aprovação da Thais. */
+/** Pode marcar resolvido na fila do dev (sem escalação ou após aprovação da Thais). */
 export function pedidoPodeSerMarcadoResolvidoPeloDev(
   escalacao: PedidoAjusteEscalacaoThaisRow | undefined,
   meuId: string
 ): boolean {
-  if (!escalacao || escalacao.status !== 'aprovado') return false
-  return escalacao.dev_id.trim().toLowerCase() === meuId.trim().toLowerCase()
+  if (escalacao?.status === 'aguardando') return false
+  if (escalacao?.status === 'aprovado') {
+    return escalacao.dev_id.trim().toLowerCase() === meuId.trim().toLowerCase()
+  }
+  return true
+}
+
+/** Pode enviar manualmente para a fila da Thais (ainda não está aguardando/aprovado na fila dela). */
+export function pedidoPodeEnviarFilaThais(
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined
+): boolean {
+  if (!escalacao) return true
+  return escalacao.status !== 'aguardando' && escalacao.status !== 'aprovado'
 }
 
 /** Usado nos testes e na listagem da fila do desenvolvedor. */
@@ -874,64 +886,6 @@ async function decidirPedidoAjusteLegado(
     .eq('mensagem_id', mensagemPedidoId)
 
   if (error) throw new Error(mensagemErroPedidoAjuste(error))
-
-  await reescalarPedidoAjusteThaisLegado(
-    String(msg.conversa_id),
-    mensagemPedidoId,
-    String(msg.remetente_id)
-  )
-}
-
-async function reescalarPedidoAjusteThaisLegado(
-  conversaId: string,
-  mensagemPedidoId: string,
-  remetentePedidoId: string
-): Promise<void> {
-  const { data: participantes, error: partErr } = await supabase
-    .from('chat_participantes')
-    .select('user_id')
-    .eq('conversa_id', conversaId)
-
-  if (partErr) {
-    if (/does not exist|relation|42P01/i.test(partErr.message)) return
-    throw new Error(mensagemErroPedidoAjuste(partErr))
-  }
-
-  const devId = (participantes ?? [])
-    .map((p) => String(p.user_id))
-    .find((id) => id !== remetentePedidoId)
-  if (!devId) return
-
-  const { data: existente } = await supabase
-    .from('chat_pedido_ajuste_aprovacao_thais')
-    .select('mensagem_id, status')
-    .eq('mensagem_id', mensagemPedidoId)
-    .maybeSingle()
-
-  if (existente?.status === 'aguardando') return
-
-  if (existente) {
-    const { error } = await supabase
-      .from('chat_pedido_ajuste_aprovacao_thais')
-      .update({
-        status: 'aguardando',
-        dev_id: devId,
-        enviado_em: new Date().toISOString(),
-        aprovado_em: null,
-        aprovado_por: null,
-      })
-      .eq('mensagem_id', mensagemPedidoId)
-    if (error) throw new Error(mensagemErroPedidoAjuste(error))
-    return
-  }
-
-  const { error } = await supabase.from('chat_pedido_ajuste_aprovacao_thais').insert({
-    mensagem_id: mensagemPedidoId,
-    conversa_id: conversaId,
-    dev_id: devId,
-    status: 'aguardando',
-  })
-  if (error) throw new Error(mensagemErroPedidoAjuste(error))
 }
 
 /** Envia resposta padrão e regista o pedido como resolvido (desenvolvedor / desenvolvedor master). */
@@ -971,10 +925,18 @@ async function validarEscalacaoThaisAntesResolver(
     throw new Error(mensagemErroPedidoAjuste(error))
   }
 
-  if (!data || data.status !== 'aprovado') {
-    throw new Error('Este pedido aguarda aprovação da Thais antes de ser tratado.')
+  if (!data) return
+
+  if (data.status === 'aguardando') {
+    throw new Error(
+      'Este pedido está na fila da Thais. Aguarde a aprovação dela ou trate-o depois da aprovação.'
+    )
   }
-  if (String(data.dev_id).trim().toLowerCase() !== meuId.trim().toLowerCase()) {
+
+  if (
+    data.status === 'aprovado' &&
+    String(data.dev_id).trim().toLowerCase() !== meuId.trim().toLowerCase()
+  ) {
     throw new Error('Este pedido foi aprovado para outro desenvolvedor tratar.')
   }
 }

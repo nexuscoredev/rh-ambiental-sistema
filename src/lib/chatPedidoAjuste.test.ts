@@ -38,7 +38,7 @@ Página: /programacao
       'Solicitante reabriu o pedido'
     )
     expect(etiquetaEventoPedidoAjusteHistorico('enviado_fila_thais')).toBe(
-      'Encaminhado para aprovação da Thais'
+      'Enviado para aprovação da Thais'
     )
     expect(etiquetaEventoPedidoAjusteHistorico('aprovado_fila_thais')).toBe(
       'Thais aprovou — devolver à fila do desenvolvedor'
@@ -49,7 +49,7 @@ Página: /programacao
     const devA = '11111111-1111-1111-1111-111111111111'
     const devB = '22222222-2222-2222-2222-222222222222'
 
-    expect(pedidoVisivelNaFilaDesenvolvedor(undefined, undefined, devA)).toBe(false)
+    expect(pedidoVisivelNaFilaDesenvolvedor(undefined, undefined, devA)).toBe(true)
 
     expect(
       pedidoVisivelNaFilaDesenvolvedor(undefined, {

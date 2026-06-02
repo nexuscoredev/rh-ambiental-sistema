@@ -23,9 +23,12 @@ type Props = {
   carregando: boolean
   carregandoHistorico: boolean
   marcandoId: string | null
+  podeEnviarFilaThais?: boolean
+  enviandoThaisId?: string | null
   aprovandoId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcarResolvido: (item: PedidoAjusteFilaItem) => Promise<void>
+  onEnviarFilaThais?: (item: PedidoAjusteFilaItem) => Promise<void>
   onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => Promise<void>
 }
 
@@ -375,7 +378,7 @@ function HistoricoDetalheModal({
 function resumoHistorico(h: PedidoAjusteHistoricoItem): string | null {
   if (h.evento === 'resolvido_dev') return 'Resposta automática enviada ao solicitante.'
   if (h.evento === 'aprovado_solicitante') return 'Pedido encerrado com aprovação.'
-  if (h.evento === 'enviado_fila_thais') return 'Encaminhado automaticamente para aprovação da Thais.'
+  if (h.evento === 'enviado_fila_thais') return 'Enviado para aprovação da Thais (pelo desenvolvedor).'
   if (h.evento === 'aprovado_fila_thais') return 'Thais aprovou — aguarda tratamento do desenvolvedor.'
   return null
 }
@@ -385,18 +388,24 @@ function PedidoCard({
   modo,
   usuariosPorId,
   marcandoId,
+  podeEnviarFilaThais,
+  enviandoThaisId,
   aprovandoId,
   onAbrirConversa,
   onMarcar,
+  onEnviarFilaThais,
   onAprovarFilaThais,
 }: {
   item: PedidoAjusteFilaItem
   modo: 'dev' | 'thais'
   usuariosPorId: Map<string, ChatUsuarioLista>
   marcandoId: string | null
+  podeEnviarFilaThais?: boolean
+  enviandoThaisId?: string | null
   aprovandoId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcar: (item: PedidoAjusteFilaItem) => void
+  onEnviarFilaThais?: (item: PedidoAjusteFilaItem) => void
   onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => void
 }) {
   const meta = usuariosPorId.get(item.remetenteId)
@@ -405,10 +414,15 @@ function PedidoCard({
     item.parseado?.descricao ||
     item.conteudo.replace(/^\[Solicitação de ajuste no sistema\]\s*/i, '').trim().slice(0, 200)
   const marcando = marcandoId === item.mensagemId
+  const enviandoThais = enviandoThaisId === item.mensagemId
   const aprovando = aprovandoId === item.mensagemId
   const reaberto = item.situacao === 'reaberto'
   const aprovadoThais = item.situacao === 'aprovado_thais'
-  const acaoBloqueada = Boolean(marcandoId || aprovandoId)
+  const acaoBloqueada = Boolean(marcandoId || enviandoThaisId || aprovandoId)
+  const podeEscalar =
+    modo === 'dev' &&
+    Boolean(podeEnviarFilaThais && onEnviarFilaThais) &&
+    (item.situacao === 'novo' || item.situacao === 'reaberto')
 
   return (
     <article
@@ -466,14 +480,26 @@ function PedidoCard({
             {aprovando ? 'A aprovar…' : 'Aprovar pedido'}
           </button>
         ) : (
-          <button
-            type="button"
-            className="chat-interno-pedido-card__btn"
-            disabled={acaoBloqueada}
-            onClick={() => onMarcar(item)}
-          >
-            {marcando ? 'A enviar resposta…' : 'Marcar como resolvido'}
-          </button>
+          <>
+            {podeEscalar ? (
+              <button
+                type="button"
+                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--secundario"
+                disabled={acaoBloqueada}
+                onClick={() => onEnviarFilaThais?.(item)}
+              >
+                {enviandoThais ? 'A enviar…' : 'Enviar p/ fila Thais'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="chat-interno-pedido-card__btn"
+              disabled={acaoBloqueada}
+              onClick={() => onMarcar(item)}
+            >
+              {marcando ? 'A enviar resposta…' : 'Marcar como resolvido'}
+            </button>
+          </>
         )}
       </div>
     </article>
@@ -488,9 +514,12 @@ export function ChatPedidosAjusteColuna({
   carregando,
   carregandoHistorico,
   marcandoId,
+  podeEnviarFilaThais,
+  enviandoThaisId,
   aprovandoId,
   onAbrirConversa,
   onMarcarResolvido,
+  onEnviarFilaThais,
   onAprovarFilaThais,
 }: Props) {
   const filaNovos = useMemo(
@@ -524,6 +553,19 @@ export function ChatPedidosAjusteColuna({
       void rgAlert({
         title: 'Pedido de ajuste',
         message: e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.',
+        variant: 'warning',
+      })
+    }
+  }
+
+  async function handleEnviarFilaThais(item: PedidoAjusteFilaItem) {
+    if (!onEnviarFilaThais) return
+    try {
+      await onEnviarFilaThais(item)
+    } catch (e) {
+      void rgAlert({
+        title: 'Pedido de ajuste',
+        message: e instanceof Error ? e.message : 'Não foi possível enviar para a fila da Thais.',
         variant: 'warning',
       })
     }
@@ -652,9 +694,12 @@ export function ChatPedidosAjusteColuna({
                 modo={modo}
                 usuariosPorId={usuariosPorId}
                 marcandoId={marcandoId}
+                podeEnviarFilaThais={podeEnviarFilaThais}
+                enviandoThaisId={enviandoThaisId}
                 aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onEnviarFilaThais={(i) => void handleEnviarFilaThais(i)}
                 onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />
             ))
@@ -674,9 +719,12 @@ export function ChatPedidosAjusteColuna({
                 modo={modo}
                 usuariosPorId={usuariosPorId}
                 marcandoId={marcandoId}
+                podeEnviarFilaThais={podeEnviarFilaThais}
+                enviandoThaisId={enviandoThaisId}
                 aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onEnviarFilaThais={(i) => void handleEnviarFilaThais(i)}
                 onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />
             ))
