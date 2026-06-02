@@ -5193,12 +5193,12 @@ a.rg-btn {
 }
 
 .welcome-nexus__btn--primary {
-  background: linear-gradient(180deg, #fb923c 0%, #f97316 42%, #ea580c 100%);
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 42%, #0d9488 100%);
   color: #ffffff;
-  border: 1px solid rgba(234, 88, 12, 0.35);
+  border: 1px solid rgba(13, 148, 136, 0.35);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 16px 38px rgba(234, 88, 12, 0.22);
+    0 16px 38px rgba(13, 148, 136, 0.22);
 }
 
 .welcome-nexus__btn--primary:hover {
@@ -5206,7 +5206,7 @@ a.rg-btn {
   filter: saturate(1.05);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 22px 54px rgba(234, 88, 12, 0.30);
+    0 22px 54px rgba(13, 148, 136, 0.30);
 }
 
 .welcome-nexus__btn--primary:active {
