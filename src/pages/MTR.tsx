@@ -3505,8 +3505,8 @@ ${MTR_LISTA_CARD_UI_CSS}
           .mtr-excel {
             font-family: Arial, Helvetica, sans-serif !important;
             color: #000 !important;
-            font-size: 10px !important;
-            line-height: 1.15 !important;
+            font-size: 10.5px !important;
+            line-height: 1.18 !important;
           }
 
           .mtr-excel__header {
@@ -3593,8 +3593,8 @@ ${MTR_LISTA_CARD_UI_CSS}
           }
 
           .mtr-excel__doc-footer {
-            font-size: 8px !important;
-            line-height: 1.25 !important;
+            font-size: 8.5px !important;
+            line-height: 1.28 !important;
           }
 
           .mtr-excel__k {
@@ -3627,7 +3627,7 @@ ${MTR_LISTA_CARD_UI_CSS}
           .mtr-excel__inner td {
             border: 1px solid #111 !important;
             padding: 3px 5px !important;
-            font-size: 8px !important;
+            font-size: 10px !important;
           }
 
           .mtr-excel__signrow {
