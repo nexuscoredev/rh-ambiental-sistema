@@ -1,0 +1,226 @@
+/* Anexo 2 — Declaração de Remessa de Resíduos (layout alinhado ao formulário físico). */
+
+.mtr-rc-decl {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 14mm 16mm 16mm;
+  font-family: Arial, Helvetica, 'Liberation Sans', sans-serif;
+  font-size: 11.5pt;
+  line-height: 1.5;
+  color: #000;
+  background: #fff;
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.mtr-rc-decl__head {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.mtr-rc-decl__logo img {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+.mtr-rc-decl__head-spacer {
+  min-height: 1px;
+}
+
+.mtr-rc-decl__title {
+  margin: 4px 0 0;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 12.5pt;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.mtr-rc-decl__sec {
+  margin-bottom: 4px;
+}
+
+.mtr-rc-decl__sec-title {
+  margin: 18px 0 10px;
+  font-size: 11.5pt;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mtr-rc-decl__sec:first-of-type .mtr-rc-decl__sec-title,
+.mtr-rc-decl > .mtr-rc-decl__sec .mtr-rc-decl__sec-title:first-child {
+  margin-top: 0;
+}
+
+.mtr-rc-decl__field {
+  margin: 0 0 7px;
+  line-height: 1.45;
+}
+
+.mtr-rc-decl__label {
+  font-weight: 800;
+}
+
+.mtr-rc-decl__valor {
+  font-weight: 400;
+}
+
+.mtr-rc-decl__paragrafo {
+  margin: 14px 0 12px;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.mtr-rc-decl__qtd-inline {
+  display: inline-block;
+  min-width: 80px;
+  border-bottom: 1px solid #000;
+  text-align: center;
+  font-weight: 400;
+  padding: 0 6px 2px;
+  vertical-align: baseline;
+  line-height: 1.2;
+}
+
+.mtr-rc-decl__checks {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 0 36px;
+  margin: 10px 0 6px;
+  padding-left: 2px;
+  font-weight: 400;
+}
+
+.mtr-rc-decl__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.mtr-rc-decl__box {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #000;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.mtr-rc-decl__box--on::after {
+  content: 'X';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mtr-rc-decl__obs {
+  margin: 20px 0 18px;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.mtr-rc-decl__obs-titulo {
+  font-weight: 800;
+}
+
+.mtr-rc-decl__assinatura-bloco {
+  margin-top: 8px;
+}
+
+.mtr-rc-decl__assinatura-bloco .mtr-rc-decl__field {
+  margin-bottom: 8px;
+}
+
+.mtr-rc-decl__assinatura-linha {
+  margin-top: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.mtr-rc-decl__assinatura-item {
+  flex: 1;
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mtr-rc-decl__linha-ass {
+  flex: 1;
+  display: block;
+  border-bottom: 1px solid #000;
+  min-height: 16px;
+  margin-bottom: 2px;
+}
+
+.mtr-rc-decl__data-ass {
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mtr-rc-decl__data-valor {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.mtr-rc-decl__rodape {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 10pt;
+  font-style: italic;
+  text-decoration: underline;
+  line-height: 1.45;
+}
+
+.mtr-rc-decl__mtr-ref {
+  margin-top: 10px;
+  font-size: 8.5pt;
+  color: #64748b;
+  text-align: center;
+}
+
+@media print {
+  .mtr-rc-decl {
+    padding: 12mm 14mm 14mm;
+    max-width: 100%;
+  }
+
+  .mtr-rc-decl__mtr-ref {
+    display: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .mtr-rc-decl__checks {
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+
+  .mtr-rc-decl__assinatura-linha {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

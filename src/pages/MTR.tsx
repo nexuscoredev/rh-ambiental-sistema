@@ -31,6 +31,12 @@ import {
 } from '../lib/mtrListaQuery'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { MtrManifestoPrint } from '../components/mtr/MtrManifestoPrint'
+import { MtrResiduoContaminadoConferenciaModal } from '../components/mtr/MtrResiduoContaminadoConferenciaModal'
+import { MtrResiduoContaminadoPrint } from '../components/mtr/MtrResiduoContaminadoPrint'
+import {
+  montarDeclaracaoResiduoContaminadoFromMtr,
+  type DeclaracaoResiduoContaminadoDados,
+} from '../lib/mtrResiduoContaminadoDeclaracao'
 import { MtrResiduosDescricaoForm } from '../components/mtr/MtrResiduosDescricaoForm'
 import { officialSiteUrl } from '../lib/officialSiteUrl'
 import {
@@ -709,6 +715,11 @@ export default function MTR() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedMTR, setSelectedMTR] = useState<MTR | null>(null)
+  const [modalResiduoContaminado, setModalResiduoContaminado] = useState(false)
+  const [declaracaoContaminadoInicial, setDeclaracaoContaminadoInicial] =
+    useState<DeclaracaoResiduoContaminadoDados | null>(null)
+  const [declaracaoContaminadoImpressao, setDeclaracaoContaminadoImpressao] =
+    useState<DeclaracaoResiduoContaminadoDados | null>(null)
 
   const [form, setForm] = useState<MTRFormState>(emptyForm)
   const [usuarioCargo, setUsuarioCargo] = useState<string | null>(null)
@@ -2318,6 +2329,46 @@ export default function MTR() {
     void confirmarEImprimirMtr(mtrSelecionadaValida, detalhesMtrSelecionada)
   }
 
+  function imprimirDeclaracaoResiduoContaminado(dados: DeclaracaoResiduoContaminadoDados) {
+    setDeclaracaoContaminadoImpressao(dados)
+    setModalResiduoContaminado(false)
+    requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.body.classList.add('mtr-print-residuo-contaminado')
+        window.print()
+        window.setTimeout(() => {
+          document.body.classList.remove('mtr-print-residuo-contaminado')
+        }, 400)
+      }, 180)
+    })
+  }
+
+  async function iniciarResiduoContaminado() {
+    if (!mtrSelecionadaValida) {
+      await rgAlert({
+        title: 'Selecione uma MTR',
+        message: 'Escolha um manifesto na lista para gerar a declaração de resíduo contaminado.',
+      })
+      return
+    }
+
+    const prosseguir = await rgConfirm({
+      title: 'Resíduo contaminado',
+      message: (
+        <span className="mtr-residuo-contaminado-aviso-pulse">
+          Certifique-se de apenas gerar esse documento para casos de resíduos contaminados.
+        </span>
+      ),
+      variant: 'danger',
+      confirmLabel: 'Prosseguir',
+      cancelLabel: 'Cancelar',
+    })
+    if (!prosseguir) return
+
+    setDeclaracaoContaminadoInicial(montarDeclaracaoResiduoContaminadoFromMtr(mtrSelecionadaValida))
+    setModalResiduoContaminado(true)
+  }
+
   const totalVinculadas = mtrs.filter((item) => !!item.programacao_id).length
 
   const selectedProgramacao = mtrSelecionadaValida?.programacao_id
@@ -2355,6 +2406,144 @@ export default function MTR() {
           gap: 16px;
           flex-wrap: wrap;
           margin-bottom: 22px;
+        }
+
+        @keyframes mtr-rc-pulse-danger {
+          0%,
+          100% {
+            color: #b91c1c;
+          }
+          50% {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+          }
+        }
+
+        .mtr-residuo-contaminado-aviso-pulse {
+          display: block;
+          font-weight: 800;
+          line-height: 1.45;
+          animation: mtr-rc-pulse-danger 1.1s ease-in-out infinite;
+        }
+
+        .btn-mtr-residuo-contaminado {
+          border: 1px solid #fca5a5;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-weight: 800;
+        }
+
+        .btn-mtr-residuo-contaminado:hover:not(:disabled) {
+          background: #fee2e2;
+          border-color: #f87171;
+        }
+
+        .panel-header--doc-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .mtr-rc-modal-card {
+          max-width: min(1200px, 96vw);
+          width: 100%;
+          max-height: 92vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .mtr-rc-modal-body {
+          overflow: auto;
+          padding: 0 20px 12px;
+          flex: 1;
+          min-height: 0;
+        }
+
+        .mtr-rc-modal-grid {
+          display: grid;
+          grid-template-columns: minmax(260px, 320px) 1fr;
+          gap: 20px;
+          align-items: start;
+        }
+
+        @media (max-width: 960px) {
+          .mtr-rc-modal-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .mtr-rc-modal-form-title {
+          margin: 0 0 10px;
+          font-size: 14px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .mtr-rc-modal-field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-bottom: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .mtr-rc-modal-field input {
+          height: 38px;
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          padding: 0 10px;
+          font-weight: 500;
+        }
+
+        .mtr-rc-modal-estados {
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 10px 12px;
+          margin: 0;
+        }
+
+        .mtr-rc-modal-estados legend {
+          font-size: 12px;
+          font-weight: 800;
+          padding: 0 4px;
+        }
+
+        .mtr-rc-modal-estado-opt {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 6px 0;
+          font-weight: 600;
+        }
+
+        .mtr-rc-modal-preview {
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 8px;
+          background: #f8fafc;
+          overflow: auto;
+          max-height: 70vh;
+        }
+
+        .mtr-rc-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          padding: 14px 20px 18px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .print-area-contaminado-slot {
+          position: fixed;
+          left: -12000px;
+          top: 0;
+          width: 210mm;
+          pointer-events: none;
+          z-index: -1;
         }
 
         .mtr-topbar-left h1 {
@@ -3447,12 +3636,20 @@ ${MTR_LISTA_CARD_UI_CSS}
           }
 
           .print-area,
-          .print-area * {
+          .print-area *,
+          body.mtr-print-residuo-contaminado .print-area-contaminado,
+          body.mtr-print-residuo-contaminado .print-area-contaminado * {
             visibility: visible;
           }
 
+          body.mtr-print-residuo-contaminado .print-area,
+          body.mtr-print-residuo-contaminado .print-area * {
+            visibility: hidden !important;
+          }
+
           /* Tira o manifesto do fluxo da página (evita canto inferior direito / coluna 2 da grid). */
-          .print-area {
+          .print-area,
+          body.mtr-print-residuo-contaminado .print-area-contaminado {
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
@@ -4154,9 +4351,24 @@ ${MTR_LISTA_CARD_UI_CSS}
           </div>
 
           <div className="panel">
-            <div className="panel-header">
-              <h2>Visualização do documento</h2>
-              <p>Visualize e imprima o manifesto selecionado na lista.</p>
+            <div className="panel-header panel-header--doc-actions">
+              <div>
+                <h2>Visualização do documento</h2>
+                <p>Visualize e imprima o manifesto selecionado na lista.</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-mtr-residuo-contaminado"
+                disabled={!mtrSelecionadaValida}
+                title={
+                  mtrSelecionadaValida
+                    ? 'Gerar declaração Anexo 2 (resíduo contaminado)'
+                    : 'Selecione uma MTR na lista'
+                }
+                onClick={() => void iniciarResiduoContaminado()}
+              >
+                Resíduo Contaminado
+              </button>
             </div>
 
             <div className="panel-body">
@@ -4245,6 +4457,23 @@ ${MTR_LISTA_CARD_UI_CSS}
           </div>
         </div>
 
+
+        {declaracaoContaminadoImpressao ? (
+          <div
+            id="mtr-residuo-contaminado-impressao"
+            className="print-area-contaminado print-area-contaminado-slot"
+            aria-hidden
+          >
+            <MtrResiduoContaminadoPrint dados={declaracaoContaminadoImpressao} />
+          </div>
+        ) : null}
+
+        <MtrResiduoContaminadoConferenciaModal
+          open={modalResiduoContaminado}
+          dadosIniciais={declaracaoContaminadoInicial}
+          onClose={() => setModalResiduoContaminado(false)}
+          onGerarImpressao={imprimirDeclaracaoResiduoContaminado}
+        />
 
         {showForm && (
           <div className="modal-overlay no-print">
