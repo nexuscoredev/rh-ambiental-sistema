@@ -193,6 +193,19 @@ export default function Login() {
           >
             {carregando ? "Entrando..." : "Entrar"}
           </button>
+
+          <p
+            style={{
+              margin: "18px 0 0",
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: "#64748b",
+              textAlign: "center",
+            }}
+          >
+            Esqueceu a senha? Após entrar, use «Minha conta» para alterá-la. Se não conseguir aceder,
+            peça ao Desenvolvedor do sistema.
+          </p>
         </form>
       </div>
     </div>

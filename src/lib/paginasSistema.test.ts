@@ -15,6 +15,18 @@ describe('paginasSistema', () => {
     ).toBe(true)
   })
 
+  it('minha-conta é sempre acessível (alterar senha própria)', () => {
+    expect(
+      usuarioPodeAcessarRota(
+        { email: 'u@test.com', cargo: 'Visualizador', paginas_permitidas: [] },
+        '/minha-conta'
+      )
+    ).toBe(true)
+    expect(
+      usuarioPodeAcessarRota({ email: 'u@test.com', paginas_permitidas: ['/clientes'] }, '/minha-conta')
+    ).toBe(true)
+  })
+
   it('sem paginas_permitidas ou vazio não restringe rotas (cargo não-Visualizador)', () => {
     expect(usuarioPodeAcessarRota({ email: 'u@test.com', cargo: 'Operacional', paginas_permitidas: null }, '/mtr')).toBe(true)
     expect(usuarioPodeAcessarRota({ email: 'u@test.com', cargo: 'Operacional', paginas_permitidas: [] }, '/mtr')).toBe(true)

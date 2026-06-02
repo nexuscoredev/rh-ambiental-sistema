@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabase'
 import {
   cargoPodeCriarOuExcluirUsuario,
   cargoPodeGerirUsuarios,
+  cargoPodeRedefinirSenhaDeOutroUsuario,
 } from '../lib/workflowPermissions'
 import {
   ROTAS_SISTEMA,
@@ -286,6 +287,8 @@ export default function Usuarios() {
   /** Rota restrita a Administrador + Diretoria; enquanto o cargo carrega, permite a UI (a Edge Function revalida). */
   const podeGerenciar = meuCargo === null || cargoPodeGerirUsuarios(meuCargo)
   const podeCriarOuExcluir = meuCargo === null || cargoPodeCriarOuExcluirUsuario(meuCargo)
+  const podeRedefinirSenhaOutro =
+    meuCargo === null || cargoPodeRedefinirSenhaDeOutroUsuario(meuCargo)
 
   const podeDefinirPaginas = emailPodeDefinirPaginasPorUsuario(meuEmail)
 
@@ -675,6 +678,10 @@ export default function Usuarios() {
     }
     if (novaSenha && novaSenha.length < 6) {
       setErro('A nova senha precisa ter pelo menos 6 caracteres.')
+      return
+    }
+    if (novaSenha && !podeRedefinirSenhaOutro) {
+      setErro('Apenas o Desenvolvedor pode redefinir a senha de outro utilizador.')
       return
     }
 
@@ -1195,7 +1202,10 @@ export default function Usuarios() {
             Editar usuário
           </h2>
           <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
-            Altere nome, e-mail, cargo ou status. Informe uma nova senha apenas se quiser redefinir.
+            Altere nome, e-mail, cargo ou status.
+            {podeRedefinirSenhaOutro
+              ? ' Informe uma nova senha apenas se precisar redefinir o acesso (suporte / esquecimento).'
+              : ' Para alterar a sua própria senha, use «Minha conta» no cabeçalho.'}
             {podeDefinirPaginas ? (
               <>
                 {' '}
@@ -1228,18 +1238,20 @@ export default function Usuarios() {
                   style={inputStyle}
                 />
               </div>
-              <div>
-                <label style={labelMiniStyle}>Nova senha (opcional)</label>
-                <input
-                  name="novaSenha"
-                  type="password"
-                  placeholder="Deixe em branco para manter"
-                  value={formEdicao.novaSenha}
-                  onChange={atualizarCampoEdicao}
-                  style={inputStyle}
-                  autoComplete="new-password"
-                />
-              </div>
+              {podeRedefinirSenhaOutro ? (
+                <div>
+                  <label style={labelMiniStyle}>Nova senha (opcional)</label>
+                  <input
+                    name="novaSenha"
+                    type="password"
+                    placeholder="Deixe em branco para manter"
+                    value={formEdicao.novaSenha}
+                    onChange={atualizarCampoEdicao}
+                    style={inputStyle}
+                    autoComplete="new-password"
+                  />
+                </div>
+              ) : null}
               <div>
                 <label style={labelMiniStyle}>Cargo</label>
                 <select

@@ -16,7 +16,12 @@ import {
   normalizarPresencaStatus,
 } from '../lib/presencaStatus'
 import { chatTotalMensagensNaoLidas } from '../lib/chat-NEXUS'
-import { ROTAS_SISTEMA, cargoPodeAcessarRotaMenu, usuarioPodeAcessarRota } from '../lib/paginasSistema'
+import {
+  ROTA_MINHA_CONTA,
+  ROTAS_SISTEMA,
+  cargoPodeAcessarRotaMenu,
+  usuarioPodeAcessarRota,
+} from '../lib/paginasSistema'
 import { RH_HUB_PATH, RH_MENU_CHILDREN } from '../lib/rhModulos'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
@@ -192,6 +197,10 @@ function CabecalhoDataHora() {
 }
 
 function obterTituloDaPagina(pathname: string) {
+  if (pathname === ROTA_MINHA_CONTA || pathname.startsWith(`${ROTA_MINHA_CONTA}/`)) {
+    return 'Minha conta'
+  }
+
   const ordenados = [...allMenuItems].sort((a, b) => b.path.length - a.path.length)
   const item = ordenados.find(
     (menu) => pathname === menu.path || pathname.startsWith(`${menu.path}/`)
@@ -785,6 +794,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 {usuario?.nome || usuario?.email || 'Usuário'}
               </div>
               <div className="layout-user-role">{usuario?.cargo || 'Administrador'}</div>
+              <Link to={ROTA_MINHA_CONTA} className="layout-user-conta-link">
+                Minha conta
+              </Link>
             </div>
 
             <input

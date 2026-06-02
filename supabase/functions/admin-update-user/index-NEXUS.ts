@@ -169,6 +169,13 @@ Deno.serve(async (req: Request) => {
     }
 
     if (novaSenha !== undefined && novaSenha.length > 0) {
+      const ehDesenvolvedor = cargoEditor.includes("desenvolvedor");
+      if (!ehDesenvolvedor) {
+        return jsonResponse(req, 403, {
+          error:
+            "Apenas o Desenvolvedor pode redefinir a senha de outro utilizador. O utilizador pode alterar a própria senha em «Minha conta».",
+        });
+      }
       updatesAuth.password = novaSenha;
     }
 

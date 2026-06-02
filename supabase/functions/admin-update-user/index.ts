@@ -1,6 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeadersFor, handleCorsOptions } from "../_shared/cors.ts";
-import { perfilPodeEditarUsuarios } from "../_shared/cargoPermissoes.ts";
+import {
+  perfilPodeEditarUsuarios,
+  perfilPodeRedefinirSenhaOutroUsuario,
+} from "../_shared/cargoPermissoes.ts";
 
 type Body = {
   id?: string;
@@ -167,6 +170,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (novaSenha !== undefined && novaSenha.length > 0) {
+      if (!perfilPodeRedefinirSenhaOutroUsuario(perfilAdmin.cargo)) {
+        return jsonResponse(req, 403, {
+          error:
+            "Apenas o Desenvolvedor pode redefinir a senha de outro utilizador. O utilizador pode alterar a própria senha em «Minha conta».",
+        });
+      }
       updatesAuth.password = novaSenha;
     }
 

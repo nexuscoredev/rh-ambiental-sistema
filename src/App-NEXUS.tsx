@@ -16,6 +16,7 @@ import Login from './pages/Login'
 import { lazyWithRetry } from './lib/lazyWithRetry'
 
 const BemVindoNexus = lazyWithRetry(() => import('./pages/BemVindoNexus'))
+const MinhaConta = lazyWithRetry(() => import('./pages/MinhaConta'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 const Clientes = lazyWithRetry(() => import('./pages/Clientes'))
 const ClientesGerenciador = lazyWithRetry(() => import('./pages/ClientesGerenciador'))
@@ -437,6 +438,22 @@ function App() {
                   apenasAutenticado
                 >
                   <BemVindoNexus />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/minha-conta"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[]}
+                  apenasAutenticado
+                >
+                  <MinhaConta />
                 </ProtectedRoute>
               }
             />

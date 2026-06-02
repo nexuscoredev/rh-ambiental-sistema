@@ -11,6 +11,9 @@ import {
  */
 export const ROTA_BEM_VINDO = '/bem-vindo'
 
+/** Alteração de senha própria — acessível a qualquer utilizador autenticado (fora de `ROTAS_SISTEMA`). */
+export const ROTA_MINHA_CONTA = '/minha-conta'
+
 /**
  * Rotas configuráveis para restrição por utilizador (`usuarios.paginas_permitidas`).
  * Valores guardados na BD são os `path` (prefixo), alinhados com as rotas em App.tsx.
@@ -224,7 +227,7 @@ export function rotasPermitidasPorCargoParaChecklist(cargo: string | null | unde
 
 /**
  * Regras (alinhadas ao documento de cargos):
- * - Página `/bem-vindo` é sempre acessível.
+ * - Páginas `/bem-vindo` e `/minha-conta` são sempre acessíveis.
  * - E-mails de gestão (bypass) ignoram qualquer restrição.
  * - Cargo `Visualizador` exige `paginas_permitidas` explícita; sem lista, só vê `/bem-vindo`.
  * - Demais cargos: lista vazia/nula = sem filtro extra por **lista de páginas** (o cargo continua a ser
@@ -239,6 +242,9 @@ export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: str
   const path = normalizarPath(pathname)
   const bem = normalizarPath(ROTA_BEM_VINDO)
   if (path === bem || path.startsWith(`${bem}/`)) return true
+
+  const minhaConta = normalizarPath(ROTA_MINHA_CONTA)
+  if (path === minhaConta || path.startsWith(`${minhaConta}/`)) return true
 
   if (cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)) return true
 

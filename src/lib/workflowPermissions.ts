@@ -461,6 +461,11 @@ export function cargoPodeCriarOuExcluirUsuario(cargo: string | null | undefined)
   return cargoEhAdministradorOuDesenvolvedor(cargo)
 }
 
+/** Redefinir senha de outro utilizador (tela Usuários / Edge Function) — somente Desenvolvedor. */
+export function cargoPodeRedefinirSenhaDeOutroUsuario(cargo: string | null | undefined): boolean {
+  return cargoEhDesenvolvedor(cargo)
+}
+
 /** Alterar o cargo de outro usuário — Administrador e Diretoria. */
 export const cargoPodeAlterarCargoDeUsuario = cargoPodeGerirUsuarios
 

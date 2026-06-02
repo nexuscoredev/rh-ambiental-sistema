@@ -19,3 +19,8 @@ export function perfilPodeEditarUsuarios(cargo: string | null | undefined): bool
   if (c.includes('financeiro') && !c.includes('operacional')) return true
   return false
 }
+
+/** Redefinir senha de outro utilizador — somente Desenvolvedor (esquecimento / suporte). */
+export function perfilPodeRedefinirSenhaOutroUsuario(cargo: string | null | undefined): boolean {
+  return normalizarCargoServidor(cargo).includes('desenvolvedor')
+}
