@@ -17,6 +17,10 @@ import { spawnSync } from 'node:child_process'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const soft = process.env.GUARD_PROJETO_SOFT === '1'
+const isRemoteBuild =
+  process.env.VERCEL === '1' ||
+  process.env.CI === 'true' ||
+  process.env.GITHUB_ACTIONS === 'true'
 
 const CRITICAL_FILES = [
   'index.html',
@@ -71,6 +75,17 @@ if (!existsSync(viteBin)) {
   errors.push(
     'Executável vite em falta (node_modules/.bin). Corra: npm install',
   )
+}
+
+if (isRemoteBuild) {
+  for (const w of warnings) warn(w)
+  if (errors.length > 0) {
+    console.error('\n[guard:projeto] Integridade comprometida:\n')
+    errors.forEach((e, i) => console.error(`  ${i + 1}. ${e}\n`))
+    process.exit(1)
+  }
+  console.log('[guard:projeto] OK — ambiente CI/Vercel.')
+  process.exit(0)
 }
 
 const tracked = git(['ls-files']).split('\n').filter(Boolean)
