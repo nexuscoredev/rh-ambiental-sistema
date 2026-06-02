@@ -193,6 +193,16 @@ const TIPOS_CAMINHAO_CATALOGO = new Set(
   TIPOS_CAMINHAO_GRUPOS.flatMap((g) => g.opcoes as string[])
 )
 
+/** Filtro rápido do calendário/agenda por tipo de caminhão (ex.: só «Baú»). */
+function combinaFiltroTipoCaminhao(
+  item: Pick<ProgramacaoItem, 'tipoCaminhao'>,
+  filtroTipo: string
+): boolean {
+  const filtro = filtroTipo.trim()
+  if (!filtro) return true
+  return (item.tipoCaminhao || '').trim().toLowerCase() === filtro.toLowerCase()
+}
+
 /** Dias da semana (ISO 1=Segunda … 7=Domingo), alinhado ao Postgres ISODOW. */
 const DIAS_SEMANA_COLETA_FIXA: readonly { iso: number; label: string }[] = [
   { iso: 1, label: 'Segunda-feira' },
@@ -738,6 +748,7 @@ export default function Programacao() {
   const [form, setForm] = useState<FormState>(initialFormState)
   const [formEdicaoModal, setFormEdicaoModal] = useState<FormState | null>(null)
   const [mesSelecionado, setMesSelecionado] = useState(getMonthInputValue())
+  const [filtroTipoCaminhao, setFiltroTipoCaminhao] = useState('')
   const [loading, setLoading] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvandoEdicaoModal, setSalvandoEdicaoModal] = useState(false)
@@ -762,6 +773,7 @@ export default function Programacao() {
       form,
       formEdicaoModal,
       mesSelecionado,
+      filtroTipoCaminhao,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -775,6 +787,7 @@ export default function Programacao() {
       form,
       formEdicaoModal,
       mesSelecionado,
+      filtroTipoCaminhao,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -795,6 +808,7 @@ export default function Programacao() {
         d.formEdicaoModal ? { ...initialFormState, ...d.formEdicaoModal, id: d.formEdicaoModal.id } : null
       )
       setMesSelecionado(d.mesSelecionado)
+      setFiltroTipoCaminhao(d.filtroTipoCaminhao ?? '')
       setDiaPainelCalendario(d.diaPainelCalendario)
       setModalNovaProgramacaoAberto(d.modalNovaProgramacaoAberto)
       setRelatorioAberto(d.relatorioAberto)
@@ -1555,12 +1569,16 @@ export default function Programacao() {
     }
   }
 
+  const programacoesComFiltroCaminhao = useMemo(() => {
+    return programacoes.filter((item) => combinaFiltroTipoCaminhao(item, filtroTipoCaminhao))
+  }, [programacoes, filtroTipoCaminhao])
+
   const programacoesFiltradas = useMemo(() => {
-    return programacoes.filter((item) => {
+    return programacoesComFiltroCaminhao.filter((item) => {
       if (!item.dataProgramada) return false
       return item.dataProgramada.startsWith(mesSelecionado)
     })
-  }, [programacoes, mesSelecionado])
+  }, [programacoesComFiltroCaminhao, mesSelecionado])
 
   const agendaAgrupada = useMemo(() => {
     const grupos = new Map<string, ProgramacaoItem[]>()
@@ -1576,17 +1594,17 @@ export default function Programacao() {
   }, [programacoesFiltradas])
 
   const calendarCells = useMemo(() => {
-    return getCalendarCells(mesSelecionado, programacoes)
-  }, [mesSelecionado, programacoes])
+    return getCalendarCells(mesSelecionado, programacoesComFiltroCaminhao)
+  }, [mesSelecionado, programacoesComFiltroCaminhao])
 
   const itensDiaPainelCalendario = useMemo(() => {
     if (!diaPainelCalendario) return []
-    return programacoes
+    return programacoesComFiltroCaminhao
       .filter((i) => i.dataProgramada === diaPainelCalendario)
       .sort((a, b) =>
         String(a.numero || '').localeCompare(String(b.numero || ''), undefined, { numeric: true })
       )
-  }, [diaPainelCalendario, programacoes])
+  }, [diaPainelCalendario, programacoesComFiltroCaminhao])
 
   const relatorioRange = useMemo(() => {
     if (relatorioFiltro === 'dia') {
@@ -1999,7 +2017,41 @@ export default function Programacao() {
           value={mesSelecionado}
           onChange={(event) => setMesSelecionado(event.target.value)}
           style={{ ...inputStyle, width: '220px' }}
+          aria-label="Mês do calendário"
         />
+
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 'min(100%, 240px)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Filtrar caminhão</span>
+          <select
+            value={filtroTipoCaminhao}
+            onChange={(event) => setFiltroTipoCaminhao(event.target.value)}
+            style={{ ...inputStyle, width: '100%', maxWidth: '280px' }}
+            aria-label="Filtrar programações por tipo de caminhão"
+            title="Ex.: Baú — mostra só programações com esse tipo de caminhão"
+          >
+            <option value="">Todos os caminhões</option>
+            {TIPOS_CAMINHAO_GRUPOS.map((grupo) => (
+              <optgroup key={grupo.titulo} label={grupo.titulo}>
+                {grupo.opcoes.map((op) => (
+                  <option key={op} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+
+        {filtroTipoCaminhao ? (
+          <button
+            type="button"
+            className="rg-btn rg-btn--outline"
+            onClick={() => setFiltroTipoCaminhao('')}
+            title="Remover filtro de caminhão"
+          >
+            Limpar filtro
+          </button>
+        ) : null}
       </div>
 
       {erro ? <FloatingAlert message={erro} variant="error" onClose={() => setErro('')} /> : null}
@@ -2107,6 +2159,13 @@ export default function Programacao() {
             <p style={cardDescricaoStyle}>
               Clique no dia para ver todas as programações e agendar nesta data. Use «Nova programação»
               no topo da página ou no painel do dia. Dias fora do mês aparecem mais claros.
+              {filtroTipoCaminhao ? (
+                <>
+                  {' '}
+                  Filtro ativo: <strong>{filtroTipoCaminhao}</strong> — só aparecem programações deste
+                  tipo de caminhão.
+                </>
+              ) : null}
             </p>
 
             <ProgramacaoCalendarioMes
@@ -2133,7 +2192,9 @@ export default function Programacao() {
               <div style={estadoVazioStyle}>Carregando programação...</div>
             ) : agendaAgrupada.length === 0 ? (
               <div style={estadoVazioStyle}>
-                Nenhuma programação encontrada para o mês selecionado.
+                {filtroTipoCaminhao
+                  ? `Nenhuma programação do tipo «${filtroTipoCaminhao}» no mês selecionado.`
+                  : 'Nenhuma programação encontrada para o mês selecionado.'}
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '14px' }}>
@@ -2448,7 +2509,9 @@ export default function Programacao() {
                     padding: '20px',
                   }}
                 >
-                  Nenhuma programação neste dia.
+                  {filtroTipoCaminhao
+                    ? `Nenhuma programação do tipo «${filtroTipoCaminhao}» neste dia.`
+                    : 'Nenhuma programação neste dia.'}
                 </div>
                 <button
                   type="button"
