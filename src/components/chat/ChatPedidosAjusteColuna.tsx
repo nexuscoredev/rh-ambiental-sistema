@@ -35,7 +35,7 @@ type Props = {
   pedindoDetalhesId?: string | null
 }
 
-type AbaPedidos = 'fila' | 'negados' | 'historico'
+type AbaPedidos = 'fila' | 'detalhes' | 'negados' | 'historico'
 
 function formatarDataHora(iso: string): string {
   const d = new Date(iso)
@@ -429,20 +429,24 @@ function PedidoCard({
   const reaberto = item.situacao === 'reaberto'
   const complemento = reaberto && item.tipoReabertura === 'complemento'
   const aprovadoThais = item.situacao === 'aprovado_thais'
+  const aguardandoDetalhes = item.situacao === 'aguardando_detalhes'
   const acaoBloqueada = Boolean(marcandoId || enviandoThaisId || aprovandoId || pedindoDetalhesId)
   const podeEscalar =
     modo === 'dev' &&
     Boolean(podeEnviarFilaThais && onEnviarFilaThais) &&
+    !aguardandoDetalhes &&
     (item.situacao === 'novo' || item.situacao === 'reaberto')
 
   return (
     <article
       className={
-        reaberto
-          ? 'chat-interno-pedido-card chat-interno-pedido-card--reaberto'
-          : aprovadoThais
-            ? 'chat-interno-pedido-card chat-interno-pedido-card--aprovado-thais'
-            : 'chat-interno-pedido-card'
+        aguardandoDetalhes
+          ? 'chat-interno-pedido-card chat-interno-pedido-card--aguardando-detalhes'
+          : reaberto
+            ? 'chat-interno-pedido-card chat-interno-pedido-card--reaberto'
+            : aprovadoThais
+              ? 'chat-interno-pedido-card chat-interno-pedido-card--aprovado-thais'
+              : 'chat-interno-pedido-card'
       }
     >
       {reaberto ? (
@@ -454,6 +458,12 @@ function PedidoCard({
       {aprovadoThais ? (
         <p className="chat-interno-pedido-card__badge-aprovado-thais" role="status">
           Aprovado pela Thais — tratar o caso
+        </p>
+      ) : null}
+      {aguardandoDetalhes ? (
+        <p className="chat-interno-pedido-card__badge-detalhes" role="status">
+          Aguardando mais detalhes do solicitante
+          {item.ciclo > 1 ? ` · ciclo ${item.ciclo}` : ''}
         </p>
       ) : null}
       <button
@@ -473,6 +483,12 @@ function PedidoCard({
       <p className="chat-interno-pedido-card__texto">{descricao}</p>
       {item.parseado?.pagina ? (
         <p className="chat-interno-pedido-card__pagina">Página: {item.parseado.pagina}</p>
+      ) : null}
+      {aguardandoDetalhes && item.perguntaDetalhes ? (
+        <blockquote className="chat-interno-pedido-card__justificativa chat-interno-pedido-card__justificativa--pergunta">
+          <strong>Pergunta enviada:</strong>
+          <p>{item.perguntaDetalhes}</p>
+        </blockquote>
       ) : null}
       {item.justificativaSolicitante ? (
         <blockquote className="chat-interno-pedido-card__justificativa">
@@ -502,7 +518,7 @@ function PedidoCard({
                 {enviandoThais ? 'A enviar…' : 'Manda para a fila da Thais'}
               </button>
             ) : null}
-            {onPedirDetalhes ? (
+            {onPedirDetalhes && !aguardandoDetalhes ? (
               <button
                 type="button"
                 className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--detalhes"
@@ -549,6 +565,10 @@ export function ChatPedidosAjusteColuna({
   const { prompt } = useRgDialog()
   const filaNovos = useMemo(
     () => itens.filter((i) => i.situacao === 'novo' || i.situacao === 'aprovado_thais'),
+    [itens]
+  )
+  const aguardandoDetalhes = useMemo(
+    () => itens.filter((i) => i.situacao === 'aguardando_detalhes'),
     [itens]
   )
   const negados = useMemo(() => itens.filter((i) => i.situacao === 'reaberto'), [itens])
@@ -638,17 +658,23 @@ export function ChatPedidosAjusteColuna({
     modo === 'thais'
       ? {
           fila: 'Pedidos escalados pelos desenvolvedores à espera da sua aprovação.',
+          detalhes: '',
           negados: '',
-          historico: 'Registo de escalamentos e aprovações.',
+          historico: 'Registro de escalamentos e aprovações.',
         }
       : {
           fila: 'Pedidos novos à espera da sua resposta.',
+          detalhes:
+            'Casos em que você pediu mais detalhes e aguarda a resposta do solicitante na conversa.',
           negados:
             'Pedidos reabertos (negativa ou complemento após pedido de detalhes). Leia a resposta e trate o caso.',
-          historico: 'Registo de respostas enviadas e pedidos aprovados.',
+          historico: 'Registro de respostas enviadas e pedidos aprovados.',
         }
 
-  const totalFila = modo === 'thais' ? filaExibida.length : filaNovos.length + negados.length
+  const totalFila =
+    modo === 'thais'
+      ? filaExibida.length
+      : filaNovos.length + aguardandoDetalhes.length + negados.length
 
   return (
     <aside className="chat-interno-pedidos-col" aria-label="Fila de solicitações de ajuste">
@@ -691,24 +717,44 @@ export function ChatPedidosAjusteColuna({
             ) : null}
           </button>
           {modo === 'dev' ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aba === 'negados'}
-              className={
-                aba === 'negados'
-                  ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--negados'
-                  : 'chat-interno-pedidos-tab'
-              }
-              onClick={() => setAba('negados')}
-            >
-              <span className="chat-interno-pedidos-tab__label">Negados</span>
-              {negados.length > 0 ? (
-                <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
-                  {negados.length}
-                </span>
-              ) : null}
-            </button>
+            <>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={aba === 'detalhes'}
+                className={
+                  aba === 'detalhes'
+                    ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--detalhes'
+                    : 'chat-interno-pedidos-tab'
+                }
+                onClick={() => setAba('detalhes')}
+              >
+                <span className="chat-interno-pedidos-tab__label">Mais detalhes</span>
+                {aguardandoDetalhes.length > 0 ? (
+                  <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--detalhes">
+                    {aguardandoDetalhes.length}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={aba === 'negados'}
+                className={
+                  aba === 'negados'
+                    ? 'chat-interno-pedidos-tab chat-interno-pedidos-tab--on chat-interno-pedidos-tab--negados'
+                    : 'chat-interno-pedidos-tab'
+                }
+                onClick={() => setAba('negados')}
+              >
+                <span className="chat-interno-pedidos-tab__label">Negados</span>
+                {negados.length > 0 ? (
+                  <span className="chat-interno-pedidos-tab__badge chat-interno-pedidos-tab__badge--neg">
+                    {negados.length}
+                  </span>
+                ) : null}
+              </button>
+            </>
           ) : null}
           <button
             type="button"
@@ -731,7 +777,7 @@ export function ChatPedidosAjusteColuna({
       <div className="chat-interno-pedidos-col__list" role="tabpanel">
         {aba === 'fila' ? (
           carregando ? (
-            <p className="chat-interno-pedidos-col__empty">A carregar…</p>
+            <p className="chat-interno-pedidos-col__empty">Carregando…</p>
           ) : filaExibida.length === 0 ? (
             <p className="chat-interno-pedidos-col__empty">
               {modo === 'thais' ? 'Nenhum pedido aguarda a sua aprovação.' : 'Nenhum pedido novo na fila.'}
@@ -760,9 +806,37 @@ export function ChatPedidosAjusteColuna({
           )
         ) : null}
 
+        {aba === 'detalhes' && modo === 'dev' ? (
+          carregando ? (
+            <p className="chat-interno-pedidos-col__empty">Carregando…</p>
+          ) : aguardandoDetalhes.length === 0 ? (
+            <p className="chat-interno-pedidos-col__empty">
+              Nenhum pedido aguardando complemento do solicitante.
+            </p>
+          ) : (
+            aguardandoDetalhes.map((item) => (
+              <PedidoCard
+                key={item.mensagemId}
+                item={item}
+                modo={modo}
+                usuariosPorId={usuariosPorId}
+                marcandoId={marcandoId}
+                podeEnviarFilaThais={podeEnviarFilaThais}
+                enviandoThaisId={enviandoThaisId}
+                aprovandoId={aprovandoId}
+                onAbrirConversa={onAbrirConversa}
+                onMarcar={(i) => void handleMarcar(i)}
+                pedindoDetalhesId={pedindoDetalhesId}
+                onEnviarFilaThais={(i) => void handleEnviarFilaThais(i)}
+                onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
+              />
+            ))
+          )
+        ) : null}
+
         {aba === 'negados' && modo === 'dev' ? (
           carregando ? (
-            <p className="chat-interno-pedidos-col__empty">A carregar…</p>
+            <p className="chat-interno-pedidos-col__empty">Carregando…</p>
           ) : negados.length === 0 ? (
             <p className="chat-interno-pedidos-col__empty">Nenhum pedido negado no momento.</p>
           ) : (
@@ -791,9 +865,9 @@ export function ChatPedidosAjusteColuna({
 
         {aba === 'historico' ? (
           carregandoHistorico ? (
-            <p className="chat-interno-pedidos-col__empty">A carregar histórico…</p>
+            <p className="chat-interno-pedidos-col__empty">Carregando histórico…</p>
           ) : historicoLimpo.length === 0 ? (
-            <p className="chat-interno-pedidos-col__empty">Sem registos ainda.</p>
+            <p className="chat-interno-pedidos-col__empty">Sem registros ainda.</p>
           ) : (
             <ul className="chat-interno-pedidos-col__historico-list">
               {historicoLimpo.map((h) => {

@@ -22,6 +22,7 @@ import {
   chatListarPedidosAguardandoDetalhesSolicitante,
   chatListarPedidosAguardandoFeedbackSolicitante,
   chatListarPedidosAjusteFilaThais,
+  chatListarPedidosAjusteAguardandoDetalhesDev,
   chatListarPedidosAjustePendentes,
   chatMarcarPedidoAjusteResolvido,
   chatPedirDetalhesPedidoAjuste,
@@ -393,11 +394,15 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     setCarregandoPedidosAjuste(true)
     setCarregandoHistoricoPedidosAjuste(true)
     try {
-      const listPromise =
+      const [list, hist] = await Promise.all([
         modoPedidosColuna === 'thais'
           ? chatListarPedidosAjusteFilaThais()
-          : chatListarPedidosAjustePendentes(uid)
-      const [list, hist] = await Promise.all([listPromise, chatListarHistoricoPedidosAjuste(50)])
+          : Promise.all([
+              chatListarPedidosAjustePendentes(uid),
+              chatListarPedidosAjusteAguardandoDetalhesDev(),
+            ]).then(([dev, detalhes]) => [...dev, ...detalhes]),
+        chatListarHistoricoPedidosAjuste(50),
+      ])
       setPedidosAjustePendentes(list)
       setHistoricoPedidosAjuste(hist)
     } catch (e) {

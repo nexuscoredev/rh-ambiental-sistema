@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.157",
+  "version": "1.2.158",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -50,7 +50,7 @@
     "db:apply:chat-pedido-ajuste-resolvido": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260526160000_chat_pedido_ajuste_resolvido.sql",
     "db:apply:chat-pedido-ajuste-fix": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260527120000_chat_pedido_ajuste_resolvido_rpc.sql",
     "db:apply:chat-pedido-ajuste-feedback": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260601120000_chat_pedido_ajuste_feedback.sql",
-    "db:apply:chat-pedido-ajuste-pedir-detalhes": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260603130000_chat_pedido_ajuste_pedir_detalhes.sql",
+    "db:apply:chat-pedido-ajuste-pedir-detalhes": "tsx scripts/apply-supabase-sql.ts supabase/sql_editor_chat_pedido_ajuste_pedir_detalhes.sql",
     "db:apply:chat-pedido-ajuste-aprovacao-thais": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260702120000_chat_pedido_ajuste_aprovacao_thais.sql",
     "db:apply:operacao-time-r-cadastro": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260801120000_operacao_time_r_cadastro_matheus_gabriel.sql",
     "db:apply:chat-pedido-ajuste-config": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260802120000_chat_pedido_ajuste_config.sql",

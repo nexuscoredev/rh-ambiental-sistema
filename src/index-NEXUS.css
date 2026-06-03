@@ -4542,6 +4542,42 @@ a.rg-btn {
   box-shadow: 0 2px 12px rgba(34, 197, 94, 0.12);
 }
 
+.chat-interno-pedido-card--aguardando-detalhes {
+  border-color: #fca5a5;
+  background: linear-gradient(180deg, #fef2f2 0%, #fff 100%);
+  box-shadow: 0 2px 12px rgba(220, 38, 38, 0.1);
+}
+
+.chat-interno-pedido-card__badge-detalhes {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #b91c1c;
+}
+
+.chat-interno-pedido-card__justificativa--pergunta {
+  border-left-color: #ef4444;
+  background: #fff5f5;
+}
+
+.chat-interno-pedidos-tab--on.chat-interno-pedidos-tab--detalhes {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.chat-interno-pedidos-tab__badge--detalhes {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.chat-interno-pedidos-tab--on .chat-interno-pedidos-tab__badge--detalhes {
+  background: #ef4444;
+  color: #fff;
+}
+
 .chat-interno-pedido-card__badge-aprovado-thais {
   margin: 0 0 8px;
   display: inline-block;

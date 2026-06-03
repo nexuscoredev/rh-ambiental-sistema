@@ -6,6 +6,7 @@ import {
   chatEnviarPedidoAjusteFilaThais,
   chatListarHistoricoPedidosAjuste,
   chatListarPedidosAjusteFilaThais,
+  chatListarPedidosAjusteAguardandoDetalhesDev,
   chatListarPedidosAjustePendentes,
   chatMarcarPedidoAjusteResolvido,
   chatPedirDetalhesPedidoAjuste,
@@ -37,11 +38,13 @@ export function usePedidosAjusteAdmin() {
     const novos = filaDev.filter((i) => i.situacao === 'novo').length
     const reabertos = filaDev.filter((i) => i.situacao === 'reaberto').length
     const aprovadosThais = filaDev.filter((i) => i.situacao === 'aprovado_thais').length
+    const aguardandoDetalhes = filaDev.filter((i) => i.situacao === 'aguardando_detalhes').length
     return {
-      filaDev: novos + reabertos + aprovadosThais,
+      filaDev: novos + reabertos + aprovadosThais + aguardandoDetalhes,
       novos,
       reabertos,
       aprovadosThais,
+      aguardandoDetalhes,
       filaThais: filaThais.length,
       historico: historico.length,
     }
@@ -59,12 +62,13 @@ export function usePedidosAjusteAdmin() {
     setCarregandoHistorico(true)
     setErro('')
     try {
-      const [dev, thais, hist] = await Promise.all([
+      const [dev, aguardandoDetalhes, thais, hist] = await Promise.all([
         chatListarPedidosAjustePendentes(uid),
+        chatListarPedidosAjusteAguardandoDetalhesDev(),
         chatListarPedidosAjusteFilaThais(),
         chatListarHistoricoPedidosAjuste(100),
       ])
-      setFilaDev(dev)
+      setFilaDev([...dev, ...aguardandoDetalhes])
       setFilaThais(thais)
       setHistorico(hist)
     } catch (e) {

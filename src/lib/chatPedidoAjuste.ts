@@ -17,6 +17,10 @@ export type PedidoAjusteStatus =
 export const CHAT_PEDIDO_DETALHES_PADRAO_DEV =
   'Precisamos de mais detalhes sobre o seu pedido para conseguir tratar o caso. Pode complementar com passos para reproduzir, exemplos ou o que esperava ver no sistema?'
 
+/** RPC «Pedir mais detalhes» ainda não aplicada no Supabase de produção. */
+export const MENSAGEM_SQL_PEDIR_DETALHES_PEDIDO_AJUSTE =
+  'Funcionalidade ainda não activa no Supabase. No Dashboard → SQL Editor, execute o ficheiro supabase/sql_editor_chat_pedido_ajuste_pedir_detalhes.sql (Run) e recarregue a página. O comando npm run db:apply:chat-pedido-ajuste-pedir-detalhes só funciona se o PC conseguir ligar ao Postgres (erro ENOTFOUND = use o SQL Editor).'
+
 export type PedidoAjusteEscalacaoThaisStatus = 'aguardando' | 'aprovado'
 
 export type PedidoAjusteEscalacaoThaisRow = {
@@ -144,11 +148,13 @@ export type PedidoAjusteFilaItem = {
   conteudo: string
   createdAt: string
   parseado: PedidoAjusteParseado | null
-  /** Novo pedido, reaberto pelo solicitante ou devolvido após aprovação da Thais. */
-  situacao: 'novo' | 'reaberto' | 'aprovado_thais'
+  /** Novo, reaberto, pós-Thais ou aguardando complemento após «pedir mais detalhes». */
+  situacao: 'novo' | 'reaberto' | 'aprovado_thais' | 'aguardando_detalhes'
   /** Quando reaberto: negativa após resolução ou complemento após pedido de detalhes. */
   tipoReabertura?: 'negativa' | 'complemento'
   justificativaSolicitante?: string
+  /** Texto enviado ao solicitante ao pedir mais detalhes (status aguardando_detalhes). */
+  perguntaDetalhes?: string
   ciclo: number
   /** Preenchido quando o pedido voltou da fila da Thais para o dev que escalou. */
   escaladoPorDevId?: string
@@ -470,6 +476,72 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
       montarItemFilaPedido(row, reg, escalacao, tipoReaberturaPorMensagem.get(mensagemId))
     )
   }
+  return itens
+}
+
+/** Pedidos em que o desenvolvedor pediu complemento e aguarda resposta do solicitante. */
+export async function chatListarPedidosAjusteAguardandoDetalhesDev(): Promise<PedidoAjusteFilaItem[]> {
+  const { data: regs, error } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, conversa_id, status, resposta_mensagem_id, justificativa_solicitante, ciclo')
+    .eq('status', 'aguardando_detalhes')
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return []
+    if (colunaInexistente(error)) return []
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  const rows = regs ?? []
+  if (rows.length === 0) return []
+
+  const mensagemIds = rows.map((r) => String(r.mensagem_id))
+  const respostaIds = rows
+    .map((r) => (r.resposta_mensagem_id ? String(r.resposta_mensagem_id) : ''))
+    .filter(Boolean)
+
+  const { data: msgs, error: msgErr } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id, conteudo, created_at')
+    .in('id', mensagemIds)
+
+  if (msgErr) throw new Error(mensagemErroPedidoAjuste(msgErr))
+
+  const perguntaPorId = new Map<string, string>()
+  if (respostaIds.length > 0) {
+    const { data: respMsgs, error: respErr } = await supabase
+      .from('chat_mensagens')
+      .select('id, conteudo')
+      .in('id', respostaIds)
+    if (respErr) throw new Error(mensagemErroPedidoAjuste(respErr))
+    for (const m of respMsgs ?? []) {
+      const texto = String(m.conteudo ?? '').trim()
+      if (texto) perguntaPorId.set(String(m.id), texto)
+    }
+  }
+
+  const regPorMensagem = new Map<string, ResolvidoRow & { resposta_mensagem_id?: string | null }>()
+  for (const row of rows) {
+    regPorMensagem.set(String(row.mensagem_id), row as ResolvidoRow & { resposta_mensagem_id?: string | null })
+  }
+
+  const escalacaoPorMensagem = await carregarEscalacoesThaisPorMensagens(mensagemIds)
+
+  const itens: PedidoAjusteFilaItem[] = []
+  for (const row of msgs ?? []) {
+    const mensagemId = String(row.id)
+    const reg = regPorMensagem.get(mensagemId)
+    if (!reg || reg.status !== 'aguardando_detalhes') continue
+    const respostaId = reg.resposta_mensagem_id ? String(reg.resposta_mensagem_id) : ''
+    const base = montarItemFilaPedido(row, reg, escalacaoPorMensagem.get(mensagemId))
+    itens.push({
+      ...base,
+      situacao: 'aguardando_detalhes',
+      perguntaDetalhes: respostaId ? perguntaPorId.get(respostaId) : undefined,
+    })
+  }
+
+  itens.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   return itens
 }
 
@@ -1188,16 +1260,12 @@ export async function chatPedirDetalhesPedidoAjuste(
   if (rpc.error && !rpcIndisponivel(rpc.error)) {
     const msg = mensagemErroPedidoAjuste(rpc.error)
     if (/does not exist|relation|42P01|42883/i.test(msg)) {
-      throw new Error(
-        'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-pedir-detalhes.'
-      )
+      throw new Error(MENSAGEM_SQL_PEDIR_DETALHES_PEDIDO_AJUSTE)
     }
     throw new Error(msg)
   }
 
-  throw new Error(
-    'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-pedir-detalhes.'
-  )
+  throw new Error(MENSAGEM_SQL_PEDIR_DETALHES_PEDIDO_AJUSTE)
 }
 
 export async function chatResponderDetalhesPedidoAjuste(

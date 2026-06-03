@@ -64,7 +64,7 @@ export default function SolicitacoesAjusteAdmin() {
             <h1 className="solicitacoes-admin__title">Gestão de solicitações</h1>
             <p className="solicitacoes-admin__lead">
               Central de filas de ajuste, aprovações e respostas automáticas. O chat interno mantém
-              o mesmo fluxo — esta página concentra a operação para a equipa de desenvolvimento.
+              o mesmo fluxo — esta página concentra a operação para a equipe de desenvolvimento.
             </p>
           </div>
           <div className="solicitacoes-admin__hero-actions">
@@ -74,7 +74,7 @@ export default function SolicitacoesAjusteAdmin() {
               disabled={carregando}
               onClick={() => void recarregar()}
             >
-              {carregando ? 'A actualizar…' : 'Actualizar filas'}
+              {carregando ? 'Atualizando…' : 'Atualizar filas'}
             </button>
           </div>
         </header>
@@ -90,7 +90,8 @@ export default function SolicitacoesAjusteAdmin() {
             <span className="solicitacoes-admin__stat-value">{resumo.filaDev}</span>
             <span className="solicitacoes-admin__stat-label">Na fila dos devs</span>
             <span className="solicitacoes-admin__stat-hint">
-              {resumo.novos} novos · {resumo.reabertos} negados · {resumo.aprovadosThais} pós-Thais
+              {resumo.novos} novos · {resumo.aguardandoDetalhes} aguard. detalhes · {resumo.reabertos}{' '}
+              negados · {resumo.aprovadosThais} pós-Thais
             </span>
           </article>
           <article className="solicitacoes-admin__stat solicitacoes-admin__stat--thais">
@@ -101,7 +102,7 @@ export default function SolicitacoesAjusteAdmin() {
           <article className="solicitacoes-admin__stat solicitacoes-admin__stat--hist">
             <span className="solicitacoes-admin__stat-value">{resumo.historico}</span>
             <span className="solicitacoes-admin__stat-label">Eventos recentes</span>
-            <span className="solicitacoes-admin__stat-hint">Últimos 100 registos</span>
+            <span className="solicitacoes-admin__stat-hint">Últimos 100 registros</span>
           </article>
         </div>
 
@@ -140,8 +141,9 @@ export default function SolicitacoesAjusteAdmin() {
               <div className="solicitacoes-admin__panel-head">
                 <h2>Fila de desenvolvimento</h2>
                 <p>
-                  Novos pedidos chegam aqui primeiro. Pode pedir mais detalhes ao solicitante, enviar
-                  à Thais quando precisar de aprovação ou marcar como resolvido.
+                  Novos pedidos chegam aqui primeiro. Use a aba <strong>Mais detalhes</strong> para
+                  acompanhar os casos em que pediu complemento ao solicitante. Também pode enviar à
+                  Thais ou marcar como resolvido.
                 </p>
               </div>
               <div className="solicitacoes-admin__coluna-wrap">
@@ -173,7 +175,7 @@ export default function SolicitacoesAjusteAdmin() {
               </div>
               <div className="solicitacoes-admin__thais-list">
                 {carregando ? (
-                  <p className="solicitacoes-admin__empty">A carregar…</p>
+                  <p className="solicitacoes-admin__empty">Carregando…</p>
                 ) : filaThais.length === 0 ? (
                   <p className="solicitacoes-admin__empty">Nenhum pedido aguarda aprovação da Thais.</p>
                 ) : (
@@ -210,7 +212,7 @@ export default function SolicitacoesAjusteAdmin() {
               <div className="solicitacoes-admin__nota">
                 <h3>Chat interno</h3>
                 <p>
-                  A coluna «Solicitações» no chat flutuante continua activa. Use esta página para
+                  A coluna «Solicitações» no chat flutuante continua ativa. Use esta página para
                   uma visão ampla; o chat para conversar com o solicitante.
                 </p>
                 <Link to="/bem-vindo" className="solicitacoes-admin__link">
