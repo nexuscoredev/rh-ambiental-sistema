@@ -5,6 +5,10 @@ import { supabase } from './lib/supabase'
 import { NEXUS_CARGOS_POR_ROTA } from './lib/nexusCargosPorRota'
 import { usuarioPodeAcessarRota, usuarioTemExcecaoCadastroCliente } from './lib/paginasSistema'
 import { carregarPerfilUsuario } from './lib/carregarPerfilUsuario'
+import {
+  EVENTO_FOTO_PERFIL_ATUALIZADA,
+  type FotoPerfilAtualizadaDetail,
+} from './lib/fotoPerfilUsuario'
 import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
@@ -370,6 +374,16 @@ function App() {
     // session omitido de propósito: só reage a sessionUserId para não recarregar perfil a cada refresh do token
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUserId])
+
+  useEffect(() => {
+    const onFotoAtualizada = (ev: Event) => {
+      const url = (ev as CustomEvent<FotoPerfilAtualizadaDetail>).detail?.foto_url
+      if (!url) return
+      setUsuario((u) => (u ? { ...u, foto_url: url } : u))
+    }
+    window.addEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onFotoAtualizada)
+    return () => window.removeEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onFotoAtualizada)
+  }, [])
 
   if (session === undefined) {
     return (

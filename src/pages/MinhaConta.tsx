@@ -1,16 +1,69 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { ChatAvatar } from '../components/chat/ChatAvatar'
+import { usePerfilUsuario } from '../contexts/PerfilUsuarioContext'
 import MainLayout from '../layouts/MainLayout'
 import { alterarSenhaPropria, SENHA_MINIMA_CARACTERES } from '../lib/alterarSenhaPropria'
+import {
+  EVENTO_FOTO_PERFIL_ATUALIZADA,
+  uploadFotoPerfilUsuario,
+  type FotoPerfilAtualizadaDetail,
+} from '../lib/fotoPerfilUsuario'
 import { supabase } from '../lib/supabase'
 
 export default function MinhaConta() {
+  const { usuario } = usePerfilUsuario()
+  const [fotoUrl, setFotoUrl] = useState<string | null>(usuario?.foto_url ?? null)
   const [senhaAtual, setSenhaAtual] = useState('')
   const [senhaNova, setSenhaNova] = useState('')
   const [confirmacao, setConfirmacao] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [enviandoFoto, setEnviandoFoto] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
+  const [erroFoto, setErroFoto] = useState('')
+  const [sucessoFoto, setSucessoFoto] = useState('')
+  const inputFotoRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setFotoUrl(usuario?.foto_url ?? null)
+  }, [usuario?.foto_url])
+
+  useEffect(() => {
+    const onAtualizada = (ev: Event) => {
+      const url = (ev as CustomEvent<FotoPerfilAtualizadaDetail>).detail?.foto_url
+      if (url) setFotoUrl(url)
+    }
+    window.addEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onAtualizada)
+    return () => window.removeEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onAtualizada)
+  }, [])
+
+  async function handleEscolherFoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setErroFoto('')
+    setSucessoFoto('')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+
+    setEnviandoFoto(true)
+    try {
+      const resultado = await uploadFotoPerfilUsuario(supabase, file, user.id)
+      if (!resultado.ok) {
+        setErroFoto(resultado.mensagem)
+        return
+      }
+      setFotoUrl(resultado.publicUrl)
+      setSucessoFoto('Foto de perfil atualizada. Também aparece no canto superior direito.')
+    } finally {
+      setEnviandoFoto(false)
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -39,6 +92,8 @@ export default function MinhaConta() {
     }
   }
 
+  const nomeExibir = usuario?.nome?.trim() || usuario?.email || 'Utilizador'
+
   return (
     <MainLayout>
       <div className="minha-conta">
@@ -46,12 +101,62 @@ export default function MinhaConta() {
           <p className="page-header__eyebrow">Conta</p>
           <h2 className="page-header__title">Minha conta</h2>
           <p className="page-header__lead">
-            Altere aqui a sua senha de acesso. Para outros dados (nome, cargo, páginas), contacte um
-            administrador.
+            Altere aqui a sua foto de perfil e a senha de acesso. Para nome, cargo e páginas
+            permitidas, contacte um administrador.
           </p>
         </header>
 
         <div className="minha-conta__grid">
+          <section
+            className="minha-conta__card minha-conta__card--foto"
+            aria-labelledby="minha-conta-foto"
+          >
+            <h3 id="minha-conta-foto" className="minha-conta__card-title">
+              Foto de perfil
+            </h3>
+            <p className="minha-conta__card-lead">
+              A mesma foto é usada no cabeçalho, no chat interno e nas listas de equipa. Formatos:
+              JPEG, PNG, WebP ou GIF (máx. 5 MB).
+            </p>
+
+            <div className="minha-conta__foto-row">
+              <ChatAvatar nome={nomeExibir} fotoUrl={fotoUrl} size={88} className="minha-conta__foto-avatar" />
+              <div className="minha-conta__foto-acoes">
+                <input
+                  ref={inputFotoRef}
+                  type="file"
+                  className="minha-conta__foto-input"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={(e) => void handleEscolherFoto(e)}
+                />
+                <button
+                  type="button"
+                  className="minha-conta__submit minha-conta__submit--foto"
+                  disabled={enviandoFoto}
+                  onClick={() => inputFotoRef.current?.click()}
+                >
+                  {enviandoFoto ? 'A enviar…' : 'Escolher nova foto'}
+                </button>
+                <p className="minha-conta__foto-dica">
+                  Também pode clicar na sua foto no canto superior direito do sistema.
+                </p>
+              </div>
+            </div>
+
+            {erroFoto ? (
+              <p className="minha-conta__alert minha-conta__alert--erro" role="alert">
+                {erroFoto}
+              </p>
+            ) : null}
+            {sucessoFoto ? (
+              <p className="minha-conta__alert minha-conta__alert--ok" role="status">
+                {sucessoFoto}
+              </p>
+            ) : null}
+          </section>
+
           <section className="minha-conta__card" aria-labelledby="minha-conta-alterar-senha">
             <h3 id="minha-conta-alterar-senha" className="minha-conta__card-title">
               Alterar senha

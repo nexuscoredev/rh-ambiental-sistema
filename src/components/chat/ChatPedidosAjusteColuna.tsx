@@ -495,17 +495,17 @@ function PedidoCard({
             {podeEscalar ? (
               <button
                 type="button"
-                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--secundario"
+                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--thais"
                 disabled={acaoBloqueada}
                 onClick={() => onEnviarFilaThais?.(item)}
               >
-                {enviandoThais ? 'A enviar…' : 'Enviar p/ fila Thais'}
+                {enviandoThais ? 'A enviar…' : 'Manda para a fila da Thais'}
               </button>
             ) : null}
             {onPedirDetalhes ? (
               <button
                 type="button"
-                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--secundario"
+                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--detalhes"
                 disabled={acaoBloqueada}
                 onClick={() => onPedirDetalhes(item)}
                 title="Devolve ao solicitante pedindo mais informações (sem marcar como resolvido)"

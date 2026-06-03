@@ -9,6 +9,11 @@ import {
   type ReactNode,
 } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import {
+  EVENTO_FOTO_PERFIL_ATUALIZADA,
+  uploadFotoPerfilUsuario,
+  type FotoPerfilAtualizadaDetail,
+} from '../lib/fotoPerfilUsuario'
 import { supabase } from '../lib/supabase'
 import {
   type PresencaStatus,
@@ -387,28 +392,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
     queueMicrotask(() => setFotoIndisponivel(false))
   }, [usuario?.foto_url])
 
+  useEffect(() => {
+    const onFotoAtualizada = (ev: Event) => {
+      const url = (ev as CustomEvent<FotoPerfilAtualizadaDetail>).detail?.foto_url
+      if (!url) return
+      setUsuario((prev) => (prev ? { ...prev, foto_url: url } : prev))
+      setFotoIndisponivel(false)
+    }
+    window.addEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onFotoAtualizada)
+    return () => window.removeEventListener(EVENTO_FOTO_PERFIL_ATUALIZADA, onFotoAtualizada)
+  }, [])
+
   async function handleEscolherFoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      await alert({
-        title: 'Foto de perfil',
-        message: 'Escolha um ficheiro de imagem (JPEG, PNG, WebP ou GIF).',
-        variant: 'warning',
-      })
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      await alert({
-        title: 'Foto de perfil',
-        message: 'A imagem deve ter no máximo 5 MB.',
-        variant: 'warning',
-      })
-      return
-    }
 
     const {
       data: { user },
@@ -419,55 +417,27 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setEnviandoFoto(true)
 
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase()
-      const extSeguro =
-        ext && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg'
-      const path = `${user.id}/avatar.${extSeguro}`
-
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
-        upsert: true,
-        contentType: file.type || undefined,
-      })
-
-      if (uploadError) {
-        console.error(uploadError)
+      const resultado = await uploadFotoPerfilUsuario(supabase, file, user.id)
+      if (!resultado.ok) {
         await alert({
           title: 'Foto de perfil',
-          message:
-            'Não foi possível enviar a foto. Aplique a migração do bucket avatars no Supabase ou tente novamente.',
-          variant: 'danger',
-        })
-        return
-      }
-
-      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path)
-      const publicUrl = publicData.publicUrl
-
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({ foto_url: publicUrl })
-        .eq('id', user.id)
-
-      if (updateError) {
-        console.error(updateError)
-        await alert({
-          title: 'Foto de perfil',
-          message:
-            'A foto foi enviada, mas falhou ao gravar o endereço no perfil. Verifique as políticas RLS em usuarios.',
-          variant: 'danger',
+          message: resultado.mensagem,
+          variant: resultado.mensagem.includes('5 MB') || resultado.mensagem.includes('imagem')
+            ? 'warning'
+            : 'danger',
         })
         return
       }
 
       setUsuario((prev) => {
         if (prev) {
-          return { ...prev, foto_url: publicUrl }
+          return { ...prev, foto_url: resultado.publicUrl }
         }
         return {
           nome: user.email || 'Usuário',
           email: user.email || '',
           cargo: '',
-          foto_url: publicUrl,
+          foto_url: resultado.publicUrl,
         }
       })
       setFotoIndisponivel(false)
