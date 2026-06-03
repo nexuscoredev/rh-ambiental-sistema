@@ -37,6 +37,10 @@ import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 import { useRgDialog } from '../lib/RgDialogProvider'
+import {
+  EVENTO_ABRIR_SOLICITACAO_AJUSTE,
+  type AbrirSolicitacaoAjusteDetail,
+} from '../lib/solicitacaoAjusteUi'
 
 type MainLayoutProps = {
   children: ReactNode
@@ -203,6 +207,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const [chatNaoLidas, setChatNaoLidas] = useState(0)
   const [ajusteAberto, setAjusteAberto] = useState(false)
+  const [ajusteTextoInicial, setAjusteTextoInicial] = useState<string | null>(null)
   const ajustePanelId = useId()
 
   const atualizarBadgeChat = useCallback(async () => {
@@ -226,6 +231,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
       void atualizarBadgeChat()
     })
   }, [pathnameDebounced, atualizarBadgeChat])
+
+  useEffect(() => {
+    const onAbrirAjuste = (ev: Event) => {
+      const detail = (ev as CustomEvent<AbrirSolicitacaoAjusteDetail>).detail
+      setAjusteTextoInicial(detail?.textoInicial?.trim() || null)
+      setAjusteAberto(true)
+    }
+    window.addEventListener(EVENTO_ABRIR_SOLICITACAO_AJUSTE, onAbrirAjuste)
+    return () => window.removeEventListener(EVENTO_ABRIR_SOLICITACAO_AJUSTE, onAbrirAjuste)
+  }, [])
 
   useEffect(() => {
     let cancel = false
@@ -729,8 +744,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       <SolicitarAjusteSistemaFloat
         open={ajusteAberto}
-        onOpenChange={setAjusteAberto}
+        onOpenChange={(aberto) => {
+          setAjusteAberto(aberto)
+          if (!aberto) setAjusteTextoInicial(null)
+        }}
         panelId={ajustePanelId}
+        textoInicial={ajusteTextoInicial}
       />
 
       <ChatInternoFloating naoLidasBadge={chatNaoLidas} />

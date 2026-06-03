@@ -189,6 +189,7 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/envio-nf': [...ENVIO_NF],
   '/usuarios': [...USUARIOS],
   '/sistema/solicitacoes-ajuste': [...SOLICITACOES_AJUSTE_ADMIN],
+  '/sistema/senha-pessoal': [...SOLICITACOES_AJUSTE_ADMIN],
   '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
   ...RH_CARGOS_POR_ROTA,
   ...FROTA_CARGOS_POR_ROTA,

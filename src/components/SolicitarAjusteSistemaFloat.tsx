@@ -9,6 +9,8 @@ export type SolicitarAjusteSistemaFloatProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   panelId: string
+  /** Pré-preenche o campo ao abrir (ex.: pedido de reset na boas-vindas). */
+  textoInicial?: string | null
 }
 
 function imagemColadaDoClipboard(e: ClipboardEvent): File | null {
@@ -39,9 +41,11 @@ export default function SolicitarAjusteSistemaFloat({
   open,
   onOpenChange,
   panelId,
+  textoInicial = null,
 }: SolicitarAjusteSistemaFloatProps) {
   const { openChat, openChatWithUser } = useChatFloat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const abriuComTextoInicial = useRef(false)
 
   const [texto, setTexto] = useState('')
   const [print, setPrint] = useState<File | null>(null)
@@ -106,10 +110,22 @@ export default function SolicitarAjusteSistemaFloat({
   }, [print])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      if (abriuComTextoInicial.current) {
+        setTexto('')
+        abriuComTextoInicial.current = false
+      }
+      return
+    }
+    if (textoInicial?.trim()) {
+      abriuComTextoInicial.current = true
+      setTexto(textoInicial.trim())
+      setErro('')
+      setSucessoId(null)
+    }
     const t = window.setTimeout(() => textareaRef.current?.focus(), 50)
     return () => window.clearTimeout(t)
-  }, [open])
+  }, [open, textoInicial])
 
   useEffect(() => {
     if (!open) return

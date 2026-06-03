@@ -1,7 +1,7 @@
 {
   "name": "rg-ambiental-sistema",
   "private": true,
-  "version": "1.2.151",
+  "version": "1.2.152",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -64,6 +64,7 @@
     "db:apply:rh-colaboradores": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260530140000_rh_colaboradores.sql",
     "db:apply:operacional-frota": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260602193000_operacional_frota.sql",
     "db:apply:frota-acessos": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260602220000_frota_acessos_rbac.sql",
+    "db:apply:senha-pessoal-confirmacao": "tsx scripts/apply-supabase-sql.ts supabase/migrations/20260602240000_usuario_senha_pessoal_confirmacao.sql",
     "supabase": "supabase",
     "functions:deploy:admin-update": "supabase functions deploy admin-update-user",
     "functions:deploy:admin-delete": "supabase functions deploy admin-delete-user",

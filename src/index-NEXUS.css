@@ -5923,6 +5923,245 @@ a.rg-btn {
   font-weight: 450;
 }
 
+.welcome-nexus__senha-card {
+  position: relative;
+  width: min(100%, 36rem);
+  margin: 0 auto clamp(26px, 3.2vw, 34px);
+  padding: 0 4px 4px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.welcome-nexus__senha-card-bar {
+  height: 3px;
+  margin: 0 -1px;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(90deg, #2dd4bf 0%, #14b8a6 48%, #0d9488 100%);
+}
+
+.welcome-nexus__senha-card-head {
+  padding: 16px 16px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.welcome-nexus__senha-card-head-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.welcome-nexus__senha-card-head-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome-nexus__senha-card-dismiss {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.welcome-nexus__senha-card-dismiss:hover {
+  color: #0f766e;
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.welcome-nexus__senha-card-greeting {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.welcome-nexus__senha-card-name {
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.welcome-nexus__senha-card-lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+  font-weight: 450;
+}
+
+.welcome-nexus__senha-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.welcome-nexus__senha-step {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 14px 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  text-align: left;
+}
+
+.welcome-nexus__senha-step-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welcome-nexus__senha-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%);
+}
+
+.welcome-nexus__senha-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: #0d9488;
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.welcome-nexus__senha-step-icon--muted {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.welcome-nexus__senha-step-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+.welcome-nexus__senha-step-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.welcome-nexus__senha-step-desc strong {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.welcome-nexus__senha-step-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  background: #fff;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.welcome-nexus__senha-step-cta:hover {
+  background: #f0fdfa;
+  border-color: #0d9488;
+  transform: translateY(-1px);
+}
+
+.welcome-nexus__senha-step-cta--primario {
+  color: #fff;
+  border-color: rgba(13, 148, 136, 0.35);
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 42%, #0d9488 100%);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.18);
+}
+
+.welcome-nexus__senha-step-cta--primario:hover {
+  color: #fff;
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 42%, #0d9488 100%);
+  filter: brightness(1.05);
+}
+
+.welcome-nexus__senha-feedback {
+  margin: 0;
+  padding: 0 16px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #0f766e;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .welcome-nexus__senha-steps {
+    grid-template-columns: 1fr;
+    padding: 0 10px 12px;
+  }
+
+  .welcome-nexus__senha-card-head {
+    padding: 14px 12px 12px;
+  }
+
+  .welcome-nexus__senha-card-head-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .welcome-nexus__senha-card-dismiss {
+    align-self: flex-end;
+  }
+
+  .welcome-nexus__senha-card-greeting {
+    font-size: 17px;
+  }
+
+  .welcome-nexus__senha-step-cta {
+    width: 100%;
+    align-self: stretch;
+  }
+}
+
 .welcome-nexus__rule {
   width: min(260px, 56%);
   height: 1px;
@@ -8326,6 +8565,119 @@ a.rg-btn {
   background: #f1f5f9;
   padding: 1px 4px;
   border-radius: 4px;
+}
+
+/* —— Acompanhamento senha pessoal (desenvolvedor) —— */
+.senha-pessoal-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1280px;
+}
+
+.senha-pessoal-admin__erro {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+}
+
+.senha-pessoal-admin__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.senha-pessoal-admin__kpi {
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.senha-pessoal-admin__kpi--ok {
+  border-color: rgba(13, 148, 136, 0.35);
+  background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%);
+}
+
+.senha-pessoal-admin__kpi--pend {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(180deg, #fffbeb 0%, #fff 100%);
+}
+
+.senha-pessoal-admin__kpi--pct {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.senha-pessoal-admin__kpi-valor {
+  font-size: 28px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.senha-pessoal-admin__kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.senha-pessoal-admin__panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+}
+
+.senha-pessoal-admin__panel-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.senha-pessoal-admin__vazio {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.senha-pessoal-admin__table-wrap {
+  overflow-x: auto;
+}
+
+.senha-pessoal-admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.senha-pessoal-admin__table th,
+.senha-pessoal-admin__table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.senha-pessoal-admin__table th {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.senha-pessoal-admin__table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* —— Frota operacional (transportes + manutenção) —— */

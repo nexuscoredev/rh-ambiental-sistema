@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BemVindoAlertaSenhaPessoal } from '../components/bemVindo/BemVindoAlertaSenhaPessoal'
 import { NovidadesSistemaModal } from '../components/bemVindo/NovidadesSistemaModal'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -72,6 +73,8 @@ export default function BemVindoNexus() {
           <p className="welcome-nexus__lead">
             Centralização de dados, padronização do fluxo e automação de processos.
           </p>
+
+          <BemVindoAlertaSenhaPessoal nome={nomeExibir} email={perfil?.email} />
 
           <div className="welcome-nexus__rule" aria-hidden />
 
