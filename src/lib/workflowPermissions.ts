@@ -670,3 +670,27 @@ export const cargoPodeEditarTicketOperacional = cargoPodeMutarTicketOperacional
 /** Alias explícito para pesagem + ticket padrão. */
 export const cargoPodeLancarTicketPadraoOperador = cargoPodeLancarPesagem
 export const cargoPodeDecidirAprovacaoDiretoria = cargoPodeMutarAprovacaoDiretoria
+
+/** Frota operacional — ler / incluir / editar / relatório. */
+export function cargoPodeAcessarFrotaOperacional(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('frota_operacional', 'ler', ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeMutarFrotaOperacional(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('frota_operacional', 'editar', ctxDeArgs(cargo, nome))
+}
+
+export function cargoPodeExcluirFrotaOperacional(
+  cargo: string | null | undefined,
+  nome?: string | null
+): boolean {
+  return rbacPode('frota_operacional', 'excluir', ctxDeArgs(cargo, nome))
+}
+
+export const cargoPodeGerarRelatorioFrotaOperacional = cargoPodeMutarFrotaOperacional

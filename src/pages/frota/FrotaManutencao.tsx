@@ -15,6 +15,8 @@ import { uploadFotosFrota } from '../../lib/frotaFotos'
 import { FROTA_HUB_PATH } from '../../lib/frotaModulos'
 import type { FrotaDiarioChecklist, FrotaDiarioRow, FrotaManutencaoRow, TipoManutencaoFrota } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
+import { FrotaPermissaoAviso } from '../../components/frota/FrotaPermissaoAviso'
+import { useFrotaPermissoes } from '../../hooks/useFrotaPermissoes'
 
 type CaminhaoOpt = {
   id: string
@@ -33,6 +35,7 @@ const CHECKLIST_ITENS: { key: keyof FrotaDiarioChecklist; label: string }[] = [
 ]
 
 export default function FrotaManutencao() {
+  const { podeMutar } = useFrotaPermissoes()
   const [caminhoes, setCaminhoes] = useState<CaminhaoOpt[]>([])
   const [veiculoId, setVeiculoId] = useState('')
   const [tab, setTab] = useState<'diario' | 'preventiva' | 'corretiva'>('diario')
@@ -137,6 +140,10 @@ export default function FrotaManutencao() {
 
   async function salvarDiario(e: React.FormEvent) {
     e.preventDefault()
+    if (!podeMutar) {
+      await rgAlert({ title: 'Permissão', message: 'O seu perfil não pode guardar o diário do veículo.' })
+      return
+    }
     if (!veiculoId || !assNome.trim()) {
       await rgAlert({ title: 'Dados em falta', message: 'Selecione o veículo e preencha a assinatura.' })
       return
@@ -182,6 +189,10 @@ export default function FrotaManutencao() {
 
   async function salvarManutencao(e: React.FormEvent) {
     e.preventDefault()
+    if (!podeMutar) {
+      await rgAlert({ title: 'Permissão', message: 'O seu perfil não pode registar manutenções.' })
+      return
+    }
     if (!veiculoId || !tituloMan.trim() || !assNome.trim()) {
       await rgAlert({ title: 'Dados em falta', message: 'Veículo, título e assinatura são obrigatórios.' })
       return
@@ -248,6 +259,8 @@ export default function FrotaManutencao() {
             </p>
           </div>
         </header>
+
+        <FrotaPermissaoAviso somenteLeitura={!podeMutar} />
 
         <div className="frota-veiculo-bar">
           <label className="frota-veiculo-bar__select">
@@ -373,19 +386,19 @@ export default function FrotaManutencao() {
                   urls={fotosDiarioUrls}
                   onUrlsChange={setFotosDiarioUrls}
                   onFilesSelect={(f) => setFotosDiarioFiles((p) => [...p, ...f])}
-                  disabled={salvando}
+                  disabled={!podeMutar || salvando}
                 />
                 <FrotaAssinaturaBloco
                   nome={assNome}
                   cargo={assCargo}
                   onNome={setAssNome}
                   onCargo={setAssCargo}
-                  disabled={salvando}
+                  disabled={!podeMutar || salvando}
                 />
               </section>
 
               <div className="frota-form-actions">
-                <button type="submit" className="frota-btn frota-btn--primary" disabled={salvando}>
+                <button type="submit" className="frota-btn frota-btn--primary" disabled={!podeMutar || salvando}>
                   {salvando ? 'A guardar…' : 'Guardar diário'}
                 </button>
               </div>
@@ -501,19 +514,19 @@ export default function FrotaManutencao() {
                   urls={fotosManUrls}
                   onUrlsChange={setFotosManUrls}
                   onFilesSelect={(f) => setFotosManFiles((p) => [...p, ...f])}
-                  disabled={salvando}
+                  disabled={!podeMutar || salvando}
                 />
                 <FrotaAssinaturaBloco
                   nome={assNome}
                   cargo={assCargo}
                   onNome={setAssNome}
                   onCargo={setAssCargo}
-                  disabled={salvando}
+                  disabled={!podeMutar || salvando}
                 />
               </section>
 
               <div className="frota-form-actions">
-                <button type="submit" className="frota-btn frota-btn--primary" disabled={salvando}>
+                <button type="submit" className="frota-btn frota-btn--primary" disabled={!podeMutar || salvando}>
                   {salvando ? 'A guardar…' : 'Registar manutenção'}
                 </button>
               </div>

@@ -19,10 +19,13 @@ import { FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos
 import type { EquipamentoClienteCatalogo, FrotaMovimentacaoRow, TipoMovimentacaoFrota } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { RgReportPdfIcon } from '../../components/ui/RgReportPdfIcon'
+import { FrotaPermissaoAviso } from '../../components/frota/FrotaPermissaoAviso'
+import { useFrotaPermissoes } from '../../hooks/useFrotaPermissoes'
 
 type CaminhaoOpt = { id: string; placa: string; modelo: string | null }
 
 export default function FrotaTransportes() {
+  const { podeMutar, podeRelatorio } = useFrotaPermissoes()
   const [tab, setTab] = useState<'equipamentos' | 'movimentacao'>('movimentacao')
   const [catalogo, setCatalogo] = useState<EquipamentoClienteCatalogo[]>([])
   const [movimentos, setMovimentos] = useState<FrotaMovimentacaoRow[]>([])
@@ -118,6 +121,13 @@ export default function FrotaTransportes() {
   }
 
   async function gerarRelatorioFormulario() {
+    if (!podeRelatorio) {
+      await rgAlert({
+        title: 'Permissão',
+        message: 'O seu perfil não pode gerar relatório para assinatura neste módulo.',
+      })
+      return
+    }
     const linha = linhaFormularioRelatorio()
     if (!linha) {
       await rgAlert({ title: 'Equipamento', message: 'Selecione um equipamento antes de gerar o relatório.' })
@@ -131,12 +141,14 @@ export default function FrotaTransportes() {
   }
 
   function gerarRelatorioMovimento(m: FrotaMovimentacaoRow) {
+    if (!podeRelatorio) return
     gerarRelatorioFrotaMovimentacaoPdf([
       movimentacaoRowParaRelatorio(m, labelTipo(m.tipo_movimentacao), placaVeiculo(m.caminhao_id)),
     ])
   }
 
   function gerarRelatorioRecentes() {
+    if (!podeRelatorio) return
     if (!movimentos.length) {
       void rgAlert({ title: 'Histórico', message: 'Não há movimentações recentes para exportar.' })
       return
@@ -149,6 +161,13 @@ export default function FrotaTransportes() {
 
   async function salvarMovimentacao(e: React.FormEvent) {
     e.preventDefault()
+    if (!podeMutar) {
+      await rgAlert({
+        title: 'Permissão',
+        message: 'O seu perfil não pode registar movimentações neste módulo.',
+      })
+      return
+    }
     if (!eqSel) {
       await rgAlert({ title: 'Equipamento', message: 'Selecione um equipamento do catálogo do cliente.' })
       return
@@ -215,6 +234,8 @@ export default function FrotaTransportes() {
             <p className="frota-page__lead">Equipamentos do contrato do cliente e registo de movimentação.</p>
           </div>
         </header>
+
+        <FrotaPermissaoAviso somenteLeitura={!podeMutar} />
 
         <div className="frota-tabs" role="tablist">
           <button
@@ -285,6 +306,7 @@ export default function FrotaTransportes() {
         ) : (
           <div className="frota-layout-2 frota-layout-2--transportes">
             <form className="frota-card frota-card--form" onSubmit={salvarMovimentacao}>
+              <fieldset disabled={!podeMutar || salvando} className="frota-form-fieldset">
               <h2>Nova movimentação</h2>
               <div className="frota-form-grid">
                 <label>
@@ -343,23 +365,28 @@ export default function FrotaTransportes() {
                 urls={fotosUrls}
                 onUrlsChange={setFotosUrls}
                 onFilesSelect={(f) => setFotosFiles((prev) => [...prev, ...f])}
-                disabled={salvando}
+                disabled={!podeMutar || salvando}
               />
               <FrotaAssinaturaBloco
                 nome={assNome}
                 cargo={assCargo}
                 onNome={setAssNome}
                 onCargo={setAssCargo}
-                disabled={salvando}
+                disabled={!podeMutar || salvando}
               />
+              </fieldset>
               <div className="frota-form-actions">
-                <button type="submit" className="frota-btn frota-btn--primary" disabled={salvando}>
+                <button
+                  type="submit"
+                  className="frota-btn frota-btn--primary"
+                  disabled={!podeMutar || salvando}
+                >
                   {salvando ? 'A guardar…' : 'Registar movimentação'}
                 </button>
                 <button
                   type="button"
                   className="frota-btn frota-btn--ghost"
-                  disabled={salvando}
+                  disabled={!podeRelatorio || salvando}
                   onClick={() => void gerarRelatorioFormulario()}
                 >
                   <RgReportPdfIcon className="frota-btn__icon" />
@@ -375,6 +402,7 @@ export default function FrotaTransportes() {
                   <button
                     type="button"
                     className="frota-btn frota-btn--ghost frota-btn--sm"
+                    disabled={!podeRelatorio}
                     onClick={gerarRelatorioRecentes}
                     title="Exportar todas as movimentações listadas"
                   >
@@ -418,6 +446,7 @@ export default function FrotaTransportes() {
                         <button
                           type="button"
                           className="frota-btn frota-btn--ghost frota-btn--sm frota-timeline__report"
+                          disabled={!podeRelatorio}
                           onClick={() => gerarRelatorioMovimento(m)}
                         >
                           <RgReportPdfIcon className="frota-btn__icon" />

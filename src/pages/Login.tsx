@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { BRAND_LOGIN_WORDMARK } from "../lib/brandLogo";
+import { LoginResetSenhaModal } from "../components/login/LoginResetSenhaModal";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [resetSenhaAberto, setResetSenhaAberto] = useState(false);
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
@@ -194,19 +196,24 @@ export default function Login() {
             {carregando ? "Entrando..." : "Entrar"}
           </button>
 
-          <p
-            style={{
-              margin: "18px 0 0",
-              fontSize: 13,
-              lineHeight: 1.5,
-              color: "#64748b",
-              textAlign: "center",
-            }}
-          >
-            Esqueceu a senha? Após entrar, use «Minha conta» para alterá-la. Se não conseguir aceder,
-            peça ao Desenvolvedor do sistema.
+          <p className="login-esqueci-senha">
+            Esqueceu a senha? Clique no{" "}
+            <button
+              type="button"
+              className="login-esqueci-senha__link"
+              onClick={() => setResetSenhaAberto(true)}
+            >
+              formulário
+            </button>
+            :
           </p>
         </form>
+
+        <LoginResetSenhaModal
+          open={resetSenhaAberto}
+          emailInicial={email}
+          onClose={() => setResetSenhaAberto(false)}
+        />
       </div>
     </div>
   );

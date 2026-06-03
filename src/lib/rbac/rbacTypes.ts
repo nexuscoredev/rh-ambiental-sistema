@@ -19,6 +19,7 @@ export type RbacRecurso =
   | 'comprovante_descarte'
   | 'conferencia_transporte'
   | 'faturamento'
+  | 'frota_operacional'
 
 export type UsuarioAcessoContext = {
   cargo?: string | null

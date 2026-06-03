@@ -149,9 +149,16 @@ const RH_CARGOS_POR_ROTA = Object.fromEntries(
   RH_ROTAS_SISTEMA.map(({ path }) => [path, RH])
 ) as Record<string, readonly string[]>
 
-/** Frota (transportes + manutenção) — perfis do fluxo operacional e gestão. */
+/** Frota: Operacional, Comercial (incl. Adm), Diretoria — sem Logística/Balanceiro/Faturamento. */
+const FROTA = [
+  ...ACESSO_TOTAL,
+  C.operacional,
+  C.diretoria,
+  C.comercial,
+] as const
+
 const FROTA_CARGOS_POR_ROTA = Object.fromEntries(
-  FROTA_ROTAS_SISTEMA.map(({ path }) => [path, [...FLUXO_COM_LOGISTICA]])
+  FROTA_ROTAS_SISTEMA.map(({ path }) => [path, [...FROTA]])
 ) as Record<string, readonly string[]>
 
 const FINANCEIRO_CARGOS_POR_ROTA = Object.fromEntries(

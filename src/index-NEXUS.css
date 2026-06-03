@@ -8329,6 +8329,24 @@ a.rg-btn {
 }
 
 /* —— Frota operacional (transportes + manutenção) —— */
+.frota-form-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.frota-permissao-aviso {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  background: rgba(45, 212, 191, 0.08);
+  color: var(--rh-text, #e2e8f0);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .frota-hub,
 .frota-page {
   max-width: 1280px;
@@ -9173,4 +9191,150 @@ a.rg-btn {
   height: 48px;
   border-bottom: 1px solid #0f172a;
   margin-top: 24px;
+}
+
+/* Login — reset de senha */
+.login-esqueci-senha {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+  text-align: center;
+}
+
+.login-esqueci-senha__link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #0f766e;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.login-esqueci-senha__link:hover {
+  color: #0d9488;
+}
+
+.login-reset-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-reset-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(2, 11, 45, 0.72);
+  cursor: pointer;
+}
+
+.login-reset-modal__panel {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: min(90dvh, 640px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.login-reset-modal__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0b1736;
+}
+
+.login-reset-modal__lead {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.login-reset-modal__label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.login-reset-modal__label span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0b1736;
+}
+
+.login-reset-modal__label input,
+.login-reset-modal__label textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.login-reset-modal__label textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.login-reset-modal__erro {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 13px;
+}
+
+.login-reset-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.login-reset-modal__btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.login-reset-modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-reset-modal__btn--primary {
+  background: #1fad49;
+  color: #fff;
+}
+
+.login-reset-modal__btn--ghost {
+  background: #f1f5f9;
+  color: #0b1736;
+}
+
+.login-reset-modal__ok p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #0b1736;
+  line-height: 1.5;
 }

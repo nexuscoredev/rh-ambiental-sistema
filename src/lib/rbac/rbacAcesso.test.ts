@@ -94,6 +94,18 @@ describe('rbac — conferência transporte', () => {
   })
 })
 
+describe('rbac — frota operacional', () => {
+  it('Operacional, Comercial e Diretoria editam; exclusão só Comercial Adm', () => {
+    expect(rbacPode('frota_operacional', 'editar', ctx('João', 'Operacional'))).toBe(true)
+    expect(rbacPode('frota_operacional', 'editar', ctx('Rafaela', 'Comercial'))).toBe(true)
+    expect(rbacPode('frota_operacional', 'editar', ctx('Ana Novaes', 'Diretoria'))).toBe(true)
+    expect(rbacPode('frota_operacional', 'excluir', ctx('Thais', 'Comercial Adm'))).toBe(true)
+    expect(rbacPode('frota_operacional', 'excluir', ctx('Rafaela', 'Comercial'))).toBe(false)
+    expect(rbacPode('frota_operacional', 'editar', ctx('Gabriel', 'Operadores (Time R)'))).toBe(false)
+    expect(rbacPode('frota_operacional', 'editar', ctx('Motorista', 'Logística'))).toBe(false)
+  })
+})
+
 describe('rbac — Diretoria (visão completa do fluxo)', () => {
   const ana = ctx('Ana Novaes', 'Diretoria')
 

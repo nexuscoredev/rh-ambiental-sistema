@@ -8,6 +8,8 @@ import { FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos
 import type { FrotaDiarioRow, FrotaManutencaoRow, FrotaMovimentacaoRow } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { isBenignSupabaseFetchError, mensagemErroSupabase } from '../../lib/supabaseErrors'
+import { FrotaPermissaoAviso } from '../../components/frota/FrotaPermissaoAviso'
+import { useFrotaPermissoes } from '../../hooks/useFrotaPermissoes'
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
@@ -31,6 +33,7 @@ function formatarPeriodo(de: string, ate: string) {
 }
 
 export default function FrotaRelatorio() {
+  const { podeRelatorio } = useFrotaPermissoes()
   const [de, setDe] = useState(() => inicioMesIso())
   const [ate, setAte] = useState(() => hojeIso())
   const [mov, setMov] = useState<FrotaMovimentacaoRow[]>([])
@@ -87,6 +90,7 @@ export default function FrotaRelatorio() {
   }, [])
 
   function confirmarAssinatura() {
+    if (!podeRelatorio) return
     if (!assNome.trim()) {
       void rgAlert({ title: 'Assinatura', message: 'Informe o nome do responsável RG.' })
       return
@@ -116,6 +120,8 @@ export default function FrotaRelatorio() {
           </div>
         </header>
 
+        <FrotaPermissaoAviso somenteLeitura={!podeRelatorio} />
+
         <section className="frota-card frota-relatorio-toolbar frota-page__head--print-hide">
           <div className="frota-form-grid frota-relatorio-toolbar__grid">
             <label>
@@ -140,7 +146,7 @@ export default function FrotaRelatorio() {
               type="button"
               className="frota-btn frota-btn--ghost"
               onClick={() => window.print()}
-              disabled={loading || !carregado}
+              disabled={!podeRelatorio || loading || !carregado}
             >
               Imprimir
             </button>
@@ -278,9 +284,20 @@ export default function FrotaRelatorio() {
 
         <section className="frota-card frota-page__head--print-hide">
           <h2>Assinatura do relatório</h2>
-          <FrotaAssinaturaBloco nome={assNome} cargo={assCargo} onNome={setAssNome} onCargo={setAssCargo} />
+          <FrotaAssinaturaBloco
+            nome={assNome}
+            cargo={assCargo}
+            onNome={setAssNome}
+            onCargo={setAssCargo}
+            disabled={!podeRelatorio}
+          />
           <div className="frota-form-actions">
-            <button type="button" className="frota-btn frota-btn--primary" onClick={confirmarAssinatura}>
+            <button
+              type="button"
+              className="frota-btn frota-btn--primary"
+              disabled={!podeRelatorio}
+              onClick={confirmarAssinatura}
+            >
               Confirmar assinatura no relatório
             </button>
           </div>

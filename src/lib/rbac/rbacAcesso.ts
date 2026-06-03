@@ -26,6 +26,15 @@ function cargoEhOperadoresTimeR(cargo: string | null | undefined): boolean {
 }
 
 /** Thais: cargo «Comercial Adm» (legado: Operacional Time T). */
+/** Cargo «Operacional» (sem Operadores / Time T/R) — módulo frota. */
+export function cargoEhOperacionalFrotaFluxo(cargo: string | null | undefined): boolean {
+  const c = normalizarTextoCargo(cargo)
+  if (!c.includes('operacional')) return false
+  if (cargoEhVisualizador(cargo)) return false
+  if (c.includes('operadores') || c.includes('time r') || c.includes('time t')) return false
+  return true
+}
+
 export function cargoEhComercialAdm(cargo: string | null | undefined): boolean {
   const c = normalizarTextoCargo(cargo)
   if (!c) return false
@@ -244,6 +253,23 @@ export function rbacPode(
       if (acao === 'ler') return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
       if (acao === 'criar' || acao === 'editar' || acao === 'excluir') {
         return usuarioEhEquipeComercial(ctx) || diretoriaAcessoNegocio(ctx)
+      }
+      return false
+    }
+    case 'frota_operacional': {
+      if (acao === 'excluir') {
+        return (
+          nomeEhThais(ctx) ||
+          cargoEhComercialAdm(ctx.cargo) ||
+          diretoriaAcessoNegocio(ctx)
+        )
+      }
+      if (acao === 'ler' || acao === 'criar' || acao === 'editar') {
+        return (
+          usuarioEhEquipeComercial(ctx) ||
+          diretoriaAcessoNegocio(ctx) ||
+          cargoEhOperacionalFrotaFluxo(ctx.cargo)
+        )
       }
       return false
     }
