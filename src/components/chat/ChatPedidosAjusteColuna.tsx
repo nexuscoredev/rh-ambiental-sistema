@@ -13,7 +13,8 @@ import {
   gerarRelatorioSolicitacoesPdf,
 } from '../../lib/gerarRelatorioSolicitacoesPdf'
 import type { ChatUsuarioLista } from '../../types/chat'
-import { rgAlert } from '../../lib/RgDialogProvider'
+import { rgAlert, useRgDialog } from '../../lib/RgDialogProvider'
+import { CHAT_PEDIDO_DETALHES_PADRAO_DEV } from '../../lib/chatPedidoAjuste'
 
 type Props = {
   modo: 'dev' | 'thais'
@@ -28,8 +29,10 @@ type Props = {
   aprovandoId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcarResolvido: (item: PedidoAjusteFilaItem) => Promise<void>
+  onPedirDetalhes?: (item: PedidoAjusteFilaItem, mensagem: string) => Promise<void>
   onEnviarFilaThais?: (item: PedidoAjusteFilaItem) => Promise<void>
   onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => Promise<void>
+  pedindoDetalhesId?: string | null
 }
 
 type AbaPedidos = 'fila' | 'negados' | 'historico'
@@ -380,6 +383,8 @@ function resumoHistorico(h: PedidoAjusteHistoricoItem): string | null {
   if (h.evento === 'aprovado_solicitante') return 'Pedido encerrado com aprovação.'
   if (h.evento === 'enviado_fila_thais') return 'Enviado para aprovação da Thais (pelo desenvolvedor).'
   if (h.evento === 'aprovado_fila_thais') return 'Thais aprovou — aguarda tratamento do desenvolvedor.'
+  if (h.evento === 'detalhes_solicitados_dev') return 'Desenvolvedor pediu mais detalhes ao solicitante.'
+  if (h.evento === 'detalhes_respondidos_solicitante') return 'Solicitante enviou complemento — pedido reaberto.'
   return null
 }
 
@@ -393,8 +398,10 @@ function PedidoCard({
   aprovandoId,
   onAbrirConversa,
   onMarcar,
+  onPedirDetalhes,
   onEnviarFilaThais,
   onAprovarFilaThais,
+  pedindoDetalhesId,
 }: {
   item: PedidoAjusteFilaItem
   modo: 'dev' | 'thais'
@@ -403,8 +410,10 @@ function PedidoCard({
   podeEnviarFilaThais?: boolean
   enviandoThaisId?: string | null
   aprovandoId?: string | null
+  pedindoDetalhesId?: string | null
   onAbrirConversa: (conversaId: string, outroId: string) => void
   onMarcar: (item: PedidoAjusteFilaItem) => void
+  onPedirDetalhes?: (item: PedidoAjusteFilaItem) => void
   onEnviarFilaThais?: (item: PedidoAjusteFilaItem) => void
   onAprovarFilaThais?: (item: PedidoAjusteFilaItem) => void
 }) {
@@ -416,9 +425,11 @@ function PedidoCard({
   const marcando = marcandoId === item.mensagemId
   const enviandoThais = enviandoThaisId === item.mensagemId
   const aprovando = aprovandoId === item.mensagemId
+  const pedindoDetalhes = pedindoDetalhesId === item.mensagemId
   const reaberto = item.situacao === 'reaberto'
+  const complemento = reaberto && item.tipoReabertura === 'complemento'
   const aprovadoThais = item.situacao === 'aprovado_thais'
-  const acaoBloqueada = Boolean(marcandoId || enviandoThaisId || aprovandoId)
+  const acaoBloqueada = Boolean(marcandoId || enviandoThaisId || aprovandoId || pedindoDetalhesId)
   const podeEscalar =
     modo === 'dev' &&
     Boolean(podeEnviarFilaThais && onEnviarFilaThais) &&
@@ -436,7 +447,7 @@ function PedidoCard({
     >
       {reaberto ? (
         <p className="chat-interno-pedido-card__badge-reaberto" role="status">
-          Negado pelo solicitante
+          {complemento ? 'Complemento do solicitante' : 'Negado pelo solicitante'}
           {item.ciclo > 1 ? ` · ciclo ${item.ciclo}` : ''}
         </p>
       ) : null}
@@ -465,7 +476,7 @@ function PedidoCard({
       ) : null}
       {item.justificativaSolicitante ? (
         <blockquote className="chat-interno-pedido-card__justificativa">
-          <strong>Motivo da negativa:</strong>
+          <strong>{complemento ? 'Complemento:' : 'Motivo da negativa:'}</strong>
           <p>{item.justificativaSolicitante}</p>
         </blockquote>
       ) : null}
@@ -489,6 +500,17 @@ function PedidoCard({
                 onClick={() => onEnviarFilaThais?.(item)}
               >
                 {enviandoThais ? 'A enviar…' : 'Enviar p/ fila Thais'}
+              </button>
+            ) : null}
+            {onPedirDetalhes ? (
+              <button
+                type="button"
+                className="chat-interno-pedido-card__btn chat-interno-pedido-card__btn--secundario"
+                disabled={acaoBloqueada}
+                onClick={() => onPedirDetalhes(item)}
+                title="Devolve ao solicitante pedindo mais informações (sem marcar como resolvido)"
+              >
+                {pedindoDetalhes ? 'A enviar…' : 'Pedir mais detalhes'}
               </button>
             ) : null}
             <button
@@ -519,9 +541,12 @@ export function ChatPedidosAjusteColuna({
   aprovandoId,
   onAbrirConversa,
   onMarcarResolvido,
+  onPedirDetalhes,
   onEnviarFilaThais,
   onAprovarFilaThais,
+  pedindoDetalhesId,
 }: Props) {
+  const { prompt } = useRgDialog()
   const filaNovos = useMemo(
     () => itens.filter((i) => i.situacao === 'novo' || i.situacao === 'aprovado_thais'),
     [itens]
@@ -535,7 +560,9 @@ export function ChatPedidosAjusteColuna({
           h.evento === 'resolvido_dev' ||
           h.evento === 'aprovado_solicitante' ||
           h.evento === 'enviado_fila_thais' ||
-          h.evento === 'aprovado_fila_thais'
+          h.evento === 'aprovado_fila_thais' ||
+          h.evento === 'detalhes_solicitados_dev' ||
+          h.evento === 'detalhes_respondidos_solicitante'
       ),
     [historico]
   )
@@ -553,6 +580,29 @@ export function ChatPedidosAjusteColuna({
       void rgAlert({
         title: 'Pedido de ajuste',
         message: e instanceof Error ? e.message : 'Não foi possível marcar como resolvido.',
+        variant: 'warning',
+      })
+    }
+  }
+
+  async function handlePedirDetalhes(item: PedidoAjusteFilaItem) {
+    if (!onPedirDetalhes) return
+    const texto = await prompt({
+      title: 'Pedir mais detalhes',
+      message:
+        'A mensagem será enviada ao solicitante na conversa. O pedido volta à fila quando ele responder.',
+      defaultValue: CHAT_PEDIDO_DETALHES_PADRAO_DEV,
+      placeholder: 'O que precisa saber para tratar o pedido?',
+      confirmLabel: 'Enviar ao solicitante',
+      cancelLabel: 'Cancelar',
+    })
+    if (texto == null || !texto.trim()) return
+    try {
+      await onPedirDetalhes(item, texto.trim())
+    } catch (e) {
+      void rgAlert({
+        title: 'Pedido de ajuste',
+        message: e instanceof Error ? e.message : 'Não foi possível pedir mais detalhes.',
         variant: 'warning',
       })
     }
@@ -594,7 +644,7 @@ export function ChatPedidosAjusteColuna({
       : {
           fila: 'Pedidos novos à espera da sua resposta.',
           negados:
-            'O solicitante negou o último ajuste. Leia a justificativa e marque como resolvido após corrigir.',
+            'Pedidos reabertos (negativa ou complemento após pedido de detalhes). Leia a resposta e trate o caso.',
           historico: 'Registo de respostas enviadas e pedidos aprovados.',
         }
 
@@ -699,6 +749,10 @@ export function ChatPedidosAjusteColuna({
                 aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onPedirDetalhes={
+                  modo === 'dev' && onPedirDetalhes ? (i) => void handlePedirDetalhes(i) : undefined
+                }
+                pedindoDetalhesId={pedindoDetalhesId}
                 onEnviarFilaThais={(i) => void handleEnviarFilaThais(i)}
                 onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />
@@ -724,6 +778,10 @@ export function ChatPedidosAjusteColuna({
                 aprovandoId={aprovandoId}
                 onAbrirConversa={onAbrirConversa}
                 onMarcar={(i) => void handleMarcar(i)}
+                onPedirDetalhes={
+                  modo === 'dev' && onPedirDetalhes ? (i) => void handlePedirDetalhes(i) : undefined
+                }
+                pedindoDetalhesId={pedindoDetalhesId}
                 onEnviarFilaThais={(i) => void handleEnviarFilaThais(i)}
                 onAprovarFilaThais={(i) => void handleAprovarFilaThais(i)}
               />

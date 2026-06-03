@@ -36,7 +36,9 @@ export default function SolicitacoesAjusteAdmin() {
     marcandoId,
     enviandoThaisId,
     aprovandoThaisId,
+    pedindoDetalhesId,
     recarregar,
+    pedirDetalhes,
     marcarResolvido,
     enviarFilaThais,
     aprovarFilaThais,
@@ -138,8 +140,8 @@ export default function SolicitacoesAjusteAdmin() {
               <div className="solicitacoes-admin__panel-head">
                 <h2>Fila de desenvolvimento</h2>
                 <p>
-                  Novos pedidos chegam aqui primeiro. Envie à Thais quando precisar de aprovação, ou
-                  marque como resolvido directamente.
+                  Novos pedidos chegam aqui primeiro. Pode pedir mais detalhes ao solicitante, enviar
+                  à Thais quando precisar de aprovação ou marcar como resolvido.
                 </p>
               </div>
               <div className="solicitacoes-admin__coluna-wrap">
@@ -156,6 +158,8 @@ export default function SolicitacoesAjusteAdmin() {
                   aprovandoId={aprovandoThaisId}
                   onAbrirConversa={abrirConversa}
                   onMarcarResolvido={marcarResolvido}
+                  onPedirDetalhes={pedirDetalhes}
+                  pedindoDetalhesId={pedindoDetalhesId}
                   onEnviarFilaThais={enviarFilaThais}
                   onAprovarFilaThais={aprovarFilaThais}
                 />

@@ -11,6 +11,8 @@ import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
 import type { ChatMensagem } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import { ChatPedidoAjusteFeedback } from './ChatPedidoAjusteFeedback'
+import { ChatPedidoAjusteDetalhes } from './ChatPedidoAjusteDetalhes'
+import type { PedidoAjusteAguardandoDetalhes } from '../../lib/chatPedidoAjuste'
 
 type Props = {
   meuId: string
@@ -41,6 +43,9 @@ type Props = {
     aprovado: boolean,
     justificativa?: string
   ) => Promise<void>
+  pedidosAguardandoDetalhes?: PedidoAjusteAguardandoDetalhes[]
+  respondendoDetalhesId?: string | null
+  onResponderDetalhesPedido?: (mensagemPedidoId: string, complemento: string) => Promise<void>
 }
 
 export function ChatThreadPanel({
@@ -62,10 +67,16 @@ export function ChatThreadPanel({
   pedidosAguardandoFeedback = [],
   decidindoPedidoAjusteId = null,
   onDecidirPedidoAjuste,
+  pedidosAguardandoDetalhes = [],
+  respondendoDetalhesId = null,
+  onResponderDetalhesPedido,
   outroLastReadAt = null,
 }: Props) {
   const feedbackPorResposta = new Map(
     pedidosAguardandoFeedback.map((p) => [p.respostaMensagemId, p])
+  )
+  const detalhesPorPergunta = new Map(
+    pedidosAguardandoDetalhes.map((p) => [p.perguntaMensagemId, p])
   )
   const mensagensVisiveis = ocultarPedidosAjusteNoHistorico
     ? mensagens.filter((m) => !chatMensagemEhPedidoAjuste(m))
@@ -234,6 +245,7 @@ export function ChatThreadPanel({
         ) : (
           mensagensVisiveis.map((m) => {
             const feedback = feedbackPorResposta.get(m.id)
+            const detalhes = detalhesPorPergunta.get(m.id)
             return (
               <MensagemBolha
                 key={m.id}
@@ -248,6 +260,17 @@ export function ChatThreadPanel({
                         decidindo: decidindoPedidoAjusteId === feedback.mensagemPedidoId,
                         onDecidir: (aprovado, justificativa) =>
                           onDecidirPedidoAjuste(feedback.mensagemPedidoId, aprovado, justificativa),
+                      }
+                    : undefined
+                }
+                detalhesPedido={
+                  detalhes && onResponderDetalhesPedido
+                    ? {
+                        mensagemPedidoId: detalhes.mensagemPedidoId,
+                        ciclo: detalhes.ciclo,
+                        enviando: respondendoDetalhesId === detalhes.mensagemPedidoId,
+                        onEnviar: (texto) =>
+                          onResponderDetalhesPedido(detalhes.mensagemPedidoId, texto),
                       }
                     : undefined
                 }
@@ -359,16 +382,25 @@ type FeedbackPedidoProps = {
   onDecidir: (aprovado: boolean, justificativa?: string) => Promise<void>
 }
 
+type DetalhesPedidoProps = {
+  mensagemPedidoId: string
+  ciclo: number
+  enviando: boolean
+  onEnviar: (texto: string) => Promise<void>
+}
+
 function MensagemBolha({
   m,
   meuId,
   outroLastReadAt,
   feedbackPedido,
+  detalhesPedido,
 }: {
   m: ChatMensagem
   meuId: string
   outroLastReadAt?: string | null
   feedbackPedido?: FeedbackPedidoProps
+  detalhesPedido?: DetalhesPedidoProps
 }) {
   const meu = m.remetente_id === meuId
   const [url, setUrl] = useState<string | null>(null)
@@ -498,6 +530,25 @@ function MensagemBolha({
                 title: 'Pedido de ajuste',
                 message:
                   e instanceof Error ? e.message : 'Não foi possível registar a sua decisão.',
+                variant: 'warning',
+              })
+              throw e
+            }
+          }}
+        />
+      ) : null}
+      {detalhesPedido ? (
+        <ChatPedidoAjusteDetalhes
+          ciclo={detalhesPedido.ciclo}
+          enviando={detalhesPedido.enviando}
+          onEnviarComplemento={async (texto) => {
+            try {
+              await detalhesPedido.onEnviar(texto)
+            } catch (e) {
+              void rgAlert({
+                title: 'Pedido de ajuste',
+                message:
+                  e instanceof Error ? e.message : 'Não foi possível enviar o complemento.',
                 variant: 'warning',
               })
               throw e

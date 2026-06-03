@@ -22,6 +22,7 @@ import {
   parseMargemLucroPercentual,
 } from "../lib/clienteMargemLucro";
 import { ClienteContratoCadastroSecoes } from "../components/clientes/ClienteContratoCadastroSecoes";
+import { RhHubHeroBanner } from "../components/hub/RhHubHeroBanner";
 import { ClienteGeradorDonoFaturamentoCampos } from "../components/clientes/ClienteGeradorDonoFaturamentoCampos";
 import {
   normalizarGeradorDonoFaturamentoOpcao,
@@ -2474,6 +2475,25 @@ export default function Clientes() {
 
   const totalExibidoKpi = totalCount != null ? totalCount : clientes.length;
 
+  const heroStats = useMemo(
+    () => [
+      {
+        value: loading ? "…" : totalExibidoKpi,
+        label: "clientes",
+      },
+      {
+        value: loading ? "…" : clientes.length,
+        label: "nesta página",
+      },
+      {
+        value: "Cadastro",
+        label: "contrato · MTR · coleta",
+        soft: true,
+      },
+    ],
+    [loading, totalExibidoKpi, clientes.length]
+  );
+
   useEffect(() => {
     if (page <= totalPaginas) return;
     const id = window.setTimeout(() => setPage(totalPaginas), 0);
@@ -2482,7 +2502,7 @@ export default function Clientes() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell rh-hub">
       <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
         {sucesso && (
           <div
@@ -2500,38 +2520,29 @@ export default function Clientes() {
           </div>
         )}
 
+        <RhHubHeroBanner
+          titleId="clientes-title"
+          eyebrow="RG Ambiental · Clientes"
+          title="Clientes"
+          lead={
+            <>
+              Cadastro da carteira para <strong>Programação</strong>, <strong>MTR</strong>,{" "}
+              <strong>Controle de Massa</strong> e o seguimento da coleta.
+            </>
+          }
+          stats={heroStats}
+        />
+
         <div
+          className="rg-page-toolbar"
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "20px",
             flexWrap: "wrap",
+            gap: "10px",
+            alignItems: "center",
+            justifyContent: "flex-end",
           }}
         >
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "26px",
-                fontWeight: 800,
-                color: "#0f172a",
-              }}
-            >
-              Cadastro da carteira de clientes
-            </h1>
-            <p className="page-header__lead" style={{ margin: "6px 0 0" }}>
-              Cadastro base para <strong>Programação</strong>, <strong>MTR</strong>,{" "}
-              <strong>Controle de Massa</strong> e o seguimento da coleta.
-            </p>
-          </div>
-
-          <div className="rg-page-toolbar">
-            <div className="rg-kpi-card">
-              <div className="rg-kpi-card__label">Total de clientes</div>
-              <div className="rg-kpi-card__value">{totalExibidoKpi}</div>
-            </div>
-
             <button
               type="button"
               className="rg-btn rg-btn--report"
@@ -2597,7 +2608,6 @@ export default function Clientes() {
             >
               Novo cliente
             </button>
-          </div>
         </div>
 
         {importResumo ? (

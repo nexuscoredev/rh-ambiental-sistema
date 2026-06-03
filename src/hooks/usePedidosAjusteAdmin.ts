@@ -8,6 +8,7 @@ import {
   chatListarPedidosAjusteFilaThais,
   chatListarPedidosAjustePendentes,
   chatMarcarPedidoAjusteResolvido,
+  chatPedirDetalhesPedidoAjuste,
   type PedidoAjusteFilaItem,
   type PedidoAjusteHistoricoItem,
 } from '../lib/chatPedidoAjuste'
@@ -25,6 +26,7 @@ export function usePedidosAjusteAdmin() {
   const [marcandoId, setMarcandoId] = useState<string | null>(null)
   const [aprovandoThaisId, setAprovandoThaisId] = useState<string | null>(null)
   const [enviandoThaisId, setEnviandoThaisId] = useState<string | null>(null)
+  const [pedindoDetalhesId, setPedindoDetalhesId] = useState<string | null>(null)
 
   const usuariosPorId = useMemo(
     () => new Map(usuarios.map((u) => [u.id, u])),
@@ -97,6 +99,24 @@ export function usePedidosAjusteAdmin() {
     void recarregar()
   }, [meuId, recarregar])
 
+  const pedirDetalhes = useCallback(
+    async (item: PedidoAjusteFilaItem, mensagem: string) => {
+      if (!meuId) return
+      setPedindoDetalhesId(item.mensagemId)
+      setErro('')
+      try {
+        await chatPedirDetalhesPedidoAjuste(item.conversaId, item.mensagemId, meuId, mensagem)
+        await recarregar()
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível pedir mais detalhes.')
+        throw e
+      } finally {
+        setPedindoDetalhesId(null)
+      }
+    },
+    [meuId, recarregar]
+  )
+
   const marcarResolvido = useCallback(
     async (item: PedidoAjusteFilaItem) => {
       if (!meuId) return
@@ -163,7 +183,9 @@ export function usePedidosAjusteAdmin() {
     marcandoId,
     aprovandoThaisId,
     enviandoThaisId,
+    pedindoDetalhesId,
     recarregar,
+    pedirDetalhes,
     marcarResolvido,
     enviarFilaThais,
     aprovarFilaThais,

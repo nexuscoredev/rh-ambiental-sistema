@@ -50,6 +50,7 @@ import {
   type PassoUiEsteiraFaturamento,
 } from '../lib/faturamentoEsteira'
 import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
+import { RhHubHeroBanner } from '../components/hub/RhHubHeroBanner'
 import {
   escolherColetaLiderFaturamento,
   resolverGrupoFaturamentoNaFila,
@@ -408,12 +409,47 @@ export default function FaturamentoOperacional() {
     setModalGrupoConsolidado(undefined)
   }
 
+  const heroStats = useMemo(
+    () => [
+      {
+        value: carregandoVista ? '…' : linhasOperacional.length,
+        label: 'coletas em andamento',
+      },
+      {
+        value: carregandoVista ? '…' : fila.length,
+        label: 'prontas para emitir',
+      },
+      {
+        value: 'Esteira',
+        label: 'ticket · medição · NF',
+        soft: true,
+      },
+    ],
+    [carregandoVista, linhasOperacional.length, fila.length]
+  )
+
   return (
     <MainLayout>
-      <div className="page-shell">
-        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+      <div className="page-shell rh-hub">
+        <RhHubHeroBanner
+          titleId="faturamento-operacional-title"
+          eyebrow="RG Ambiental · Faturamento"
+          title="Faturamento"
+          lead="Consolidação e emissão por coleta — conferência do ticket, medição, NF e encaminhamento ao Financeiro."
+          stats={heroStats}
+        />
+
+        <h2
+          style={{
+            margin: '0 0 0',
+            fontSize: '18px',
+            fontWeight: 800,
+            color: '#0f172a',
+            letterSpacing: '-0.02em',
+          }}
+        >
           Consolidação e emissão por coleta
-        </h1>
+        </h2>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
           Esteira: <strong>conferência do ticket</strong> → <strong>ajuste de valores</strong> →{' '}
           <strong>relatório de medição</strong> →{' '}

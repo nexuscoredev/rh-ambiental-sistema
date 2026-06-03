@@ -8,7 +8,14 @@ export const CHAT_PEDIDO_AJUSTE_PREFIX = '[Solicitação de ajuste no sistema]'
 export const CHAT_RESPOSTA_AJUSTE_RESOLVIDO =
   'Ajustamos conforme a sua solicitação, pode testar por gentileza?'
 
-export type PedidoAjusteStatus = 'aguardando_solicitante' | 'reaberto' | 'aprovado'
+export type PedidoAjusteStatus =
+  | 'aguardando_solicitante'
+  | 'aguardando_detalhes'
+  | 'reaberto'
+  | 'aprovado'
+
+export const CHAT_PEDIDO_DETALHES_PADRAO_DEV =
+  'Precisamos de mais detalhes sobre o seu pedido para conseguir tratar o caso. Pode complementar com passos para reproduzir, exemplos ou o que esperava ver no sistema?'
 
 export type PedidoAjusteEscalacaoThaisStatus = 'aguardando' | 'aprovado'
 
@@ -80,6 +87,10 @@ export function etiquetaEventoPedidoAjusteHistorico(
       return 'Solicitante aprovou'
     case 'negado_solicitante':
       return 'Solicitante reabriu o pedido'
+    case 'detalhes_solicitados_dev':
+      return 'Desenvolvedor pediu mais detalhes'
+    case 'detalhes_respondidos_solicitante':
+      return 'Solicitante enviou complemento'
     case 'enviado_fila_thais':
       return 'Enviado para aprovação da Thais'
     case 'aprovado_fila_thais':
@@ -135,6 +146,8 @@ export type PedidoAjusteFilaItem = {
   parseado: PedidoAjusteParseado | null
   /** Novo pedido, reaberto pelo solicitante ou devolvido após aprovação da Thais. */
   situacao: 'novo' | 'reaberto' | 'aprovado_thais'
+  /** Quando reaberto: negativa após resolução ou complemento após pedido de detalhes. */
+  tipoReabertura?: 'negativa' | 'complemento'
   justificativaSolicitante?: string
   ciclo: number
   /** Preenchido quando o pedido voltou da fila da Thais para o dev que escalou. */
@@ -148,11 +161,25 @@ export type PedidoAjusteAguardandoFeedback = {
   ciclo: number
 }
 
+export type PedidoAjusteAguardandoDetalhes = {
+  mensagemPedidoId: string
+  perguntaMensagemId: string
+  conversaId: string
+  ciclo: number
+}
+
 export type PedidoAjusteHistoricoItem = {
   id: string
   mensagemPedidoId: string
   conversaId: string
-  evento: 'resolvido_dev' | 'aprovado_solicitante' | 'negado_solicitante' | 'enviado_fila_thais' | 'aprovado_fila_thais'
+  evento:
+    | 'resolvido_dev'
+    | 'aprovado_solicitante'
+    | 'negado_solicitante'
+    | 'enviado_fila_thais'
+    | 'aprovado_fila_thais'
+    | 'detalhes_solicitados_dev'
+    | 'detalhes_respondidos_solicitante'
   actorId: string
   texto: string | null
   ciclo: number
@@ -206,6 +233,8 @@ export function rotuloSituacaoPedidoAjuste(status: PedidoAjusteStatus | null | u
       return 'Negado — reaberto'
     case 'aguardando_solicitante':
       return 'Aguardando confirmação'
+    case 'aguardando_detalhes':
+      return 'Aguardando complemento'
     case 'aprovado':
       return 'Aprovado'
     default:
@@ -233,7 +262,9 @@ function situacaoCoincideFiltro(
   if (filtro === 'todas') return true
   if (filtro === 'novo') return !status
   if (filtro === 'negado') return status === 'reaberto'
-  if (filtro === 'aguardando') return status === 'aguardando_solicitante'
+  if (filtro === 'aguardando') {
+    return status === 'aguardando_solicitante' || status === 'aguardando_detalhes'
+  }
   if (filtro === 'aprovado') return status === 'aprovado'
   return true
 }
@@ -258,6 +289,7 @@ function pedidoEstaNaFilaDev(
     return row.status === 'reaberto'
   }
   if (!row) return true
+  if (row.status === 'aguardando_detalhes' || row.status === 'aguardando_solicitante') return false
   return row.status === 'reaberto'
 }
 
@@ -320,6 +352,39 @@ async function carregarEscalacoesThaisPorMensagens(
   return map
 }
 
+function tipoReaberturaDoEvento(evento: string | undefined): 'negativa' | 'complemento' | undefined {
+  if (evento === 'detalhes_respondidos_solicitante') return 'complemento'
+  if (evento === 'negado_solicitante') return 'negativa'
+  return undefined
+}
+
+async function carregarUltimoEventoReaberturaPorMensagem(
+  mensagemIds: string[]
+): Promise<Map<string, 'negativa' | 'complemento'>> {
+  const map = new Map<string, 'negativa' | 'complemento'>()
+  if (mensagemIds.length === 0) return map
+
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_historico')
+    .select('mensagem_pedido_id, evento, created_at')
+    .in('mensagem_pedido_id', mensagemIds)
+    .in('evento', ['negado_solicitante', 'detalhes_respondidos_solicitante'])
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return map
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  for (const row of data ?? []) {
+    const id = String(row.mensagem_pedido_id)
+    if (map.has(id)) continue
+    const tipo = tipoReaberturaDoEvento(String(row.evento))
+    if (tipo) map.set(id, tipo)
+  }
+  return map
+}
+
 function montarItemFilaPedido(
   row: {
     id: string
@@ -329,7 +394,8 @@ function montarItemFilaPedido(
     created_at: string
   },
   reg: ResolvidoRow | undefined,
-  escalacao: PedidoAjusteEscalacaoThaisRow | undefined
+  escalacao: PedidoAjusteEscalacaoThaisRow | undefined,
+  tipoReabertura?: 'negativa' | 'complemento'
 ): PedidoAjusteFilaItem {
   const conteudo = String(row.conteudo ?? '')
   const reaberto = reg?.status === 'reaberto'
@@ -342,6 +408,7 @@ function montarItemFilaPedido(
     createdAt: String(row.created_at),
     parseado: parsePedidoAjusteConteudo(conteudo),
     situacao: reaberto ? 'reaberto' : aprovadoThais ? 'aprovado_thais' : 'novo',
+    tipoReabertura: reaberto ? tipoReabertura : undefined,
     justificativaSolicitante: reaberto
       ? String(reg?.justificativa_solicitante ?? '').trim() || undefined
       : undefined,
@@ -382,6 +449,16 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
   const mensagemIds = (data ?? []).map((row) => String(row.id))
   const escalacaoPorMensagem = await carregarEscalacoesThaisPorMensagens(mensagemIds)
 
+  const reabertoIds: string[] = []
+  for (const row of data ?? []) {
+    const mensagemId = String(row.id)
+    const reg = resolvidoPorMensagem.get(mensagemId)
+    const escalacao = escalacaoPorMensagem.get(mensagemId)
+    if (!pedidoEstaNaFilaDev(reg, escalacao, uid)) continue
+    if (reg?.status === 'reaberto') reabertoIds.push(mensagemId)
+  }
+  const tipoReaberturaPorMensagem = await carregarUltimoEventoReaberturaPorMensagem(reabertoIds)
+
   const itens: PedidoAjusteFilaItem[] = []
   for (const row of data ?? []) {
     const mensagemId = String(row.id)
@@ -389,7 +466,9 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
     const escalacao = escalacaoPorMensagem.get(mensagemId)
     if (!pedidoEstaNaFilaDev(reg, escalacao, uid)) continue
 
-    itens.push(montarItemFilaPedido(row, reg, escalacao))
+    itens.push(
+      montarItemFilaPedido(row, reg, escalacao, tipoReaberturaPorMensagem.get(mensagemId))
+    )
   }
   return itens
 }
@@ -644,6 +723,53 @@ export async function chatListarPedidosAguardandoFeedbackSolicitante(
   return out
 }
 
+/** Pedidos em que o desenvolvedor pediu complemento (solicitante responde na conversa). */
+export async function chatListarPedidosAguardandoDetalhesSolicitante(
+  conversaId: string,
+  meuId: string
+): Promise<PedidoAjusteAguardandoDetalhes[]> {
+  const cid = conversaId.trim()
+  const uid = meuId.trim()
+  if (!cid || !uid) return []
+
+  const { data: pedidos, error: pedErr } = await supabase
+    .from('chat_mensagens')
+    .select('id')
+    .eq('conversa_id', cid)
+    .eq('remetente_id', uid)
+    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+
+  if (pedErr) throw new Error(mensagemErroPedidoAjuste(pedErr))
+  const ids = (pedidos ?? []).map((p) => String(p.id))
+  if (ids.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, resposta_mensagem_id, conversa_id, status, ciclo')
+    .eq('conversa_id', cid)
+    .in('mensagem_id', ids)
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return []
+    if (colunaInexistente(error)) return []
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  const out: PedidoAjusteAguardandoDetalhes[] = []
+  for (const row of data ?? []) {
+    if ((row.status ?? '') !== 'aguardando_detalhes') continue
+    const perguntaId = row.resposta_mensagem_id ? String(row.resposta_mensagem_id) : ''
+    if (!perguntaId) continue
+    out.push({
+      mensagemPedidoId: String(row.mensagem_id),
+      perguntaMensagemId: perguntaId,
+      conversaId: String(row.conversa_id),
+      ciclo: Number(row.ciclo ?? 1) || 1,
+    })
+  }
+  return out
+}
+
 /** Histórico recente de decisões (desenvolvedor). */
 export async function chatListarHistoricoPedidosAjuste(limite = 40): Promise<PedidoAjusteHistoricoItem[]> {
   const { data, error } = await supabase
@@ -841,6 +967,10 @@ async function marcarPedidoAjusteResolvidoLegado(
     throw new Error('Este pedido já foi tratado (aguarda o solicitante ou está encerrado).')
   }
 
+  if (status === 'aguardando_detalhes') {
+    throw new Error('Este pedido aguarda complemento do solicitante.')
+  }
+
   const resposta = await chatEnviarTexto(
     conversaId,
     uid,
@@ -904,7 +1034,10 @@ async function decidirPedidoAjusteLegado(
     .maybeSingle()
 
   if (regErr) throw new Error(mensagemErroPedidoAjuste(regErr))
-  if (!reg || reg.status !== 'aguardando_solicitante') {
+  if (!reg || reg.status === 'aguardando_detalhes') {
+    throw new Error('Responda primeiro ao pedido de mais detalhes do desenvolvimento.')
+  }
+  if (reg.status !== 'aguardando_solicitante') {
     throw new Error('Não há ajuste pendente da sua confirmação para este pedido.')
   }
 
@@ -1029,6 +1162,107 @@ export async function chatMarcarPedidoAjusteResolvido(
     meuId,
     conteudoPedido
   )
+}
+
+export async function chatPedirDetalhesPedidoAjuste(
+  conversaId: string,
+  mensagemPedidoId: string,
+  meuId: string,
+  mensagem?: string
+): Promise<ChatMensagem> {
+  await validarEscalacaoThaisAntesResolver(mensagemPedidoId, meuId)
+  await carregarConteudoPedidoAjuste(conversaId, mensagemPedidoId)
+
+  const texto = (mensagem ?? '').trim() || CHAT_PEDIDO_DETALHES_PADRAO_DEV
+
+  const rpc = await supabase.rpc('chat_pedir_detalhes_pedido_ajuste', {
+    p_conversa_id: conversaId,
+    p_mensagem_pedido_id: mensagemPedidoId,
+    p_mensagem: texto,
+  })
+
+  if (!rpc.error && rpc.data != null) {
+    return mensagemPrimeiraLinhaRpc(rpc.data)
+  }
+
+  if (rpc.error && !rpcIndisponivel(rpc.error)) {
+    const msg = mensagemErroPedidoAjuste(rpc.error)
+    if (/does not exist|relation|42P01|42883/i.test(msg)) {
+      throw new Error(
+        'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-pedir-detalhes.'
+      )
+    }
+    throw new Error(msg)
+  }
+
+  throw new Error(
+    'Funcionalidade ainda não activa no Supabase. Execute npm run db:apply:chat-pedido-ajuste-pedir-detalhes.'
+  )
+}
+
+export async function chatResponderDetalhesPedidoAjuste(
+  mensagemPedidoId: string,
+  complemento: string
+): Promise<ChatMensagem> {
+  const texto = complemento.trim()
+  if (texto.length < 3) {
+    throw new Error('Descreva o complemento com pelo menos 3 caracteres.')
+  }
+
+  const rpc = await supabase.rpc('chat_responder_detalhes_pedido_ajuste', {
+    p_mensagem_pedido_id: mensagemPedidoId,
+    p_complemento: texto,
+  })
+
+  if (!rpc.error && rpc.data != null) {
+    return mensagemPrimeiraLinhaRpc(rpc.data)
+  }
+
+  if (rpc.error && !rpcIndisponivel(rpc.error)) {
+    throw new Error(mensagemErroPedidoAjuste(rpc.error))
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const uid = user?.id
+  if (!uid) throw new Error('Sessão inválida.')
+
+  const { data: msg } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id')
+    .eq('id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (!msg) throw new Error('Pedido não encontrado.')
+  if (String(msg.remetente_id) !== uid) {
+    throw new Error('Apenas quem abriu o pedido pode enviar o complemento.')
+  }
+
+  const { data: reg } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('status, ciclo')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (!reg || reg.status !== 'aguardando_detalhes') {
+    throw new Error('Não há pedido de detalhes pendente para este caso.')
+  }
+
+  const resposta = await chatEnviarTexto(String(msg.conversa_id), uid, texto)
+
+  const { error: upErr } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .update({
+      status: 'reaberto',
+      justificativa_solicitante: texto,
+      decidido_por: uid,
+      decidido_em: new Date().toISOString(),
+    })
+    .eq('mensagem_id', mensagemPedidoId)
+
+  if (upErr) throw new Error(mensagemErroPedidoAjuste(upErr))
+  return resposta
 }
 
 export async function chatDecidirPedidoAjusteSolicitante(
