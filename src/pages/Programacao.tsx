@@ -18,6 +18,7 @@ import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
 import ProgramacaoFiltroCaminhao from '../components/programacao/ProgramacaoFiltroCaminhao'
+import { RhHubHeroBanner } from '../components/hub/RhHubHeroBanner'
 import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
 import {
   TIPOS_CAMINHAO_CATALOGO,
@@ -1961,80 +1962,95 @@ export default function Programacao() {
     )
   }
 
+  const heroStats = useMemo(
+    () => [
+      {
+        value: loading ? '…' : programacoesFiltradas.length,
+        label: 'visíveis',
+      },
+      {
+        value: loading ? '…' : programacoesNoMes.length,
+        label: 'no mês',
+      },
+      {
+        value: formatMonthLabelTitulo(mesSelecionado),
+        label: 'calendário',
+        soft: true,
+      },
+    ],
+    [loading, programacoesFiltradas.length, programacoesNoMes.length, mesSelecionado]
+  )
+
   return (
     <MainLayout>
-      <div className="page-shell">
-      <div
-        style={{
-          marginBottom: '20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: '16px',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ flex: '1', minWidth: 'min(100%, 260px)' }}>
-          <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
-            Calendário das programações de Coleta
-          </h1>
-          <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
-            <strong>Fluxo:</strong> Programação → MTR → Controle de Massa (pesagem). Monte o calendário e
-            cadastre visitas; o status no calendário acompanha automaticamente MTR e coleta (não é editável
-            aqui).
-          </p>
-          {usuarioCargo ? (
-            <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
-              Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
-              {!podeMutarProgramacao ? ' · somente consulta' : ' · pode criar e editar'}
-            </p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className="rg-btn rg-btn--report"
-          style={{ flexShrink: 0, alignSelf: 'flex-start' }}
-          onClick={() => {
-            setRelatorioDiaRef(todayIsoLocal())
-            setRelatorioMesRef(mesSelecionado)
-            setRelatorioFiltro('dia')
-            setRelatorioAberto(true)
-          }}
-          aria-label="Abrir relatório de programações"
-        >
-          <RgReportPdfIcon className="rg-btn__icon" />
-          Relatório (PDF)
-        </button>
-      </div>
+      <div className="page-shell rh-hub programacao-page">
+        <RhHubHeroBanner
+          titleId="programacao-title"
+          eyebrow="RG Ambiental · Programação"
+          title="Calendário das programações de Coleta"
+          lead={
+            <>
+              <strong>Fluxo:</strong> Programação → MTR → Controle de Massa (pesagem). O status no
+              calendário acompanha MTR e coleta automaticamente.
+              {usuarioCargo ? (
+                <>
+                  {' '}
+                  Perfil: <strong>{usuarioCargo}</strong>
+                  {!podeMutarProgramacao ? ' · somente consulta' : ' · pode criar e editar'}
+                </>
+              ) : null}
+            </>
+          }
+          stats={heroStats}
+        />
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button
-          type="button"
-          className="rg-btn rg-btn--outline"
-          onClick={() => void carregarDados()}
-          disabled={loading}
-        >
-          {loading ? 'Atualizando...' : 'Atualizar'}
-        </button>
+        <div className="programacao-page__controls">
+          <div className="programacao-page__controls-acoes">
+            <button
+              type="button"
+              className="rg-btn rg-btn--outline"
+              onClick={() => void carregarDados()}
+              disabled={loading}
+            >
+              {loading ? 'Atualizando...' : 'Atualizar'}
+            </button>
 
-        {podeMutarProgramacao ? (
+            {podeMutarProgramacao ? (
+              <button
+                type="button"
+                className="rg-btn rg-btn--primary"
+                onClick={() => abrirModalNovaProgramacao()}
+                title="Abrir formulário de nova programação (data inicial = hoje)"
+              >
+                + Nova programação
+              </button>
+            ) : null}
+
+            <input
+              type="month"
+              value={mesSelecionado}
+              onChange={(event) => setMesSelecionado(event.target.value)}
+              className="programacao-page__controls-mes"
+              style={inputStyle}
+              aria-label="Mês do calendário"
+            />
+          </div>
+
           <button
             type="button"
-            className="rg-btn rg-btn--primary"
-            onClick={() => abrirModalNovaProgramacao()}
-            title="Abrir formulário de nova programação (data inicial = hoje)"
+            className="rg-btn rg-btn--report"
+            onClick={() => {
+              setRelatorioDiaRef(todayIsoLocal())
+              setRelatorioMesRef(mesSelecionado)
+              setRelatorioFiltro('dia')
+              setRelatorioAberto(true)
+            }}
+            aria-label="Abrir relatório de programações"
           >
-            + Nova programação
+            <RgReportPdfIcon className="rg-btn__icon" />
+            Relatório (PDF)
           </button>
-        ) : null}
-
-        <input
-          type="month"
-          value={mesSelecionado}
-          onChange={(event) => setMesSelecionado(event.target.value)}
-          style={{ ...inputStyle, width: '220px' }}
-          aria-label="Mês do calendário"
-        />
+        </div>
 
         <ProgramacaoFiltroCaminhao
           filtroTipo={filtroTipoCaminhao}
@@ -2047,7 +2063,6 @@ export default function Programacao() {
           totalFiltradoNoMes={programacoesFiltradas.length}
           inputStyle={inputStyle}
         />
-      </div>
 
       {erro ? <FloatingAlert message={erro} variant="error" onClose={() => setErro('')} /> : null}
       {sucesso ? (

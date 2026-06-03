@@ -72,7 +72,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     title: 'Fluxo operacional',
     items: [
       {
-        label: 'Coleta e emissão',
+        label: 'Programações',
         path: '/programacao',
         children: MENU_COLETA_EMISSAO_CHILDREN,
       },

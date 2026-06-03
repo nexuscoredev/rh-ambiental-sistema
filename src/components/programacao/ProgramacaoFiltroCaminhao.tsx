@@ -40,11 +40,6 @@ const chipAtivo: CSSProperties = {
   color: '#0f766e',
 }
 
-const chipZero: CSSProperties = {
-  ...chipBase,
-  opacity: 0.55,
-}
-
 export default function ProgramacaoFiltroCaminhao({
   filtroTipo,
   onFiltroTipoChange,
@@ -57,6 +52,7 @@ export default function ProgramacaoFiltroCaminhao({
   inputStyle,
 }: Props) {
   const [busca, setBusca] = useState('')
+  const [mostrarTodosTipos, setMostrarTodosTipos] = useState(false)
 
   const contagemPorTipo = useMemo(
     () => new Map(contagensTipoNoMes.map((c) => [c.tipo.toLowerCase(), c.count])),
@@ -76,27 +72,32 @@ export default function ProgramacaoFiltroCaminhao({
     for (const tipo of TIPOS_CAMINHAO_LISTA) {
       if (vistos.has(tipo.toLowerCase())) continue
       vistos.add(tipo.toLowerCase())
+      const count = contagemPorTipo.get(tipo.toLowerCase()) ?? 0
+      const ativoFiltro = filtroTipo.trim().toLowerCase() === tipo.trim().toLowerCase()
+      if (!mostrarTodosTipos && count === 0 && !ativoFiltro) continue
       if (!textoBuscaCombinaCaminhao(busca, tipo)) continue
-      lista.push({
-        tipo,
-        count: contagemPorTipo.get(tipo.toLowerCase()) ?? 0,
-        catalogo: true,
-      })
+      lista.push({ tipo, count, catalogo: true })
     }
 
     for (const tipo of tiposLegadoNoMes) {
       if (vistos.has(tipo.toLowerCase())) continue
       vistos.add(tipo.toLowerCase())
+      const count = contagemPorTipo.get(tipo.toLowerCase()) ?? 0
       if (!textoBuscaCombinaCaminhao(busca, tipo)) continue
-      lista.push({
-        tipo,
-        count: contagemPorTipo.get(tipo.toLowerCase()) ?? 0,
-        catalogo: false,
-      })
+      lista.push({ tipo, count, catalogo: false })
     }
 
     return lista.sort((a, b) => b.count - a.count || a.tipo.localeCompare(b.tipo, 'pt-BR'))
-  }, [busca, contagemPorTipo, tiposLegadoNoMes])
+  }, [busca, contagemPorTipo, tiposLegadoNoMes, mostrarTodosTipos, filtroTipo])
+
+  const tiposOcultosCount = useMemo(() => {
+    if (mostrarTodosTipos || busca.trim()) return 0
+    let n = 0
+    for (const tipo of TIPOS_CAMINHAO_LISTA) {
+      if ((contagemPorTipo.get(tipo.toLowerCase()) ?? 0) === 0) n += 1
+    }
+    return n
+  }, [mostrarTodosTipos, busca, contagemPorTipo])
 
   const veiculosFiltrados = useMemo(() => {
     return veiculosNoMes.filter((v) => {
@@ -108,11 +109,11 @@ export default function ProgramacaoFiltroCaminhao({
   }, [veiculosNoMes, filtroTipo, busca])
 
   const filtroAtivo = Boolean(filtroTipo || filtroCaminhaoId)
-
   const placaSelecionada = veiculosNoMes.find((v) => v.id === filtroCaminhaoId)?.placa
 
   function limparFiltros() {
     setBusca('')
+    setMostrarTodosTipos(false)
     onFiltroTipoChange('')
     onFiltroCaminhaoIdChange('')
   }
@@ -124,29 +125,17 @@ export default function ProgramacaoFiltroCaminhao({
   }
 
   return (
-    <div
-      style={{
-        flex: '1 1 320px',
-        minWidth: 'min(100%, 280px)',
-        maxWidth: '640px',
-        padding: '12px 14px',
-        borderRadius: '14px',
-        border: '1px solid #e2e8f0',
-        background: '#f8fafc',
-        display: 'grid',
-        gap: '10px',
-      }}
-    >
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
+    <section className="programacao-filtro-caminhao" aria-label="Filtrar caminhões">
+      <div className="programacao-filtro-caminhao__head">
         <div>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Filtrar caminhões</div>
-          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-            Busque ou clique no tipo (ex.: Baú). Opcional: filtre por placa.
-          </div>
+          <h2 className="programacao-filtro-caminhao__title">Filtrar caminhões</h2>
+          <p className="programacao-filtro-caminhao__hint">
+            Busque ou clique no tipo (ex.: Baú). Opcional: restrinja por placa.
+          </p>
         </div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', alignSelf: 'center' }}>
+        <span className="programacao-filtro-caminhao__count">
           {totalFiltradoNoMes} de {totalNoMes} no mês
-        </div>
+        </span>
       </div>
 
       <input
@@ -158,34 +147,53 @@ export default function ProgramacaoFiltroCaminhao({
         aria-label="Buscar tipo de caminhão ou placa"
       />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '120px', overflowY: 'auto' }}>
-        {chipsTipos.length === 0 ? (
-          <span style={{ fontSize: '12px', color: '#64748b' }}>Nenhum tipo corresponde à busca.</span>
-        ) : (
-          chipsTipos.map(({ tipo, count, catalogo }) => {
-            const ativo = filtroTipo.trim().toLowerCase() === tipo.trim().toLowerCase()
-            return (
-              <button
-                key={`${tipo}-${catalogo ? 'c' : 'l'}`}
-                type="button"
-                style={ativo ? chipAtivo : count > 0 ? chipBase : chipZero}
-                onClick={() => alternarTipo(tipo)}
-                title={
-                  count > 0
-                    ? `${count} programação(ões) neste mês`
-                    : 'Sem programações neste mês — ainda pode filtrar'
-                }
-              >
-                {tipo}
-                {count > 0 ? ` (${count})` : ''}
-              </button>
-            )
-          })
-        )}
+      <div>
+        {tiposOcultosCount > 0 && !busca.trim() ? (
+          <button
+            type="button"
+            className="programacao-filtro-caminhao__chip-toggle"
+            onClick={() => setMostrarTodosTipos((v) => !v)}
+          >
+            {mostrarTodosTipos
+              ? 'Mostrar só tipos com programação neste mês'
+              : `Mostrar mais tipos (${tiposOcultosCount} sem programação no mês)`}
+          </button>
+        ) : null}
+        <div
+          className={
+            mostrarTodosTipos
+              ? 'programacao-filtro-caminhao__chips programacao-filtro-caminhao__chips--expandido'
+              : 'programacao-filtro-caminhao__chips'
+          }
+        >
+          {chipsTipos.length === 0 ? (
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Nenhum tipo corresponde à busca.</span>
+          ) : (
+            chipsTipos.map(({ tipo, count, catalogo }) => {
+              const ativo = filtroTipo.trim().toLowerCase() === tipo.trim().toLowerCase()
+              return (
+                <button
+                  key={`${tipo}-${catalogo ? 'c' : 'l'}`}
+                  type="button"
+                  style={ativo ? chipAtivo : chipBase}
+                  onClick={() => alternarTipo(tipo)}
+                  title={
+                    count > 0
+                      ? `${count} programação(ões) neste mês`
+                      : 'Sem programações neste mês'
+                  }
+                >
+                  {tipo}
+                  {count > 0 ? ` (${count})` : ''}
+                </button>
+              )
+            })
+          )}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
+      <div className="programacao-filtro-caminhao__row">
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Tipo (lista)</span>
           <select
             value={filtroTipo}
@@ -221,7 +229,7 @@ export default function ProgramacaoFiltroCaminhao({
           </select>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 160px' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Placa</span>
           <select
             value={filtroCaminhaoId}
@@ -246,15 +254,17 @@ export default function ProgramacaoFiltroCaminhao({
             className="rg-btn rg-btn--outline"
             onClick={limparFiltros}
             title="Remover filtros de caminhão"
-            style={{ flexShrink: 0, alignSelf: 'flex-end' }}
+            style={{ height: '42px', alignSelf: 'end' }}
           >
             Limpar
           </button>
-        ) : null}
+        ) : (
+          <span aria-hidden style={{ width: 1 }} />
+        )}
       </div>
 
       {filtroAtivo ? (
-        <p style={{ margin: 0, fontSize: '12px', color: '#0f766e', fontWeight: 600 }}>
+        <p className="programacao-filtro-caminhao__ativo">
           Filtro ativo
           {filtroTipo ? (
             <>
@@ -270,6 +280,6 @@ export default function ProgramacaoFiltroCaminhao({
           ) : null}
         </p>
       ) : null}
-    </div>
+    </section>
   )
 }
