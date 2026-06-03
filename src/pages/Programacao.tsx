@@ -17,7 +17,13 @@ import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
+import ProgramacaoFiltroCaminhao from '../components/programacao/ProgramacaoFiltroCaminhao'
 import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
+import {
+  TIPOS_CAMINHAO_CATALOGO,
+  TIPOS_CAMINHAO_GRUPOS,
+  combinaFiltrosProgramacaoCaminhao,
+} from '../lib/programacaoTiposCaminhao'
 import {
   parseEquipamentosProgramacaoJson,
   parseResiduosProgramacaoJson,
@@ -167,40 +173,6 @@ const initialFormState: FormState = {
   periodicidade: '',
   diasSemanaColetaFixa: [],
   programacaoSerieId: null,
-}
-
-/** Catálogo fixo de tipos de caminhão (valor salvo = texto da opção). */
-const TIPOS_CAMINHAO_GRUPOS: readonly { titulo: string; opcoes: readonly string[] }[] = [
-  { titulo: 'Baú e veículo leve', opcoes: ['Baú', 'Fiorino'] },
-  {
-    titulo: 'Roll-on',
-    opcoes: [
-      'Rollon Caixa Alta',
-      'Rollon Caixa baixa',
-      'Rollon Caixa de 30',
-      'Rollon caixa de 40',
-    ],
-  },
-  { titulo: 'Vácuo', opcoes: ['Vacuo de 13', 'Vacuo de 15'] },
-  { titulo: 'Carreta', opcoes: ['Carreta de 30', 'Carreta de 40'] },
-  {
-    titulo: 'Polli (caçamba)',
-    opcoes: ['Polli (Caçamba de 5)', 'Polli (Caçamba de 7)', 'Polli (Caçamba de 10)'],
-  },
-] as const
-
-const TIPOS_CAMINHAO_CATALOGO = new Set(
-  TIPOS_CAMINHAO_GRUPOS.flatMap((g) => g.opcoes as string[])
-)
-
-/** Filtro rápido do calendário/agenda por tipo de caminhão (ex.: só «Baú»). */
-function combinaFiltroTipoCaminhao(
-  item: Pick<ProgramacaoItem, 'tipoCaminhao'>,
-  filtroTipo: string
-): boolean {
-  const filtro = filtroTipo.trim()
-  if (!filtro) return true
-  return (item.tipoCaminhao || '').trim().toLowerCase() === filtro.toLowerCase()
 }
 
 /** Dias da semana (ISO 1=Segunda … 7=Domingo), alinhado ao Postgres ISODOW. */
@@ -749,6 +721,7 @@ export default function Programacao() {
   const [formEdicaoModal, setFormEdicaoModal] = useState<FormState | null>(null)
   const [mesSelecionado, setMesSelecionado] = useState(getMonthInputValue())
   const [filtroTipoCaminhao, setFiltroTipoCaminhao] = useState('')
+  const [filtroCaminhaoId, setFiltroCaminhaoId] = useState('')
   const [loading, setLoading] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvandoEdicaoModal, setSalvandoEdicaoModal] = useState(false)
@@ -774,6 +747,7 @@ export default function Programacao() {
       formEdicaoModal,
       mesSelecionado,
       filtroTipoCaminhao,
+      filtroCaminhaoId,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -788,6 +762,7 @@ export default function Programacao() {
       formEdicaoModal,
       mesSelecionado,
       filtroTipoCaminhao,
+      filtroCaminhaoId,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -809,6 +784,7 @@ export default function Programacao() {
       )
       setMesSelecionado(d.mesSelecionado)
       setFiltroTipoCaminhao(d.filtroTipoCaminhao ?? '')
+      setFiltroCaminhaoId(d.filtroCaminhaoId ?? '')
       setDiaPainelCalendario(d.diaPainelCalendario)
       setModalNovaProgramacaoAberto(d.modalNovaProgramacaoAberto)
       setRelatorioAberto(d.relatorioAberto)
@@ -1570,8 +1546,48 @@ export default function Programacao() {
   }
 
   const programacoesComFiltroCaminhao = useMemo(() => {
-    return programacoes.filter((item) => combinaFiltroTipoCaminhao(item, filtroTipoCaminhao))
-  }, [programacoes, filtroTipoCaminhao])
+    return programacoes.filter((item) =>
+      combinaFiltrosProgramacaoCaminhao(item, {
+        filtroTipo: filtroTipoCaminhao,
+        filtroCaminhaoId,
+      })
+    )
+  }, [programacoes, filtroTipoCaminhao, filtroCaminhaoId])
+
+  const programacoesNoMes = useMemo(() => {
+    return programacoes.filter(
+      (item) => item.dataProgramada && item.dataProgramada.startsWith(mesSelecionado)
+    )
+  }, [programacoes, mesSelecionado])
+
+  const contagensTipoCaminhaoNoMes = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const item of programacoesNoMes) {
+      const tipo = (item.tipoCaminhao || '').trim() || 'Sem tipo'
+      map.set(tipo, (map.get(tipo) || 0) + 1)
+    }
+    return Array.from(map.entries())
+      .map(([tipo, count]) => ({ tipo, count }))
+      .sort((a, b) => b.count - a.count || a.tipo.localeCompare(b.tipo, 'pt-BR'))
+  }, [programacoesNoMes])
+
+  const veiculosProgramacaoNoMes = useMemo(() => {
+    const porId = new Map<string, { id: string; placa: string; tipoCaminhao: string }>()
+    const base = filtroTipoCaminhao
+      ? programacoesNoMes.filter((item) =>
+          combinaFiltrosProgramacaoCaminhao(item, { filtroTipo: filtroTipoCaminhao })
+        )
+      : programacoesNoMes
+    for (const item of base) {
+      if (!item.caminhaoId || porId.has(item.caminhaoId)) continue
+      porId.set(item.caminhaoId, {
+        id: item.caminhaoId,
+        placa: item.caminhaoPlaca || item.caminhaoId,
+        tipoCaminhao: item.tipoCaminhao,
+      })
+    }
+    return Array.from(porId.values()).sort((a, b) => a.placa.localeCompare(b.placa, 'pt-BR'))
+  }, [programacoesNoMes, filtroTipoCaminhao])
 
   const programacoesFiltradas = useMemo(() => {
     return programacoesComFiltroCaminhao.filter((item) => {
@@ -2020,38 +2036,17 @@ export default function Programacao() {
           aria-label="Mês do calendário"
         />
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 'min(100%, 240px)' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Filtrar caminhão</span>
-          <select
-            value={filtroTipoCaminhao}
-            onChange={(event) => setFiltroTipoCaminhao(event.target.value)}
-            style={{ ...inputStyle, width: '100%', maxWidth: '280px' }}
-            aria-label="Filtrar programações por tipo de caminhão"
-            title="Ex.: Baú — mostra só programações com esse tipo de caminhão"
-          >
-            <option value="">Todos os caminhões</option>
-            {TIPOS_CAMINHAO_GRUPOS.map((grupo) => (
-              <optgroup key={grupo.titulo} label={grupo.titulo}>
-                {grupo.opcoes.map((op) => (
-                  <option key={op} value={op}>
-                    {op}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-
-        {filtroTipoCaminhao ? (
-          <button
-            type="button"
-            className="rg-btn rg-btn--outline"
-            onClick={() => setFiltroTipoCaminhao('')}
-            title="Remover filtro de caminhão"
-          >
-            Limpar filtro
-          </button>
-        ) : null}
+        <ProgramacaoFiltroCaminhao
+          filtroTipo={filtroTipoCaminhao}
+          onFiltroTipoChange={setFiltroTipoCaminhao}
+          filtroCaminhaoId={filtroCaminhaoId}
+          onFiltroCaminhaoIdChange={setFiltroCaminhaoId}
+          contagensTipoNoMes={contagensTipoCaminhaoNoMes}
+          veiculosNoMes={veiculosProgramacaoNoMes}
+          totalNoMes={programacoesNoMes.length}
+          totalFiltradoNoMes={programacoesFiltradas.length}
+          inputStyle={inputStyle}
+        />
       </div>
 
       {erro ? <FloatingAlert message={erro} variant="error" onClose={() => setErro('')} /> : null}
@@ -2159,11 +2154,27 @@ export default function Programacao() {
             <p style={cardDescricaoStyle}>
               Clique no dia para ver todas as programações e agendar nesta data. Use «Nova programação»
               no topo da página ou no painel do dia. Dias fora do mês aparecem mais claros.
-              {filtroTipoCaminhao ? (
+              {filtroTipoCaminhao || filtroCaminhaoId ? (
                 <>
                   {' '}
-                  Filtro ativo: <strong>{filtroTipoCaminhao}</strong> — só aparecem programações deste
-                  tipo de caminhão.
+                  Filtro ativo
+                  {filtroTipoCaminhao ? (
+                    <>
+                      {' '}
+                      · tipo <strong>{filtroTipoCaminhao}</strong>
+                    </>
+                  ) : null}
+                  {filtroCaminhaoId ? (
+                    <>
+                      {' '}
+                      · placa{' '}
+                      <strong>
+                        {veiculosProgramacaoNoMes.find((v) => v.id === filtroCaminhaoId)?.placa ||
+                          filtroCaminhaoId}
+                      </strong>
+                    </>
+                  ) : null}
+                  .
                 </>
               ) : null}
             </p>
@@ -2192,8 +2203,8 @@ export default function Programacao() {
               <div style={estadoVazioStyle}>Carregando programação...</div>
             ) : agendaAgrupada.length === 0 ? (
               <div style={estadoVazioStyle}>
-                {filtroTipoCaminhao
-                  ? `Nenhuma programação do tipo «${filtroTipoCaminhao}» no mês selecionado.`
+                {filtroTipoCaminhao || filtroCaminhaoId
+                  ? 'Nenhuma programação corresponde ao filtro de caminhão neste mês.'
                   : 'Nenhuma programação encontrada para o mês selecionado.'}
               </div>
             ) : (
@@ -2509,8 +2520,8 @@ export default function Programacao() {
                     padding: '20px',
                   }}
                 >
-                  {filtroTipoCaminhao
-                    ? `Nenhuma programação do tipo «${filtroTipoCaminhao}» neste dia.`
+                  {filtroTipoCaminhao || filtroCaminhaoId
+                    ? 'Nenhuma programação corresponde ao filtro de caminhão neste dia.'
                     : 'Nenhuma programação neste dia.'}
                 </div>
                 <button
