@@ -36,6 +36,7 @@ import {
   navLinkEndExact,
 } from '../lib/menuNavegacao'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
+import { useLayoutMobile } from '../hooks/useMediaQuery'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
@@ -214,6 +215,27 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [ajusteAberto, setAjusteAberto] = useState(false)
   const [ajusteTextoInicial, setAjusteTextoInicial] = useState<string | null>(null)
   const ajustePanelId = useId()
+  const layoutMobile = useLayoutMobile()
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  const fecharMenuMobile = useCallback(() => setMobileNavOpen(false), [])
+
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!layoutMobile) setMobileNavOpen(false)
+  }, [layoutMobile])
+
+  useEffect(() => {
+    if (!mobileNavOpen || !layoutMobile) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mobileNavOpen, layoutMobile])
 
   const atualizarBadgeChat = useCallback(async () => {
     const {
@@ -508,9 +530,30 @@ export default function MainLayout({ children }: MainLayoutProps) {
     })
   }, [location.pathname, menuGroupsVisiveis])
 
+  const rootClassName = [
+    'layout-root',
+    layoutMobile && mobileNavOpen ? 'layout-root--mobile-nav-open' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <div className="layout-root">
-      <aside className="layout-sidebar">
+    <div className={rootClassName}>
+      {layoutMobile ? (
+        <button
+          type="button"
+          className="layout-mobile-nav-backdrop"
+          aria-label="Fechar menu de navegação"
+          tabIndex={mobileNavOpen ? 0 : -1}
+          onClick={fecharMenuMobile}
+        />
+      ) : null}
+
+      <aside
+        id="layout-sidebar"
+        className="layout-sidebar"
+        aria-hidden={layoutMobile && !mobileNavOpen ? true : undefined}
+      >
         <div className="layout-sidebar__brand">
           <div className="layout-sidebar__logo-row">
             <Link
@@ -561,6 +604,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                               to={item.path}
                               end={navLinkEndExact(item.path)}
                               className="sidebar-nav-link"
+                              onClick={layoutMobile ? fecharMenuMobile : undefined}
                             >
                               <span className="sidebar-nav-link__label">{item.label}</span>
                             </NavLink>
@@ -571,6 +615,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                                   to={child.path}
                                   end={navLinkEndExact(child.path)}
                                   className="sidebar-nav-link sidebar-nav-link--nested"
+                                  onClick={layoutMobile ? fecharMenuMobile : undefined}
                                 >
                                   <span className="sidebar-nav-link__label">{child.label}</span>
                                 </NavLink>
@@ -583,6 +628,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                             to={item.path}
                             end={navLinkEndExact(item.path)}
                             className="sidebar-nav-link"
+                            onClick={layoutMobile ? fecharMenuMobile : undefined}
                           >
                             <span className="sidebar-nav-link__label">{item.label}</span>
                           </NavLink>
@@ -592,6 +638,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                             to={item.path}
                             end={navLinkEndExact(item.path)}
                             className="sidebar-nav-link"
+                            onClick={layoutMobile ? fecharMenuMobile : undefined}
                           >
                             <span className="sidebar-nav-link__label">{item.label}</span>
                           </NavLink>
@@ -637,6 +684,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="layout-main">
         <header className="layout-header">
           <div className="layout-header-left">
+            {layoutMobile ? (
+              <button
+                type="button"
+                className="layout-mobile-menu-btn"
+                aria-expanded={mobileNavOpen}
+                aria-controls="layout-sidebar"
+                onClick={() => setMobileNavOpen((v) => !v)}
+              >
+                <span className="layout-mobile-menu-btn__icon" aria-hidden>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                </span>
+                <span className="layout-mobile-menu-btn__label">Menu</span>
+              </button>
+            ) : null}
             <nav className="layout-breadcrumb" aria-label="Trilha de navegação">
               <Link to="/bem-vindo">Início</Link>
             </nav>

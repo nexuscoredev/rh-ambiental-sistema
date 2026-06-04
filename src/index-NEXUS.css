@@ -1151,6 +1151,210 @@ a.rg-btn {
   }
 }
 
+/* —— Layout mobile: menu drawer (não altera desktop ≥901px) —— */
+
+.layout-mobile-menu-btn {
+  display: none;
+}
+
+.layout-mobile-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .layout-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    margin-right: 4px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #0f172a;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .layout-mobile-menu-btn:focus-visible {
+    outline: 2px solid rgba(13, 148, 136, 0.55);
+    outline-offset: 2px;
+  }
+
+  .layout-mobile-menu-btn__label {
+    display: none;
+  }
+
+  @media (min-width: 380px) {
+    .layout-mobile-menu-btn__label {
+      display: inline;
+    }
+  }
+
+  .layout-header-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .layout-header-left .layout-breadcrumb {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .layout-header-left .layout-title {
+    order: 3;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 18px;
+  }
+
+  .layout-header-left .layout-tagline {
+    display: none;
+  }
+
+  .layout-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    width: min(var(--sidebar-width), min(300px, 88vw));
+    min-width: 0;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: none;
+  }
+
+  .layout-root--mobile-nav-open .layout-sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .layout-mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .layout-root--mobile-nav-open .layout-mobile-nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .layout-root--mobile-nav-open {
+    overflow: hidden;
+  }
+
+  .layout-main {
+    width: 100%;
+  }
+
+  .layout-header {
+    padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) 10px
+      calc(14px + var(--safe-left));
+    gap: 10px 12px;
+  }
+
+  .layout-header-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .layout-header-datetime {
+    display: none;
+  }
+
+  .layout-user-role {
+    display: none;
+  }
+
+  .layout-user-name {
+    font-size: 12px;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout-btn-sair {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+
+  .layout-avatar--interactive {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .sidebar-nav-link {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .layout-sidebar__group-toggle {
+    min-height: 44px;
+  }
+
+  .layout-main-scroll-inner {
+    padding: 14px calc(14px + var(--safe-right)) calc(18px + var(--safe-bottom))
+      calc(14px + var(--safe-left));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .layout-main-scroll-inner .table-base {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pwa-install-fab {
+    left: max(12px, var(--safe-left));
+    right: max(12px, var(--safe-right));
+    bottom: calc(14px + var(--safe-bottom));
+    max-width: none;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .layout-presenca-select {
+    max-width: 118px;
+    font-size: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .layout-user-conta-link {
+    font-size: 11px;
+  }
+}
+
 .layout-pill {
   display: inline-flex;
   align-items: center;
