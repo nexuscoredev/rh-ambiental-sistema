@@ -82,6 +82,7 @@ import {
   residuoContratoTemConteudo,
 } from "../lib/mtrClienteContratoAutofill";
 import {
+  coletaCorrespondeResiduo,
   deveSegmentarTicketsPorMtr,
   numeroTicketParaSegmento,
   ordenarColetasParaTickets,
