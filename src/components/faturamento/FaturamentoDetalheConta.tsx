@@ -44,6 +44,7 @@ function LinhaValor({ linha }: { linha: LinhaDetalheConta }) {
 
   return (
     <div
+      className="rg-mobile-stack-grid"
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr auto',

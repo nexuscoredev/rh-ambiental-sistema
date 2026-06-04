@@ -380,7 +380,7 @@ export function FaturamentoFilaColetas({
           {mensagemVazia}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: R.lg, border: '1px solid #e2e8f0' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', borderRadius: R.lg, border: '1px solid #e2e8f0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1020px' }}>
             <thead>
               <tr>

@@ -169,7 +169,7 @@ export function FaturamentoHistoricoColetas({
           />
         </div>
       </div>
-      <div style={{ overflowX: 'auto', maxHeight: 'min(420px, 48vh)', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+      <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', maxHeight: 'min(420px, 48vh)', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '920px' }}>
           <thead>
             <tr>

@@ -512,7 +512,7 @@ export function FaturamentoFilaAprovacaoTicket({
               Nenhum resultado com os filtros actuais.
             </p>
           ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>

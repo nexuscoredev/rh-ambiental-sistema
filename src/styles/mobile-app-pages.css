@@ -194,11 +194,147 @@
     min-width: min(100%, 160px);
   }
 
+  .programacao-page .programacao-calendario-mes__scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -2px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px #e8ecf1;
+  }
+
+  .programacao-page .programacao-calendario-mes__week,
+  .programacao-page .programacao-calendario-mes__grid {
+    min-width: 532px;
+  }
+
+  .programacao-page .programacao-calendario-mes__grid {
+    grid-template-columns: repeat(7, minmax(72px, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .programacao-page .programacao-calendario-mes__week {
+    grid-template-columns: repeat(7, minmax(72px, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .programacao-page .programacao-calendario-mes__preview {
+    display: none !important;
+  }
+
+  .programacao-page .programacao-calendario-mes__cell {
+    min-height: 56px !important;
+  }
+
+  .programacao-page .programacao-calendario-mes button[aria-label*='M'] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   /* —— Controle de massa —— */
+  .controle-massa-page__page-head h1 {
+    font-size: clamp(1.2rem, 5vw, 1.65rem);
+  }
+
+  .controle-massa-page__page-head .page-header__lead {
+    max-width: none;
+  }
+
+  .controle-massa-page__stepper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controle-massa-page__stepper > div:last-child {
+    min-width: 0 !important;
+    justify-content: flex-start;
+  }
+
+  .controle-massa-page__lista-filtros {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .controle-massa-page__busca {
+    max-width: none !important;
+    flex: 1 1 100% !important;
+    font-size: 16px !important;
+    min-height: 44px !important;
+  }
+
+  .controle-massa-page__lista-table {
+    font-size: 13px !important;
+  }
+
+  .controle-massa-page__lista-table th,
+  .controle-massa-page__lista-table td {
+    padding: 10px 8px !important;
+  }
+
+  .controle-massa-page__lista-table-wrap {
+    max-height: min(48vh, 420px) !important;
+  }
+
+  .controle-massa-page__panel-form form {
+    padding: 16px 14px !important;
+  }
+
   .controle-massa-page .rg-mobile-stack-grid--12 input,
   .controle-massa-page .rg-mobile-stack-grid--12 select,
   .controle-massa-page .rg-mobile-stack-grid--12 textarea {
     grid-column: auto !important;
+  }
+
+  .controle-massa-page__lista-table button {
+    min-height: 36px;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* —— Faturamento —— */
+  .faturamento-page .faturamento-esteira-fluxo {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+
+  .faturamento-page .faturamento-esteira-fluxo > span {
+    flex-shrink: 0;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .faturamento-page .faturamento-page__toolbar button {
+    min-height: 44px;
+  }
+
+  .faturamento-page .rg-mobile-table-scroll {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+
+  .faturamento-page .page-header__lead {
+    max-width: none;
+    font-size: 14px;
+  }
+
+  .faturamento-page h2 {
+    font-size: 17px;
+  }
+
+  /* —— Clínicas / Conferência —— */
+  .clinicas-page .rg-mobile-table-scroll,
+  .conferencia-transporte-page .rg-mobile-table-scroll {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+
+  .conferencia-transporte-page .conf-trans-screen {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
   /* —— Pós-venda —— */

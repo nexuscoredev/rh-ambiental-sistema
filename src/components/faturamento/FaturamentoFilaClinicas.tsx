@@ -221,7 +221,7 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
           .
         </p>
       ) : (
-        <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+        <div className="rg-mobile-table-scroll" style={{ marginTop: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>

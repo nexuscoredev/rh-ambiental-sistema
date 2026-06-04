@@ -69,7 +69,7 @@ const LABELS_UI: { passo: PassoUiEsteiraFaturamento; lbl: string }[] = [
 /** Indicador visual da esteira (passos 1–8). */
 export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: PassoUiEsteiraFaturamento }) {
   return (
-    <div style={wrap}>
+    <div className="faturamento-esteira-fluxo" style={wrap}>
       {LABELS_UI.map(({ passo, lbl }) => (
         <span key={passo} style={stepStyle(passo, passoAtivo)} title={ROTULO_PASSO_UI_ESTEIRA[passo]}>
           {lbl}

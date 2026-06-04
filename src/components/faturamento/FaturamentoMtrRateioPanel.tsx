@@ -105,6 +105,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
           {linhas.map((linha, idx) => (
             <div
               key={idx}
+              className="rg-mobile-stack-grid"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 90px 90px auto',

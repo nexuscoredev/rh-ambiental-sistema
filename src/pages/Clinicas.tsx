@@ -312,7 +312,7 @@ export default function Clinicas() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell clinicas-page">
         <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>Clínicas</h1>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
           Cadastro mãe <strong>{grupoNome}</strong> e unidades de coleta. Gere ordens de serviço em lote — sem
@@ -437,7 +437,7 @@ export default function Clinicas() {
           {loading ? (
             <p style={{ marginTop: '16px', color: '#64748b' }}>A carregar…</p>
           ) : (
-            <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+            <div className="rg-mobile-table-scroll" style={{ marginTop: '16px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
@@ -566,7 +566,7 @@ export default function Clinicas() {
                 : `Nenhuma O.S. com o filtro «${rotuloFiltroOs}».`}
             </p>
           ) : (
-            <div style={{ marginTop: '14px', overflowX: 'auto' }}>
+            <div className="rg-mobile-table-scroll" style={{ marginTop: '14px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
@@ -629,7 +629,7 @@ export default function Clinicas() {
           {relatorio.length === 0 ? (
             <p style={{ marginTop: '12px', color: '#64748b' }}>Sem movimentação no período.</p>
           ) : (
-            <div style={{ marginTop: '14px', overflowX: 'auto' }}>
+            <div className="rg-mobile-table-scroll" style={{ marginTop: '14px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>

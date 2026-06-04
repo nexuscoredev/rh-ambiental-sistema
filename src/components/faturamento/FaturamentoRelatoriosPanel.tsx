@@ -229,7 +229,7 @@ export function FaturamentoRelatoriosPanel({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
         <div>
           <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: '#475569' }}>Ranking por cliente</h3>
-          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '260px' }}>
               <thead>
                 <tr>
@@ -263,7 +263,7 @@ export function FaturamentoRelatoriosPanel({
           <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: '#475569' }}>
             Faturamento por dia (últimos 14 no período)
           </h3>
-          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '200px' }}>
               <thead>
                 <tr>

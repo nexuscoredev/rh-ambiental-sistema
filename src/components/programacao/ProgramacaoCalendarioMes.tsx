@@ -141,7 +141,7 @@ export default function ProgramacaoCalendarioMes({
   showMonthNav = true,
 }: ProgramacaoCalendarioMesProps) {
   return (
-    <div style={{ display: 'grid', gap: '12px' }}>
+    <div className="programacao-calendario-mes" style={{ display: 'grid', gap: '12px' }}>
       {showMonthNav ? (
         <div
           style={{
@@ -222,7 +222,8 @@ export default function ProgramacaoCalendarioMes({
         })}
       </div>
 
-      <div style={weekHeaderStyle}>
+      <div className="programacao-calendario-mes__scroll">
+      <div className="programacao-calendario-mes__week" style={weekHeaderStyle}>
         {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S\u00e1b', 'Dom'].map((day, idx) => (
           <div
             key={day}
@@ -236,7 +237,7 @@ export default function ProgramacaoCalendarioMes({
         ))}
       </div>
 
-      <div style={gridStyle}>
+      <div className="programacao-calendario-mes__grid" style={gridStyle}>
         {cells.map((cell) => {
           const destaqueContexto =
             !!contextoDestaqueId && cell.items.some((i) => i.id === contextoDestaqueId)
@@ -267,6 +268,7 @@ export default function ProgramacaoCalendarioMes({
                   abrirPainelDia()
                 }
               }}
+              className="programacao-calendario-mes__cell"
               style={{
                 ...cellStyle,
                 background: cellBg,
@@ -308,7 +310,7 @@ export default function ProgramacaoCalendarioMes({
                   </div>
 
                   {cell.items.length > 0 ? (
-                    <div style={itemsListStyle}>
+                    <div className="programacao-calendario-mes__preview" style={itemsListStyle}>
                       {cell.items.slice(0, CALENDAR_PREVIEW_MAX).map((item) => {
                         const statusStyle = getStatusStyle(item.statusProgramacao)
                         return (
@@ -353,6 +355,7 @@ export default function ProgramacaoCalendarioMes({
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )

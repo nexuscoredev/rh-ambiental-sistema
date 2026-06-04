@@ -529,7 +529,7 @@ export default function FaturamentoOperacional() {
           </div>
         ) : null}
 
-        <div style={{ marginTop: '22px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        <div className="faturamento-page__toolbar rg-page-toolbar" style={{ marginTop: '22px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => void recarregarTudo()}

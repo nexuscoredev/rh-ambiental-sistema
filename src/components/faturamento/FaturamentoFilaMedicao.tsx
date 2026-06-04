@@ -123,7 +123,7 @@ function GrupoMedicaoCard({
 
       <MedicaoGeradorDonoFaturamentoBloco clienteId={grupo.cliente_id} />
 
-      <div style={{ marginTop: '12px', overflowX: 'auto' }}>
+      <div className="rg-mobile-table-scroll" style={{ marginTop: '12px', overflowX: 'auto' }}>
         {carregandoMedicao ? (
           <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>A calcular valores do contrato…</p>
         ) : erroMedicao ? (

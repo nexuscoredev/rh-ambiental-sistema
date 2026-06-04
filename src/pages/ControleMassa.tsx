@@ -2953,7 +2953,7 @@ export default function ControleMassa() {
   return (
     <MainLayout>
       <div className="page-shell controle-massa-page">
-      <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+      <div className="controle-massa-page__workspace" style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
         {sucesso && (
           <div
             style={{
@@ -3040,6 +3040,7 @@ export default function ControleMassa() {
         )}
 
         <div
+          className="controle-massa-page__page-head"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -3209,6 +3210,7 @@ export default function ControleMassa() {
 
         {/* Stepper sticky: guia rápido do fluxo */}
         <div
+          className="controle-massa-page__stepper"
           style={{
             position: "sticky",
             top: 0,
@@ -3300,6 +3302,7 @@ export default function ControleMassa() {
         </div>
 
         <div
+          className="controle-massa-page__panel-lista"
           style={{
             background: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -3382,8 +3385,9 @@ export default function ControleMassa() {
                   </div>
                 ) : null}
 
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                <div className="controle-massa-page__lista-filtros" style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                   <input
+                    className="controle-massa-page__busca"
                     value={buscaColetasLista}
                     onChange={(e) => setBuscaColetasLista(e.target.value)}
                     placeholder={
@@ -3432,6 +3436,7 @@ export default function ControleMassa() {
               </div>
 
               <div
+                className="controle-massa-page__lista-table-wrap rg-mobile-table-scroll"
                 style={{
                   overflowX: "auto",
                   maxHeight: modoTela === "operacao" ? "min(38vh, 380px)" : "min(52vh, 520px)",
@@ -3451,6 +3456,7 @@ export default function ControleMassa() {
               </div>
             ) : (
               <table
+                className="controle-massa-page__lista-table"
                 style={{
                   width: "100%",
                   borderCollapse: "collapse",
@@ -3726,6 +3732,7 @@ export default function ControleMassa() {
 
         <div
           id="massa-form-anchor"
+          className="controle-massa-page__panel-form"
           style={{
             background: "#ffffff",
             border: "1px solid #e5e7eb",

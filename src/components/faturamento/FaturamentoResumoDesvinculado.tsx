@@ -304,7 +304,7 @@ function FaturamentoResumoDesvinculadoInner({
         </div>
 
         {linhasTickets.length > 0 ? (
-          <div style={{ marginBottom: '12px', overflowX: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ marginBottom: '12px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
               <thead>
                 <tr>
@@ -347,7 +347,7 @@ function FaturamentoResumoDesvinculadoInner({
             />
           </div>
         ) : (
-          <div style={{ ...grid3, marginBottom: '10px' }}>
+          <div className="rg-mobile-stack-grid" style={{ ...grid3, marginBottom: '10px' }}>
             <div>
               <label style={label}>Tara (kg)</label>
               <input
@@ -620,7 +620,7 @@ function FaturamentoResumoDesvinculadoInner({
         <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
           Resíduo (MTR)
         </div>
-        <div style={{ ...grid3, marginBottom: '8px' }}>
+        <div className="rg-mobile-stack-grid" style={{ ...grid3, marginBottom: '8px' }}>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={label}>Tipo / descrição</label>
             <input
@@ -664,7 +664,7 @@ function FaturamentoResumoDesvinculadoInner({
             />
           </div>
         </div>
-        <div style={grid2}>
+        <div className="rg-mobile-stack-grid" style={grid2}>
           <div>
             <label style={label}>Valor unitário (R$)</label>
             <input
@@ -712,7 +712,7 @@ function FaturamentoResumoDesvinculadoInner({
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>
             Ajustes financeiros (Operacional (Time T))
           </div>
-          <div style={grid2}>
+          <div className="rg-mobile-stack-grid" style={grid2}>
             <div>
               <label style={label}>Acréscimo (R$)</label>
               <input

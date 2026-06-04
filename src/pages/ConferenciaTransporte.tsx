@@ -762,7 +762,7 @@ export default function ConferenciaTransporte() {
         }
       `}</style>
 
-      <div className="conf-trans-no-print conf-trans-screen">
+      <div className="conf-trans-no-print conf-trans-screen conferencia-transporte-page">
         <header style={{ textAlign: 'center', marginBottom: 24 }}>
           <img className="conf-trans-hero-logo" src={BRAND_LOGO_MARK} alt="RG Ambiental" />
           <h1
@@ -1166,6 +1166,7 @@ export default function ConferenciaTransporte() {
                 <strong>ticket nº</strong> pode ser editado (numerar a partir de 1340, conforme procedimento interno).
               </p>
               <div
+                className="rg-mobile-stack-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -1252,7 +1253,7 @@ export default function ConferenciaTransporte() {
                 </label>
               </div>
 
-              <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+              <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginBottom: 14 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 480 }}>
                   <thead>
                     <tr style={{ background: '#f1f5f9' }}>
@@ -1323,7 +1324,7 @@ export default function ConferenciaTransporte() {
               <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
                 Clientes / rota (5 linhas)
               </div>
-              <div style={{ overflowX: 'auto' }}>
+              <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 520 }}>
                   <thead>
                     <tr style={{ background: '#f1f5f9' }}>
