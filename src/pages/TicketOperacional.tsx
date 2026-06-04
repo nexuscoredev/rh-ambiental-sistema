@@ -146,7 +146,7 @@ export default function TicketOperacional() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell ticket-operacional-page">
         <div style={{ marginBottom: 14, maxWidth: 480 }}>
           <label
             htmlFor="filtro-ticket-coleta"

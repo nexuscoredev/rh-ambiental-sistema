@@ -802,6 +802,7 @@ export default function Motoristas() {
                   </div>
 
                   <div
+                    className="rg-mobile-stack-grid"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -1342,6 +1343,7 @@ export default function Motoristas() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "18px" }}>
               <dl
+                className="rg-mobile-split-stack"
                 style={{
                   margin: 0,
                   display: "grid",

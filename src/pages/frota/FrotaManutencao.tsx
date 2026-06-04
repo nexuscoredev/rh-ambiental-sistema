@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
+import { FrotaDiarioResumoModal } from '../../components/frota/FrotaDiarioResumoModal'
 import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import {
@@ -70,6 +71,8 @@ export default function FrotaManutencao() {
 
   const [assNome, setAssNome] = useState('')
   const [assCargo, setAssCargo] = useState('')
+  const [diarioResumo, setDiarioResumo] = useState<FrotaDiarioRow | null>(null)
+  const diarioFormRef = useRef<HTMLFormElement>(null)
 
   const veiculo = caminhoes.find((c) => c.id === veiculoId)
 
@@ -92,11 +95,11 @@ export default function FrotaManutencao() {
     }
   }, [])
 
-  const carregarDiarioDia = useCallback(async (id: string, data: string) => {
-    const row = await fetchDiarioPorData(id, data)
+  const aplicarDiarioNoFormulario = useCallback((row: FrotaDiarioRow | null) => {
     if (!row) {
       setDiarioId(undefined)
       setChecklist({})
+      setAnomalias('')
       setObsDiario('')
       setFotosDiarioUrls([])
       return
@@ -110,6 +113,35 @@ export default function FrotaManutencao() {
     setObsDiario(row.observacoes ?? '')
     setFotosDiarioUrls(row.fotos)
   }, [])
+
+  const carregarDiarioDia = useCallback(
+    async (id: string, data: string) => {
+      const row = await fetchDiarioPorData(id, data)
+      aplicarDiarioNoFormulario(row)
+    },
+    [aplicarDiarioNoFormulario]
+  )
+
+  const abrirResumoDiario = useCallback(
+    async (d: FrotaDiarioRow) => {
+      setDataDiario(d.data_diario)
+      setDiarioResumo(d)
+      if (!veiculoId) return
+      const row = await fetchDiarioPorData(veiculoId, d.data_diario)
+      if (row) {
+        aplicarDiarioNoFormulario(row)
+        setDiarioResumo(row)
+      }
+    },
+    [veiculoId, aplicarDiarioNoFormulario]
+  )
+
+  function editarDiarioDoResumo() {
+    setDiarioResumo(null)
+    requestAnimationFrame(() => {
+      diarioFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   useEffect(() => {
     void (async () => {
@@ -308,7 +340,12 @@ export default function FrotaManutencao() {
           <p className="frota-loading">A carregar…</p>
         ) : tab === 'diario' ? (
           <div className="frota-layout-2 frota-layout-2--manutencao">
-            <form className="frota-card frota-card--form" onSubmit={salvarDiario}>
+            <form
+              ref={diarioFormRef}
+              id="frota-diario-form"
+              className="frota-card frota-card--form"
+              onSubmit={salvarDiario}
+            >
               <h2>Diário — {dataDiario}</h2>
 
               <section className="frota-form-section">
@@ -412,7 +449,7 @@ export default function FrotaManutencao() {
               {diarios.length === 0 ? (
                 <div className="frota-empty-state">
                   <p>Nenhum diário guardado para este veículo.</p>
-                  <p className="frota-muted">Após guardar, os registos aparecem aqui para reabrir por data.</p>
+                  <p className="frota-muted">Após guardar, toque num registo para ver o resumo do dia.</p>
                 </div>
               ) : (
                 <ul className="frota-timeline frota-timeline--cards">
@@ -421,7 +458,7 @@ export default function FrotaManutencao() {
                       <button
                         type="button"
                         className="frota-timeline__card frota-timeline__card--btn"
-                        onClick={() => setDataDiario(d.data_diario)}
+                        onClick={() => void abrirResumoDiario(d)}
                       >
                         <div className="frota-timeline__card-head">
                           <strong>{d.data_diario}</strong>
@@ -435,12 +472,21 @@ export default function FrotaManutencao() {
                             {d.assinatura_responsavel_cargo ? ` · ${d.assinatura_responsavel_cargo}` : ''}
                           </p>
                         ) : null}
+                        <span className="frota-timeline__hint">Toque para ver o resumo</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
             </aside>
+            {diarioResumo && veiculo ? (
+              <FrotaDiarioResumoModal
+                row={diarioResumo}
+                veiculoLabel={`${veiculo.placa}${veiculo.modelo ? ` · ${veiculo.modelo}` : ''}`}
+                onFechar={() => setDiarioResumo(null)}
+                onEditar={editarDiarioDoResumo}
+              />
+            ) : null}
           </div>
         ) : (
           <div className="frota-layout-2 frota-layout-2--manutencao">

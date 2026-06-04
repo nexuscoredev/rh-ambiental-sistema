@@ -1285,6 +1285,7 @@ export default function Caminhoes() {
                   </div>
 
                   <div
+                    className="rg-mobile-stack-grid"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -1350,6 +1351,7 @@ export default function Caminhoes() {
                       Operação e vínculo
                     </div>
                     <div
+                      className="rg-mobile-stack-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -1428,6 +1430,7 @@ export default function Caminhoes() {
                       Documentação e certificações
                     </div>
                     <div
+                      className="rg-mobile-stack-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -2206,6 +2209,7 @@ export default function Caminhoes() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "18px" }}>
               <dl
+                className="rg-mobile-split-stack"
                 style={{
                   margin: 0,
                   display: "grid",

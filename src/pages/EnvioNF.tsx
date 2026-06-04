@@ -774,7 +774,7 @@ export default function EnvioNF() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell envio-nf-page">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           <div
             style={{
@@ -1045,7 +1045,7 @@ export default function EnvioNF() {
               </p>
             ) : null}
 
-            <div style={{ overflowX: 'auto' }}>
+            <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '640px' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>

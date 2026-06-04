@@ -4029,6 +4029,7 @@ export default function Clientes() {
                           >
                             <td colSpan={colSpanDetalhe} style={{ padding: "14px 18px" }}>
                               <div
+                                className="rg-mobile-stack-grid"
                                 style={{
                                   display: "grid",
                                   gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",

@@ -9830,6 +9830,176 @@ a.rg-btn {
   font: inherit;
 }
 
+.frota-timeline__hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.frota-diario-resumo-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+@media (min-width: 640px) {
+  .frota-diario-resumo-modal {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.frota-diario-resumo-modal__card {
+  width: 100%;
+  max-width: 520px;
+  max-height: min(88vh, 720px);
+  overflow: auto;
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+@media (min-width: 640px) {
+  .frota-diario-resumo-modal__card {
+    border-radius: 16px;
+  }
+}
+
+.frota-diario-resumo-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.frota-diario-resumo-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.frota-diario-resumo-modal__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f1f5f9;
+  font-size: 22px;
+  line-height: 1;
+  color: #475569;
+  cursor: pointer;
+}
+
+.frota-diario-resumo-modal__close:hover {
+  background: #e2e8f0;
+}
+
+.frota-diario-resumo-modal__dl {
+  margin: 0;
+  padding: 16px 18px;
+}
+
+.frota-diario-resumo-modal__dl > div {
+  margin-bottom: 12px;
+}
+
+.frota-diario-resumo-modal__dl dt {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.frota-diario-resumo-modal__dl dd {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.frota-diario-resumo-modal__sep {
+  height: 1px;
+  margin: 14px 0;
+  background: #e2e8f0;
+}
+
+.frota-diario-resumo-modal__texto {
+  white-space: pre-wrap;
+}
+
+.frota-diario-resumo-modal__checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frota-diario-resumo-modal__checklist li {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.frota-diario-resumo-modal__checklist li[data-ok='1'] {
+  color: #047857;
+  font-weight: 600;
+}
+
+.frota-diario-resumo-modal__fotos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frota-diario-resumo-modal__fotos img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.frota-diario-resumo-modal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.frota-diario-resumo-modal__btn {
+  flex: 1;
+  min-width: 120px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.frota-diario-resumo-modal__btn--ghost {
+  background: #fff;
+  color: #0f766e;
+}
+
 .frota-muted {
   color: #64748b;
   font-size: 13px;

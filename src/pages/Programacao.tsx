@@ -2169,7 +2169,7 @@ export default function Programacao() {
         </div>
       )}
 
-      <div style={cardsGridStyle}>
+      <div className="programacao-page__resumo-cards" style={cardsGridStyle}>
         <div style={cardResumoStyle}>
           <div style={cardResumoTituloStyle}>Mês selecionado</div>
           <div style={cardResumoValorStyle}>{formatMonthLabel(mesSelecionado)}</div>
@@ -2196,9 +2196,9 @@ export default function Programacao() {
         </div>
       </div>
 
-      <div style={layoutPrincipalStyle}>
+      <div className="programacao-page__layout" style={layoutPrincipalStyle}>
         <div style={{ display: 'grid', gap: '20px' }}>
-          <div style={cardPrincipalStyle}>
+          <div className="programacao-page__card" style={cardPrincipalStyle}>
             <h2 style={cardTituloStyle}>Calendário do mês</h2>
             <p style={cardDescricaoStyle}>
               Clique no dia para ver todas as programações e agendar nesta data. Use «Nova programação»
@@ -2241,7 +2241,7 @@ export default function Programacao() {
             />
           </div>
 
-          <div style={cardPrincipalStyle}>
+          <div className="programacao-page__card" style={cardPrincipalStyle}>
             <h2 style={cardTituloStyle}>Agenda detalhada</h2>
             <p style={cardDescricaoStyle}>
               Por data: editar ou excluir. Dias com muitas programações mostram as primeiras{' '}

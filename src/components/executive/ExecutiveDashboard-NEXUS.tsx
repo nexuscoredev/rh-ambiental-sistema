@@ -1727,14 +1727,15 @@ export function ExecutiveDashboard() {
                 ›
               </button>
             </div>
-            <div style={execCalWeekdays}>
+            <div className="exec-dash-cal-scroll">
+            <div className="exec-dash-cal-week" style={execCalWeekdays}>
               {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => (
                 <span key={d} style={execCalWd}>
                   {d}
                 </span>
               ))}
             </div>
-            <div style={execCalGrid}>
+            <div className="exec-dash-cal-grid" style={execCalGrid}>
               {cells.map((cell, idx) =>
                 cell.dia == null ? (
                   <div key={`e-${idx}`} style={execCalCellEmpty} />
@@ -1764,6 +1765,7 @@ export function ExecutiveDashboard() {
                   </button>
                 )
               )}
+            </div>
             </div>
           </div>
 

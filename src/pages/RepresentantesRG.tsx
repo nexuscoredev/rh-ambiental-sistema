@@ -892,6 +892,7 @@ export default function RepresentantesRG() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "18px" }}>
               <dl
+                className="rg-mobile-split-stack"
                 style={{
                   margin: 0,
                   display: "grid",

@@ -392,6 +392,266 @@
   }
 }
 
+/* ========================================================================== */
+/* Mobile v2 — regras globais (layout-root--mobile, ≤900px)                   */
+/* ========================================================================== */
+
+@media (max-width: 900px) {
+  .layout-root--mobile .layout-main-scroll-inner .page-shell > div {
+    gap: 18px;
+  }
+
+  .layout-root--mobile .page-shell h1 {
+    font-size: clamp(1.15rem, 5.2vw, 1.7rem) !important;
+    line-height: 1.25 !important;
+  }
+
+  .layout-root--mobile .page-shell h2 {
+    font-size: clamp(1rem, 4.2vw, 1.3rem) !important;
+    line-height: 1.3 !important;
+  }
+
+  .layout-root--mobile .page-shell h3 {
+    font-size: clamp(0.95rem, 3.8vw, 1.1rem) !important;
+  }
+
+  .layout-root--mobile .page-shell .page-header__lead {
+    max-width: none !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  /* Tabelas: scroll automático no contentor directo */
+  .layout-root--mobile .page-shell :is(div, section, article):has(> table),
+  .layout-root--mobile .rg-page :is(div, section):has(> table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+  }
+
+  .layout-root--mobile .page-shell :is(div, section):has(> table) > table,
+  .layout-root--mobile .rg-page :is(div, section):has(> table) > table {
+    font-size: 13px;
+  }
+
+  .layout-root--mobile .page-shell :is(div, section):has(> table):not(.rg-mobile-table-scroll)::before,
+  .layout-root--mobile .clientes-page__list-wrap::before {
+    content: 'Deslize ↔ para ver todas as colunas';
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .layout-root--mobile .rg-mobile-table-scroll::before {
+    content: none;
+  }
+
+  /* Grelhas multi-coluna inline (style attribute) → coluna única */
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(4'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(5'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(6'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(12'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(3'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: 1fr 1fr 1fr'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: minmax(0, 38%'],
+  .layout-root--mobile .page-shell [style*='grid-template-columns: 2fr 1fr'],
+  .layout-root--mobile .rg-page [style*='grid-template-columns: repeat(4'],
+  .layout-root--mobile .rg-page [style*='grid-template-columns: repeat(6'],
+  .layout-root--mobile .rg-page [style*='grid-template-columns: minmax(0, 38%'] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .layout-root--mobile .page-shell input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']),
+  .layout-root--mobile .page-shell select,
+  .layout-root--mobile .page-shell textarea,
+  .layout-root--mobile .rg-page input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']),
+  .layout-root--mobile .rg-page select,
+  .layout-root--mobile .rg-page textarea {
+    font-size: max(16px, 1em) !important;
+    min-height: 44px;
+  }
+
+  .layout-root--mobile .page-shell textarea {
+    min-height: 88px;
+  }
+
+  .layout-root--mobile .page-shell table button,
+  .layout-root--mobile .page-shell table a.rg-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  /* —— Programação v2 —— */
+  .programacao-page__resumo-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .programacao-page__resumo-cards > div {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .programacao-page__layout .programacao-page__card {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .programacao-page [role='dialog'] > div {
+    max-width: calc(100vw - 24px) !important;
+    width: 100% !important;
+    margin: 12px !important;
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  /* —— Dashboard executivo —— */
+  .exec-dash .exec-dash-cal-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin: 0 -2px;
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 1px #e8ecf1;
+  }
+
+  .exec-dash .exec-dash-cal-week,
+  .exec-dash .exec-dash-cal-grid {
+    min-width: 504px;
+  }
+
+  .exec-dash .exec-dash-cal-week,
+  .exec-dash .exec-dash-cal-grid {
+    grid-template-columns: repeat(7, minmax(68px, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .exec-dash .exec-cal-day {
+    min-height: 52px !important;
+    min-width: 44px;
+  }
+
+  .exec-dash .exec-cal-arrow {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .exec-dash .exec-chart-slot {
+    height: min(280px, 42vh) !important;
+    min-height: 200px;
+  }
+
+  .exec-dash .exec-hero-board {
+    padding: 16px 14px !important;
+  }
+
+  .exec-dash .exec-kpi-card {
+    min-height: 0;
+  }
+
+  /* —— MTR (ecrã, não impressão) —— */
+  .layout-root--mobile .mtr-page.page-shell {
+    padding: 12px 10px 24px !important;
+  }
+
+  .layout-root--mobile .mtr-page .mtr-topbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .layout-root--mobile .mtr-page .mtr-topbar > * {
+    width: 100%;
+    max-width: none !important;
+  }
+
+  .layout-root--mobile .mtr-page .mtr-stats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .layout-root--mobile .mtr-page .mtr-grid .panel {
+    border-radius: 14px !important;
+    margin-bottom: 12px;
+  }
+
+  .layout-root--mobile .mtr-page .document-top {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* —— Clientes v2 —— */
+  .clientes-page__list-wrap::before {
+    display: block;
+  }
+
+  .clientes-page__list-table th,
+  .clientes-page__list-table td {
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+  }
+
+  .clientes-page__list-table button {
+    min-height: 38px !important;
+    min-width: 38px !important;
+  }
+
+  /* —— Controle de massa v2 —— */
+  .controle-massa-page__workspace {
+    gap: 16px !important;
+  }
+
+  .controle-massa-page__panel-lista,
+  .controle-massa-page__panel-form {
+    border-radius: 14px !important;
+  }
+
+  /* —— Financeiro contas / Envio NF —— */
+  .financeiro-cr-page .rg-mobile-table-scroll,
+  .financeiro-cp-page .rg-mobile-table-scroll,
+  .envio-nf-page .rg-mobile-table-scroll,
+  .faturamento-clinicas-page .rg-mobile-table-scroll {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+
+  /* Modais genéricos em page-shell */
+  .layout-root--mobile .page-shell [role='dialog'] {
+    padding: 12px !important;
+    align-items: flex-end !important;
+  }
+
+  .layout-root--mobile .page-shell [role='dialog'] > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .layout-root--mobile .page-shell [style*='grid-template-columns: repeat(2'] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .programacao-page__resumo-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .layout-root--mobile .mtr-page .mtr-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .exec-dash .exec-dash-cal-week,
+  .exec-dash .exec-dash-cal-grid {
+    min-width: 448px;
+  }
+}
+
 /* Desktop: lista compacta mantém overflow hidden (só ≥901px) */
 @media (min-width: 901px) {
   .clientes-page__list-wrap:not(.clientes-page__list-wrap--planilha) {

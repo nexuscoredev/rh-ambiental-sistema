@@ -523,7 +523,7 @@ export default function FinanceiroContasReceber() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell financeiro-cr-page">
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
@@ -840,7 +840,7 @@ export default function FinanceiroContasReceber() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', marginTop: '18px' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginTop: '18px' }}>
           {loading ? (
             <p style={{ color: '#64748b' }}>A carregar…</p>
           ) : (

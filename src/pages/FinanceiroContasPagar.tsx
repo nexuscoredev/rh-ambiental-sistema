@@ -475,7 +475,7 @@ export default function FinanceiroContasPagar() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell financeiro-cp-page">
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>Contas a pagar</h1>
@@ -853,7 +853,7 @@ export default function FinanceiroContasPagar() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', marginTop: '18px' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginTop: '18px' }}>
           {loading ? (
             <p style={{ color: '#64748b' }}>A carregar…</p>
           ) : (

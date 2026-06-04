@@ -40,7 +40,7 @@ export default function FaturamentoClinicas() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell faturamento-clinicas-page">
         <div
           style={{
             display: 'flex',
