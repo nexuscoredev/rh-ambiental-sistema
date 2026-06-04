@@ -532,6 +532,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const rootClassName = [
     'layout-root',
+    layoutMobile ? 'layout-root--mobile' : '',
     layoutMobile && mobileNavOpen ? 'layout-root--mobile-nav-open' : '',
   ]
     .filter(Boolean)
@@ -555,11 +556,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
         aria-hidden={layoutMobile && !mobileNavOpen ? true : undefined}
       >
         <div className="layout-sidebar__brand">
-          <div className="layout-sidebar__logo-row">
+          <div
+            className={
+              layoutMobile
+                ? 'layout-sidebar__logo-row layout-sidebar__logo-row--mobile-head'
+                : 'layout-sidebar__logo-row'
+            }
+          >
             <Link
               to="/bem-vindo"
               className="layout-sidebar__logo-link"
               aria-label="Ir para a página inicial"
+              onClick={layoutMobile ? fecharMenuMobile : undefined}
             >
               {logoCarregou ? (
                 <img
@@ -572,6 +580,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <span className="layout-sidebar__wordmark">RG Ambiental</span>
               )}
             </Link>
+            {layoutMobile ? (
+              <button
+                type="button"
+                className="layout-sidebar__mobile-close"
+                aria-label="Fechar menu"
+                onClick={fecharMenuMobile}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -682,29 +702,54 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </aside>
 
       <div className="layout-main">
-        <header className="layout-header">
+        <header
+          className={
+            layoutMobile ? 'layout-header layout-header--premium-mobile' : 'layout-header'
+          }
+        >
+          {layoutMobile ? (
+            <button
+              type="button"
+              className="layout-mobile-menu-btn"
+              aria-expanded={mobileNavOpen}
+              aria-controls="layout-sidebar"
+              onClick={() => setMobileNavOpen((v) => !v)}
+            >
+              <span className="layout-mobile-menu-btn__icon" aria-hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </span>
+              <span className="layout-mobile-menu-btn__label">Menu</span>
+            </button>
+          ) : null}
+
+          {layoutMobile ? (
+            <Link
+              to="/bem-vindo"
+              className="layout-mobile-header-mark"
+              aria-label="Página inicial"
+            >
+              {logoCarregou ? (
+                <img src={BRAND_LOGO_MARK} alt="" decoding="async" />
+              ) : (
+                <span className="layout-mobile-header-mark__fallback">RG</span>
+              )}
+            </Link>
+          ) : null}
+
           <div className="layout-header-left">
-            {layoutMobile ? (
-              <button
-                type="button"
-                className="layout-mobile-menu-btn"
-                aria-expanded={mobileNavOpen}
-                aria-controls="layout-sidebar"
-                onClick={() => setMobileNavOpen((v) => !v)}
-              >
-                <span className="layout-mobile-menu-btn__icon" aria-hidden>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M4 7h16M4 12h16M4 17h16" />
-                  </svg>
-                </span>
-                <span className="layout-mobile-menu-btn__label">Menu</span>
-              </button>
-            ) : null}
-            <nav className="layout-breadcrumb" aria-label="Trilha de navegação">
-              <Link to="/bem-vindo">Início</Link>
-            </nav>
-            <h1 className="layout-title">{tituloPagina}</h1>
-            <p className="layout-tagline">RG Ambiental</p>
+            {!layoutMobile ? (
+              <>
+                <nav className="layout-breadcrumb" aria-label="Trilha de navegação">
+                  <Link to="/bem-vindo">Início</Link>
+                </nav>
+                <h1 className="layout-title">{tituloPagina}</h1>
+                <p className="layout-tagline">RG Ambiental</p>
+              </>
+            ) : (
+              <h1 className="layout-title">{tituloPagina}</h1>
+            )}
           </div>
 
           <LayoutCabecalhoBusca usuario={usuario} />
@@ -764,8 +809,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
               )}
             </button>
 
-            <button type="button" onClick={handleLogout} className="layout-btn-sair">
-              Sair
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={
+                layoutMobile ? 'layout-btn-sair layout-btn-sair--compact' : 'layout-btn-sair'
+              }
+              aria-label="Sair da conta"
+            >
+              <span className="layout-btn-sair__icon" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </span>
+              <span className="layout-btn-sair__label">Sair</span>
             </button>
           </div>
         </header>
