@@ -82,15 +82,21 @@ import {
   residuoContratoTemConteudo,
 } from "../lib/mtrClienteContratoAutofill";
 import {
-  coletaCorrespondeResiduo,
   deveSegmentarTicketsPorMtr,
   numeroTicketParaSegmento,
+  ordenarColetasParaTickets,
+  resolverColetaIdParaLinhaResiduo,
   segmentosResiduoParaTickets,
 } from "../lib/ticketCardinalidadeResiduo";
 import {
   numeroTicketFromMtr,
   podeGerarNumeroTicketFromMtr,
 } from "../lib/numeroTicketMtr";
+import {
+  chavesDescricaoSegmentoTicket,
+  gravarDescricaoTicketArmazenada,
+  lerDescricaoTicketArmazenada,
+} from "../lib/controleMassaDescricaoTicket";
 
 function preencherNumeroTicketNoForm(
   prev: FormRegistro,
@@ -966,6 +972,12 @@ export default function ControleMassa() {
   const [numeroTicketPorColeta, setNumeroTicketPorColeta] = useState<Map<string, string>>(
     () => new Map()
   );
+  /** Nota do ticket — uma por coleta ou por índice de segmento (vários resíduos na mesma MTR). */
+  const [descricaoTicketPorChave, setDescricaoTicketPorChave] = useState<Map<string, string>>(
+    () => new Map()
+  );
+  const descricaoTicketPorChaveRef = useRef(descricaoTicketPorChave);
+  const [indiceSegmentoTicketAtivo, setIndiceSegmentoTicketAtivo] = useState(0);
   const [sucesso, setSucesso] = useState("");
   const [erroTela, setErroTela] = useState("");
   const [form, setForm] = useState<FormRegistro>(formInicial);
@@ -1139,7 +1151,15 @@ export default function ControleMassa() {
     const mtrNum = mtrId
       ? (mtrsLista.find((m) => m.id === mtrId)?.numero ?? "").trim()
       : "";
-    const coletasMtr = mtrId ? todasColetas.filter((c) => c.mtr_id === mtrId) : [];
+    const coletasMtr = ordenarColetasParaTickets(
+      mtrId ? todasColetas.filter((c) => c.mtr_id === mtrId) : [],
+      {
+        linhasResiduo: linhasForm,
+        numeroTicketPorColeta,
+      }
+    );
+
+    const coletasUsadasImpressao = new Set<string>();
 
     return linhas.map((linha, i) => {
       let coletaId = linha.coletaIdFixo?.trim() ?? "";
@@ -1149,13 +1169,15 @@ export default function ControleMassa() {
           i === 0 && form.coleta_id.trim()
             ? todasColetas.find((c) => c.id === form.coleta_id.trim())
             : undefined;
-        if (coletaForm && coletaCorrespondeResiduo(coletaForm, linha.texto)) {
-          coletaId = coletaForm.id;
-        } else {
-          const existente = coletasMtr.find((c) => coletaCorrespondeResiduo(c, linha.texto));
-          if (existente) coletaId = existente.id;
-        }
+        coletaId = resolverColetaIdParaLinhaResiduo(
+          coletasMtr,
+          linha.texto,
+          coletasUsadasImpressao,
+          { coletaPreferida: coletaForm ?? null }
+        );
       }
+
+      if (coletaId) coletasUsadasImpressao.add(coletaId);
 
       const numeroPrevisto =
         (coletaId ? numeroTicketPorColeta.get(coletaId) : undefined)?.trim() ||
@@ -1193,6 +1215,55 @@ export default function ControleMassa() {
   ]);
 
   const multiTicketImpressao = ticketsSegmentoImpressao.length >= 2;
+
+  const qtdSegmentosTicketNota = useMemo(() => {
+    const linhas = linhasComConteudo(form.residuos_linhas).length;
+    if (ticketsSegmentoImpressao.length >= 2) return ticketsSegmentoImpressao.length;
+    if (linhas >= 2) return linhas;
+    return 0;
+  }, [form.residuos_linhas, ticketsSegmentoImpressao.length]);
+
+  useEffect(() => {
+    descricaoTicketPorChaveRef.current = descricaoTicketPorChave;
+  }, [descricaoTicketPorChave]);
+
+  useEffect(() => {
+    if (qtdSegmentosTicketNota < 2) {
+      if (indiceSegmentoTicketAtivo !== 0) setIndiceSegmentoTicketAtivo(0);
+      return;
+    }
+    if (indiceSegmentoTicketAtivo >= qtdSegmentosTicketNota) {
+      setIndiceSegmentoTicketAtivo(0);
+    }
+  }, [qtdSegmentosTicketNota, indiceSegmentoTicketAtivo]);
+
+  const resolverChavesNotaTicketAtiva = useCallback(
+    (indice: number, coletaIdForm: string) => {
+      const seg = ticketsSegmentoImpressao[indice];
+      return chavesDescricaoSegmentoTicket(indice, seg?.coletaId || (indice === 0 ? coletaIdForm : ""));
+    },
+    [ticketsSegmentoImpressao]
+  );
+
+  const selecionarSegmentoNotaTicket = useCallback(
+    (novoIndice: number) => {
+      setIndiceSegmentoTicketAtivo(novoIndice);
+      setForm((prev) => ({
+        ...prev,
+        descricao_ticket: lerDescricaoTicketArmazenada(
+          descricaoTicketPorChaveRef.current,
+          resolverChavesNotaTicketAtiva(novoIndice, prev.coleta_id)
+        ),
+      }));
+    },
+    [resolverChavesNotaTicketAtiva]
+  );
+
+  const lerNotaTicketParaColeta = useCallback(
+    (coletaId: string) =>
+      lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, { coletaId }),
+    []
+  );
 
   const listaOperacao = useMemo(() => {
     const hojeIso = new Date().toISOString().slice(0, 10);
@@ -1365,8 +1436,10 @@ export default function ControleMassa() {
       coletaId,
       numeroTicket,
       tipoTicket,
-      descricaoExtra:
-        form.coleta_id.trim() === coletaId ? form.descricao_ticket || null : null,
+      descricaoExtra: (() => {
+        const nota = lerNotaTicketParaColeta(coletaId).trim();
+        return nota || null;
+      })(),
     });
     if (!gt.ok) {
       setErroTela(gt.message);
@@ -1449,6 +1522,13 @@ export default function ControleMassa() {
     setUltimaPesagemPorColeta(ultima);
     setTipoTicketPorColeta(ticketPorColeta.tipoPorColeta);
     setNumeroTicketPorColeta(ticketPorColeta.numeroPorColeta);
+    setDescricaoTicketPorChave((prev) => {
+      let next = prev;
+      for (const [cid, desc] of ticketPorColeta.descricaoPorColeta) {
+        next = gravarDescricaoTicketArmazenada(next, desc, { coletaId: cid });
+      }
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -1574,6 +1654,13 @@ export default function ControleMassa() {
     setUltimaPesagemPorColeta((prev) => new Map([...prev, ...ultima]));
     setTipoTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.tipoPorColeta]));
     setNumeroTicketPorColeta((prev) => new Map([...prev, ...ticketPorColeta.numeroPorColeta]));
+    setDescricaoTicketPorChave((prev) => {
+      let next = prev;
+      for (const [cid, desc] of ticketPorColeta.descricaoPorColeta) {
+        next = gravarDescricaoTicketArmazenada(next, desc, { coletaId: cid });
+      }
+      return next;
+    });
     void atualizarStatsMtrSemTicket();
   }, [atualizarStatsMtrSemTicket]);
 
@@ -1600,10 +1687,21 @@ export default function ControleMassa() {
   /** Opções do passo 1: MTR (com ou sem coleta) e coletas filhas quando há vários tickets por MTR. */
   const opcoesMtrParaPesagem = useMemo(() => {
     const linhas: { mtr: MtrResumo; coleta: ColetaOpcao | null }[] = [];
+    const mtrIdOrdemResiduos =
+      mtrSemColetaSelecionado ||
+      (form.coleta_id.trim()
+        ? todasColetas.find((c) => c.id === form.coleta_id.trim())?.mtr_id ?? null
+        : null);
 
     for (const m of mtrsLista) {
       if (m.status === "Cancelado") continue;
-      const coletasMtr = todasColetas.filter((c) => c.mtr_id === m.id);
+      const coletasMtr = ordenarColetasParaTickets(
+        todasColetas.filter((c) => c.mtr_id === m.id),
+        {
+          linhasResiduo: m.id === mtrIdOrdemResiduos ? form.residuos_linhas : [],
+          numeroTicketPorColeta,
+        }
+      );
       const mtr = mtrComDataProgramacao(m, coletasMtr, dataProgramadaPorProgramacao);
       if (coletasMtr.length === 0) {
         linhas.push({ mtr, coleta: null });
@@ -1623,15 +1721,24 @@ export default function ControleMassa() {
       if (na !== nb) return nb.localeCompare(na, "pt-BR", { numeric: true });
       if (!a.coleta && b.coleta) return -1;
       if (a.coleta && !b.coleta) return 1;
-      return String(b.coleta?.numero ?? "").localeCompare(
-        String(a.coleta?.numero ?? ""),
+      if (a.coleta && b.coleta && a.mtr.id === b.mtr.id) return 0;
+      return String(a.coleta?.numero ?? "").localeCompare(
+        String(b.coleta?.numero ?? ""),
         "pt-BR",
         { numeric: true }
       );
     });
 
     return linhas;
-  }, [mtrsLista, todasColetas, dataProgramadaPorProgramacao]);
+  }, [
+    mtrsLista,
+    todasColetas,
+    dataProgramadaPorProgramacao,
+    form.coleta_id,
+    form.residuos_linhas,
+    mtrSemColetaSelecionado,
+    numeroTicketPorColeta,
+  ]);
 
   /** Valor do `<select>`: id da MTR ou `coleta:uuid` para coleta sem MTR. */
   const valorSelectVinculo = useMemo(() => {
@@ -1841,6 +1948,10 @@ export default function ControleMassa() {
         ? prev.hora_saida
         : horaDbParaInputTime(pesagemPrev?.hora_saida);
 
+    const descricaoSalva = lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, {
+      coletaId: coletaSelecionada.id,
+    });
+
     return preencherNumeroTicketNoForm(
       mergeFormResiduosLinhas(
         {
@@ -1852,6 +1963,7 @@ export default function ControleMassa() {
           empresa: coletaSelecionada.cliente || prev.empresa,
           placa: campos.placa || prev.placa,
           motorista: campos.motorista || prev.motorista,
+          descricao_ticket: descricaoSalva,
         },
         linhas
       ),
@@ -1866,6 +1978,7 @@ export default function ControleMassa() {
   function aplicarColetaNoForm(coletaSelecionada: ColetaOpcao) {
     setMtrSemColetaSelecionado(null);
     setTipoVeiculoMtrSelecionada("");
+    setIndiceSegmentoTicketAtivo(0);
 
     const aplicar = async (heranca: MtrHerancaPesagem | null) => {
       registrarTipoCaminhaoHeranca(heranca);
@@ -1897,6 +2010,7 @@ export default function ControleMassa() {
 
   function aplicarHerancaMtrSemColeta(mtrId: string, clienteMtr: string) {
     setMtrSemColetaSelecionado(mtrId);
+    setIndiceSegmentoTicketAtivo(0);
     void buscarMtrHerancaPesagem(mtrId).then((heranca) => {
       const linhas = linhasResiduoHerancaOuColeta(
         [linhaVaziaResiduoPesagem()],
@@ -2012,6 +2126,8 @@ export default function ControleMassa() {
     setTipoVeiculoMtrSelecionada("");
     setMtrPickerAberto(false);
     setColetasImpressaoSessao([]);
+    setIndiceSegmentoTicketAtivo(0);
+    setDescricaoTicketPorChave(new Map());
     setForm(formInicial);
     setErroTela("");
     setSucesso("");
@@ -2108,6 +2224,13 @@ export default function ControleMassa() {
     return c;
   }, [form.coleta_id, todasColetas]);
 
+  const mtrAtivoParaAtalhos = useMemo(() => {
+    if (mtrSemColetaSelecionado) return mtrSemColetaSelecionado;
+    const cid = form.coleta_id.trim();
+    if (!cid) return null;
+    return todasColetas.find((c) => c.id === cid)?.mtr_id ?? null;
+  }, [mtrSemColetaSelecionado, form.coleta_id, todasColetas]);
+
   const resumoSelecaoMtr = useMemo((): ResumoSelecaoMtr => {
     if (opcaoColetaSemMtr && form.coleta_id.trim() === opcaoColetaSemMtr.id) {
       return { tipo: "coleta_sem_mtr", coleta: opcaoColetaSemMtr };
@@ -2130,11 +2253,14 @@ export default function ControleMassa() {
     const m = mtrsLista.find((x) => x.id === c.mtr_id);
     if (!m) return { tipo: "vazio" };
 
-    const coletasMtr = todasColetas
-      .filter((x) => x.mtr_id === c.mtr_id)
-      .sort((a, b) =>
-        String(b.numero).localeCompare(String(a.numero), "pt-BR", { numeric: true })
-      );
+    const coletasMtr = ordenarColetasParaTickets(
+      todasColetas.filter((x) => x.mtr_id === c.mtr_id),
+      {
+        linhasResiduo:
+          c.mtr_id === mtrAtivoParaAtalhos ? form.residuos_linhas : [],
+        numeroTicketPorColeta,
+      }
+    );
 
     if (coletasMtr.length === 1) {
       return { tipo: "mtr_unica", mtr: m, coleta: c };
@@ -2149,27 +2275,25 @@ export default function ControleMassa() {
     };
   }, [
     form.coleta_id,
+    form.residuos_linhas,
     mtrSemColetaSelecionado,
     opcaoColetaSemMtr,
     todasColetas,
     mtrsLista,
+    mtrAtivoParaAtalhos,
+    numeroTicketPorColeta,
   ]);
-
-  const mtrAtivoParaAtalhos = useMemo(() => {
-    if (mtrSemColetaSelecionado) return mtrSemColetaSelecionado;
-    const cid = form.coleta_id.trim();
-    if (!cid) return null;
-    return todasColetas.find((c) => c.id === cid)?.mtr_id ?? null;
-  }, [mtrSemColetaSelecionado, form.coleta_id, todasColetas]);
 
   const coletasAtalhoMtr = useMemo(() => {
     if (!mtrAtivoParaAtalhos) return [];
-    return todasColetas
-      .filter((c) => c.mtr_id === mtrAtivoParaAtalhos)
-      .sort((a, b) =>
-        String(b.numero).localeCompare(String(a.numero), "pt-BR", { numeric: true })
-      );
-  }, [mtrAtivoParaAtalhos, todasColetas]);
+    return ordenarColetasParaTickets(
+      todasColetas.filter((c) => c.mtr_id === mtrAtivoParaAtalhos),
+      {
+        linhasResiduo: form.residuos_linhas,
+        numeroTicketPorColeta,
+      }
+    );
+  }, [mtrAtivoParaAtalhos, todasColetas, form.residuos_linhas, numeroTicketPorColeta]);
 
   const mostrarOpcaoColetaSemMtr = useMemo(() => {
     if (!opcaoColetaSemMtr) return false;
@@ -2343,7 +2467,13 @@ export default function ControleMassa() {
       const segmentos = segmentosResiduoParaTickets(form.residuos_linhas);
       const mtrNumeroSeg =
         mtrsLista.find((m) => m.id === mtrIdSegmentacao)?.numero?.trim() ?? "";
-      let coletasMtr = todasColetas.filter((c) => c.mtr_id === mtrIdSegmentacao);
+      let coletasMtr = ordenarColetasParaTickets(
+        todasColetas.filter((c) => c.mtr_id === mtrIdSegmentacao),
+        {
+          linhasResiduo: segmentos,
+          numeroTicketPorColeta,
+        }
+      );
       const coletasUsadas = new Set<string>();
       const coletasGravadas: string[] = [];
       let ticketsOk = 0;
@@ -2375,14 +2505,12 @@ export default function ControleMassa() {
             ? todasColetas.find((c) => c.id === form.coleta_id.trim())
             : undefined;
 
-        if (coletaForm && coletaCorrespondeResiduo(coletaForm, linha.texto)) {
-          coletaIdSeg = coletaForm.id;
-        } else {
-          const existente = coletasMtr.find(
-            (c) => !coletasUsadas.has(c.id) && coletaCorrespondeResiduo(c, linha.texto)
-          );
-          if (existente) coletaIdSeg = existente.id;
-        }
+        coletaIdSeg = resolverColetaIdParaLinhaResiduo(
+          coletasMtr,
+          linha.texto,
+          coletasUsadas,
+          { coletaPreferida: coletaForm ?? null }
+        );
 
         if (!coletaIdSeg) {
           const agSeg = agregarPesosDasLinhas([linha]);
@@ -2437,11 +2565,16 @@ export default function ControleMassa() {
         coletasUsadas.add(coletaIdSeg);
 
         const coletaSeg = todasColetas.find((c) => c.id === coletaIdSeg) ?? coletasMtr.find((c) => c.id === coletaIdSeg);
+        const notaSegmento = lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, {
+          coletaId: coletaIdSeg,
+          indiceSegmento: i,
+        });
+
         const persist = await persistirPesagemUmSegmento({
           coletaId: coletaIdSeg,
           numeroTicket: numeroTicketSeg,
           tipoTicket: form.tipo_ticket,
-          descricaoTicket: form.descricao_ticket,
+          descricaoTicket: notaSegmento,
           data: form.data,
           hora_entrada: form.hora_entrada,
           hora_saida: form.hora_saida,
@@ -2468,6 +2601,9 @@ export default function ControleMassa() {
         }
 
         coletasGravadas.push(coletaIdSeg);
+        setDescricaoTicketPorChave((prev) =>
+          gravarDescricaoTicketArmazenada(prev, notaSegmento, { coletaId: coletaIdSeg })
+        );
       }
 
       const linhasSalvasSeg = linhasFormAposGravacao(undefined, segmentos);
@@ -2648,11 +2784,22 @@ export default function ControleMassa() {
       return;
     }
 
+    const notaTicketUnica =
+      form.descricao_ticket.trim() ||
+      lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, {
+        coletaId,
+        indiceSegmento: 0,
+      });
+
+    setDescricaoTicketPorChave((prev) =>
+      gravarDescricaoTicketArmazenada(prev, notaTicketUnica, { coletaId })
+    );
+
     const ticketAuto = await garantirTicketAposPesagem({
       coletaId,
       numeroTicket: form.numero_ticket,
       tipoTicket: form.tipo_ticket,
-      descricaoExtra: form.descricao_ticket,
+      descricaoExtra: notaTicketUnica,
     });
 
     const fluxoPosPesagem = ticketAuto.ok ? "TICKET_GERADO" : "CONTROLE_PESAGEM_LANCADO";
@@ -3968,16 +4115,73 @@ export default function ControleMassa() {
                     </div>
                   </div>
 
+                  {qtdSegmentosTicketNota >= 2 ? (
+                    <div style={{ gridColumn: "span 12" }}>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                        Qual ticket?
+                      </label>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          marginTop: "6px",
+                        }}
+                      >
+                        {Array.from({ length: qtdSegmentosTicketNota }, (_, idx) => {
+                          const ativo = indiceSegmentoTicketAtivo === idx;
+                          const rotulo =
+                            ticketsSegmentoImpressao[idx]?.texto?.trim() ||
+                            linhasComConteudo(form.residuos_linhas)[idx]?.texto?.trim() ||
+                            `Ticket ${idx + 1}`;
+                          return (
+                            <button
+                              key={`nota-ticket-seg-${idx}`}
+                              type="button"
+                              onClick={() => selecionarSegmentoNotaTicket(idx)}
+                              style={{
+                                borderRadius: "999px",
+                                border: `1px solid ${ativo ? "#0f172a" : "#cbd5e1"}`,
+                                background: ativo ? "#0f172a" : "#ffffff",
+                                color: ativo ? "#ffffff" : "#334155",
+                                padding: "6px 12px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              title={rotulo}
+                            >
+                              Ticket {idx + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div style={{ gridColumn: "span 12" }} className="field">
                     <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
                       Nota no ticket (opcional)
+                      {qtdSegmentosTicketNota >= 2 ? (
+                        <span style={{ fontWeight: 600, color: "#64748b", marginLeft: 6 }}>
+                          — ticket {indiceSegmentoTicketAtivo + 1}
+                        </span>
+                      ) : null}
                     </label>
                     <textarea
                       name="descricao_ticket"
                       value={form.descricao_ticket}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, descricao_ticket: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        const valor = e.target.value;
+                        const chaves = resolverChavesNotaTicketAtiva(
+                          indiceSegmentoTicketAtivo,
+                          form.coleta_id
+                        );
+                        setDescricaoTicketPorChave((prev) =>
+                          gravarDescricaoTicketArmazenada(prev, valor, chaves)
+                        );
+                        setForm((prev) => ({ ...prev, descricao_ticket: valor }));
+                      }}
                       rows={2}
                       placeholder="Ex.: observação interna que deve aparecer no ticket impresso. Deixe vazio se não precisar."
                       style={{

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  avisosConferenciaDeclaracao,
+  DECLARACAO_RESIDUO_RG_ANEXO2,
   estadoFisicoDeclaracaoDesdeTexto,
   montarDeclaracaoResiduoContaminadoFromMtr,
+  type DeclaracaoResiduoContaminadoDados,
 } from './mtrResiduoContaminadoDeclaracao'
 
 describe('mtrResiduoContaminadoDeclaracao', () => {
@@ -33,5 +36,26 @@ describe('mtrResiduoContaminadoDeclaracao', () => {
     expect(estadoFisicoDeclaracaoDesdeTexto('SÓLIDO')).toBe('solido')
     expect(estadoFisicoDeclaracaoDesdeTexto('pastoso')).toBe('pastoso')
     expect(estadoFisicoDeclaracaoDesdeTexto('')).toBe('')
+  })
+
+  it('conferência não exige quantidade (Kg)', () => {
+    const base: DeclaracaoResiduoContaminadoDados = {
+      numeroMtr: 'MTR-1',
+      gerador: { razaoSocial: 'ETHOS', cnpj: '10.313.205/0001-80', endereco: 'Rua X' },
+      quantidadeKg: '',
+      classeResiduo: 'EFLUENTE',
+      estadoFisico: 'liquido',
+      destino: DECLARACAO_RESIDUO_RG_ANEXO2,
+      transporte: DECLARACAO_RESIDUO_RG_ANEXO2,
+      assinatura: {
+        responsavel: '',
+        departamento: '',
+        email: '',
+        telefone: '',
+        data: '01/06/2026',
+      },
+    }
+    expect(avisosConferenciaDeclaracao(base)).not.toContain('Quantidade (Kg)')
+    expect(avisosConferenciaDeclaracao(base)).toEqual([])
   })
 })

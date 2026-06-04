@@ -112,7 +112,7 @@ export function MtrResiduoContaminadoConferenciaModal({
                 />
               </label>
               <label className="mtr-rc-modal-field">
-                <span>Quantidade (Kg)</span>
+                <span>Quantidade (Kg) (opcional)</span>
                 <input
                   value={draft.quantidadeKg}
                   onChange={(e) => setDraft((p) => (p ? { ...p, quantidadeKg: e.target.value } : p))}

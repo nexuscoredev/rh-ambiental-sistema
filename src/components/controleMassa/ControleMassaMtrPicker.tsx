@@ -44,7 +44,7 @@ export function agruparOpcoesMtrPicker(linhas: LinhaOpcao[]): GrupoMtrPicker[] {
 
   for (const g of map.values()) {
     g.coletas.sort((a, b) =>
-      String(b.numero).localeCompare(String(a.numero), "pt-BR", { numeric: true })
+      String(a.numero).localeCompare(String(b.numero), "pt-BR", { numeric: true })
     );
   }
 

@@ -157,7 +157,6 @@ export function avisosConferenciaDeclaracao(d: DeclaracaoResiduoContaminadoDados
   if (!d.gerador.razaoSocial || d.gerador.razaoSocial === '—') f.push('Razão social do gerador')
   if (!d.gerador.cnpj || d.gerador.cnpj === '—') f.push('CNPJ do gerador')
   if (!d.gerador.endereco || d.gerador.endereco === '—') f.push('Endereço do gerador')
-  if (!d.quantidadeKg.trim()) f.push('Quantidade (Kg)')
   if (!d.estadoFisico) f.push('Estado físico (marque Sólido, Líquido, Pastoso ou Lodo)')
   return f
 }

@@ -222,18 +222,20 @@ export async function fetchTicketOperacionalPorColetaIds(
 ): Promise<{
   tipoPorColeta: Map<string, string>
   numeroPorColeta: Map<string, string>
+  descricaoPorColeta: Map<string, string>
 }> {
   const tipoPorColeta = new Map<string, string>()
   const numeroPorColeta = new Map<string, string>()
+  const descricaoPorColeta = new Map<string, string>()
   const uniq = [...new Set(coletaIds.map((id) => id.trim()).filter(Boolean))]
-  if (uniq.length === 0) return { tipoPorColeta, numeroPorColeta }
+  if (uniq.length === 0) return { tipoPorColeta, numeroPorColeta, descricaoPorColeta }
 
   const visto = new Set<string>()
   for (let i = 0; i < uniq.length; i += CHUNK_TICKETS) {
     const chunk = uniq.slice(i, i + CHUNK_TICKETS)
     const { data, error } = await supabase
       .from('tickets_operacionais')
-      .select('coleta_id, tipo_ticket, numero')
+      .select('coleta_id, tipo_ticket, numero, descricao')
       .in('coleta_id', chunk)
     if (error) {
       console.error('Erro ao buscar ticket operacional por coleta:', error)
@@ -245,6 +247,7 @@ export async function fetchTicketOperacionalPorColetaIds(
             coleta_id?: string
             tipo_ticket?: string | null
             numero?: string | null
+            descricao?: string | null
           }>
         | null) ?? []
     for (const row of rows) {
@@ -253,11 +256,13 @@ export async function fetchTicketOperacionalPorColetaIds(
       visto.add(cid)
       const tt = row.tipo_ticket != null ? String(row.tipo_ticket).trim() : ''
       const num = row.numero != null ? String(row.numero).trim() : ''
+      const desc = row.descricao != null ? String(row.descricao).trim() : ''
       if (tt) tipoPorColeta.set(cid, tt)
       numeroPorColeta.set(cid, num)
+      if (desc) descricaoPorColeta.set(cid, desc)
     }
   }
-  return { tipoPorColeta, numeroPorColeta }
+  return { tipoPorColeta, numeroPorColeta, descricaoPorColeta }
 }
 
 const MTR_STATUS_EMITIDA = ['Emitido', 'Baixada'] as const
