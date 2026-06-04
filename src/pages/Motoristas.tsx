@@ -686,7 +686,7 @@ export default function Motoristas() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell motoristas-page">
         <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
           {sucesso && (
             <div
@@ -1048,7 +1048,7 @@ export default function Motoristas() {
                 Carregando motoristas...
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="rg-mobile-table-scroll" style={{ overflowX: "auto" }}>
                 <table
                   style={{
                     width: "100%",

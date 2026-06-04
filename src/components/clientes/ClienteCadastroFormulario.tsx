@@ -89,6 +89,7 @@ export function ClienteCadastroFormulario({
                 </p>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid4,
@@ -142,6 +143,7 @@ export function ClienteCadastroFormulario({
                   </label>
                 </div>
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid4,
@@ -226,6 +228,7 @@ export function ClienteCadastroFormulario({
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid3,
@@ -449,6 +452,7 @@ export function ClienteCadastroFormulario({
                 />
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid6,
@@ -502,6 +506,7 @@ export function ClienteCadastroFormulario({
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid6,
@@ -526,6 +531,7 @@ export function ClienteCadastroFormulario({
                 />
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid6,
@@ -579,6 +585,7 @@ export function ClienteCadastroFormulario({
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: grid6,
@@ -608,6 +615,7 @@ export function ClienteCadastroFormulario({
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: gridResp,

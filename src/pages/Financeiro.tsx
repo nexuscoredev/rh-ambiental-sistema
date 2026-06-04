@@ -845,7 +845,7 @@ export default function Financeiro() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell financeiro-page">
       <div
         style={{
           display: 'flex',
@@ -1290,7 +1290,7 @@ export default function Financeiro() {
           </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
           <table style={tableStyle}>
             <thead>
               <tr>
@@ -1802,7 +1802,7 @@ export default function Financeiro() {
         ) : documentos.length === 0 ? (
           <p style={{ color: '#64748b', fontSize: '14px' }}>Nenhum documento registado.</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
             <table style={{ ...tableStyle, minWidth: '720px' }}>
               <thead>
                 <tr>

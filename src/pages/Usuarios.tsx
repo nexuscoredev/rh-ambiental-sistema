@@ -785,7 +785,7 @@ export default function Usuarios() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell usuarios-page">
       <div
         style={{
           display: 'flex',
@@ -1056,7 +1056,7 @@ export default function Usuarios() {
             Nenhum usuário encontrado.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1040px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc' }}>

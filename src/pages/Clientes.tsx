@@ -2502,7 +2502,7 @@ export default function Clientes() {
 
   return (
     <MainLayout>
-      <div className="page-shell rh-hub">
+      <div className="page-shell rh-hub clientes-page">
       <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
         {sucesso && (
           <div
@@ -2534,7 +2534,7 @@ export default function Clientes() {
         />
 
         <div
-          className="rg-page-toolbar"
+          className="rg-page-toolbar clientes-page__toolbar"
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -2554,7 +2554,7 @@ export default function Clientes() {
               {gerandoRelatorio ? "Gerando PDF…" : "Relatório (PDF)"}
             </button>
 
-            <div className="rg-page-toolbar" style={{ gap: "8px" }}>
+            <div className="rg-page-toolbar clientes-page__toolbar-nested" style={{ gap: "8px" }}>
               <input
                 type="file"
                 accept=".xlsx"
@@ -2627,6 +2627,7 @@ export default function Clientes() {
 
         {mostrarCadastro && (
         <div
+          className="clientes-page__cadastro"
           style={{
             background: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -2677,6 +2678,7 @@ export default function Clientes() {
                 </p>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -2730,6 +2732,7 @@ export default function Clientes() {
                   </label>
                 </div>
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -2814,6 +2817,7 @@ export default function Clientes() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -3037,6 +3041,7 @@ export default function Clientes() {
                 />
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
@@ -3090,6 +3095,7 @@ export default function Clientes() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
@@ -3114,6 +3120,7 @@ export default function Clientes() {
                 />
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
@@ -3167,6 +3174,7 @@ export default function Clientes() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
@@ -3196,6 +3204,7 @@ export default function Clientes() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "2fr 1fr",
@@ -3365,6 +3374,7 @@ export default function Clientes() {
           }}
         >
           <div
+            className="clientes-page__lista-head"
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -3388,6 +3398,7 @@ export default function Clientes() {
             </div>
 
             <input
+              className="clientes-page__busca"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Busca (aguarda digitar — nome, razão social, CNPJ/CPF, cidade, e-mail NF, resíduo, endereços, MTR, destino…)"
@@ -3410,6 +3421,7 @@ export default function Clientes() {
           </div>
 
           <div
+            className="clientes-page__filtros-row"
             style={{
               display: "flex",
               flexWrap: "wrap",
@@ -3420,6 +3432,7 @@ export default function Clientes() {
             }}
           >
             <div
+              className="clientes-page__modo-tabs"
               role="tablist"
               aria-label="Modo de exibição da lista"
               style={{
@@ -3532,12 +3545,17 @@ export default function Clientes() {
             </div>
           ) : (
             <div
+              className={
+                modoTabela === "planilha"
+                  ? "clientes-page__list-wrap clientes-page__list-wrap--planilha rg-mobile-table-scroll"
+                  : "clientes-page__list-wrap rg-mobile-table-scroll"
+              }
               style={{
-                overflowX: modoTabela === "planilha" ? "auto" : "hidden",
                 WebkitOverflowScrolling: "touch",
               }}
             >
               <table
+                className="clientes-page__list-table"
                 style={{
                   width: "100%",
                   tableLayout: modoTabela === "planilha" ? "auto" : "fixed",
@@ -4770,6 +4788,7 @@ function DetalheSecao({ titulo, children }: { titulo: string; children: React.Re
         {titulo}
       </h3>
       <div
+        className="cliente-detalhe-secao__grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",

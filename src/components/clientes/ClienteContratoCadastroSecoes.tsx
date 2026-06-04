@@ -128,6 +128,7 @@ export function ClienteContratoCadastroSecoes({
                 </button>
               </div>
               <div
+                className="rg-mobile-stack-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr minmax(120px, 160px) auto',
@@ -215,6 +216,7 @@ export function ClienteContratoCadastroSecoes({
                 </button>
               </div>
               <div
+                className="rg-mobile-stack-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr minmax(120px, 160px) auto',
@@ -307,6 +309,7 @@ export function ClienteContratoCadastroSecoes({
                 </button>
               </div>
               <div
+                className="rg-mobile-stack-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',

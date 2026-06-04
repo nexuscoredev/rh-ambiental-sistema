@@ -430,7 +430,7 @@ export default function FaturamentoOperacional() {
 
   return (
     <MainLayout>
-      <div className="page-shell rh-hub">
+      <div className="page-shell rh-hub faturamento-page">
         <RhHubHeroBanner
           titleId="faturamento-operacional-title"
           eyebrow="RG Ambiental · Faturamento"

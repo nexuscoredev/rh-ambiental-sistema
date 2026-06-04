@@ -390,7 +390,7 @@ export default function DashboardLegacy() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell dashboard-legacy-page">
       <div
         style={{
           display: 'flex',
@@ -492,7 +492,10 @@ export default function DashboardLegacy() {
           Filas operacionais orientadas por ação · baseadas na etapa canónica do fluxo.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '10px', marginBottom: '12px' }}>
+        <div
+          className="dashboard-legacy-kpi-row"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '10px', marginBottom: '12px' }}
+        >
           {(
             [
               ['operacional', 'Operacional'],

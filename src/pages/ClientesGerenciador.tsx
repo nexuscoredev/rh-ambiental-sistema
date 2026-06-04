@@ -418,7 +418,7 @@ export default function ClientesGerenciador(props: unknown) {
   return (
     <MainLayout>
       <div
-        className="rg-page"
+        className="rg-page gerenciador-clientes-page"
         style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', minWidth: 0 }}
       >
         <div style={pageHeaderRow}>

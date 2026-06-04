@@ -280,7 +280,10 @@ export function ClienteGerenciadorMtrTabela({
         pelo contrato de resíduos do cadastro quando o nome do resíduo coincide; pode ser ajustado
         manualmente na linha.
       </p>
-      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+      <div
+        className="rg-mobile-table-scroll"
+        style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}
+      >
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '960px' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>

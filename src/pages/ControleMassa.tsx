@@ -2952,7 +2952,7 @@ export default function ControleMassa() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell controle-massa-page">
       <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
         {sucesso && (
           <div
@@ -3890,6 +3890,7 @@ export default function ControleMassa() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid rg-mobile-stack-grid--12"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
@@ -4025,6 +4026,7 @@ export default function ControleMassa() {
                 </div>
 
                 <div
+                  className="rg-mobile-stack-grid rg-mobile-stack-grid--12"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(12, minmax(0, 1fr))",

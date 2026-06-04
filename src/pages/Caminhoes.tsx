@@ -1141,7 +1141,7 @@ export default function Caminhoes() {
 
   return (
     <MainLayout>
-      <div className="page-shell">
+      <div className="page-shell caminhoes-page">
         <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
           {sucesso && (
             <div
@@ -1886,7 +1886,7 @@ export default function Caminhoes() {
                 Carregando veículos...
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="rg-mobile-table-scroll" style={{ overflowX: "auto" }}>
                 <table
                   style={{
                     width: "100%",

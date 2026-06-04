@@ -1,0 +1,264 @@
+/**
+ * Otimizações visuais só para telefone/tablet (≤900px).
+ * Desktop (≥901px) não é alterado por este ficheiro.
+ */
+
+@media (max-width: 900px) {
+  /* —— Padrões em qualquer página com .page-shell —— */
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar .rg-btn,
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar .rg-btn--outline,
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar .rg-btn--primary,
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar .rg-btn--report {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .layout-main-scroll-inner .page-shell .rg-page-toolbar .rg-page-toolbar {
+    width: 100%;
+  }
+
+  .rh-hub__hero-inner {
+    padding: 20px 16px !important;
+    border-radius: 16px;
+  }
+
+  .rh-hub__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .rh-hub__stat {
+    flex: 1 1 calc(50% - 8px);
+    min-width: min(100%, 148px);
+  }
+
+  .rh-hub__title {
+    font-size: clamp(1.25rem, 5vw, 1.65rem);
+  }
+
+  .rh-hub__grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .rh-hub__card {
+    min-height: 0;
+  }
+
+  .rh-modulo__layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .rh-modulo__panel {
+    padding: 18px 16px;
+  }
+
+  /* Grelhas de formulário (classe opt-in nos componentes) */
+  .rg-mobile-stack-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .rg-mobile-stack-grid--12 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .rg-mobile-split-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Scroll horizontal em tabelas largas */
+  .rg-mobile-table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+  }
+
+  .rg-mobile-table-scroll > table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  /* Painéis / rg-page */
+  .layout-main-scroll-inner .rg-page {
+    gap: 14px;
+  }
+
+  .layout-main-scroll-inner .panel {
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .layout-main-scroll-inner .panel-body {
+    padding: 14px 12px;
+  }
+
+  /* —— Clientes —— */
+  .clientes-page .clientes-page__toolbar-nested {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .clientes-page .clientes-page__lista-head {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .clientes-page .clientes-page__lista-head h2 {
+    font-size: 17px;
+  }
+
+  .clientes-page .clientes-page__busca {
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    font-size: 16px !important;
+  }
+
+  .clientes-page .clientes-page__filtros-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .clientes-page .clientes-page__modo-tabs {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .clientes-page .clientes-page__modo-tabs button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    min-height: 40px;
+  }
+
+  .clientes-page__list-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .clientes-page__list-table {
+    table-layout: auto !important;
+    min-width: 680px;
+  }
+
+  .clientes-page__list-wrap--planilha .clientes-page__list-table {
+    min-width: 1480px;
+  }
+
+  .clientes-page__cadastro {
+    border-radius: 14px;
+  }
+
+  .clientes-page__cadastro form {
+    padding: 16px 14px !important;
+  }
+
+  .cliente-detalhe-secao__grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* —— Programação —— */
+  .programacao-page .programacao-page__controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .programacao-page .programacao-page__controls-acoes {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .programacao-page .programacao-page__controls-acoes .rg-btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 160px);
+  }
+
+  /* —— Controle de massa —— */
+  .controle-massa-page .rg-mobile-stack-grid--12 input,
+  .controle-massa-page .rg-mobile-stack-grid--12 select,
+  .controle-massa-page .rg-mobile-stack-grid--12 textarea {
+    grid-column: auto !important;
+  }
+
+  /* —— Pós-venda —— */
+  .pos-venda-page .pos-venda-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* —— Dashboard legado —— */
+  .dashboard-legacy-page .dashboard-legacy-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* —— Gerenciador de clientes —— */
+  .gerenciador-clientes-page .rg-page > div:first-child {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gerenciador-clientes-page .rg-page > div:first-child .rg-btn {
+    width: 100%;
+  }
+
+  /* —— Financeiro / listagens —— */
+  .financeiro-page .rg-mobile-table-scroll,
+  .usuarios-page .rg-mobile-table-scroll,
+  .motoristas-page .rg-mobile-table-scroll,
+  .caminhoes-page .rg-mobile-table-scroll {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+
+  /* Mini-botões em tabelas */
+  .layout-main-scroll-inner .mini-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .rh-hub__stat {
+    flex: 1 1 100%;
+  }
+
+  .rg-mobile-stack-grid--12 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-legacy-page .dashboard-legacy-kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .clientes-page__list-table {
+    min-width: 600px;
+  }
+}
+
+/* Desktop: lista compacta mantém overflow hidden (só ≥901px) */
+@media (min-width: 901px) {
+  .clientes-page__list-wrap:not(.clientes-page__list-wrap--planilha) {
+    overflow-x: hidden;
+  }
+}
