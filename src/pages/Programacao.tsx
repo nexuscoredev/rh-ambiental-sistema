@@ -1258,7 +1258,7 @@ export default function Programacao() {
     setDiaPainelCalendario(null)
   }
 
-  async function excluirProgramacao(id: string) {
+  async function excluirProgramacao(item: ProgramacaoItem) {
     if (!podeExcluirProgramacao) {
       setErro('Seu perfil não pode excluir programações. Apenas equipe Comercial ou Desenvolvedor.')
       return
@@ -1271,25 +1271,59 @@ export default function Programacao() {
     })
     if (!confirmar) return
 
+    let excluirSerieInteira = false
+    const serieId = item.programacaoSerieId?.trim() || null
+    if (item.coletaFixa && serieId) {
+      excluirSerieInteira = await rgConfirm({
+        title: 'Coleta fixa semanal',
+        message:
+          'Esta programação faz parte de uma coleta fixa com várias datas no calendário. Deseja excluir TODAS as datas desta série? (Cancelar = excluir somente esta data)',
+        confirmLabel: 'Excluir toda a série',
+        cancelLabel: 'Só esta data',
+        variant: 'danger',
+      })
+    }
+
     try {
       setErro('')
       setSucesso('')
 
-      const { error } = await supabase.from('programacoes').delete().eq('id', id)
+      let query = supabase.from('programacoes').delete()
+      if (excluirSerieInteira && serieId) {
+        query = query.eq('programacao_serie_id', serieId)
+      } else {
+        query = query.eq('id', item.id)
+      }
+
+      const { data: removidas, error } = await query.select('id')
 
       if (error) {
         console.error('ERRO AO EXCLUIR PROGRAMAÇÃO:', error)
         throw error
       }
 
-      setSucesso('Programação excluída com sucesso.')
+      if (!removidas?.length) {
+        setErro(
+          'Nenhuma programação foi removida. O servidor pode ter bloqueado a exclusão (permissão) ou o registro já não existe. Peça ao suporte para aplicar o script RBAC no Supabase, se o problema continuar.'
+        )
+        return
+      }
+
+      setSucesso(
+        excluirSerieInteira && serieId
+          ? `${removidas.length} programação(ões) da série excluída(s) com sucesso.`
+          : 'Programação excluída com sucesso.'
+      )
       await carregarDados()
 
-      if (form.id === id) {
+      if (form.id === item.id || (excluirSerieInteira && form.programacaoSerieId === serieId)) {
         limparFormulario()
         setModalNovaProgramacaoAberto(false)
       }
-      if (formEdicaoModal?.id === id) {
+      if (
+        formEdicaoModal?.id === item.id ||
+        (excluirSerieInteira && formEdicaoModal?.programacaoSerieId === serieId)
+      ) {
         setFormEdicaoModal(null)
       }
     } catch (error) {
@@ -2412,7 +2446,7 @@ export default function Programacao() {
                                   opacity: podeExcluirProgramacao ? 1 : 0.5,
                                   cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
                                 }}
-                                onClick={() => excluirProgramacao(item.id)}
+                                onClick={() => void excluirProgramacao(item)}
                                 disabled={!podeExcluirProgramacao}
                               >
                                 Excluir
@@ -2740,7 +2774,7 @@ export default function Programacao() {
                             opacity: podeExcluirProgramacao ? 1 : 0.5,
                             cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
                           }}
-                          onClick={() => void excluirProgramacao(item.id)}
+                          onClick={() => void excluirProgramacao(item)}
                           disabled={!podeExcluirProgramacao}
                         >
                           Excluir
