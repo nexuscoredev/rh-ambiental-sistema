@@ -42,12 +42,7 @@ export function agruparOpcoesMtrPicker(linhas: LinhaOpcao[]): GrupoMtrPicker[] {
     else g.coletas.push(coleta);
   }
 
-  for (const g of map.values()) {
-    g.coletas.sort((a, b) =>
-      String(a.numero).localeCompare(String(b.numero), "pt-BR", { numeric: true })
-    );
-  }
-
+  // Mantém a ordem canónica (linhas de resíduo / sufixo do ticket) vinda de `opcoesMtrParaPesagem`.
   return Array.from(map.values());
 }
 

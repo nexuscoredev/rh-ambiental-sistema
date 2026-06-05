@@ -59,6 +59,25 @@ describe("ticketCardinalidadeResiduo", () => {
     expect(resolverColetaIdParaLinhaResiduo(coletas, "MIX", usadas)).toBe("");
   });
 
+  it("coletaPreferida não deve trocar ticket 1 e 2 quando o resíduo é o mesmo", () => {
+    const coletas = [
+      { id: "c1", numero: "90188", tipo_residuo: "MIX DE CONTAMINADOS - Classe I" },
+      { id: "c2", numero: "90189", tipo_residuo: "MIX DE CONTAMINADOS - Classe I" },
+    ];
+    const linhas = [{ texto: "MIX DE CONTAMINADOS - Classe I" }, { texto: "MIX DE CONTAMINADOS - Classe I" }];
+    const ord = ordenarColetasPorLinhasResiduo(coletas, linhas);
+    const usadas = new Set<string>();
+    const id0 = ord[0] ? resolverColetaIdParaLinhaResiduo(ord, linhas[0]!.texto, usadas) : "";
+    usadas.add(id0);
+    const id1 = ord[1] ? resolverColetaIdParaLinhaResiduo(ord, linhas[1]!.texto, usadas) : "";
+    expect(id0).toBe("c1");
+    expect(id1).toBe("c2");
+    const trocado = resolverColetaIdParaLinhaResiduo(ord, linhas[0]!.texto, new Set(), {
+      coletaPreferida: coletas[1],
+    });
+    expect(trocado).toBe("c2");
+  });
+
   it("indiceSufixoNumeroTicket lê sufixo -1, -2", () => {
     expect(indiceSufixoNumeroTicket("153818-1")).toBe(1);
     expect(indiceSufixoNumeroTicket("153818-3")).toBe(3);

@@ -1138,13 +1138,16 @@ export default function ControleMassa() {
     let linhas: LinhaSeg[] = linhasForm.map((l) => ({ texto: l.texto }));
 
     if (linhas.length < 2 && coletasImpressaoSessao.length >= 2) {
-      linhas = coletasImpressaoSessao.map((id) => {
-        const c = todasColetas.find((x) => x.id === id);
-        return {
-          texto: (c?.tipo_residuo ?? "").trim() || `Coleta ${id.slice(0, 8)}`,
-          coletaIdFixo: id,
-        };
-      });
+      const coletasSessao = ordenarColetasParaTickets(
+        coletasImpressaoSessao
+          .map((id) => todasColetas.find((x) => x.id === id))
+          .filter((c): c is ColetaOpcao => Boolean(c)),
+        { linhasResiduo: linhasForm, numeroTicketPorColeta }
+      );
+      linhas = coletasSessao.map((c) => ({
+        texto: (c.tipo_residuo ?? "").trim() || `Coleta ${c.id.slice(0, 8)}`,
+        coletaIdFixo: c.id,
+      }));
     }
 
     if (linhas.length < 2) return [];
@@ -1166,16 +1169,20 @@ export default function ControleMassa() {
       let coletaId = linha.coletaIdFixo?.trim() ?? "";
 
       if (!coletaId) {
-        const coletaForm =
-          i === 0 && form.coleta_id.trim()
-            ? todasColetas.find((c) => c.id === form.coleta_id.trim())
-            : undefined;
-        coletaId = resolverColetaIdParaLinhaResiduo(
-          coletasMtr,
-          linha.texto,
-          coletasUsadasImpressao,
-          { coletaPreferida: coletaForm ?? null }
-        );
+        const candidataOrdem = coletasMtr[i];
+        if (
+          candidataOrdem &&
+          !coletasUsadasImpressao.has(candidataOrdem.id) &&
+          coletaCorrespondeResiduo(candidataOrdem, linha.texto)
+        ) {
+          coletaId = candidataOrdem.id;
+        } else {
+          coletaId = resolverColetaIdParaLinhaResiduo(
+            coletasMtr,
+            linha.texto,
+            coletasUsadasImpressao
+          );
+        }
       }
 
       if (coletaId) coletasUsadasImpressao.add(coletaId);
@@ -2501,17 +2508,20 @@ export default function ControleMassa() {
 
         let coletaIdSeg = "";
 
-        const coletaForm =
-          form.coleta_id.trim() && i === 0
-            ? todasColetas.find((c) => c.id === form.coleta_id.trim())
-            : undefined;
-
-        coletaIdSeg = resolverColetaIdParaLinhaResiduo(
-          coletasMtr,
-          linha.texto,
-          coletasUsadas,
-          { coletaPreferida: coletaForm ?? null }
-        );
+        const candidataOrdem = coletasMtr[i];
+        if (
+          candidataOrdem &&
+          !coletasUsadas.has(candidataOrdem.id) &&
+          coletaCorrespondeResiduo(candidataOrdem, linha.texto)
+        ) {
+          coletaIdSeg = candidataOrdem.id;
+        } else {
+          coletaIdSeg = resolverColetaIdParaLinhaResiduo(
+            coletasMtr,
+            linha.texto,
+            coletasUsadas
+          );
+        }
 
         if (!coletaIdSeg) {
           const agSeg = agregarPesosDasLinhas([linha]);
