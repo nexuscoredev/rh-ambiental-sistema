@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
-import { FROTA_DIVISOES } from '../../lib/frotaModulos'
+import { FROTA_DIVISOES, FROTA_HUB_LABEL } from '../../lib/frotaModulos'
 import { FrotaModuloIcon } from './FrotaModuloIcon'
 import { frotaVisual } from './frotaModuloVisual'
 
@@ -10,24 +10,24 @@ const modulos = [...FROTA_DIVISOES].sort((a, b) => a.ordem - b.ordem)
 export default function FrotaHub() {
   return (
     <MainLayout>
-      <div className="page-shell rh-hub">
+      <div className="page-shell rh-hub frota-hub-transportes">
         <section className="rh-hub__hero" aria-labelledby="frota-hub-title">
           <div className="rh-hub__hero-glow" aria-hidden />
           <div className="rh-hub__hero-inner">
             <div className="rh-hub__hero-copy">
               <p className="rh-hub__eyebrow">RG Ambiental · Fluxo operacional</p>
               <h1 id="frota-hub-title" className="rh-hub__title">
-                Frota operacional
+                {FROTA_HUB_LABEL}
               </h1>
               <p className="rh-hub__lead">
-                Transportes de equipamentos do cliente e manutenção completa da frota: diário do veículo,
-                quilometragem, óleo, fotos e assinatura do responsável.
+                Movimentação de equipamentos do cliente, manutenção e diário da frota, e relatório
+                consolidado para impressão — tudo num só lugar.
               </p>
             </div>
             <div className="rh-hub__stats" aria-label="Resumo da área">
               <div className="rh-hub__stat">
                 <span className="rh-hub__stat-value">{modulos.length}</span>
-                <span className="rh-hub__stat-label">módulos</span>
+                <span className="rh-hub__stat-label">áreas</span>
               </div>
               <div className="rh-hub__stat">
                 <span className="rh-hub__stat-value">{modulos.length}</span>
@@ -35,7 +35,7 @@ export default function FrotaHub() {
               </div>
               <div className="rh-hub__stat rh-hub__stat--soft">
                 <span className="rh-hub__stat-value">Hub</span>
-                <span className="rh-hub__stat-label">transportes · manutenção · relatório</span>
+                <span className="rh-hub__stat-label">movimentação · manutenção · relatório</span>
               </div>
             </div>
           </div>
@@ -44,9 +44,11 @@ export default function FrotaHub() {
         <section className="rh-hub__modules" aria-labelledby="frota-modules-title">
           <div className="rh-hub__section-head">
             <h2 id="frota-modules-title" className="rh-hub__section-title">
-              Divisões da frota
+              O que pretende fazer?
             </h2>
-            <p className="rh-hub__section-sub">Selecione um módulo para abrir a área correspondente.</p>
+            <p className="rh-hub__section-sub">
+              Escolha uma área abaixo. Cada módulo abre numa página dedicada, com formulários e histórico.
+            </p>
           </div>
 
           <div className="rh-hub__grid">

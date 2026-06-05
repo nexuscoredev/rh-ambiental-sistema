@@ -40,7 +40,7 @@ const MENU_COLETA_EMISSAO_CHILDREN: MenuLeaf[] = [
   { label: 'Pesagem e Ticket', path: '/controle-massa' },
 ]
 
-/** Ramo: conferência, comprovante e módulos da frota (hub em /operacional-frota). */
+/** Ramo: conferência, comprovante e hub Transportes (manutenção e relatório dentro do hub). */
 const MENU_TRANSPORTE_FROTA_CHILDREN: MenuLeaf[] = [
   { label: 'Conferência de transportes', path: '/conferencia-transporte' },
   { label: 'Comprovante de Descarte', path: '/comprovantes-descarte' },

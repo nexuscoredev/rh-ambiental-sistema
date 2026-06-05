@@ -4,7 +4,7 @@ import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import { fetchDadosRelatorioFrota } from '../../lib/frotaApi'
-import { FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos'
+import { FROTA_HUB_LABEL, FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos'
 import type { FrotaDiarioRow, FrotaManutencaoRow, FrotaMovimentacaoRow } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { isBenignSupabaseFetchError, mensagemErroSupabase } from '../../lib/supabaseErrors'
@@ -105,7 +105,7 @@ export default function FrotaRelatorio() {
     <MainLayout>
       <div className="page-shell frota-page">
         <nav className="rh-modulo__breadcrumb frota-page__head--print-hide" aria-label="Navegação">
-          <Link to={FROTA_HUB_PATH}>Frota operacional</Link>
+          <Link to={FROTA_HUB_PATH}>{FROTA_HUB_LABEL}</Link>
           <span className="rh-modulo__breadcrumb-sep" aria-hidden>
             /
           </span>
@@ -114,7 +114,7 @@ export default function FrotaRelatorio() {
 
         <header className="frota-page__head frota-page__head--row frota-page__head--print-hide">
           <div>
-            <p className="frota-page__eyebrow">Frota operacional</p>
+            <p className="frota-page__eyebrow">{FROTA_HUB_LABEL}</p>
             <h1>Relatório da frota</h1>
             <p className="frota-page__lead">Consolidação para conferência e impressão com assinatura.</p>
           </div>

@@ -1,6 +1,8 @@
-/** Módulo Frota — Transportes e Manutenção (fluxo operacional). */
+/** Módulo Frota — hub Transportes (movimentação, manutenção, relatório). */
 
 export const FROTA_HUB_PATH = '/operacional-frota'
+
+export const FROTA_HUB_LABEL = 'Transportes'
 
 export type FrotaDivisaoSlug = 'transportes' | 'manutencao' | 'relatorio'
 
@@ -39,13 +41,11 @@ export const FROTA_DIVISOES: readonly FrotaDivisao[] = [
   },
 ] as const
 
-export const FROTA_MENU_CHILDREN = FROTA_DIVISOES.map((d) => ({
-  label: d.label,
-  path: d.path,
-}))
+/** Menu lateral: uma entrada para o hub (subáreas abrem pelos cartões na página). */
+export const FROTA_MENU_CHILDREN = [{ label: FROTA_HUB_LABEL, path: FROTA_HUB_PATH }]
 
 export const FROTA_ROTAS_SISTEMA: { path: string; label: string }[] = [
-  { path: FROTA_HUB_PATH, label: 'Frota operacional' },
+  { path: FROTA_HUB_PATH, label: FROTA_HUB_LABEL },
   ...FROTA_DIVISOES.map((d) => ({ path: d.path, label: d.label })),
 ]
 

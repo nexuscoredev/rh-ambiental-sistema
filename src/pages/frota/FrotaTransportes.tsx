@@ -15,7 +15,7 @@ import {
   movimentacaoRowParaRelatorio,
   type FrotaMovimentacaoRelatorioLinha,
 } from '../../lib/gerarRelatorioFrotaMovimentacaoPdf'
-import { FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos'
+import { FROTA_HUB_LABEL, FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos'
 import type { EquipamentoClienteCatalogo, FrotaMovimentacaoRow, TipoMovimentacaoFrota } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { RgReportPdfIcon } from '../../components/ui/RgReportPdfIcon'
@@ -220,7 +220,7 @@ export default function FrotaTransportes() {
     <MainLayout>
       <div className="page-shell frota-page">
         <nav className="rh-modulo__breadcrumb" aria-label="Navegação">
-          <Link to={FROTA_HUB_PATH}>Frota operacional</Link>
+          <Link to={FROTA_HUB_PATH}>{FROTA_HUB_LABEL}</Link>
           <span className="rh-modulo__breadcrumb-sep" aria-hidden>
             /
           </span>

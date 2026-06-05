@@ -13,7 +13,7 @@ import {
   salvarDiarioFrota,
 } from '../../lib/frotaApi'
 import { uploadFotosFrota } from '../../lib/frotaFotos'
-import { FROTA_HUB_PATH } from '../../lib/frotaModulos'
+import { FROTA_HUB_LABEL, FROTA_HUB_PATH } from '../../lib/frotaModulos'
 import type { FrotaDiarioChecklist, FrotaDiarioRow, FrotaManutencaoRow, TipoManutencaoFrota } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { FrotaPermissaoAviso } from '../../components/frota/FrotaPermissaoAviso'
@@ -275,7 +275,7 @@ export default function FrotaManutencao() {
     <MainLayout>
       <div className="page-shell frota-page">
         <nav className="rh-modulo__breadcrumb" aria-label="Navegação">
-          <Link to={FROTA_HUB_PATH}>Frota operacional</Link>
+          <Link to={FROTA_HUB_PATH}>{FROTA_HUB_LABEL}</Link>
           <span className="rh-modulo__breadcrumb-sep" aria-hidden>
             /
           </span>
@@ -284,7 +284,7 @@ export default function FrotaManutencao() {
 
         <header className="frota-page__head">
           <div>
-            <p className="frota-page__eyebrow">Frota operacional</p>
+            <p className="frota-page__eyebrow">{FROTA_HUB_LABEL}</p>
             <h1>Manutenção e diário do veículo</h1>
             <p className="frota-page__lead">
               Controlo preventivo, corretivo, quilometragem, troca de óleo, fotos e assinatura do responsável.
