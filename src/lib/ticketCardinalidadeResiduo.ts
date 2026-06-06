@@ -84,29 +84,59 @@ export function indiceSufixoNumeroTicket(numeroTicket: string | null | undefined
   return 1;
 }
 
+function compararOrdemColetaTicket<T extends ColetaComResiduoTicket>(
+  a: T,
+  b: T,
+  numeroTicketPorColeta?: Map<string, string>
+): number {
+  const ia = indiceSufixoNumeroTicket(numeroTicketPorColeta?.get(a.id));
+  const ib = indiceSufixoNumeroTicket(numeroTicketPorColeta?.get(b.id));
+  if (ia !== ib) return ia - ib;
+  return String(a.numero ?? "").localeCompare(String(b.numero ?? ""), "pt-BR", {
+    numeric: true,
+  });
+}
+
+/** Melhor coleta disponível para uma linha (desempate: sufixo do ticket → n.º da coleta). */
+function melhorColetaParaLinhaResiduo<T extends ColetaComResiduoTicket>(
+  coletas: T[],
+  texto: string,
+  usadas: Set<string>,
+  numeroTicketPorColeta?: Map<string, string>
+): T | undefined {
+  const candidatas = coletas.filter(
+    (x) => !usadas.has(x.id) && coletaCorrespondeResiduo(x, texto)
+  );
+  if (candidatas.length === 0) return undefined;
+  candidatas.sort((a, b) => compararOrdemColetaTicket(a, b, numeroTicketPorColeta));
+  return candidatas[0];
+}
+
 /**
  * Ordem canónica dos tickets: mesma das linhas de resíduo (1.ª linha = Ticket 1).
  * Coletas sem linha correspondente vão ao final.
  */
 export function ordenarColetasPorLinhasResiduo<T extends ColetaComResiduoTicket>(
   coletas: T[],
-  linhas: Array<{ texto: string }>
+  linhas: Array<{ texto: string }>,
+  numeroTicketPorColeta?: Map<string, string>
 ): T[] {
   const usadas = new Set<string>();
   const ordenadas: T[] = [];
   for (const linha of linhas) {
     const texto = linha.texto.trim();
     if (!texto) continue;
-    const c = coletas.find(
-      (x) => !usadas.has(x.id) && coletaCorrespondeResiduo(x, texto)
-    );
+    const c = melhorColetaParaLinhaResiduo(coletas, texto, usadas, numeroTicketPorColeta);
     if (c) {
       usadas.add(c.id);
       ordenadas.push(c);
     }
   }
-  for (const c of coletas) {
-    if (!usadas.has(c.id)) ordenadas.push(c);
+  const restantes = coletas
+    .filter((c) => !usadas.has(c.id))
+    .sort((a, b) => compararOrdemColetaTicket(a, b, numeroTicketPorColeta));
+  for (const c of restantes) {
+    ordenadas.push(c);
   }
   return ordenadas;
 }
@@ -123,7 +153,7 @@ export function ordenarColetasParaTickets<T extends ColetaComResiduoTicket>(
     opts.linhasResiduo as ResiduoPesagemItem[]
   );
   if (linhas.length >= 2) {
-    return ordenarColetasPorLinhasResiduo(coletas, linhas);
+    return ordenarColetasPorLinhasResiduo(coletas, linhas, opts.numeroTicketPorColeta);
   }
 
   const comNumero = coletas.filter((c) =>
@@ -152,15 +182,21 @@ export function resolverColetaIdParaLinhaResiduo(
   coletas: ColetaComResiduoTicket[],
   textoResiduo: string,
   coletasUsadas: Set<string>,
-  opts?: { coletaPreferida?: ColetaComResiduoTicket | null }
+  opts?: {
+    coletaPreferida?: ColetaComResiduoTicket | null;
+    numeroTicketPorColeta?: Map<string, string>;
+  }
 ): string {
   const pref = opts?.coletaPreferida;
   if (pref && !coletasUsadas.has(pref.id) && coletaCorrespondeResiduo(pref, textoResiduo)) {
     return pref.id;
   }
 
-  const existente = coletas.find(
-    (c) => !coletasUsadas.has(c.id) && coletaCorrespondeResiduo(c, textoResiduo)
+  const existente = melhorColetaParaLinhaResiduo(
+    coletas,
+    textoResiduo,
+    coletasUsadas,
+    opts?.numeroTicketPorColeta
   );
   return existente?.id ?? "";
 }

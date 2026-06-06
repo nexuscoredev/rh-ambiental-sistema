@@ -4,6 +4,7 @@ import {
   deveSegmentarTicketsPorMtr,
   indiceSufixoNumeroTicket,
   numeroTicketParaSegmento,
+  ordenarColetasParaTickets,
   ordenarColetasPorLinhasResiduo,
   resolverColetaIdParaLinhaResiduo,
 } from "./ticketCardinalidadeResiduo";
@@ -76,6 +77,44 @@ describe("ticketCardinalidadeResiduo", () => {
       coletaPreferida: coletas[1],
     });
     expect(trocado).toBe("c2");
+  });
+
+  it("mantém Ticket 1/2 quando o resíduo se repete e a lista vem invertida", () => {
+    const residuo = "MIX DE CONTAMINADOS - Classe I";
+    const coletas = [
+      { id: "c2", numero: "90189", tipo_residuo: residuo },
+      { id: "c1", numero: "90188", tipo_residuo: residuo },
+    ];
+    const linhas = [{ texto: residuo }, { texto: residuo }];
+    const numeroTicketPorColeta = new Map([
+      ["c1", "153818-1"],
+      ["c2", "153818-2"],
+    ]);
+
+    const ord = ordenarColetasParaTickets(coletas, { linhasResiduo: linhas, numeroTicketPorColeta });
+    expect(ord.map((c) => c.id)).toEqual(["c1", "c2"]);
+
+    const usadas = new Set<string>();
+    const ticket1 = resolverColetaIdParaLinhaResiduo(ord, linhas[0]!.texto, usadas, {
+      numeroTicketPorColeta,
+    });
+    usadas.add(ticket1);
+    const ticket2 = resolverColetaIdParaLinhaResiduo(ord, linhas[1]!.texto, usadas, {
+      numeroTicketPorColeta,
+    });
+    expect(ticket1).toBe("c1");
+    expect(ticket2).toBe("c2");
+  });
+
+  it("desempata resíduo repetido pelo n.º da coleta sem ticket gravado", () => {
+    const residuo = "MIX DE CONTAMINADOS - Classe I";
+    const coletas = [
+      { id: "c2", numero: "90189", tipo_residuo: residuo },
+      { id: "c1", numero: "90188", tipo_residuo: residuo },
+    ];
+    const linhas = [{ texto: residuo }, { texto: residuo }];
+    const ord = ordenarColetasPorLinhasResiduo(coletas, linhas);
+    expect(ord.map((c) => c.id)).toEqual(["c1", "c2"]);
   });
 
   it("indiceSufixoNumeroTicket lê sufixo -1, -2", () => {

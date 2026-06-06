@@ -1180,7 +1180,8 @@ export default function ControleMassa() {
           coletaId = resolverColetaIdParaLinhaResiduo(
             coletasMtr,
             linha.texto,
-            coletasUsadasImpressao
+            coletasUsadasImpressao,
+            { numeroTicketPorColeta }
           );
         }
       }
@@ -2519,7 +2520,8 @@ export default function ControleMassa() {
           coletaIdSeg = resolverColetaIdParaLinhaResiduo(
             coletasMtr,
             linha.texto,
-            coletasUsadas
+            coletasUsadas,
+            { numeroTicketPorColeta }
           );
         }
 
