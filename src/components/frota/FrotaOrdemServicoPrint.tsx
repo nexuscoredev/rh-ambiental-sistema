@@ -1,5 +1,19 @@
 import { BRAND_LOGO_MARK } from '../../lib/brandLogo'
-import { FROTA_OS_CLASSIFICACOES, type FrotaOrdemServicoPrintData } from '../../lib/frotaOrdemServico'
+import type { FrotaOrdemServicoPrintData } from '../../lib/frotaOrdemServico'
+import type { FrotaOsClassificacao } from '../../lib/frotaTypes'
+
+const GRID_CLASSIFICACAO: { key: keyof FrotaOsClassificacao; label: string }[][] = [
+  [
+    { key: 'preventiva', label: 'PREVENTIVA' },
+    { key: 'corretiva', label: 'CORRETIVA' },
+    { key: 'frota', label: 'FROTA' },
+  ],
+  [
+    { key: 'planejada', label: 'PLANEJADA' },
+    { key: 'urgencia', label: 'URGÊNCIA' },
+    { key: 'geral', label: 'GERAL' },
+  ],
+]
 
 function CaixaClassificacao({
   label,
@@ -10,9 +24,7 @@ function CaixaClassificacao({
 }) {
   return (
     <span className="frota-os-print__class-item">
-      <span className={`frota-os-print__check${marcado ? ' frota-os-print__check--on' : ''}`} aria-hidden>
-        {marcado ? '✓' : ''}
-      </span>
+      <span className={`frota-os-print__check${marcado ? ' frota-os-print__check--on' : ''}`} aria-hidden />
       <span>{label}</span>
     </span>
   )
@@ -22,11 +34,9 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
   return (
     <section className="frota-os-print__folha">
       <header className="frota-os-print__top">
-        <div className="frota-os-print__brand">
+        <div className="frota-os-print__top-main">
           <img src={BRAND_LOGO_MARK} alt="RG Ambiental" className="frota-os-print__logo" />
-        </div>
-        <div className="frota-os-print__empresa-grid">
-          <div>
+          <div className="frota-os-print__empresa-col">
             <p>
               <strong>Empresa:</strong> {dados.empresa}
             </p>
@@ -37,10 +47,9 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
               <strong>Planilha:</strong> {dados.planilha}
             </p>
           </div>
-          <div className="frota-os-print__os-meta">
-            <p>
-              <strong>ORDEM DE SERVIÇO:</strong> {dados.numeroOs}
-            </p>
+          <div className="frota-os-print__os-titulo">
+            <p className="frota-os-print__os-titulo-linha">ORDEM DE SERVIÇO</p>
+            <p className="frota-os-print__os-numero">{dados.numeroOs}</p>
             <p>
               <strong>Ano:</strong> {dados.ano}
             </p>
@@ -54,21 +63,28 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
         </div>
       </header>
 
-      <div className="frota-os-print__class-row">
-        {FROTA_OS_CLASSIFICACOES.map(({ key, label }) => (
-          <CaixaClassificacao key={key} label={label} marcado={Boolean(dados.classificacao[key])} />
-        ))}
-        <span className="frota-os-print__placa">
+      <div className="frota-os-print__class-box">
+        <div className="frota-os-print__class-grid">
+          {GRID_CLASSIFICACAO.map((linha, i) => (
+            <div key={i} className="frota-os-print__class-linha">
+              {linha.map(({ key, label }) => (
+                <CaixaClassificacao key={key} label={label} marcado={Boolean(dados.classificacao[key])} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="frota-os-print__placa-box">
           <strong>PLACA:</strong> {dados.placa || '—'}
-        </span>
+        </div>
       </div>
 
-      <p className="frota-os-print__linha">
-        <strong>Solicitante:</strong> {dados.solicitante || ' '}
-      </p>
+      <div className="frota-os-print__solicitante-box">
+        <strong>Solicitante:</strong>
+        <span className="frota-os-print__solicitante-valor">{dados.solicitante || '\u00A0'}</span>
+      </div>
 
       <div className="frota-os-print__caixa">
-        <p className="frota-os-print__caixa-titulo">OCORRIDO / SOLICITAÇÃO</p>
+        <p className="frota-os-print__caixa-titulo">OCORRIDO/ SOLICITAÇÃO</p>
         <div className="frota-os-print__caixa-corpo">{dados.ocorrido || '\u00A0'}</div>
       </div>
 
@@ -79,7 +95,7 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
 
       <div className="frota-os-print__datas-row">
         <span>
-          <strong>Data de inicio :</strong> {dados.dataInicio || '___/___/______'}
+          <strong>Data de Inicio:</strong> {dados.dataInicio || '___/___/______'}
         </span>
         <span>
           <strong>Data Término:</strong> {dados.dataTermino || '___/___/______'}
@@ -110,6 +126,8 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
 export function FrotaOrdemServicoPrint({ dados }: { dados: FrotaOrdemServicoPrintData }) {
   return (
     <div id="frota-os-print-root" className="frota-os-print-root">
+      <FolhaOs dados={dados} />
+      <div className="frota-os-print__corte" aria-hidden="true" />
       <FolhaOs dados={dados} />
     </div>
   )
