@@ -332,7 +332,12 @@ BEGIN
     coalesce(u.nome, u.email, 'Utilizador') AS solicitante_nome,
     CASE
       WHEN s.tipo_entidade = 'programacao' THEN
-        coalesce(c.nome_fantasia, c.razao_social, 'Cliente')
+        coalesce(
+          nullif(trim(c.nome), ''),
+          nullif(trim(c.razao_social), ''),
+          nullif(trim(p.cliente), ''),
+          'Cliente'
+        )
       WHEN s.tipo_entidade = 'mtr' THEN
         coalesce('MTR ' || nullif(trim(m.numero), ''), 'MTR')
       ELSE '—'
