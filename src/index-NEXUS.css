@@ -10472,40 +10472,179 @@ a.rg-btn {
   line-height: 1.45;
 }
 
-.frota-relatorio-print {
+.frota-relatorio-preview {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 24px;
+  padding: 8px;
   margin-top: 16px;
+  overflow: auto;
 }
 
-.frota-relatorio-print__head h1 {
-  margin: 0 0 8px;
+.frota-relatorio-preview .frota-relatorio-print-root {
+  position: static;
+  left: auto;
+  width: 100%;
+  max-width: 100%;
+  padding: 20px 18px;
+  box-shadow: none;
+}
+
+.frota-relatorio-print-root {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  width: 210mm;
+  max-width: 100%;
+  padding: 16mm 14mm;
+  box-sizing: border-box;
+  background: #fff;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.4;
+}
+
+.frota-relatorio-print-root__header {
+  margin: 0 0 14px;
+}
+
+.frota-relatorio-print-root__logo {
+  max-height: 40px;
+  width: auto;
+  max-width: min(220px, 100%);
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.frota-relatorio-print-root__title {
+  margin: 0 0 6px;
   font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0c1222;
 }
 
-.frota-relatorio-print section {
-  margin-top: 24px;
+.frota-relatorio-print-root__meta {
+  margin: 0 0 16px;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.55;
 }
 
-.frota-relatorio-print h2 {
-  font-size: 15px;
-  margin: 0 0 10px;
-  border-bottom: 2px solid #0f766e;
-  padding-bottom: 4px;
+.frota-relatorio-print-root__section {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #334155;
 }
 
-.frota-relatorio-print__assinatura {
-  margin-top: 32px;
-  padding-top: 16px;
+.frota-relatorio-print-root__empty {
+  margin: 4px 0 12px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.frota-relatorio-print-root__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+  margin-bottom: 4px;
+}
+
+.frota-relatorio-print-root__table th,
+.frota-relatorio-print-root__table td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.frota-relatorio-print-root__table th {
+  background: #f8fafc;
+  font-weight: 800;
+  color: #334155;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.frota-relatorio-print-root__sign {
+  margin-top: 22px;
+  padding-top: 8px;
   border-top: 1px solid #e2e8f0;
 }
 
-.frota-relatorio-print__linha-ass {
-  height: 48px;
-  border-bottom: 1px solid #0f172a;
-  margin-top: 24px;
+.frota-relatorio-print-root__sign-meta {
+  margin: 0 0 12px;
+  font-size: 10px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.frota-relatorio-print-root__sign-nome {
+  min-height: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: center;
+  padding: 0 8px 2px;
+}
+
+.frota-relatorio-print-root__sign-line {
+  border-top: 1px solid #0f172a;
+  margin: 0 12mm 6px;
+  min-height: 32px;
+}
+
+.frota-relatorio-print-root__sign-label {
+  margin: 0;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.frota-relatorio-print-root__footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+    size: A4;
+  }
+
+  body:has(.frota-relatorio-print-root) > *:not(.frota-relatorio-print-root) {
+    display: none !important;
+  }
+
+  body:has(.frota-relatorio-print-root) .frota-relatorio-print-root {
+    position: static !important;
+    left: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body:has(.frota-relatorio-print-root) .frota-relatorio-print-root__logo,
+  body:has(.frota-relatorio-print-root) .frota-relatorio-print-root__table th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 /* Login — reset de senha */

@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
+import {
+  FrotaRelatorioPrintDocument,
+  type FrotaRelatorioPrintDocumentProps,
+} from '../../components/frota/FrotaRelatorioPrintDocument'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import { fetchDadosRelatorioFrota } from '../../lib/frotaApi'
-import { FROTA_HUB_LABEL, FROTA_HUB_PATH, FROTA_TIPOS_MOVIMENTACAO } from '../../lib/frotaModulos'
+import { FROTA_HUB_LABEL, FROTA_HUB_PATH } from '../../lib/frotaModulos'
 import type { FrotaDiarioRow, FrotaManutencaoRow, FrotaMovimentacaoRow } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { isBenignSupabaseFetchError, mensagemErroSupabase } from '../../lib/supabaseErrors'
@@ -42,6 +47,7 @@ export default function FrotaRelatorio() {
   const [loading, setLoading] = useState(false)
   const [erroCarga, setErroCarga] = useState<string | null>(null)
   const [carregado, setCarregado] = useState(false)
+  const [geradoEm, setGeradoEm] = useState('')
   const [assNome, setAssNome] = useState('')
   const [assCargo, setAssCargo] = useState('')
   const [assinado, setAssinado] = useState(false)
@@ -56,6 +62,15 @@ export default function FrotaRelatorio() {
       setMov(d.movimentacoes)
       setMan(d.manutencoes)
       setDia(d.diarios)
+      setGeradoEm(
+        new Intl.DateTimeFormat('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(new Date())
+      )
       setCarregado(true)
     } catch (e) {
       if (isBenignSupabaseFetchError(e as { message?: string; name?: string })) {
@@ -67,6 +82,7 @@ export default function FrotaRelatorio() {
       setMan([])
       setDia([])
       setCarregado(false)
+      setGeradoEm('')
       await rgAlert({ title: 'Erro', message: msg, variant: 'danger' })
     } finally {
       setLoading(false)
@@ -99,7 +115,19 @@ export default function FrotaRelatorio() {
     setAssinaturaEm(new Date().toLocaleString('pt-BR'))
   }
 
-  const labelTipo = (id: string) => FROTA_TIPOS_MOVIMENTACAO.find((t) => t.id === id)?.label ?? id
+  const relatorioDocumentProps = useMemo((): FrotaRelatorioPrintDocumentProps => {
+    return {
+      periodoLabel: formatarPeriodo(de, ate),
+      geradoEm: geradoEm || '—',
+      movimentacoes: mov,
+      manutencoes: man,
+      diarios: dia,
+      assinado,
+      assNome,
+      assCargo,
+      assinaturaEm,
+    }
+  }, [de, ate, geradoEm, mov, man, dia, assinado, assNome, assCargo, assinaturaEm])
 
   return (
     <MainLayout>
@@ -148,7 +176,7 @@ export default function FrotaRelatorio() {
               onClick={() => window.print()}
               disabled={!podeRelatorio || loading || !carregado}
             >
-              Imprimir
+              Imprimir / PDF
             </button>
           </div>
           {erroCarga ? (
@@ -158,129 +186,11 @@ export default function FrotaRelatorio() {
           ) : null}
         </section>
 
-        <article id="frota-relatorio-impressao" className="frota-relatorio-print print-area-frota">
-          <header className="frota-relatorio-print__head">
-            <h1>Relatório operacional — Frota RG Ambiental</h1>
-            <p>Período: {formatarPeriodo(de, ate)}</p>
-            <p className="frota-relatorio-print__meta">
-              Movimentações: {mov.length} · Manutenções: {man.length} · Diários: {dia.length}
-            </p>
-          </header>
-
-          <section>
-            <h2>Movimentação de equipamentos</h2>
-            {mov.length === 0 ? (
-              <p className="frota-muted">Nenhum registo no período.</p>
-            ) : (
-              <div className="frota-table-wrap">
-                <table className="frota-table frota-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Tipo</th>
-                      <th>Cliente</th>
-                      <th>Equipamento</th>
-                      <th>Responsável</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mov.map((m) => (
-                      <tr key={m.id}>
-                        <td>{new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
-                        <td>{labelTipo(m.tipo_movimentacao)}</td>
-                        <td>{m.cliente_nome}</td>
-                        <td>{m.equipamento_descricao}</td>
-                        <td>{m.assinatura_responsavel_nome ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h2>Manutenção</h2>
-            {man.length === 0 ? (
-              <p className="frota-muted">Nenhum registo no período.</p>
-            ) : (
-              <div className="frota-table-wrap">
-                <table className="frota-table frota-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Veículo</th>
-                      <th>Tipo</th>
-                      <th>Serviço</th>
-                      <th>Km</th>
-                      <th>Responsável</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {man.map((m) => (
-                      <tr key={m.id}>
-                        <td>{m.realizado_em}</td>
-                        <td>{m.caminhao_placa ?? '—'}</td>
-                        <td>{m.tipo_manutencao}</td>
-                        <td>{m.titulo}</td>
-                        <td>{m.km_atual?.toLocaleString('pt-BR') ?? '—'}</td>
-                        <td>{m.assinatura_responsavel_nome ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h2>Diário dos veículos</h2>
-            {dia.length === 0 ? (
-              <p className="frota-muted">Nenhum diário no período.</p>
-            ) : (
-              <div className="frota-table-wrap">
-                <table className="frota-table frota-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Placa</th>
-                      <th>Km</th>
-                      <th>Óleo (km)</th>
-                      <th>Responsável</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dia.map((d) => (
-                      <tr key={d.id}>
-                        <td>{d.data_diario}</td>
-                        <td>{d.caminhao_placa ?? '—'}</td>
-                        <td>{d.km_odometro?.toLocaleString('pt-BR') ?? '—'}</td>
-                        <td>{d.ultima_troca_oleo_km?.toLocaleString('pt-BR') ?? '—'}</td>
-                        <td>{d.assinatura_responsavel_nome ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          <footer className="frota-relatorio-print__assinatura">
-            {assinado ? (
-              <>
-                <p>
-                  <strong>Assinado por:</strong> {assNome} — {assCargo}
-                </p>
-                <p>
-                  <strong>Data/hora:</strong> {assinaturaEm}
-                </p>
-                <div className="frota-relatorio-print__linha-ass" />
-              </>
-            ) : (
-              <p className="frota-muted">Assinatura pendente (preencha abaixo antes de imprimir).</p>
-            )}
-          </footer>
-        </article>
+        {carregado ? (
+          <div className="frota-relatorio-preview frota-page__head--print-hide" aria-label="Pré-visualização do relatório">
+            <FrotaRelatorioPrintDocument {...relatorioDocumentProps} />
+          </div>
+        ) : null}
 
         <section className="frota-card frota-page__head--print-hide">
           <h2>Assinatura do relatório</h2>
@@ -304,23 +214,9 @@ export default function FrotaRelatorio() {
         </section>
       </div>
 
-      <style>{`
-        @media print {
-          .frota-page__head--print-hide,
-          .layout-sidebar,
-          .layout-header { display: none !important; }
-          body * { visibility: hidden; }
-          .print-area-frota, .print-area-frota * { visibility: visible; }
-          .print-area-frota {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 12mm;
-            background: #fff;
-          }
-        }
-      `}</style>
+      {carregado
+        ? createPortal(<FrotaRelatorioPrintDocument {...relatorioDocumentProps} />, document.body)
+        : null}
     </MainLayout>
   )
 }
