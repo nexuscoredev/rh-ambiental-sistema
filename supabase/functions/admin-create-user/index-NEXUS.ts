@@ -201,6 +201,22 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const { error: senhaRefError } = await admin
+      .from("usuario_senha_referencia_dev")
+      .upsert({
+        user_id: novoUsuarioId,
+        senha_cadastrada: senha,
+        atualizada_em: new Date().toISOString(),
+        fonte: "criacao",
+      });
+
+    if (senhaRefError) {
+      console.warn(
+        "[admin-create-user] senha referência dev:",
+        senhaRefError.message
+      );
+    }
+
     return jsonResponse(req,200, {
       success: true,
       message: "Usuário criado com sucesso.",

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { limparSenhaReferenciaAposAlteracaoPropria } from './senhaReferenciaDev'
 
 export const SENHA_MINIMA_CARACTERES = 6
 
@@ -90,6 +91,8 @@ export async function alterarSenhaPropria(
   if (updateError) {
     return { ok: false, mensagem: mensagemErroAuth(updateError.message) }
   }
+
+  await limparSenhaReferenciaAposAlteracaoPropria()
 
   return { ok: true }
 }

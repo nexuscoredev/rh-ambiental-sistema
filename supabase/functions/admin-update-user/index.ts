@@ -205,6 +205,24 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (novaSenha !== undefined && novaSenha.length > 0) {
+      const { error: senhaRefError } = await admin
+        .from("usuario_senha_referencia_dev")
+        .upsert({
+          user_id: id,
+          senha_cadastrada: novaSenha,
+          atualizada_em: new Date().toISOString(),
+          fonte: "redefinicao_dev",
+        });
+
+      if (senhaRefError) {
+        console.warn(
+          "[admin-update-user] senha referência dev:",
+          senhaRefError.message
+        );
+      }
+    }
+
     return jsonResponse(req,200, {
       success: true,
       message: "Usuário atualizado com sucesso.",

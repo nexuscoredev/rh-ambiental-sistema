@@ -19,10 +19,15 @@ import {
 } from '../lib/edgeFunctionErrors'
 import { supabase } from '../lib/supabase'
 import {
+  cargoEhDesenvolvedor,
   cargoPodeCriarOuExcluirUsuario,
   cargoPodeGerirUsuarios,
   cargoPodeRedefinirSenhaDeOutroUsuario,
 } from '../lib/workflowPermissions'
+import {
+  carregarMapaSenhasCadastradasDev,
+  type SenhaReferenciaDevRow,
+} from '../lib/senhaReferenciaDev'
 import {
   ROTAS_SISTEMA,
   emailPodeDefinirPaginasPorUsuario,
@@ -289,6 +294,12 @@ export default function Usuarios() {
   const podeCriarOuExcluir = meuCargo === null || cargoPodeCriarOuExcluirUsuario(meuCargo)
   const podeRedefinirSenhaOutro =
     meuCargo === null || cargoPodeRedefinirSenhaDeOutroUsuario(meuCargo)
+  const ehDesenvolvedor = meuCargo !== null && cargoEhDesenvolvedor(meuCargo)
+
+  const [senhasCadastradas, setSenhasCadastradas] = useState<
+    Map<string, SenhaReferenciaDevRow>
+  >(() => new Map())
+  const [senhasVisiveis, setSenhasVisiveis] = useState(false)
 
   const podeDefinirPaginas = emailPodeDefinirPaginasPorUsuario(meuEmail)
 
@@ -405,6 +416,14 @@ export default function Usuarios() {
       }
 
       setUsuarios((data || []) as Usuario[])
+
+      if (ehDesenvolvedor) {
+        try {
+          setSenhasCadastradas(await carregarMapaSenhasCadastradasDev())
+        } catch (senhaErr) {
+          console.warn('[Usuarios] senhas cadastradas:', senhaErr)
+        }
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao carregar usuários.')
     } finally {
@@ -417,6 +436,22 @@ export default function Usuarios() {
       void carregarUsuarios()
     })
   }, [])
+
+  useEffect(() => {
+    if (!ehDesenvolvedor) {
+      setSenhasCadastradas(new Map())
+      setSenhasVisiveis(false)
+      return
+    }
+    void (async () => {
+      try {
+        setSenhasCadastradas(await carregarMapaSenhasCadastradasDev())
+      } catch (senhaErr) {
+        console.warn('[Usuarios] senhas cadastradas:', senhaErr)
+        setSenhasCadastradas(new Map())
+      }
+    })()
+  }, [ehDesenvolvedor])
 
   useEffect(() => {
     async function carregarMeuCargo() {
@@ -1037,6 +1072,16 @@ export default function Usuarios() {
             >
               {loadingLista ? 'Atualizando...' : 'Atualizar'}
             </button>
+            {ehDesenvolvedor ? (
+              <button
+                type="button"
+                onClick={() => setSenhasVisiveis((v) => !v)}
+                style={secondaryButtonStyle}
+                title="Mostrar ou ocultar senhas cadastradas pelo Desenvolvedor"
+              >
+                {senhasVisiveis ? 'Ocultar senhas' : 'Ver senhas cadastradas'}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1057,13 +1102,20 @@ export default function Usuarios() {
           </div>
         ) : (
           <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1040px' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: ehDesenvolvedor ? '1180px' : '1040px',
+              }}
+            >
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc' }}>
                   <th style={thStyle}>Nome</th>
                   <th style={thStyle}>E-mail</th>
                   <th style={thStyle}>Cargo</th>
                   <th style={thStyle}>Status</th>
+                  {ehDesenvolvedor ? <th style={thStyle}>Senha cadastrada</th> : null}
                   <th style={thStyle}>Páginas</th>
                   <th style={thStyle}>Criado em</th>
                   {podeGerenciar ? <th style={{ ...thStyle, width: '260px' }}>Ações</th> : null}
@@ -1077,6 +1129,27 @@ export default function Usuarios() {
                     <td style={tdStyle}>{usuario.email}</td>
                     <td style={tdStyle}>{usuario.cargo}</td>
                     <td style={tdStyle}>{normalizarStatus(usuario.status)}</td>
+                    {ehDesenvolvedor ? (
+                      <td style={{ ...tdStyle, fontFamily: 'ui-monospace, monospace', fontSize: '13px' }}>
+                        {(() => {
+                          const ref = senhasCadastradas.get(usuario.id)
+                          if (!ref?.senha_cadastrada) {
+                            return (
+                              <span style={{ color: '#94a3b8' }} title="Utilizador alterou a senha ou cadastro anterior à referência">
+                                —
+                              </span>
+                            )
+                          }
+                          return senhasVisiveis ? (
+                            <span title={`Atualizada em ${formatarData(ref.atualizada_em)}`}>
+                              {ref.senha_cadastrada}
+                            </span>
+                          ) : (
+                            <span style={{ letterSpacing: '0.12em', color: '#64748b' }}>••••••</span>
+                          )
+                        })()}
+                      </td>
+                    ) : null}
                     <td style={{ ...tdStyle, fontSize: '13px', color: '#475569' }}>
                       {usuario.paginas_permitidas && usuario.paginas_permitidas.length > 0 ? (
                         <span title={usuario.paginas_permitidas.join(', ')}>
@@ -1206,6 +1279,15 @@ export default function Usuarios() {
             {podeRedefinirSenhaOutro
               ? ' Informe uma nova senha apenas se precisar redefinir o acesso (suporte / esquecimento).'
               : ' Para alterar a sua própria senha, use «Minha conta» no cabeçalho.'}
+            {ehDesenvolvedor ? (
+              <>
+                {' '}
+                Senha cadastrada actual:{' '}
+                <strong style={{ fontFamily: 'ui-monospace, monospace' }}>
+                  {senhasCadastradas.get(usuarioEmEdicao.id)?.senha_cadastrada ?? '— (não registada)'}
+                </strong>
+              </>
+            ) : null}
             {podeDefinirPaginas ? (
               <>
                 {' '}
