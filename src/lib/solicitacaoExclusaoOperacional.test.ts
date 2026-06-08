@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   motivoExclusaoValido,
+  programacaoComExclusaoPendente,
   rotuloTipoEntidadeExclusao,
   rpcExclusaoOperacionalIndisponivel,
 } from './solicitacaoExclusaoOperacional'
@@ -21,6 +22,31 @@ describe('solicitacaoExclusaoOperacional', () => {
   it('rotula tipo de entidade', () => {
     expect(rotuloTipoEntidadeExclusao('programacao')).toBe('Programação')
     expect(rotuloTipoEntidadeExclusao('mtr')).toBe('MTR')
+  })
+
+  it('bloqueia só a programação com exclusão pendente, não o mesmo cliente', () => {
+    const resumo = {
+      entidadeIds: new Set(['prog-612']),
+      seriesInteirasPendentes: new Set<string>(),
+    }
+    expect(
+      programacaoComExclusaoPendente(
+        { id: 'prog-612', programacaoSerieId: null },
+        resumo
+      )
+    ).toBe(true)
+    expect(
+      programacaoComExclusaoPendente(
+        { id: 'prog-614', programacaoSerieId: null },
+        resumo
+      )
+    ).toBe(false)
+    expect(
+      programacaoComExclusaoPendente(
+        { id: 'prog-999', programacaoSerieId: 'serie-1' },
+        { entidadeIds: new Set(), seriesInteirasPendentes: new Set(['serie-1']) }
+      )
+    ).toBe(true)
   })
 
   it('detecta RPC de exclusão indisponível no servidor', () => {

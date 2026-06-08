@@ -35,6 +35,53 @@ export function motivoExclusaoValido(motivo: string): boolean {
   return motivo.trim().length >= 3
 }
 
+export type ExclusaoPendenteProgramacaoResumo = {
+  entidadeIds: Set<string>
+  seriesInteirasPendentes: Set<string>
+}
+
+export const EXCLUSAO_PENDENTE_RESUMO_VAZIO: ExclusaoPendenteProgramacaoResumo = {
+  entidadeIds: new Set(),
+  seriesInteirasPendentes: new Set(),
+}
+
+export function programacaoComExclusaoPendente(
+  item: { id: string; programacaoSerieId?: string | null },
+  resumo: ExclusaoPendenteProgramacaoResumo
+): boolean {
+  if (resumo.entidadeIds.has(item.id)) return true
+  const sid = item.programacaoSerieId?.trim()
+  return !!sid && resumo.seriesInteirasPendentes.has(sid)
+}
+
+export async function carregarExclusoesProgramacaoPendentes(): Promise<ExclusaoPendenteProgramacaoResumo> {
+  const { data, error } = await supabase
+    .from('solicitacoes_exclusao_operacional')
+    .select('entidade_id, excluir_serie_inteira, programacao_serie_id')
+    .eq('status', 'aguardando')
+    .eq('tipo_entidade', 'programacao')
+
+  if (error) {
+    if (rpcExclusaoOperacionalIndisponivel(error)) {
+      return { entidadeIds: new Set(), seriesInteirasPendentes: new Set() }
+    }
+    throw new Error(
+      mensagemErroSupabase(error, 'Não foi possível carregar solicitações de exclusão pendentes.')
+    )
+  }
+
+  const entidadeIds = new Set<string>()
+  const seriesInteirasPendentes = new Set<string>()
+  for (const row of data ?? []) {
+    const entidadeId = String(row.entidade_id ?? '').trim()
+    if (entidadeId) entidadeIds.add(entidadeId)
+    if (row.excluir_serie_inteira && row.programacao_serie_id) {
+      seriesInteirasPendentes.add(String(row.programacao_serie_id))
+    }
+  }
+  return { entidadeIds, seriesInteirasPendentes }
+}
+
 export async function solicitarExclusaoOperacional(opts: {
   tipoEntidade: TipoEntidadeExclusao
   entidadeId: string

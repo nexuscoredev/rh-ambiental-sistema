@@ -12,7 +12,13 @@ import {
   cargoPodeEditarProgramacao,
   cargoPodeSolicitarExclusaoProgramacao,
 } from '../lib/workflowPermissions'
-import { solicitarExclusaoOperacional } from '../lib/solicitacaoExclusaoOperacional'
+import {
+  carregarExclusoesProgramacaoPendentes,
+  EXCLUSAO_PENDENTE_RESUMO_VAZIO,
+  programacaoComExclusaoPendente,
+  solicitarExclusaoOperacional,
+  type ExclusaoPendenteProgramacaoResumo,
+} from '../lib/solicitacaoExclusaoOperacional'
 import { SolicitarExclusaoMotivoDialog } from '../components/operacional/SolicitarExclusaoMotivoDialog'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
@@ -736,6 +742,11 @@ export default function Programacao() {
   const [edicaoCriadoPorNomeDev, setEdicaoCriadoPorNomeDev] = useState('')
   const [diaPainelCalendario, setDiaPainelCalendario] = useState<string | null>(null)
   const [buscaClientePainelDia, setBuscaClientePainelDia] = useState('')
+  const [selecionadosExclusaoPainel, setSelecionadosExclusaoPainel] = useState<Set<string>>(
+    () => new Set()
+  )
+  const [exclusaoPendenteResumo, setExclusaoPendenteResumo] =
+    useState<ExclusaoPendenteProgramacaoResumo>(EXCLUSAO_PENDENTE_RESUMO_VAZIO)
   /** Datas (YYYY-MM-DD) em que a agenda detalhada mostra todas as programações, não só as primeiras N. */
   const [datasAgendaExpandidas, setDatasAgendaExpandidas] = useState<Set<string>>(() => new Set())
   const [modalNovaProgramacaoAberto, setModalNovaProgramacaoAberto] = useState(false)
@@ -806,16 +817,37 @@ export default function Programacao() {
     usuarioNome
   )
   const [exclusaoPendente, setExclusaoPendente] = useState<{
-    item: ProgramacaoItem
+    items: ProgramacaoItem[]
     excluirSerieInteira: boolean
     serieId: string | null
   } | null>(null)
+
+  const recarregarExclusaoPendenteResumo = useCallback(async () => {
+    if (!podeSolicitarExclusaoProgramacao) {
+      setExclusaoPendenteResumo(EXCLUSAO_PENDENTE_RESUMO_VAZIO)
+      return
+    }
+    try {
+      setExclusaoPendenteResumo(await carregarExclusoesProgramacaoPendentes())
+    } catch {
+      /* badge opcional — não bloqueia a tela */
+    }
+  }, [podeSolicitarExclusaoProgramacao])
 
   useEffect(() => {
     if (!sucesso) return
     const t = window.setTimeout(() => setSucesso(''), 4500)
     return () => window.clearTimeout(t)
   }, [sucesso])
+
+  useEffect(() => {
+    void recarregarExclusaoPendenteResumo()
+  }, [recarregarExclusaoPendenteResumo])
+
+  useEffect(() => {
+    setSelecionadosExclusaoPainel(new Set())
+    setBuscaClientePainelDia('')
+  }, [diaPainelCalendario])
 
   useEffect(() => {
     setDatasAgendaExpandidas(new Set())
@@ -1102,6 +1134,7 @@ export default function Programacao() {
       })
 
       setProgramacoes(rows)
+      void recarregarExclusaoPendenteResumo()
     } catch (error) {
       setErro(getSupabaseErrorMessage(error))
     } finally {
@@ -1113,6 +1146,7 @@ export default function Programacao() {
     relatorioFiltro,
     relatorioDiaRef,
     relatorioMesRef,
+    recarregarExclusaoPendenteResumo,
   ])
 
   useEffect(() => {
@@ -1269,10 +1303,25 @@ export default function Programacao() {
     setDiaPainelCalendario(null)
   }
 
+  function alternarSelecaoExclusaoPainel(itemId: string) {
+    setSelecionadosExclusaoPainel((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }
+
   async function iniciarSolicitacaoExclusaoProgramacao(item: ProgramacaoItem) {
     if (!podeSolicitarExclusaoProgramacao) {
       setErro(
         'Seu perfil não pode solicitar exclusão de programações. Equipe Comercial ou Operação.'
+      )
+      return
+    }
+    if (programacaoComExclusaoPendente(item, exclusaoPendenteResumo)) {
+      setErro(
+        `A programação ${item.numero || '—'} já aguarda aprovação da Thais. Você pode solicitar outras programações do mesmo cliente.`
       )
       return
     }
@@ -1298,35 +1347,80 @@ export default function Programacao() {
       })
     }
 
-    setExclusaoPendente({ item, excluirSerieInteira, serieId })
+    setExclusaoPendente({ items: [item], excluirSerieInteira, serieId })
+  }
+
+  async function iniciarSolicitacaoExclusaoLotePainel() {
+    if (!podeSolicitarExclusaoProgramacao) return
+    const items = itensDiaPainelCalendarioFiltrados.filter(
+      (item) =>
+        selecionadosExclusaoPainel.has(item.id) &&
+        !programacaoComExclusaoPendente(item, exclusaoPendenteResumo)
+    )
+    if (items.length === 0) {
+      setErro(
+        'Selecione ao menos uma programação sem solicitação de exclusão pendente.'
+      )
+      return
+    }
+    const confirmar = await rgConfirm({
+      title: 'Solicitar exclusão em lote',
+      message: `${items.length} programação(ões) serão enviadas para aprovação da Thais (cada uma com o mesmo motivo). Continuar?`,
+      confirmLabel: 'Continuar',
+      variant: 'danger',
+    })
+    if (!confirmar) return
+    setExclusaoPendente({ items, excluirSerieInteira: false, serieId: null })
   }
 
   async function confirmarSolicitacaoExclusaoProgramacao(motivo: string) {
     if (!exclusaoPendente) return
-    const { item, excluirSerieInteira, serieId } = exclusaoPendente
+    const { items, excluirSerieInteira, serieId } = exclusaoPendente
     setExclusaoPendente(null)
 
     try {
       setErro('')
       setSucesso('')
 
-      const res = await solicitarExclusaoOperacional({
-        tipoEntidade: 'programacao',
-        entidadeId: item.id,
-        motivo,
-        excluirSerieInteira,
-        programacaoSerieId: excluirSerieInteira ? serieId : null,
-      })
+      let enviadas = 0
+      const falhas: string[] = []
 
-      if (!res.ok) {
-        setErro(res.message)
-        return
+      for (const item of items) {
+        if (programacaoComExclusaoPendente(item, exclusaoPendenteResumo)) {
+          falhas.push(`Programação ${item.numero || '—'}: já possui solicitação pendente.`)
+          continue
+        }
+        const res = await solicitarExclusaoOperacional({
+          tipoEntidade: 'programacao',
+          entidadeId: item.id,
+          motivo,
+          excluirSerieInteira: items.length === 1 ? excluirSerieInteira : false,
+          programacaoSerieId:
+            items.length === 1 && excluirSerieInteira ? serieId : null,
+        })
+        if (!res.ok) {
+          falhas.push(`Programação ${item.numero || '—'}: ${res.message}`)
+        } else {
+          enviadas += 1
+        }
       }
 
+      await recarregarExclusaoPendenteResumo()
+      setSelecionadosExclusaoPainel(new Set())
+
+      if (enviadas === 0) {
+        setErro(falhas.join(' '))
+        return
+      }
+      if (falhas.length > 0) {
+        setErro(`${enviadas} enviada(s). ${falhas.join(' ')}`)
+      }
       setSucesso(
-        excluirSerieInteira && serieId
+        enviadas === 1 && excluirSerieInteira && serieId
           ? 'Solicitação de exclusão da série enviada para aprovação da Thais.'
-          : 'Solicitação de exclusão enviada para aprovação da Thais.'
+          : enviadas === 1
+            ? 'Solicitação de exclusão enviada para aprovação da Thais.'
+            : `${enviadas} solicitações de exclusão enviadas para aprovação da Thais.`
       )
     } catch (error) {
       setErro(getSupabaseErrorMessage(error))
@@ -2295,6 +2389,10 @@ export default function Programacao() {
                     <div style={grupoAgendaItensWrapStyle}>
                       {itensVisiveis.map((item) => {
                         const statusStyle = getStatusStyle(item.statusProgramacao)
+                        const exclusaoJaPendente = programacaoComExclusaoPendente(
+                          item,
+                          exclusaoPendenteResumo
+                        )
 
                         const emDestaqueContexto = contextoDestaqueId === item.id
 
@@ -2464,11 +2562,22 @@ export default function Programacao() {
                                 type="button"
                                 style={{
                                   ...botaoExcluirListaCompactStyle,
-                                  opacity: podeSolicitarExclusaoProgramacao ? 1 : 0.5,
-                                  cursor: podeSolicitarExclusaoProgramacao ? 'pointer' : 'not-allowed',
+                                  opacity:
+                                    podeSolicitarExclusaoProgramacao && !exclusaoJaPendente
+                                      ? 1
+                                      : 0.5,
+                                  cursor:
+                                    podeSolicitarExclusaoProgramacao && !exclusaoJaPendente
+                                      ? 'pointer'
+                                      : 'not-allowed',
                                 }}
                                 onClick={() => void iniciarSolicitacaoExclusaoProgramacao(item)}
-                                disabled={!podeSolicitarExclusaoProgramacao}
+                                disabled={!podeSolicitarExclusaoProgramacao || exclusaoJaPendente}
+                                title={
+                                  exclusaoJaPendente
+                                    ? 'Esta programação já aguarda aprovação da Thais'
+                                    : undefined
+                                }
                               >
                                 Solicitar exclusão
                               </button>
@@ -2580,39 +2689,82 @@ export default function Programacao() {
             </div>
 
             {itensDiaPainelCalendario.length > 0 ? (
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '12px',
-                }}
-              >
-                <span
+              <>
+                <label
                   style={{
                     display: 'block',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#64748b',
-                    marginBottom: '6px',
+                    marginBottom: '12px',
                   }}
                 >
-                  Buscar por cliente
-                </span>
-                <input
-                  type="search"
-                  value={buscaClientePainelDia}
-                  onChange={(e) => setBuscaClientePainelDia(e.target.value)}
-                  placeholder="Nome do cliente…"
-                  autoComplete="off"
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '14px',
-                  }}
-                />
-              </label>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#64748b',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    Buscar por cliente
+                  </span>
+                  <input
+                    type="search"
+                    value={buscaClientePainelDia}
+                    onChange={(e) => setBuscaClientePainelDia(e.target.value)}
+                    placeholder="Nome do cliente…"
+                    autoComplete="off"
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '14px',
+                    }}
+                  />
+                </label>
+                {podeSolicitarExclusaoProgramacao && itensDiaPainelCalendarioFiltrados.length > 0 ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      gap: '10px',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="rg-btn rg-btn--outline"
+                      onClick={() => {
+                        const elegiveis = itensDiaPainelCalendarioFiltrados.filter(
+                          (item) => !programacaoComExclusaoPendente(item, exclusaoPendenteResumo)
+                        )
+                        setSelecionadosExclusaoPainel(new Set(elegiveis.map((i) => i.id)))
+                      }}
+                    >
+                      Selecionar todas
+                    </button>
+                    <button
+                      type="button"
+                      className="rg-btn rg-btn--outline"
+                      onClick={() => setSelecionadosExclusaoPainel(new Set())}
+                      disabled={selecionadosExclusaoPainel.size === 0}
+                    >
+                      Limpar seleção
+                    </button>
+                    {selecionadosExclusaoPainel.size > 0 ? (
+                      <button
+                        type="button"
+                        style={botaoExcluirListaStyle}
+                        onClick={() => void iniciarSolicitacaoExclusaoLotePainel()}
+                      >
+                        Solicitar exclusão ({selecionadosExclusaoPainel.size})
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
             ) : null}
 
             {itensDiaPainelCalendario.length === 0 ? (
@@ -2678,14 +2830,21 @@ export default function Programacao() {
                   const statusStyle = getStatusStyle(item.statusProgramacao)
                   const secPainel = textoServicoCalendario(item)
                   const chipVeiculo = resumoVeiculoPainelDia(item)
+                  const exclusaoJaPendente = programacaoComExclusaoPendente(
+                    item,
+                    exclusaoPendenteResumo
+                  )
+                  const selecionadaExclusao = selecionadosExclusaoPainel.has(item.id)
                   return (
                     <div
                       key={item.id}
                       style={{
-                        border: '1px solid #e5e7eb',
+                        border: selecionadaExclusao
+                          ? '2px solid #f59e0b'
+                          : '1px solid #e5e7eb',
                         borderRadius: '14px',
                         padding: '14px 16px',
-                        background: '#ffffff',
+                        background: selecionadaExclusao ? '#fffbeb' : '#ffffff',
                         borderLeft: `4px solid ${statusStyle.stripeColor}`,
                       }}
                     >
@@ -2701,16 +2860,59 @@ export default function Programacao() {
                       >
                         <div
                           style={{
-                            fontSize: '12px',
-                            color: '#64748b',
-                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
                             minWidth: 0,
                             flex: '1 1 auto',
                           }}
                         >
-                          Programação {item.numero || '—'}
+                          {podeSolicitarExclusaoProgramacao ? (
+                            <input
+                              type="checkbox"
+                              checked={selecionadaExclusao}
+                              disabled={exclusaoJaPendente}
+                              onChange={() => alternarSelecaoExclusaoPainel(item.id)}
+                              aria-label={`Selecionar programação ${item.numero || ''} para exclusão`}
+                              style={{ flexShrink: 0 }}
+                            />
+                          ) : null}
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: '#64748b',
+                              fontWeight: 700,
+                              minWidth: 0,
+                            }}
+                          >
+                            Programação {item.numero || '—'}
+                          </div>
                         </div>
-                        <div style={{ flexShrink: 0 }}>
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          {exclusaoJaPendente ? (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                border: '1px solid #fcd34d',
+                                borderRadius: '999px',
+                                padding: '3px 10px',
+                              }}
+                            >
+                              Exclusão pendente
+                            </span>
+                          ) : null}
                           <ProgramacaoStatusLabel status={item.statusProgramacao} />
                         </div>
                       </div>
@@ -2841,11 +3043,20 @@ export default function Programacao() {
                           type="button"
                           style={{
                             ...botaoExcluirListaStyle,
-                            opacity: podeSolicitarExclusaoProgramacao ? 1 : 0.5,
-                            cursor: podeSolicitarExclusaoProgramacao ? 'pointer' : 'not-allowed',
+                            opacity:
+                              podeSolicitarExclusaoProgramacao && !exclusaoJaPendente ? 1 : 0.5,
+                            cursor:
+                              podeSolicitarExclusaoProgramacao && !exclusaoJaPendente
+                                ? 'pointer'
+                                : 'not-allowed',
                           }}
                           onClick={() => void iniciarSolicitacaoExclusaoProgramacao(item)}
-                          disabled={!podeSolicitarExclusaoProgramacao}
+                          disabled={!podeSolicitarExclusaoProgramacao || exclusaoJaPendente}
+                          title={
+                            exclusaoJaPendente
+                              ? 'Esta programação já aguarda aprovação da Thais'
+                              : 'Enviar solicitação de exclusão para a fila da Thais'
+                          }
                         >
                           Solicitar exclusão
                         </button>
@@ -3347,11 +3558,17 @@ export default function Programacao() {
 
       <SolicitarExclusaoMotivoDialog
         open={exclusaoPendente != null}
-        title="Motivo da exclusão"
+        title={
+          (exclusaoPendente?.items.length ?? 0) > 1
+            ? `Motivo da exclusão (${exclusaoPendente?.items.length} programações)`
+            : 'Motivo da exclusão'
+        }
         message={
           exclusaoPendente?.excluirSerieInteira
             ? 'A solicitação abrange todas as datas da série de coleta fixa.'
-            : 'Informe o motivo para enviar à fila de aprovação da Thais.'
+            : (exclusaoPendente?.items.length ?? 0) > 1
+              ? 'O mesmo motivo será aplicado a cada programação selecionada (cada uma entra separadamente na fila da Thais).'
+              : 'Informe o motivo para enviar à fila de aprovação da Thais.'
         }
         onConfirm={(motivo) => void confirmarSolicitacaoExclusaoProgramacao(motivo)}
         onCancel={() => setExclusaoPendente(null)}
