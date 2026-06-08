@@ -5,6 +5,7 @@
 
 import { FROTA_HUB_PATH, FROTA_MENU_CHILDREN } from './frotaModulos'
 import { FINANCEIRO_HUB_PATH, FINANCEIRO_MENU_CHILDREN } from './financeiroModulos'
+import { PRESIDENTE_HUB_PATH, PRESIDENTE_MENU_CHILDREN } from './presidenteModulos'
 import { RH_HUB_PATH, RH_MENU_CHILDREN } from './rhModulos'
 
 export type MenuLeaf = { label: string; path: string }
@@ -53,6 +54,16 @@ export const MENU_GROUPS: MenuGroup[] = [
     items: [
       { label: 'Bem-vindo', path: '/bem-vindo' },
       { label: 'Dashboard', path: '/dashboard' },
+    ],
+  },
+  {
+    title: 'Presidência',
+    items: [
+      {
+        label: 'Área do Presidente',
+        path: PRESIDENTE_HUB_PATH,
+        children: PRESIDENTE_MENU_CHILDREN,
+      },
     ],
   },
   {
@@ -151,6 +162,7 @@ export const NAV_LINK_PREFIX_PATHS = new Set([
   '/clientes',
   '/financeiro',
   '/rh',
+  '/presidente',
 ])
 
 export function navLinkEndExact(path: string): boolean {

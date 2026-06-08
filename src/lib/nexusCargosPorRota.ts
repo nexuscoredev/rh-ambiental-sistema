@@ -19,6 +19,7 @@ import {
 } from './workflowPermissions'
 import { FROTA_ROTAS_SISTEMA } from './frotaModulos'
 import { FINANCEIRO_ROTAS_SISTEMA } from './financeiroModulos'
+import { PRESIDENTE_ROTAS_SISTEMA } from './presidenteModulos'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
 
 export const CARGO_NEXUS = {
@@ -138,6 +139,9 @@ const FINANCEIRO = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador]
 /** RH: em desenvolvimento — apenas Desenvolvedor acede às rotas por enquanto. */
 const RH = [C.desenvolvedor] as const
 
+/** Presidência — visão executiva (câmaras e rastreamento). */
+const PRESIDENTE = [C.desenvolvedor, C.diretoria] as const
+
 const ENVIO_NF = [...ACESSO_TOTAL, C.diretoria, C.faturamento, C.visualizador, C.comercial] as const
 
 const USUARIOS = [C.desenvolvedor] as const
@@ -162,6 +166,10 @@ const FROTA = [
 
 const FROTA_CARGOS_POR_ROTA = Object.fromEntries(
   FROTA_ROTAS_SISTEMA.map(({ path }) => [path, [...FROTA]])
+) as Record<string, readonly string[]>
+
+const PRESIDENTE_CARGOS_POR_ROTA = Object.fromEntries(
+  PRESIDENTE_ROTAS_SISTEMA.map(({ path }) => [path, [...PRESIDENTE]])
 ) as Record<string, readonly string[]>
 
 const FINANCEIRO_CARGOS_POR_ROTA = Object.fromEntries(
@@ -197,4 +205,5 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
   ...RH_CARGOS_POR_ROTA,
   ...FROTA_CARGOS_POR_ROTA,
+  ...PRESIDENTE_CARGOS_POR_ROTA,
 }

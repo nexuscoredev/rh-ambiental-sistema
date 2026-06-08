@@ -52,6 +52,7 @@ const ComprovanteDescarteForm = lazyWithRetry(() => import('./pages/ComprovanteD
 const Chat = lazyWithRetry(() => import('./pages/Chat'))
 const RhArea = lazyWithRetry(() => import('./pages/rh/RhArea'))
 const FrotaArea = lazyWithRetry(() => import('./pages/frota/FrotaArea'))
+const PresidenteArea = lazyWithRetry(() => import('./pages/presidente/PresidenteArea'))
 const SolicitacoesAjusteAdmin = lazyWithRetry(() => import('./pages/sistema/SolicitacoesAjusteAdmin'))
 const FilaExclusaoOperacional = lazyWithRetry(() => import('./pages/sistema/FilaExclusaoOperacional'))
 const SenhaPessoalAcompanhamento = lazyWithRetry(
@@ -911,6 +912,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/operacional-frota']]}
                 >
                   <FrotaArea />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/presidente/*"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/presidente']]}
+                >
+                  <PresidenteArea />
                 </ProtectedRoute>
               }
             />
