@@ -10956,3 +10956,255 @@ a.rg-btn {
     print-color-adjust: exact;
   }
 }
+
+.frota-diario-print-root {
+  display: none;
+}
+
+.frota-diario-print__folha {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  color: #111;
+  line-height: 1.35;
+  padding: 0 8mm;
+  max-width: 210mm;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.frota-diario-print__top {
+  border: 1px solid #333;
+  padding: 8px 10px 10px;
+  margin-bottom: 6px;
+}
+
+.frota-diario-print__top-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px 14px;
+  align-items: start;
+}
+
+.frota-diario-print__logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.frota-diario-print__empresa-col p {
+  margin: 2px 0;
+}
+
+.frota-diario-print__titulo-box {
+  text-align: right;
+  min-width: 148px;
+}
+
+.frota-diario-print__titulo {
+  margin: 0 0 4px !important;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.frota-diario-print__data {
+  margin: 0 !important;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.frota-diario-print__grid-dados {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  border: 1px solid #333;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.frota-diario-print__grid-dados p {
+  margin: 0;
+}
+
+.frota-diario-print__checklist-box {
+  border: 1px solid #333;
+  margin-bottom: 6px;
+}
+
+.frota-diario-print__sec-titulo {
+  margin: 0;
+  padding: 4px 8px;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #333;
+}
+
+.frota-diario-print__checklist {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+}
+
+.frota-diario-print__checklist li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.frota-diario-print__check {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #333;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.frota-diario-print__check--on::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: #111;
+}
+
+.frota-diario-print__caixa {
+  border: 1px solid #333;
+  margin-bottom: 6px;
+}
+
+.frota-diario-print__caixa-titulo {
+  margin: 0;
+  padding: 4px 8px;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #333;
+}
+
+.frota-diario-print__caixa-corpo {
+  padding: 8px 10px;
+  min-height: 48px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.frota-diario-print__assinaturas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.frota-diario-print__ass-col {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  min-width: 0;
+}
+
+.frota-diario-print__ass-titulo {
+  margin: 0 0 6px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.frota-diario-print__ass-nome {
+  min-height: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.frota-diario-print__ass-linha {
+  border-top: 1px solid #333;
+  margin: 0 4px 4px;
+  min-height: 28px;
+}
+
+.frota-diario-print__ass-label {
+  margin: 0;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.frota-diario-print__ass-cargo {
+  margin: 4px 0 0;
+  font-size: 9px;
+  color: #333;
+}
+
+.frota-diario-print__ass-data {
+  margin: 6px 0 0;
+  font-size: 10px;
+}
+
+.frota-diario-print__corte {
+  margin: 6mm 8mm;
+  border-top: 1px dashed #666;
+}
+
+@media print {
+  .frota-diario-print__folha {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    padding: 0;
+  }
+
+  .frota-diario-print__corte {
+    margin: 4mm 0;
+    border-top: 1px dashed #999;
+  }
+
+  body:has(#frota-diario-print-root) .layout-sidebar,
+  body:has(#frota-diario-print-root) .layout-header,
+  body:has(#frota-diario-print-root) .chat-float-layer,
+  body:has(#frota-diario-print-root) .suporte-float-root,
+  body:has(#frota-diario-print-root) .pwa-install-fab,
+  body:has(#frota-diario-print-root) .frota-page {
+    display: none !important;
+  }
+
+  html:has(#frota-diario-print-root),
+  body:has(#frota-diario-print-root) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body:has(#frota-diario-print-root) .layout-root,
+  body:has(#frota-diario-print-root) .layout-main,
+  body:has(#frota-diario-print-root) .layout-main-scroll,
+  body:has(#frota-diario-print-root) .layout-main-scroll-inner {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+  }
+
+  #frota-diario-print-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #frota-diario-print-root,
+  #frota-diario-print-root * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

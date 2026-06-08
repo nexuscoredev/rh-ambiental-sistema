@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
 import { FrotaDiarioResumoModal } from '../../components/frota/FrotaDiarioResumoModal'
+import { FrotaDiarioVeiculoPrint } from '../../components/frota/FrotaDiarioVeiculoPrint'
 import { FrotaOrdemServicoPrint } from '../../components/frota/FrotaOrdemServicoPrint'
 import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
 import { rgAlert, rgConfirm } from '../../lib/RgDialogProvider'
@@ -16,6 +17,10 @@ import {
   salvarDiarioFrota,
 } from '../../lib/frotaApi'
 import { uploadFotosFrota } from '../../lib/frotaFotos'
+import {
+  montarDadosImpressaoDiario,
+  type FrotaDiarioPrintData,
+} from '../../lib/frotaDiarioImpressao'
 import {
   FROTA_OS_CLASSIFICACOES,
   inferirTipoManutencaoOs,
@@ -86,6 +91,7 @@ export default function FrotaManutencao() {
   const [assCargo, setAssCargo] = useState('')
   const [diarioResumo, setDiarioResumo] = useState<FrotaDiarioRow | null>(null)
   const [osImpressao, setOsImpressao] = useState<FrotaOrdemServicoPrintData | null>(null)
+  const [diarioImpressao, setDiarioImpressao] = useState<FrotaDiarioPrintData | null>(null)
   const [excluindoOsId, setExcluindoOsId] = useState<string | null>(null)
   const [excluindoDiarioId, setExcluindoDiarioId] = useState<string | null>(null)
   const diarioFormRef = useRef<HTMLFormElement>(null)
@@ -154,6 +160,14 @@ export default function FrotaManutencao() {
   function imprimirOs(row: FrotaManutencaoRow) {
     if (!veiculo) return
     setOsImpressao(montarDadosImpressaoOs(row, veiculo.placa))
+    requestAnimationFrame(() => {
+      window.setTimeout(() => window.print(), 200)
+    })
+  }
+
+  function imprimirDiario(row: FrotaDiarioRow) {
+    if (!veiculo) return
+    setDiarioImpressao(montarDadosImpressaoDiario(row, veiculo.placa, veiculo.modelo))
     requestAnimationFrame(() => {
       window.setTimeout(() => window.print(), 200)
     })
@@ -286,7 +300,10 @@ export default function FrotaManutencao() {
   }, [veiculoId, dataDiario, carregarVeiculo, carregarDiarioDia])
 
   useEffect(() => {
-    const onAfterPrint = () => setOsImpressao(null)
+    const onAfterPrint = () => {
+      setOsImpressao(null)
+      setDiarioImpressao(null)
+    }
     window.addEventListener('afterprint', onAfterPrint)
     return () => window.removeEventListener('afterprint', onAfterPrint)
   }, [])
@@ -617,6 +634,13 @@ export default function FrotaManutencao() {
                         >
                           Ver resumo
                         </button>
+                        <button
+                          type="button"
+                          className="frota-btn frota-btn--ghost frota-btn--sm"
+                          onClick={() => imprimirDiario(d)}
+                        >
+                          PDF / Assinatura
+                        </button>
                         {podeExcluir ? (
                           <button
                             type="button"
@@ -639,6 +663,7 @@ export default function FrotaManutencao() {
                 veiculoLabel={`${veiculo.placa}${veiculo.modelo ? ` · ${veiculo.modelo}` : ''}`}
                 onFechar={() => setDiarioResumo(null)}
                 onEditar={editarDiarioDoResumo}
+                onImprimir={() => imprimirDiario(diarioResumo)}
                 podeExcluir={podeExcluir}
                 excluindo={excluindoDiarioId === diarioResumo.id}
                 onExcluir={() => void handleExcluirDiario(diarioResumo)}
@@ -825,6 +850,7 @@ export default function FrotaManutencao() {
       </div>
 
       {osImpressao ? <FrotaOrdemServicoPrint dados={osImpressao} /> : null}
+      {diarioImpressao ? <FrotaDiarioVeiculoPrint dados={diarioImpressao} /> : null}
     </MainLayout>
   )
 }

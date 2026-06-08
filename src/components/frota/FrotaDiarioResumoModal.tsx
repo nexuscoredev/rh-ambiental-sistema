@@ -14,6 +14,7 @@ type Props = {
   veiculoLabel: string
   onFechar: () => void
   onEditar: () => void
+  onImprimir?: () => void
   podeExcluir?: boolean
   excluindo?: boolean
   onExcluir?: () => void
@@ -24,6 +25,7 @@ export function FrotaDiarioResumoModal({
   veiculoLabel,
   onFechar,
   onEditar,
+  onImprimir,
   podeExcluir = false,
   excluindo = false,
   onExcluir,
@@ -129,6 +131,11 @@ export function FrotaDiarioResumoModal({
         </dl>
 
         <footer className="frota-diario-resumo-modal__foot">
+          {onImprimir ? (
+            <button type="button" className="frota-diario-resumo-modal__btn" onClick={onImprimir}>
+              PDF / Assinatura
+            </button>
+          ) : null}
           <button type="button" className="frota-diario-resumo-modal__btn" onClick={onEditar}>
             Editar registo
           </button>
