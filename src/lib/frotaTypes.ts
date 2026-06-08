@@ -1,4 +1,4 @@
-export type TipoMovimentacaoFrota = 'troca' | 'retirada' | 'carregamento_hora' | 'instalacao'
+export type TipoMovimentacaoFrota = 'coleta' | 'troca' | 'retirada' | 'carregamento_hora' | 'instalacao'
 export type TipoManutencaoFrota = 'preventiva' | 'corretiva'
 
 /** Classificação da Ordem de Serviço (formulário impresso RG). */

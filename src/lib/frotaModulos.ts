@@ -50,6 +50,7 @@ export const FROTA_ROTAS_SISTEMA: { path: string; label: string }[] = [
 ]
 
 export const FROTA_TIPOS_MOVIMENTACAO = [
+  { id: 'coleta' as const, label: 'Coleta' },
   { id: 'troca' as const, label: 'Troca' },
   { id: 'retirada' as const, label: 'Retirada' },
   { id: 'carregamento_hora' as const, label: 'Carregamento na hora' },
