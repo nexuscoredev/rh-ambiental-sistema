@@ -77,34 +77,30 @@ function FolhaOs({ dados }: { dados: FrotaOrdemServicoPrintData }) {
         <div className="frota-os-print__caixa-corpo">{dados.compraSolucao || '\u00A0'}</div>
       </div>
 
-      <div className="frota-os-print__datas">
-        <p>
-          <strong>Data de início:</strong> {dados.dataInicio || '___/___/______'}
-        </p>
-        <p>
+      <div className="frota-os-print__datas-row">
+        <span>
+          <strong>Data de inicio :</strong> {dados.dataInicio || '___/___/______'}
+        </span>
+        <span>
           <strong>Data Término:</strong> {dados.dataTermino || '___/___/______'}
-        </p>
+        </span>
       </div>
 
       <footer className="frota-os-print__assinaturas">
-        <div>
+        <div className="frota-os-print__ass-col">
+          <div className="frota-os-print__ass-nome-area">{dados.autorizado || '\u00A0'}</div>
           <div className="frota-os-print__ass-linha" />
-          <p>AUTORIZADO</p>
-          {dados.autorizado ? <p className="frota-os-print__ass-nome">{dados.autorizado}</p> : null}
+          <p className="frota-os-print__ass-label">AUTORIZADO</p>
         </div>
-        <div>
+        <div className="frota-os-print__ass-col">
+          <div className="frota-os-print__ass-nome-area">{dados.responsavelExecucao || '\u00A0'}</div>
           <div className="frota-os-print__ass-linha" />
-          <p>RESPONSÁVEL PELA EXECUÇÃO</p>
-          {dados.responsavelExecucao ? (
-            <p className="frota-os-print__ass-nome">{dados.responsavelExecucao}</p>
-          ) : null}
+          <p className="frota-os-print__ass-label">RESPONSAVEL PELA EXECUÇÃO</p>
         </div>
-        <div>
+        <div className="frota-os-print__ass-col">
+          <div className="frota-os-print__ass-nome-area">{dados.responsavelSolicitacao || '\u00A0'}</div>
           <div className="frota-os-print__ass-linha" />
-          <p>RESPONSÁVEL PELA SOLICITAÇÃO</p>
-          {dados.responsavelSolicitacao ? (
-            <p className="frota-os-print__ass-nome">{dados.responsavelSolicitacao}</p>
-          ) : null}
+          <p className="frota-os-print__ass-label">RESPONSAVEL PELA SOLICITAÇÃO</p>
         </div>
       </footer>
     </section>

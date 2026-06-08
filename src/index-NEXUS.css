@@ -10765,44 +10765,54 @@ a.rg-btn {
   word-break: break-word;
 }
 
-.frota-os-print__datas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 10px 0 16px;
-}
-
-.frota-os-print__datas p {
-  margin: 0;
-  border-bottom: 1px solid #333;
-  padding-bottom: 4px;
+.frota-os-print__datas-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin: 10px 0 0;
+  padding: 0 2px;
+  font-size: 11px;
 }
 
 .frota-os-print__assinaturas {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 24px;
+  gap: 12px;
+  margin-top: 52px;
+}
+
+.frota-os-print__ass-col {
+  display: flex;
+  flex-direction: column;
   text-align: center;
+  min-width: 0;
+}
+
+.frota-os-print__ass-nome-area {
+  min-height: 36px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 6px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .frota-os-print__ass-linha {
   border-top: 1px solid #333;
-  margin: 28px 8px 6px;
+  margin: 0 2px 5px;
 }
 
-.frota-os-print__assinaturas p {
+.frota-os-print__ass-label {
   margin: 0;
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 8px;
+  font-weight: 700;
   text-transform: uppercase;
-}
-
-.frota-os-print__ass-nome {
-  margin-top: 4px !important;
-  font-weight: 600 !important;
-  text-transform: none !important;
-  font-size: 10px !important;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
 }
 
 @media print {
