@@ -28,6 +28,7 @@ import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalen
 import ProgramacaoFiltroCaminhao from '../components/programacao/ProgramacaoFiltroCaminhao'
 import { RhHubHeroBanner } from '../components/hub/RhHubHeroBanner'
 import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
+import { FROTA_TIPOS_MOVIMENTACAO } from '../lib/frotaModulos'
 import {
   TIPOS_CAMINHAO_CATALOGO,
   TIPOS_CAMINHAO_GRUPOS,
@@ -166,6 +167,17 @@ function payloadContratoProgramacao(form: Pick<FormState, 'residuosSelecionados'
     residuos_programacao: residuos.length > 0 ? residuos : null,
     equipamentos_programacao: equipamentos.length > 0 ? equipamentos : null,
   }
+}
+
+function tipoServicoProgramacaoEhCatalogo(valor: string): boolean {
+  const t = valor.trim()
+  return FROTA_TIPOS_MOVIMENTACAO.some((x) => x.label === t || x.id === t)
+}
+
+function rotuloTipoServicoProgramacao(valor: string): string {
+  const t = valor.trim()
+  const found = FROTA_TIPOS_MOVIMENTACAO.find((x) => x.label === t || x.id === t)
+  return found?.label ?? t
 }
 
 const initialFormState: FormState = {
@@ -1110,7 +1122,7 @@ export default function Programacao() {
           tipoCaminhao: row.tipo_caminhao || '',
           caminhaoId: row.caminhao_id || '',
           caminhaoPlaca: row.caminhao_id ? placaPorCaminhaoId.get(row.caminhao_id) || '' : '',
-          tipoServico: row.tipo_servico || '',
+          tipoServico: rotuloTipoServicoProgramacao(row.tipo_servico || ''),
           ...contratoSelecaoDaProgramacaoRow(row),
           observacoes: row.observacoes || '',
           coletaFixa: row.coleta_fixa ?? false,
@@ -1452,7 +1464,7 @@ export default function Programacao() {
       }
 
       if (!formEdicaoModal.tipoServico.trim()) {
-        setErro('Preencha o tipo de serviço.')
+        setErro('Selecione o tipo de serviço.')
         return
       }
 
@@ -1556,7 +1568,7 @@ export default function Programacao() {
       }
 
       if (!form.tipoServico.trim()) {
-        setErro('Preencha o tipo de serviço.')
+        setErro('Selecione o tipo de serviço.')
         return
       }
 
@@ -2012,13 +2024,35 @@ export default function Programacao() {
 
         <div>
           <label style={labelStyle}>Tipo de serviço</label>
-          <input
-            type="text"
-            value={f.tipoServico}
-            onChange={(event) => patch('tipoServico', event.target.value)}
-            placeholder="Ex: Coleta, troca de caçamba"
+          <select
+            value={
+              f.tipoServico.trim() && !tipoServicoProgramacaoEhCatalogo(f.tipoServico)
+                ? '__legado__'
+                : rotuloTipoServicoProgramacao(f.tipoServico)
+            }
+            onChange={(event) => {
+              const v = event.target.value
+              if (v === '__legado__') return
+              patch('tipoServico', v)
+            }}
             style={inputStyle}
-          />
+          >
+            <option value="">Selecione o tipo</option>
+            {f.tipoServico.trim() && !tipoServicoProgramacaoEhCatalogo(f.tipoServico) ? (
+              <option value="__legado__">Outro (texto anterior): {f.tipoServico.trim()}</option>
+            ) : null}
+            {FROTA_TIPOS_MOVIMENTACAO.map((t) => (
+              <option key={t.id} value={t.label}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          {f.tipoServico.trim() && !tipoServicoProgramacaoEhCatalogo(f.tipoServico) ? (
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+              Valor anterior (texto livre). Escolha uma opção na lista para padronizar; se não alterar, o
+              valor atual permanece ao salvar.
+            </p>
+          ) : null}
         </div>
 
         <ProgramacaoClienteContratoCampos
