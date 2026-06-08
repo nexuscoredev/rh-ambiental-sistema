@@ -1,4 +1,5 @@
 import { parseEquipamentosContratoJsonb } from './clienteContratoCadastro'
+import { parseOsClassificacao } from './frotaOrdemServico'
 import { supabase } from './supabase'
 import { parseFotosJson } from './frotaFotos'
 import type {
@@ -8,6 +9,7 @@ import type {
   FrotaDiarioRow,
   FrotaManutencaoRow,
   FrotaMovimentacaoRow,
+  FrotaOsClassificacao,
   FrotaResumoDashboard,
   TipoManutencaoFrota,
   TipoMovimentacaoFrota,
@@ -130,6 +132,19 @@ function mapManutencao(r: Record<string, unknown>): FrotaManutencaoRow {
       ? String(r.assinatura_responsavel_cargo)
       : null,
     assinatura_em: r.assinatura_em ? String(r.assinatura_em) : null,
+    numero_os: r.numero_os != null ? Number(r.numero_os) : null,
+    ano_os: r.ano_os != null ? Number(r.ano_os) : null,
+    os_classificacao: parseOsClassificacao(r.os_classificacao),
+    solicitante: r.solicitante ? String(r.solicitante) : null,
+    ocorrido_solicitacao: r.ocorrido_solicitacao ? String(r.ocorrido_solicitacao) : null,
+    compra_solucao: r.compra_solucao ? String(r.compra_solucao) : null,
+    data_inicio: r.data_inicio ? String(r.data_inicio) : null,
+    data_termino: r.data_termino ? String(r.data_termino) : null,
+    assinatura_autorizado_nome: r.assinatura_autorizado_nome ? String(r.assinatura_autorizado_nome) : null,
+    assinatura_execucao_nome: r.assinatura_execucao_nome ? String(r.assinatura_execucao_nome) : null,
+    assinatura_solicitacao_nome: r.assinatura_solicitacao_nome
+      ? String(r.assinatura_solicitacao_nome)
+      : null,
     created_at: String(r.created_at ?? ''),
     caminhao_placa: cam?.placa ?? null,
     caminhao_modelo: cam?.modelo ?? null,
@@ -153,16 +168,25 @@ export async function fetchManutencoesFrota(caminhaoId?: string): Promise<FrotaM
 export async function criarManutencaoFrota(input: {
   caminhao_id: string
   tipo_manutencao: TipoManutencaoFrota
-  titulo: string
-  descricao: string
-  km_atual: number | null
-  oleo_ultima_troca_km: number | null
-  oleo_ultima_troca_data: string | null
-  oleo_proxima_troca_km: number | null
-  custo: number | null
+  titulo?: string
+  descricao?: string
+  km_atual?: number | null
+  oleo_ultima_troca_km?: number | null
+  oleo_ultima_troca_data?: string | null
+  oleo_proxima_troca_km?: number | null
+  custo?: number | null
   realizado_em: string
-  fotos: string[]
-  assinatura: FrotaAssinatura
+  fotos?: string[]
+  assinatura?: FrotaAssinatura
+  os_classificacao?: FrotaOsClassificacao
+  solicitante?: string
+  ocorrido_solicitacao?: string
+  compra_solucao?: string
+  data_inicio?: string | null
+  data_termino?: string | null
+  assinatura_autorizado_nome?: string
+  assinatura_execucao_nome?: string
+  assinatura_solicitacao_nome?: string
   created_by: string | null
 }) {
   const { data, error } = await supabase
@@ -170,18 +194,27 @@ export async function criarManutencaoFrota(input: {
     .insert({
       caminhao_id: input.caminhao_id,
       tipo_manutencao: input.tipo_manutencao,
-      titulo: input.titulo,
+      titulo: input.titulo?.trim() || '',
       descricao: input.descricao || null,
-      km_atual: input.km_atual,
-      oleo_ultima_troca_km: input.oleo_ultima_troca_km,
-      oleo_ultima_troca_data: input.oleo_ultima_troca_data,
-      oleo_proxima_troca_km: input.oleo_proxima_troca_km,
-      custo: input.custo,
+      km_atual: input.km_atual ?? null,
+      oleo_ultima_troca_km: input.oleo_ultima_troca_km ?? null,
+      oleo_ultima_troca_data: input.oleo_ultima_troca_data ?? null,
+      oleo_proxima_troca_km: input.oleo_proxima_troca_km ?? null,
+      custo: input.custo ?? null,
       realizado_em: input.realizado_em,
-      fotos: input.fotos,
-      assinatura_responsavel_nome: input.assinatura.responsavel_nome,
-      assinatura_responsavel_cargo: input.assinatura.responsavel_cargo,
-      assinatura_em: input.assinatura.assinatura_em,
+      fotos: input.fotos ?? [],
+      assinatura_responsavel_nome: input.assinatura?.responsavel_nome ?? null,
+      assinatura_responsavel_cargo: input.assinatura?.responsavel_cargo ?? null,
+      assinatura_em: input.assinatura?.assinatura_em ?? null,
+      os_classificacao: input.os_classificacao ?? {},
+      solicitante: input.solicitante?.trim() || null,
+      ocorrido_solicitacao: input.ocorrido_solicitacao?.trim() || null,
+      compra_solucao: input.compra_solucao?.trim() || null,
+      data_inicio: input.data_inicio || null,
+      data_termino: input.data_termino || null,
+      assinatura_autorizado_nome: input.assinatura_autorizado_nome?.trim() || null,
+      assinatura_execucao_nome: input.assinatura_execucao_nome?.trim() || null,
+      assinatura_solicitacao_nome: input.assinatura_solicitacao_nome?.trim() || null,
       created_by: input.created_by,
       status: 'concluida',
     })

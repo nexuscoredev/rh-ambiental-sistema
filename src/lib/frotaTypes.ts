@@ -1,6 +1,16 @@
 export type TipoMovimentacaoFrota = 'troca' | 'retirada' | 'carregamento_hora' | 'instalacao'
 export type TipoManutencaoFrota = 'preventiva' | 'corretiva'
 
+/** Classificação da Ordem de Serviço (formulário impresso RG). */
+export type FrotaOsClassificacao = {
+  preventiva?: boolean
+  planejada?: boolean
+  corretiva?: boolean
+  urgencia?: boolean
+  frota?: boolean
+  geral?: boolean
+}
+
 export type FrotaAssinatura = {
   responsavel_nome: string
   responsavel_cargo: string
@@ -48,6 +58,17 @@ export type FrotaManutencaoRow = {
   assinatura_responsavel_nome: string | null
   assinatura_responsavel_cargo: string | null
   assinatura_em: string | null
+  numero_os: number | null
+  ano_os: number | null
+  os_classificacao: FrotaOsClassificacao
+  solicitante: string | null
+  ocorrido_solicitacao: string | null
+  compra_solucao: string | null
+  data_inicio: string | null
+  data_termino: string | null
+  assinatura_autorizado_nome: string | null
+  assinatura_execucao_nome: string | null
+  assinatura_solicitacao_nome: string | null
   created_at: string
   caminhao_placa?: string | null
   caminhao_modelo?: string | null

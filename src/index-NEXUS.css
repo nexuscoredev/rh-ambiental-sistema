@@ -10620,3 +10620,230 @@ a.rg-btn {
   color: #0b1736;
   line-height: 1.5;
 }
+
+/* —— Frota: Ordem de Serviço (formulário + impressão) —— */
+.frota-os-form__hint {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.frota-os-class-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.frota-timeline__snippet {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.frota-timeline__card-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.frota-btn--sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.frota-os-print-root {
+  display: none;
+}
+
+.frota-os-print__folha {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  color: #111;
+  line-height: 1.35;
+  padding: 8mm 10mm;
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.frota-os-print__top {
+  border: 1px solid #333;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.frota-os-print__brand {
+  margin-bottom: 6px;
+}
+
+.frota-os-print__logo {
+  height: 36px;
+  width: auto;
+}
+
+.frota-os-print__empresa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.frota-os-print__empresa-grid p,
+.frota-os-print__os-meta p {
+  margin: 2px 0;
+}
+
+.frota-os-print__os-meta {
+  text-align: right;
+}
+
+.frota-os-print__class-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  border: 1px solid #333;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.frota-os-print__class-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.frota-os-print__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #333;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.frota-os-print__check--on {
+  background: #fff;
+}
+
+.frota-os-print__placa {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.frota-os-print__linha {
+  margin: 0 0 8px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+}
+
+.frota-os-print__caixa {
+  border: 1px solid #333;
+  margin-bottom: 8px;
+  min-height: 72px;
+}
+
+.frota-os-print__caixa-titulo {
+  margin: 0;
+  padding: 4px 8px;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #333;
+  background: #f8fafc;
+}
+
+.frota-os-print__caixa-corpo {
+  padding: 8px;
+  min-height: 56px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.frota-os-print__datas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 10px 0 16px;
+}
+
+.frota-os-print__datas p {
+  margin: 0;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+}
+
+.frota-os-print__assinaturas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+  text-align: center;
+}
+
+.frota-os-print__ass-linha {
+  border-top: 1px solid #333;
+  margin: 28px 8px 6px;
+}
+
+.frota-os-print__assinaturas p {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.frota-os-print__ass-nome {
+  margin-top: 4px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  font-size: 10px !important;
+}
+
+@media print {
+  body:has(#frota-os-print-root) .layout-sidebar,
+  body:has(#frota-os-print-root) .layout-header,
+  body:has(#frota-os-print-root) .chat-float-layer,
+  body:has(#frota-os-print-root) .suporte-float-root,
+  body:has(#frota-os-print-root) .pwa-install-fab,
+  body:has(#frota-os-print-root) .frota-page {
+    display: none !important;
+  }
+
+  html:has(#frota-os-print-root),
+  body:has(#frota-os-print-root) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body:has(#frota-os-print-root) .layout-root,
+  body:has(#frota-os-print-root) .layout-main,
+  body:has(#frota-os-print-root) .layout-main-scroll,
+  body:has(#frota-os-print-root) .layout-main-scroll-inner {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+  }
+
+  #frota-os-print-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #frota-os-print-root,
+  #frota-os-print-root * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
 import { FrotaDiarioResumoModal } from '../../components/frota/FrotaDiarioResumoModal'
+import { FrotaOrdemServicoPrint } from '../../components/frota/FrotaOrdemServicoPrint'
 import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import {
@@ -13,8 +14,14 @@ import {
   salvarDiarioFrota,
 } from '../../lib/frotaApi'
 import { uploadFotosFrota } from '../../lib/frotaFotos'
+import {
+  FROTA_OS_CLASSIFICACOES,
+  inferirTipoManutencaoOs,
+  montarDadosImpressaoOs,
+  type FrotaOrdemServicoPrintData,
+} from '../../lib/frotaOrdemServico'
 import { FROTA_HUB_LABEL, FROTA_HUB_PATH } from '../../lib/frotaModulos'
-import type { FrotaDiarioChecklist, FrotaDiarioRow, FrotaManutencaoRow, TipoManutencaoFrota } from '../../lib/frotaTypes'
+import type { FrotaDiarioChecklist, FrotaDiarioRow, FrotaManutencaoRow, FrotaOsClassificacao } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { FrotaPermissaoAviso } from '../../components/frota/FrotaPermissaoAviso'
 import { useFrotaPermissoes } from '../../hooks/useFrotaPermissoes'
@@ -35,11 +42,13 @@ const CHECKLIST_ITENS: { key: keyof FrotaDiarioChecklist; label: string }[] = [
   { key: 'limpeza_ok', label: 'Limpeza / higiene OK' },
 ]
 
+const OS_CLASSIFICACAO_INICIAL: FrotaOsClassificacao = { frota: true }
+
 export default function FrotaManutencao() {
   const { podeMutar } = useFrotaPermissoes()
   const [caminhoes, setCaminhoes] = useState<CaminhaoOpt[]>([])
   const [veiculoId, setVeiculoId] = useState('')
-  const [tab, setTab] = useState<'diario' | 'preventiva' | 'corretiva'>('diario')
+  const [tab, setTab] = useState<'diario' | 'ordem_servico'>('diario')
   const [manutencoes, setManutencoes] = useState<FrotaManutencaoRow[]>([])
   const [diarios, setDiarios] = useState<FrotaDiarioRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,21 +66,24 @@ export default function FrotaManutencao() {
   const [fotosDiarioUrls, setFotosDiarioUrls] = useState<string[]>([])
   const [fotosDiarioFiles, setFotosDiarioFiles] = useState<File[]>([])
 
-  const [tipoMan, setTipoMan] = useState<TipoManutencaoFrota>('preventiva')
-  const [tituloMan, setTituloMan] = useState('')
-  const [descMan, setDescMan] = useState('')
-  const [kmMan, setKmMan] = useState('')
-  const [oleoUltKm, setOleoUltKm] = useState('')
-  const [oleoUltData, setOleoUltData] = useState('')
-  const [oleoProxKm, setOleoProxKm] = useState('')
-  const [custoMan, setCustoMan] = useState('')
-  const [dataMan, setDataMan] = useState(() => new Date().toISOString().slice(0, 10))
+  const [osClassificacao, setOsClassificacao] = useState<FrotaOsClassificacao>(OS_CLASSIFICACAO_INICIAL)
+  const [solicitanteOs, setSolicitanteOs] = useState('')
+  const [ocorridoOs, setOcorridoOs] = useState('')
+  const [compraSolucaoOs, setCompraSolucaoOs] = useState('')
+  const [dataInicioOs, setDataInicioOs] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dataTerminoOs, setDataTerminoOs] = useState('')
+  const [kmOs, setKmOs] = useState('')
+  const [custoOs, setCustoOs] = useState('')
   const [fotosManUrls, setFotosManUrls] = useState<string[]>([])
   const [fotosManFiles, setFotosManFiles] = useState<File[]>([])
+  const [assAutorizado, setAssAutorizado] = useState('')
+  const [assExecucao, setAssExecucao] = useState('')
+  const [assSolicitacao, setAssSolicitacao] = useState('')
 
   const [assNome, setAssNome] = useState('')
   const [assCargo, setAssCargo] = useState('')
   const [diarioResumo, setDiarioResumo] = useState<FrotaDiarioRow | null>(null)
+  const [osImpressao, setOsImpressao] = useState<FrotaOrdemServicoPrintData | null>(null)
   const diarioFormRef = useRef<HTMLFormElement>(null)
 
   const veiculo = caminhoes.find((c) => c.id === veiculoId)
@@ -83,15 +95,7 @@ export default function FrotaManutencao() {
     setDiarios(dia)
     const ultimo = dia[0]
     if (ultimo?.km_odometro != null) {
-      setKmMan(String(ultimo.km_odometro))
-    }
-    if (ultimo?.ultima_troca_oleo_km != null) {
-      setOleoUltKm(String(ultimo.ultima_troca_oleo_km))
-      setOleoKm(String(ultimo.ultima_troca_oleo_km))
-    }
-    if (ultimo?.ultima_troca_oleo_data) {
-      setOleoUltData(ultimo.ultima_troca_oleo_data)
-      setOleoData(ultimo.ultima_troca_oleo_data)
+      setKmOs(String(ultimo.km_odometro))
     }
   }, [])
 
@@ -143,6 +147,28 @@ export default function FrotaManutencao() {
     })
   }
 
+  function imprimirOs(row: FrotaManutencaoRow) {
+    if (!veiculo) return
+    setOsImpressao(montarDadosImpressaoOs(row, veiculo.placa))
+    requestAnimationFrame(() => {
+      window.setTimeout(() => window.print(), 200)
+    })
+  }
+
+  function limparFormularioOs() {
+    setOsClassificacao({ ...OS_CLASSIFICACAO_INICIAL })
+    setSolicitanteOs('')
+    setOcorridoOs('')
+    setCompraSolucaoOs('')
+    setDataInicioOs(new Date().toISOString().slice(0, 10))
+    setDataTerminoOs('')
+    setCustoOs('')
+    setFotosManFiles([])
+    setFotosManUrls([])
+    setAssAutorizado('')
+    setAssSolicitacao('')
+  }
+
   useEffect(() => {
     void (async () => {
       setLoading(true)
@@ -151,8 +177,13 @@ export default function FrotaManutencao() {
         if (user) {
           setUserId(user.id)
           const { data: u } = await supabase.from('usuarios').select('nome, cargo').eq('id', user.id).maybeSingle()
-          setAssNome(String(u?.nome ?? '').trim())
-          setAssCargo(String(u?.cargo ?? '').trim())
+          const nome = String(u?.nome ?? '').trim()
+          const cargo = String(u?.cargo ?? '').trim()
+          setAssNome(nome)
+          setAssCargo(cargo)
+          setAssExecucao(nome)
+          setSolicitanteOs(nome)
+          setAssSolicitacao(nome)
         }
         const { data, error } = await supabase.from('caminhoes').select('id, placa, modelo').order('placa')
         if (error) throw error
@@ -169,6 +200,12 @@ export default function FrotaManutencao() {
     void carregarVeiculo(veiculoId)
     void carregarDiarioDia(veiculoId, dataDiario)
   }, [veiculoId, dataDiario, carregarVeiculo, carregarDiarioDia])
+
+  useEffect(() => {
+    const onAfterPrint = () => setOsImpressao(null)
+    window.addEventListener('afterprint', onAfterPrint)
+    return () => window.removeEventListener('afterprint', onAfterPrint)
+  }, [])
 
   async function salvarDiario(e: React.FormEvent) {
     e.preventDefault()
@@ -219,14 +256,17 @@ export default function FrotaManutencao() {
     }
   }
 
-  async function salvarManutencao(e: React.FormEvent) {
+  async function salvarOrdemServico(e: React.FormEvent) {
     e.preventDefault()
     if (!podeMutar) {
-      await rgAlert({ title: 'Permissão', message: 'O seu perfil não pode registar manutenções.' })
+      await rgAlert({ title: 'Permissão', message: 'O seu perfil não pode registar ordens de serviço.' })
       return
     }
-    if (!veiculoId || !tituloMan.trim() || !assNome.trim()) {
-      await rgAlert({ title: 'Dados em falta', message: 'Veículo, título e assinatura são obrigatórios.' })
+    if (!veiculoId || !solicitanteOs.trim() || !ocorridoOs.trim()) {
+      await rgAlert({
+        title: 'Dados em falta',
+        message: 'Veículo, solicitante e ocorrido/solicitação são obrigatórios.',
+      })
       return
     }
     setSalvando(true)
@@ -235,35 +275,42 @@ export default function FrotaManutencao() {
       if (fotosManFiles.length) {
         fotos = [...fotos, ...(await uploadFotosFrota(fotosManFiles, `manut/${veiculoId}`))]
       }
-      await criarManutencaoFrota({
+      const tipo = inferirTipoManutencaoOs(osClassificacao)
+      const row = await criarManutencaoFrota({
         caminhao_id: veiculoId,
-        tipo_manutencao: tipoMan,
-        titulo: tituloMan.trim(),
-        descricao: descMan,
-        km_atual: kmMan ? Number(kmMan.replace(',', '.')) : null,
-        oleo_ultima_troca_km: oleoUltKm ? Number(oleoUltKm.replace(',', '.')) : null,
-        oleo_ultima_troca_data: oleoUltData || null,
-        oleo_proxima_troca_km: oleoProxKm ? Number(oleoProxKm.replace(',', '.')) : null,
-        custo: custoMan ? Number(custoMan.replace(',', '.')) : null,
-        realizado_em: dataMan,
+        tipo_manutencao: tipo,
+        realizado_em: dataInicioOs,
+        km_atual: kmOs ? Number(kmOs.replace(',', '.')) : null,
+        custo: custoOs ? Number(custoOs.replace(',', '.')) : null,
         fotos,
+        os_classificacao: osClassificacao,
+        solicitante: solicitanteOs,
+        ocorrido_solicitacao: ocorridoOs,
+        compra_solucao: compraSolucaoOs,
+        data_inicio: dataInicioOs,
+        data_termino: dataTerminoOs || null,
+        assinatura_autorizado_nome: assAutorizado,
+        assinatura_execucao_nome: assExecucao || assNome,
+        assinatura_solicitacao_nome: assSolicitacao || solicitanteOs,
         assinatura: {
-          responsavel_nome: assNome.trim(),
+          responsavel_nome: (assExecucao || assNome).trim(),
           responsavel_cargo: assCargo.trim(),
           assinatura_em: new Date().toISOString(),
         },
         created_by: userId,
       })
-      setTituloMan('')
-      setDescMan('')
-      setFotosManFiles([])
-      setFotosManUrls([])
+      limparFormularioOs()
       await carregarVeiculo(veiculoId)
-      await rgAlert({ title: 'Manutenção registada', message: 'Registo guardado com assinatura.', variant: 'success' })
+      await rgAlert({
+        title: 'OS registada',
+        message: `Ordem de serviço nº ${row.numero_os ?? '—'}/${row.ano_os ?? ''} guardada.`,
+        variant: 'success',
+      })
+      imprimirOs(row)
     } catch (err) {
       await rgAlert({
         title: 'Erro',
-        message: err instanceof Error ? err.message : 'Falha ao guardar.',
+        message: err instanceof Error ? err.message : 'Falha ao guardar a ordem de serviço.',
         variant: 'danger',
       })
     } finally {
@@ -287,7 +334,8 @@ export default function FrotaManutencao() {
             <p className="frota-page__eyebrow">{FROTA_HUB_LABEL}</p>
             <h1>Manutenção e diário do veículo</h1>
             <p className="frota-page__lead">
-              Controlo preventivo, corretivo, quilometragem, troca de óleo, fotos e assinatura do responsável.
+              Diário diário do veículo e ordens de serviço (OS) com impressão no modelo RG — preventiva,
+              corretiva, compras e assinaturas.
             </p>
           </div>
         </header>
@@ -312,26 +360,29 @@ export default function FrotaManutencao() {
           {veiculo ? (
             <div className="frota-veiculo-chip">
               <strong>{veiculo.placa}</strong>
-              <span>{diarios.length} diário(s) · {manutencoes.length} manutenção(ões)</span>
+              <span>
+                {diarios.length} diário(s) · {manutencoes.length} OS / manutenção(ões)
+              </span>
             </div>
           ) : null}
         </div>
 
         <div className="frota-tabs" role="tablist">
-          {(['diario', 'preventiva', 'corretiva'] as const).map((t) => (
+          {(
+            [
+              ['diario', 'Diário do veículo'],
+              ['ordem_servico', 'Ordem de serviço (OS)'],
+            ] as const
+          ).map(([t, label]) => (
             <button
               key={t}
               type="button"
               role="tab"
               className={tab === t ? 'frota-tabs__btn--on' : ''}
               aria-selected={tab === t}
-              onClick={() => {
-                setTab(t)
-                if (t === 'preventiva') setTipoMan('preventiva')
-                if (t === 'corretiva') setTipoMan('corretiva')
-              }}
+              onClick={() => setTab(t)}
             >
-              {t === 'diario' ? 'Diário do veículo' : t === 'preventiva' ? 'Preventiva' : 'Corretiva'}
+              {label}
             </button>
           ))}
         </div>
@@ -490,69 +541,104 @@ export default function FrotaManutencao() {
           </div>
         ) : (
           <div className="frota-layout-2 frota-layout-2--manutencao">
-            <form className="frota-card frota-card--form" onSubmit={salvarManutencao}>
-              <h2>Manutenção {tipoMan === 'preventiva' ? 'preventiva' : 'corretiva'}</h2>
+            <form className="frota-card frota-card--form" onSubmit={salvarOrdemServico}>
+              <h2>Ordem de serviço — {veiculo?.placa ?? 'veículo'}</h2>
+              <p className="frota-os-form__hint">
+                Preencha conforme o formulário RG. Ao guardar, a OS recebe número automático e pode ser impressa.
+              </p>
+
+              <section className="frota-form-section">
+                <h3 className="frota-form-section__title">Classificação</h3>
+                <div className="frota-os-class-grid">
+                  {FROTA_OS_CLASSIFICACOES.map(({ key, label }) => (
+                    <label key={key} className="frota-check">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(osClassificacao[key])}
+                        onChange={(e) =>
+                          setOsClassificacao((c) => ({ ...c, [key]: e.target.checked || undefined }))
+                        }
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
 
               <section className="frota-form-section">
                 <div className="frota-form-grid">
                   <label className="frota-span2">
-                    <span>Título / serviço</span>
+                    <span>Solicitante</span>
                     <input
-                      value={tituloMan}
-                      onChange={(e) => setTituloMan(e.target.value)}
-                      placeholder="Ex.: Revisão 10.000 km"
+                      value={solicitanteOs}
+                      onChange={(e) => setSolicitanteOs(e.target.value)}
+                      placeholder="Nome de quem solicita o serviço"
                     />
                   </label>
                   <label>
-                    <span>Data</span>
-                    <input type="date" value={dataMan} onChange={(e) => setDataMan(e.target.value)} />
+                    <span>Data de início</span>
+                    <input type="date" value={dataInicioOs} onChange={(e) => setDataInicioOs(e.target.value)} />
                   </label>
                   <label>
-                    <span>Km atual</span>
-                    <input
-                      value={kmMan}
-                      onChange={(e) => setKmMan(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="0"
+                    <span>Data término</span>
+                    <input type="date" value={dataTerminoOs} onChange={(e) => setDataTerminoOs(e.target.value)} />
+                  </label>
+                  <label>
+                    <span>Km (referência)</span>
+                    <input value={kmOs} onChange={(e) => setKmOs(e.target.value)} inputMode="decimal" />
+                  </label>
+                  <label>
+                    <span>Custo compra (R$)</span>
+                    <input value={custoOs} onChange={(e) => setCustoOs(e.target.value)} inputMode="decimal" />
+                  </label>
+                  <label className="frota-span2">
+                    <span>Ocorrido / solicitação</span>
+                    <textarea
+                      value={ocorridoOs}
+                      onChange={(e) => setOcorridoOs(e.target.value)}
+                      rows={5}
+                      placeholder="Descreva o problema, pedido ou ocorrência…"
+                      required
+                    />
+                  </label>
+                  <label className="frota-span2">
+                    <span>Compra / solução</span>
+                    <textarea
+                      value={compraSolucaoOs}
+                      onChange={(e) => setCompraSolucaoOs(e.target.value)}
+                      rows={5}
+                      placeholder="Peças compradas, serviço executado, fornecedor…"
                     />
                   </label>
                 </div>
               </section>
 
               <section className="frota-form-section">
-                <h3 className="frota-form-section__title">Óleo e custos</h3>
+                <h3 className="frota-form-section__title">Assinaturas (impressão)</h3>
                 <div className="frota-form-grid">
                   <label>
-                    <span>Última troca óleo (km)</span>
-                    <input value={oleoUltKm} onChange={(e) => setOleoUltKm(e.target.value)} inputMode="decimal" />
+                    <span>Autorizado</span>
+                    <input value={assAutorizado} onChange={(e) => setAssAutorizado(e.target.value)} />
                   </label>
                   <label>
-                    <span>Data troca óleo</span>
-                    <input type="date" value={oleoUltData} onChange={(e) => setOleoUltData(e.target.value)} />
-                  </label>
-                  <label>
-                    <span>Próxima troca (km)</span>
-                    <input
-                      value={oleoProxKm}
-                      onChange={(e) => setOleoProxKm(e.target.value)}
-                      placeholder="Ex.: km atual + 10 000"
-                      inputMode="decimal"
-                    />
-                  </label>
-                  <label>
-                    <span>Custo (R$)</span>
-                    <input value={custoMan} onChange={(e) => setCustoMan(e.target.value)} inputMode="decimal" />
+                    <span>Responsável pela execução</span>
+                    <input value={assExecucao} onChange={(e) => setAssExecucao(e.target.value)} />
                   </label>
                   <label className="frota-span2">
-                    <span>Descrição</span>
-                    <textarea
-                      value={descMan}
-                      onChange={(e) => setDescMan(e.target.value)}
-                      rows={4}
-                      placeholder="Serviços realizados, peças trocadas, fornecedor…"
-                    />
+                    <span>Responsável pela solicitação</span>
+                    <input value={assSolicitacao} onChange={(e) => setAssSolicitacao(e.target.value)} />
                   </label>
                 </div>
+                <FrotaAssinaturaBloco
+                  nome={assNome}
+                  cargo={assCargo}
+                  onNome={(v) => {
+                    setAssNome(v)
+                    if (!assExecucao) setAssExecucao(v)
+                  }}
+                  onCargo={setAssCargo}
+                  disabled={!podeMutar || salvando}
+                />
               </section>
 
               <section className="frota-form-section">
@@ -562,61 +648,67 @@ export default function FrotaManutencao() {
                   onFilesSelect={(f) => setFotosManFiles((p) => [...p, ...f])}
                   disabled={!podeMutar || salvando}
                 />
-                <FrotaAssinaturaBloco
-                  nome={assNome}
-                  cargo={assCargo}
-                  onNome={setAssNome}
-                  onCargo={setAssCargo}
-                  disabled={!podeMutar || salvando}
-                />
               </section>
 
               <div className="frota-form-actions">
                 <button type="submit" className="frota-btn frota-btn--primary" disabled={!podeMutar || salvando}>
-                  {salvando ? 'A guardar…' : 'Registar manutenção'}
+                  {salvando ? 'A guardar…' : 'Guardar e imprimir OS'}
                 </button>
               </div>
             </form>
 
             <aside className="frota-card frota-card--historico">
               <div className="frota-card__head-row">
-                <h2>Histórico — {tipoMan === 'preventiva' ? 'preventiva' : 'corretiva'}</h2>
-                <span className="frota-kpi">
-                  {manutencoes.filter((m) => m.tipo_manutencao === tipoMan).length}
-                </span>
+                <h2>Histórico de OS</h2>
+                <span className="frota-kpi">{manutencoes.length}</span>
               </div>
-              {manutencoes.filter((m) => m.tipo_manutencao === tipoMan).length === 0 ? (
+              {manutencoes.length === 0 ? (
                 <div className="frota-empty-state">
-                  <p>Nenhuma manutenção {tipoMan} registada.</p>
-                  <p className="frota-muted">Use o formulário ao lado para criar o primeiro registo.</p>
+                  <p>Nenhuma ordem de serviço registada.</p>
+                  <p className="frota-muted">Use o formulário ao lado para criar a primeira OS.</p>
                 </div>
               ) : (
                 <ul className="frota-timeline frota-timeline--cards">
-                  {manutencoes
-                    .filter((m) => m.tipo_manutencao === tipoMan)
-                    .map((m) => (
-                      <li key={m.id} className="frota-timeline__card">
-                        <div className="frota-timeline__card-head">
-                          <strong>{m.titulo}</strong>
-                          <time className="frota-timeline__when" dateTime={m.realizado_em}>
-                            {m.realizado_em}
-                          </time>
-                        </div>
-                        <p className="frota-timeline__meta">
-                          {m.km_atual != null ? `${m.km_atual.toLocaleString('pt-BR')} km` : 'Km não informado'}
-                          {m.custo != null ? ` · R$ ${m.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
+                  {manutencoes.map((m) => (
+                    <li key={m.id} className="frota-timeline__card">
+                      <div className="frota-timeline__card-head">
+                        <strong>
+                          OS {m.numero_os ?? '—'}/{m.ano_os ?? ''}
+                        </strong>
+                        <time className="frota-timeline__when" dateTime={m.data_inicio ?? m.realizado_em}>
+                          {m.data_inicio ?? m.realizado_em}
+                        </time>
+                      </div>
+                      <p className="frota-timeline__meta">
+                        {m.solicitante ?? 'Sem solicitante'}
+                        {m.km_atual != null ? ` · ${m.km_atual.toLocaleString('pt-BR')} km` : ''}
+                      </p>
+                      {m.ocorrido_solicitacao ? (
+                        <p className="frota-timeline__snippet">
+                          {m.ocorrido_solicitacao.length > 120
+                            ? `${m.ocorrido_solicitacao.slice(0, 120)}…`
+                            : m.ocorrido_solicitacao}
                         </p>
-                        {m.assinatura_responsavel_nome ? (
-                          <p className="frota-timeline__ass">✓ {m.assinatura_responsavel_nome}</p>
-                        ) : null}
-                      </li>
-                    ))}
+                      ) : null}
+                      <div className="frota-timeline__card-actions">
+                        <button
+                          type="button"
+                          className="frota-btn frota-btn--ghost frota-btn--sm"
+                          onClick={() => imprimirOs(m)}
+                        >
+                          Imprimir OS
+                        </button>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               )}
             </aside>
           </div>
         )}
       </div>
+
+      {osImpressao ? <FrotaOrdemServicoPrint dados={osImpressao} /> : null}
     </MainLayout>
   )
 }
