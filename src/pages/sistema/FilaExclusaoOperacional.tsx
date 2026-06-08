@@ -112,8 +112,8 @@ export default function FilaExclusaoOperacional() {
       <div className="page-shell solicitacoes-admin">
         <header className="solicitacoes-admin__hero">
           <div className="solicitacoes-admin__hero-copy">
-            <p className="solicitacoes-admin__eyebrow">Sistema · Aprovação</p>
-            <h1 className="solicitacoes-admin__title">Fila de exclusões</h1>
+            <p className="solicitacoes-admin__eyebrow">Sistema · Gestão de solicitações</p>
+            <h1 className="solicitacoes-admin__title">Exclusões operacionais</h1>
             <p className="solicitacoes-admin__lead">
               Solicitações de exclusão de programações e MTRs enviadas pela equipe comercial e
               operacional. Ao aprovar, a exclusão é executada automaticamente.

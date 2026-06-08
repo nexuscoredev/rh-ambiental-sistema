@@ -68,6 +68,12 @@ export default function SolicitacoesAjusteAdmin() {
             </p>
           </div>
           <div className="solicitacoes-admin__hero-actions">
+            <Link
+              to="/sistema/fila-exclusoes"
+              className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost"
+            >
+              Exclusões operacionais
+            </Link>
             <button
               type="button"
               className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost"

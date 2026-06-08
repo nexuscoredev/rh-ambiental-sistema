@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { motivoExclusaoValido, rotuloTipoEntidadeExclusao } from './solicitacaoExclusaoOperacional'
+import {
+  motivoExclusaoValido,
+  rotuloTipoEntidadeExclusao,
+  rpcExclusaoOperacionalIndisponivel,
+} from './solicitacaoExclusaoOperacional'
 import {
   cargoPodeSolicitarExclusaoMtr,
   cargoPodeSolicitarExclusaoProgramacao,
@@ -17,6 +21,17 @@ describe('solicitacaoExclusaoOperacional', () => {
   it('rotula tipo de entidade', () => {
     expect(rotuloTipoEntidadeExclusao('programacao')).toBe('Programação')
     expect(rotuloTipoEntidadeExclusao('mtr')).toBe('MTR')
+  })
+
+  it('detecta RPC de exclusão indisponível no servidor', () => {
+    expect(rpcExclusaoOperacionalIndisponivel({ code: 'PGRST202' })).toBe(true)
+    expect(rpcExclusaoOperacionalIndisponivel({ code: '42883' })).toBe(true)
+    expect(
+      rpcExclusaoOperacionalIndisponivel({
+        message: 'Could not find the function public.listar_solicitacoes_exclusao_operacional',
+      })
+    ).toBe(true)
+    expect(rpcExclusaoOperacionalIndisponivel({ code: '42501' })).toBe(false)
   })
 })
 

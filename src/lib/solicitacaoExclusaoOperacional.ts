@@ -18,13 +18,18 @@ export type SolicitacaoExclusaoOperacionalRow = {
   criado_em: string
 }
 
-function rpcIndisponivel(err: { code?: string; message?: string } | null): boolean {
+export function rpcExclusaoOperacionalIndisponivel(
+  err: { code?: string; message?: string } | null
+): boolean {
   if (!err) return false
   const code = String(err.code ?? '')
   const msg = String(err.message ?? '').toLowerCase()
   if (code === '42883' || code === 'PGRST202') return true
   return msg.includes('could not find the function') || msg.includes('schema cache')
 }
+
+const MSG_FILA_NAO_IMPLANTADA =
+  'A fila de exclusões ainda não está disponível no servidor. Avise o suporte técnico para aplicar a migração de solicitações de exclusão.'
 
 export function motivoExclusaoValido(motivo: string): boolean {
   return motivo.trim().length >= 3
@@ -76,7 +81,9 @@ export async function listarSolicitacoesExclusaoOperacional(
   })
 
   if (error) {
-    if (rpcIndisponivel(error)) return []
+    if (rpcExclusaoOperacionalIndisponivel(error)) {
+      throw new Error(MSG_FILA_NAO_IMPLANTADA)
+    }
     throw new Error(
       mensagemErroSupabase(error, 'Não foi possível carregar a fila de exclusões.')
     )

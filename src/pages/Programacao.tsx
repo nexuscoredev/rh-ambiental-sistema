@@ -735,6 +735,7 @@ export default function Programacao() {
   const [usuarioNome, setUsuarioNome] = useState<string | null>(null)
   const [edicaoCriadoPorNomeDev, setEdicaoCriadoPorNomeDev] = useState('')
   const [diaPainelCalendario, setDiaPainelCalendario] = useState<string | null>(null)
+  const [buscaClientePainelDia, setBuscaClientePainelDia] = useState('')
   /** Datas (YYYY-MM-DD) em que a agenda detalhada mostra todas as programações, não só as primeiras N. */
   const [datasAgendaExpandidas, setDatasAgendaExpandidas] = useState<Set<string>>(() => new Set())
   const [modalNovaProgramacaoAberto, setModalNovaProgramacaoAberto] = useState(false)
@@ -1658,6 +1659,22 @@ export default function Programacao() {
       )
   }, [diaPainelCalendario, programacoesComFiltroCaminhao])
 
+  const itensDiaPainelCalendarioFiltrados = useMemo(() => {
+    const q = buscaClientePainelDia
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .trim()
+    if (!q) return itensDiaPainelCalendario
+    return itensDiaPainelCalendario.filter((item) => {
+      const nome = String(item.clienteNome ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+      return nome.includes(q)
+    })
+  }, [buscaClientePainelDia, itensDiaPainelCalendario])
+
   const relatorioRange = useMemo(() => {
     if (relatorioFiltro === 'dia') {
       return { ini: relatorioDiaRef, fim: relatorioDiaRef }
@@ -1734,7 +1751,10 @@ export default function Programacao() {
   }, [relatorioPrintTick.n])
 
   useEffect(() => {
-    if (!diaPainelCalendario) return
+    if (!diaPainelCalendario) {
+      setBuscaClientePainelDia('')
+      return
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setDiaPainelCalendario(null)
     }
@@ -2541,8 +2561,12 @@ export default function Programacao() {
                   {formatDiaPainelTitulo(diaPainelCalendario)}
                 </div>
                 <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
-                  {itensDiaPainelCalendario.length}{' '}
-                  {itensDiaPainelCalendario.length === 1 ? 'programação' : 'programações'}
+                  {itensDiaPainelCalendarioFiltrados.length}
+                  {buscaClientePainelDia.trim() &&
+                  itensDiaPainelCalendarioFiltrados.length !== itensDiaPainelCalendario.length
+                    ? ` de ${itensDiaPainelCalendario.length}`
+                    : ''}{' '}
+                  {itensDiaPainelCalendarioFiltrados.length === 1 ? 'programação' : 'programações'}
                 </div>
               </div>
               <button
@@ -2554,6 +2578,42 @@ export default function Programacao() {
                 ×
               </button>
             </div>
+
+            {itensDiaPainelCalendario.length > 0 ? (
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '12px',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#64748b',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Buscar por cliente
+                </span>
+                <input
+                  type="search"
+                  value={buscaClientePainelDia}
+                  onChange={(e) => setBuscaClientePainelDia(e.target.value)}
+                  placeholder="Nome do cliente…"
+                  autoComplete="off"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '14px',
+                  }}
+                />
+              </label>
+            ) : null}
 
             {itensDiaPainelCalendario.length === 0 ? (
               <div
@@ -2594,6 +2654,15 @@ export default function Programacao() {
                   + Nova programação
                 </button>
               </div>
+            ) : itensDiaPainelCalendarioFiltrados.length === 0 ? (
+              <div
+                style={{
+                  ...estadoVazioStyle,
+                  padding: '20px',
+                }}
+              >
+                Nenhuma programação corresponde ao cliente «{buscaClientePainelDia.trim()}» neste dia.
+              </div>
             ) : (
               <>
               <div
@@ -2605,7 +2674,7 @@ export default function Programacao() {
                   overflowY: 'auto',
                 }}
               >
-                {itensDiaPainelCalendario.map((item) => {
+                {itensDiaPainelCalendarioFiltrados.map((item) => {
                   const statusStyle = getStatusStyle(item.statusProgramacao)
                   const secPainel = textoServicoCalendario(item)
                   const chipVeiculo = resumoVeiculoPainelDia(item)
