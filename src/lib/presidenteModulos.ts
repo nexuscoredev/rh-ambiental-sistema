@@ -160,6 +160,10 @@ export const PRESIDENTE_CAMERAS_BALANCA: readonly PresidenteCamera[] = [
   cam('bal-4', 'Sala do balanceiro', 'Monitorização', 'integracao'),
 ]
 
+/** Centro do mapa de rastreamento — sede RG (Araçariguama/SP). */
+export const PRESIDENTE_MAPA_CENTRO: [number, number] = [-23.1044, -47.7869]
+export const PRESIDENTE_MAPA_ZOOM = 13
+
 /** Frota — dados demonstrativos até integração telemática / DVR. */
 export const PRESIDENTE_VEICULOS_DEMO: readonly PresidenteVeiculoMonitor[] = [
   {
@@ -170,8 +174,8 @@ export const PRESIDENTE_VEICULOS_DEMO: readonly PresidenteVeiculoMonitor[] = [
     status: 'em_rota',
     velocidadeKmh: 48,
     ultimaAtualizacao: 'Agora',
-    lat: -23.44,
-    lng: -47.06,
+    lat: -23.0982,
+    lng: -47.7815,
     cameras: [
       cam('v1-f', 'Cabine frontal', 'Dashcam', 'integracao'),
       cam('v1-t', 'Carroceria traseira', 'Carga', 'integracao'),
@@ -185,8 +189,8 @@ export const PRESIDENTE_VEICULOS_DEMO: readonly PresidenteVeiculoMonitor[] = [
     status: 'parado',
     velocidadeKmh: 0,
     ultimaAtualizacao: '2 min',
-    lat: -23.45,
-    lng: -47.08,
+    lat: -23.1078,
+    lng: -47.7912,
     cameras: [
       cam('v2-f', 'Cabine frontal', 'Dashcam', 'integracao'),
       cam('v2-l', 'Lateral direita', 'Descarga', 'integracao'),
@@ -199,8 +203,8 @@ export const PRESIDENTE_VEICULOS_DEMO: readonly PresidenteVeiculoMonitor[] = [
     status: 'em_rota',
     velocidadeKmh: 62,
     ultimaAtualizacao: 'Agora',
-    lat: -23.42,
-    lng: -47.12,
+    lat: -23.1115,
+    lng: -47.7778,
     cameras: [cam('v3-f', 'Cabine frontal', 'Dashcam', 'integracao')],
   },
   {
@@ -210,6 +214,8 @@ export const PRESIDENTE_VEICULOS_DEMO: readonly PresidenteVeiculoMonitor[] = [
     status: 'manutencao',
     velocidadeKmh: null,
     ultimaAtualizacao: '1 h',
+    lat: -23.1056,
+    lng: -47.7884,
     cameras: [cam('v4-f', 'Oficina — baia 2', 'Fixa', 'offline')],
   },
 ]
