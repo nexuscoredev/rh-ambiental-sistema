@@ -9,6 +9,7 @@ import {
   cargoPodeSolicitarExclusaoMtr,
   cargoPodeSolicitarExclusaoProgramacao,
   usuarioEhAprovadorExclusaoOperacionalThais,
+  usuarioPodeDecidirFilaExclusaoOperacional,
 } from './workflowPermissions'
 import { CARGO_COMERCIAL_ADM, CARGO_OPERADORES_TIME_R } from './workflowPermissions'
 
@@ -76,5 +77,12 @@ describe('workflowPermissions — solicitação de exclusão', () => {
       true
     )
     expect(usuarioEhAprovadorExclusaoOperacionalThais('Rose', 'Comercial')).toBe(false)
+  })
+
+  it('Desenvolvedor pode decidir na fila de exclusões', () => {
+    expect(usuarioPodeDecidirFilaExclusaoOperacional('Rafael Cavalcante', 'Desenvolvedor')).toBe(
+      true
+    )
+    expect(usuarioPodeDecidirFilaExclusaoOperacional('Rose', 'Comercial')).toBe(false)
   })
 })

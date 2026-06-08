@@ -545,6 +545,19 @@ export function usuarioEhAprovadorExclusaoOperacionalThais(
   return usuarioEhAprovadorSolicitacoesThais(nome, cargo)
 }
 
+/** Thais ou Desenvolvedor — decidir (rejeitar / aprovar e excluir) na fila operacional. */
+export function usuarioPodeDecidirFilaExclusaoOperacional(
+  nome?: string | null,
+  cargo?: string | null,
+  email?: string | null
+): boolean {
+  return (
+    usuarioEhAprovadorExclusaoOperacionalThais(nome, cargo) ||
+    cargoEhDesenvolvedor(cargo) ||
+    temAutoridadeMaximaSistema(cargo, nome, email)
+  )
+}
+
 export const cargoPodeCriarMtr = cargoPodeMutarMtr
 export const cargoPodeEditarMtr = cargoPodeMutarMtr
 

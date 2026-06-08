@@ -9109,6 +9109,146 @@ a.rg-btn {
   cursor: not-allowed;
 }
 
+.solicitacoes-admin__btn--danger {
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.solicitacoes-admin__btn--primary {
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
+  color: #fff;
+  border: none;
+}
+
+/* —— Fila exclusões operacionais —— */
+.fila-exclusao__panel {
+  padding: 20px 22px 24px;
+}
+
+.fila-exclusao__empty {
+  margin: 8px 0 0;
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.fila-exclusao__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.fila-exclusao__card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.fila-exclusao__card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fila-exclusao__badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.fila-exclusao__badge--prog {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.fila-exclusao__badge--mtr {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.fila-exclusao__card-titulo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.fila-exclusao__card-detalhe {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.fila-exclusao__motivo {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.fila-exclusao__motivo-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b45309;
+  margin-bottom: 6px;
+}
+
+.fila-exclusao__motivo-texto {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #334155;
+  word-break: break-word;
+}
+
+.fila-exclusao__meta {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.fila-exclusao__meta strong {
+  color: #334155;
+}
+
+.fila-exclusao__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  margin-top: 2px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fila-exclusao__btn {
+  min-width: 128px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .solicitacoes-admin__config-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

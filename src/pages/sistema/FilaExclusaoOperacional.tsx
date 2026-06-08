@@ -10,7 +10,10 @@ import {
   rotuloTipoEntidadeExclusao,
   type SolicitacaoExclusaoOperacionalRow,
 } from '../../lib/solicitacaoExclusaoOperacional'
-import { usuarioEhAprovadorExclusaoOperacionalThais } from '../../lib/workflowPermissions'
+import {
+  cargoEhDesenvolvedor,
+  usuarioPodeDecidirFilaExclusaoOperacional,
+} from '../../lib/workflowPermissions'
 
 function formatarDataHora(iso: string): string {
   const d = new Date(iso)
@@ -24,6 +27,12 @@ function formatarDataHora(iso: string): string {
   })
 }
 
+function badgeTipoClasse(tipo: string): string {
+  return tipo === 'programacao'
+    ? 'fila-exclusao__badge fila-exclusao__badge--prog'
+    : 'fila-exclusao__badge fila-exclusao__badge--mtr'
+}
+
 export default function FilaExclusaoOperacional() {
   const { usuario } = usePerfilUsuario()
   const { confirm, alert, prompt } = useRgDialog()
@@ -32,7 +41,12 @@ export default function FilaExclusaoOperacional() {
   const [erro, setErro] = useState('')
   const [processandoId, setProcessandoId] = useState<string | null>(null)
 
-  const podeAprovar = usuarioEhAprovadorExclusaoOperacionalThais(usuario?.nome, usuario?.cargo)
+  const podeDecidir = usuarioPodeDecidirFilaExclusaoOperacional(
+    usuario?.nome,
+    usuario?.cargo,
+    usuario?.email
+  )
+  const ehDesenvolvedor = cargoEhDesenvolvedor(usuario?.cargo)
 
   const carregar = useCallback(async () => {
     try {
@@ -53,11 +67,11 @@ export default function FilaExclusaoOperacional() {
   }, [carregar])
 
   async function handleAprovar(item: SolicitacaoExclusaoOperacionalRow) {
-    if (!podeAprovar) return
+    if (!podeDecidir) return
     const tipo = rotuloTipoEntidadeExclusao(item.tipo_entidade)
     const ok = await confirm({
-      title: 'Aprovar exclusão',
-      message: `Aprovar exclusão de ${tipo} «${item.entidade_rotulo}»?\n\nMotivo informado: ${item.motivo}`,
+      title: 'Aprovar e excluir',
+      message: `Confirma a exclusão de ${tipo} «${item.entidade_rotulo}»?\n\nMotivo do solicitante: ${item.motivo}`,
       confirmLabel: 'Aprovar e excluir',
       variant: 'danger',
     })
@@ -73,7 +87,7 @@ export default function FilaExclusaoOperacional() {
     }
 
     await alert({
-      title: 'Exclusão aprovada',
+      title: 'Exclusão concluída',
       message: `${tipo} excluída com sucesso.`,
       variant: 'success',
     })
@@ -81,7 +95,7 @@ export default function FilaExclusaoOperacional() {
   }
 
   async function handleRejeitar(item: SolicitacaoExclusaoOperacionalRow) {
-    if (!podeAprovar) return
+    if (!podeDecidir) return
     const motivoRejeicao = await prompt({
       title: 'Rejeitar solicitação',
       message: 'Opcional: informe o motivo da rejeição para o solicitante.',
@@ -109,17 +123,24 @@ export default function FilaExclusaoOperacional() {
 
   return (
     <MainLayout>
-      <div className="page-shell solicitacoes-admin">
+      <div className="page-shell solicitacoes-admin fila-exclusao">
         <header className="solicitacoes-admin__hero">
           <div className="solicitacoes-admin__hero-copy">
             <p className="solicitacoes-admin__eyebrow">Sistema · Gestão de solicitações</p>
             <h1 className="solicitacoes-admin__title">Exclusões operacionais</h1>
             <p className="solicitacoes-admin__lead">
               Solicitações de exclusão de programações e MTRs enviadas pela equipe comercial e
-              operacional. Ao aprovar, a exclusão é executada automaticamente.
+              operacional. Ao aprovar, o registro é excluído automaticamente.
+              {ehDesenvolvedor ? ' Desenvolvedores podem rejeitar, aprovar ou excluir.' : ''}
             </p>
           </div>
           <div className="solicitacoes-admin__hero-actions">
+            <Link
+              to="/sistema/solicitacoes-ajuste"
+              className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost"
+            >
+              ← Gestão de solicitações
+            </Link>
             <button
               type="button"
               className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost"
@@ -140,18 +161,22 @@ export default function FilaExclusaoOperacional() {
         <div className="solicitacoes-admin__stats" aria-label="Resumo">
           <article className="solicitacoes-admin__stat solicitacoes-admin__stat--thais">
             <span className="solicitacoes-admin__stat-value">{fila.length}</span>
-            <span className="solicitacoes-admin__stat-label">Aguardando aprovação</span>
+            <span className="solicitacoes-admin__stat-label">Aguardando decisão</span>
           </article>
         </div>
 
-        <section className="solicitacoes-admin__panel">
-          <h2>Pendentes</h2>
+        <section className="solicitacoes-admin__panel fila-exclusao__panel">
+          <div className="solicitacoes-admin__panel-head">
+            <h2>Pendentes</h2>
+            <p>Revise o motivo antes de rejeitar ou aprovar a exclusão.</p>
+          </div>
+
           {carregando ? (
-            <p>Carregando solicitações…</p>
+            <p className="fila-exclusao__empty">Carregando solicitações…</p>
           ) : fila.length === 0 ? (
-            <p>Nenhuma solicitação pendente na fila.</p>
+            <p className="fila-exclusao__empty">Nenhuma solicitação pendente na fila.</p>
           ) : (
-            <div className="solicitacoes-admin__lista">
+            <div className="fila-exclusao__lista">
               {fila.map((item) => {
                 const ocupado = processandoId === item.id
                 const tipo = rotuloTipoEntidadeExclusao(item.tipo_entidade)
@@ -161,41 +186,49 @@ export default function FilaExclusaoOperacional() {
                     : `/mtr?mtr=${item.entidade_id}`
 
                 return (
-                  <article key={item.id} className="solicitacoes-admin__card">
-                    <div className="solicitacoes-admin__card-head">
-                      <span className="solicitacoes-admin__badge">{tipo}</span>
-                      <strong>{item.entidade_rotulo}</strong>
-                      <span className="solicitacoes-admin__meta">{item.entidade_detalhe}</span>
+                  <article key={item.id} className="fila-exclusao__card">
+                    <header className="fila-exclusao__card-top">
+                      <span className={badgeTipoClasse(item.tipo_entidade)}>{tipo}</span>
+                      <h3 className="fila-exclusao__card-titulo">{item.entidade_rotulo}</h3>
+                      {item.entidade_detalhe ? (
+                        <p className="fila-exclusao__card-detalhe">{item.entidade_detalhe}</p>
+                      ) : null}
+                    </header>
+
+                    <div className="fila-exclusao__motivo">
+                      <span className="fila-exclusao__motivo-label">Motivo da exclusão</span>
+                      <p className="fila-exclusao__motivo-texto">{item.motivo}</p>
                     </div>
-                    <p className="solicitacoes-admin__card-motivo">
-                      <strong>Motivo:</strong> {item.motivo}
-                    </p>
-                    <p className="solicitacoes-admin__card-meta">
+
+                    <p className="fila-exclusao__meta">
                       Solicitado por <strong>{item.solicitante_nome}</strong> em{' '}
                       {formatarDataHora(item.criado_em)}
-                      {item.excluir_serie_inteira ? ' · série completa' : ''}
                     </p>
-                    <div className="solicitacoes-admin__card-actions">
-                      <Link to={linkEntidade} className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost">
+
+                    <footer className="fila-exclusao__acoes">
+                      <Link
+                        to={linkEntidade}
+                        className="solicitacoes-admin__btn solicitacoes-admin__btn--ghost fila-exclusao__btn"
+                      >
                         Ver registro
                       </Link>
                       <button
                         type="button"
-                        className="solicitacoes-admin__btn solicitacoes-admin__btn--danger"
-                        disabled={!podeAprovar || ocupado}
+                        className="solicitacoes-admin__btn solicitacoes-admin__btn--danger fila-exclusao__btn"
+                        disabled={!podeDecidir || ocupado}
                         onClick={() => void handleRejeitar(item)}
                       >
                         {ocupado ? 'Processando…' : 'Rejeitar'}
                       </button>
                       <button
                         type="button"
-                        className="solicitacoes-admin__btn solicitacoes-admin__btn--primary"
-                        disabled={!podeAprovar || ocupado}
+                        className="solicitacoes-admin__btn solicitacoes-admin__btn--primary fila-exclusao__btn"
+                        disabled={!podeDecidir || ocupado}
                         onClick={() => void handleAprovar(item)}
                       >
                         {ocupado ? 'Processando…' : 'Aprovar e excluir'}
                       </button>
-                    </div>
+                    </footer>
                   </article>
                 )
               })}
