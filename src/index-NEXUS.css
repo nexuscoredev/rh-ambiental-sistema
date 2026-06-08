@@ -10150,6 +10150,29 @@ a.rg-btn {
   color: #0f766e;
 }
 
+.frota-diario-resumo-modal__btn--danger {
+  background: #fff;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.frota-timeline__card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.frota-timeline__card-open:hover .frota-timeline__hint {
+  color: #0f766e;
+}
+
 .frota-muted {
   color: #64748b;
   font-size: 13px;

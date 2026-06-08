@@ -14,9 +14,20 @@ type Props = {
   veiculoLabel: string
   onFechar: () => void
   onEditar: () => void
+  podeExcluir?: boolean
+  excluindo?: boolean
+  onExcluir?: () => void
 }
 
-export function FrotaDiarioResumoModal({ row, veiculoLabel, onFechar, onEditar }: Props) {
+export function FrotaDiarioResumoModal({
+  row,
+  veiculoLabel,
+  onFechar,
+  onEditar,
+  podeExcluir = false,
+  excluindo = false,
+  onExcluir,
+}: Props) {
   const cl = row.checklist ?? {}
   const anomalias = cl.anomalias?.trim()
 
@@ -121,6 +132,16 @@ export function FrotaDiarioResumoModal({ row, veiculoLabel, onFechar, onEditar }
           <button type="button" className="frota-diario-resumo-modal__btn" onClick={onEditar}>
             Editar registo
           </button>
+          {podeExcluir && onExcluir ? (
+            <button
+              type="button"
+              className="frota-diario-resumo-modal__btn frota-diario-resumo-modal__btn--danger"
+              disabled={excluindo}
+              onClick={onExcluir}
+            >
+              {excluindo ? 'A excluir…' : 'Excluir'}
+            </button>
+          ) : null}
           <button
             type="button"
             className="frota-diario-resumo-modal__btn frota-diario-resumo-modal__btn--ghost"

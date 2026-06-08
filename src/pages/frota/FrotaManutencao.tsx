@@ -8,6 +8,7 @@ import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
 import { rgAlert, rgConfirm } from '../../lib/RgDialogProvider'
 import {
   criarManutencaoFrota,
+  excluirDiarioFrota,
   excluirManutencaoFrota,
   fetchDiarioPorData,
   fetchDiariosFrota,
@@ -86,6 +87,7 @@ export default function FrotaManutencao() {
   const [diarioResumo, setDiarioResumo] = useState<FrotaDiarioRow | null>(null)
   const [osImpressao, setOsImpressao] = useState<FrotaOrdemServicoPrintData | null>(null)
   const [excluindoOsId, setExcluindoOsId] = useState<string | null>(null)
+  const [excluindoDiarioId, setExcluindoDiarioId] = useState<string | null>(null)
   const diarioFormRef = useRef<HTMLFormElement>(null)
 
   const veiculo = caminhoes.find((c) => c.id === veiculoId)
@@ -191,6 +193,49 @@ export default function FrotaManutencao() {
       })
     } finally {
       setExcluindoOsId(null)
+    }
+  }
+
+  async function handleExcluirDiario(row: FrotaDiarioRow) {
+    if (!podeExcluir) {
+      await rgAlert({
+        title: 'Permissão',
+        message: 'O seu perfil não pode excluir diários do veículo.',
+      })
+      return
+    }
+    const rotulo = `diário de ${row.data_diario}`
+    const ok = await rgConfirm({
+      title: 'Excluir diário',
+      message: `Confirma a exclusão do ${rotulo}?\n\nEsta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setExcluindoDiarioId(row.id)
+    try {
+      await excluirDiarioFrota(row.id)
+      if (diarioResumo?.id === row.id) setDiarioResumo(null)
+      if (veiculoId) {
+        await carregarVeiculo(veiculoId)
+        if (row.data_diario === dataDiario) {
+          await carregarDiarioDia(veiculoId, dataDiario)
+        }
+      }
+      await rgAlert({
+        title: 'Diário excluído',
+        message: `O registo de ${row.data_diario} foi removido.`,
+        variant: 'success',
+      })
+    } catch (err) {
+      await rgAlert({
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir o diário.',
+        variant: 'danger',
+      })
+    } finally {
+      setExcluindoDiarioId(null)
     }
   }
 
@@ -544,10 +589,10 @@ export default function FrotaManutencao() {
               ) : (
                 <ul className="frota-timeline frota-timeline--cards">
                   {diarios.map((d) => (
-                    <li key={d.id}>
+                    <li key={d.id} className="frota-timeline__card">
                       <button
                         type="button"
-                        className="frota-timeline__card frota-timeline__card--btn"
+                        className="frota-timeline__card-open"
                         onClick={() => void abrirResumoDiario(d)}
                       >
                         <div className="frota-timeline__card-head">
@@ -564,6 +609,25 @@ export default function FrotaManutencao() {
                         ) : null}
                         <span className="frota-timeline__hint">Toque para ver o resumo</span>
                       </button>
+                      <div className="frota-timeline__card-actions">
+                        <button
+                          type="button"
+                          className="frota-btn frota-btn--ghost frota-btn--sm"
+                          onClick={() => void abrirResumoDiario(d)}
+                        >
+                          Ver resumo
+                        </button>
+                        {podeExcluir ? (
+                          <button
+                            type="button"
+                            className="frota-btn frota-btn--danger frota-btn--sm"
+                            disabled={excluindoDiarioId === d.id}
+                            onClick={() => void handleExcluirDiario(d)}
+                          >
+                            {excluindoDiarioId === d.id ? 'A excluir…' : 'Excluir'}
+                          </button>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -575,6 +639,9 @@ export default function FrotaManutencao() {
                 veiculoLabel={`${veiculo.placa}${veiculo.modelo ? ` · ${veiculo.modelo}` : ''}`}
                 onFechar={() => setDiarioResumo(null)}
                 onEditar={editarDiarioDoResumo}
+                podeExcluir={podeExcluir}
+                excluindo={excluindoDiarioId === diarioResumo.id}
+                onExcluir={() => void handleExcluirDiario(diarioResumo)}
               />
             ) : null}
           </div>
