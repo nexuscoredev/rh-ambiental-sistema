@@ -129,6 +129,15 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/sistema/solicitacoes-ajuste')).toBe(false)
   })
 
+  it('Fila de exclusões: Thais (Comercial Adm) e Desenvolvedor', () => {
+    expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/sistema/fila-exclusoes')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial Adm', '/sistema/fila-exclusoes', 'Thais')).toBe(true)
+    expect(cargoPodeAcessarRotaMenu('Comercial', '/sistema/fila-exclusoes', 'Rose')).toBe(false)
+    expect(cargoPodeAcessarRotaMenu('Operadores (Time R)', '/sistema/fila-exclusoes', 'Matheus')).toBe(
+      false
+    )
+  })
+
   it('RH: apenas Desenvolvedor acede às rotas', () => {
     expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/rh')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Desenvolvedor', '/rh/departamento-pessoal')).toBe(true)

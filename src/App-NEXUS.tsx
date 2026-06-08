@@ -53,6 +53,7 @@ const Chat = lazyWithRetry(() => import('./pages/Chat'))
 const RhArea = lazyWithRetry(() => import('./pages/rh/RhArea'))
 const FrotaArea = lazyWithRetry(() => import('./pages/frota/FrotaArea'))
 const SolicitacoesAjusteAdmin = lazyWithRetry(() => import('./pages/sistema/SolicitacoesAjusteAdmin'))
+const FilaExclusaoOperacional = lazyWithRetry(() => import('./pages/sistema/FilaExclusaoOperacional'))
 const SenhaPessoalAcompanhamento = lazyWithRetry(
   () => import('./pages/sistema/SenhaPessoalAcompanhamento')
 )
@@ -940,6 +941,21 @@ function App() {
                   allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/sistema/solicitacoes-ajuste']]}
                 >
                   <SolicitacoesAjusteAdmin />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/sistema/fila-exclusoes"
+              element={
+                <ProtectedRoute
+                  session={session}
+                  usuario={usuario}
+                  carregandoUsuario={carregandoUsuario}
+                  erroPerfil={erroPerfil}
+                  allowedRoles={[...NEXUS_CARGOS_POR_ROTA['/sistema/fila-exclusoes']]}
+                >
+                  <FilaExclusaoOperacional />
                 </ProtectedRoute>
               }
             />

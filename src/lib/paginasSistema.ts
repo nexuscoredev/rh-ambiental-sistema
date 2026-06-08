@@ -45,6 +45,7 @@ export const ROTAS_SISTEMA: { path: string; label: string }[] = [
   ...RH_ROTAS_SISTEMA,
   { path: '/usuarios', label: 'Usuários' },
   { path: '/sistema/solicitacoes-ajuste', label: 'Gestão de solicitações' },
+  { path: '/sistema/fila-exclusoes', label: 'Fila de exclusões' },
   { path: '/sistema/senha-pessoal', label: 'Acompanhamento senha pessoal' },
   { path: '/chat', label: 'Chat' },
 ]

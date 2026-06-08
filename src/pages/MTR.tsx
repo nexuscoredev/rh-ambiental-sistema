@@ -15,7 +15,10 @@ import {
   cargoEhDesenvolvedor,
   cargoPodeEditarMtr,
   cargoPodeExcluirMtr,
+  cargoPodeSolicitarExclusaoMtr,
 } from '../lib/workflowPermissions'
+import { solicitarExclusaoOperacional } from '../lib/solicitacaoExclusaoOperacional'
+import { SolicitarExclusaoMotivoDialog } from '../components/operacional/SolicitarExclusaoMotivoDialog'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { MtrCicloVidaAcoes } from '../components/mtr/MtrCicloVidaAcoes'
 import { isMtrStatusCancelado } from '../lib/mtrCicloVida'
@@ -98,7 +101,6 @@ import { escolherTipoResiduoContratoMtr } from '../lib/mtrResiduoContratoOpcoes'
 import { useSessionObjectDraft } from '../lib/usePageSessionPersistence'
 import {
   excluirColetaPorId,
-  excluirMtrPorId,
   listarColetaIdsPorMtr,
 } from '../lib/excluirOperacionalCascata'
 import {
@@ -755,6 +757,12 @@ export default function MTR() {
 
   const podeMutarMtr = cargoPodeEditarMtr(usuarioCargo, usuarioNome)
   const podeExcluirMtr = cargoPodeExcluirMtr(usuarioCargo, usuarioNome, usuarioEmail)
+  const podeSolicitarExclusaoMtr = cargoPodeSolicitarExclusaoMtr(
+    usuarioCargo,
+    usuarioNome,
+    usuarioEmail
+  )
+  const [mtrExclusaoPendente, setMtrExclusaoPendente] = useState<MTR | null>(null)
 
   const loadDataGenRef = useRef(0)
   const programacaoChangeGenRef = useRef(0)
@@ -2137,12 +2145,12 @@ export default function MTR() {
     void atualizarMtrsEmitidasPorProgramacao(programacoes.map((p) => p.id))
   }
 
-  async function handleDelete(item: MTR) {
-    if (!podeExcluirMtr) {
+  async function iniciarSolicitacaoExclusaoMtr(item: MTR) {
+    if (!podeSolicitarExclusaoMtr) {
       await rgAlert({
         title: 'MTR',
         message:
-          'Seu perfil não pode remover MTR. Utilizadores autorizados: Thais, Ezequiel, Ana, Rafael (operação), Vinicius e desenvolvedor master.',
+          'Seu perfil não pode solicitar exclusão de MTR. Equipe Comercial ou Operação.',
         variant: 'warning',
       })
       return
@@ -2154,42 +2162,47 @@ export default function MTR() {
     const temColeta = qtdColetas > 0
 
     const msgConfirm = temColeta
-      ? `Remover a MTR ${item.numero} e ${qtdColetas} coleta(s) vinculada(s)?\n\nIsso apaga checklist, ticket, aprovação, faturamento e desvincula programação e controle de massa quando aplicável.`
-      : `Deseja realmente remover a MTR ${item.numero}?`
+      ? `Solicitar exclusão da MTR ${item.numero} e ${qtdColetas} coleta(s) vinculada(s)?\n\nApós aprovação da Thais, serão removidos checklist, ticket, faturamento e vínculos operacionais.`
+      : `Solicitar exclusão da MTR ${item.numero}? A exclusão será enviada para aprovação da Thais.`
 
     if (
       !(await rgConfirm({
-        title: 'Excluir MTR',
+        title: 'Solicitar exclusão de MTR',
         message: msgConfirm,
-        confirmLabel: 'Excluir',
+        confirmLabel: 'Continuar',
         variant: 'danger',
       }))
     )
       return
 
-    const res = await excluirMtrPorId(item.id)
+    setMtrExclusaoPendente(item)
+  }
+
+  async function confirmarSolicitacaoExclusaoMtr(motivo: string) {
+    if (!mtrExclusaoPendente) return
+    const item = mtrExclusaoPendente
+    setMtrExclusaoPendente(null)
+
+    const res = await solicitarExclusaoOperacional({
+      tipoEntidade: 'mtr',
+      entidadeId: item.id,
+      motivo,
+    })
+
     if (!res.ok) {
       await rgAlert({
-        title: 'Erro ao remover MTR',
+        title: 'Erro ao solicitar exclusão',
         message: res.message,
         variant: 'danger',
       })
       return
     }
 
-    if (selectedMTR?.id === item.id) {
-      setSelectedMTR(null)
-    }
-
     await rgAlert({
       title: 'MTR',
-      message: temColeta
-        ? 'MTR e coleta(s) vinculadas foram removidas com sucesso.'
-        : 'MTR removida com sucesso.',
+      message: 'Solicitação de exclusão enviada para aprovação da Thais.',
       variant: 'success',
     })
-    await loadData(paramsListaMtrAtual())
-    void atualizarMtrsEmitidasPorProgramacao(programacoes.map((p) => p.id))
   }
 
   async function handleDeleteColetasDaMtr(
@@ -4308,12 +4321,12 @@ ${MTR_LISTA_CARD_UI_CSS}
                           >
                             Editar
                           </button>
-                          {podeExcluirMtr ? (
+                          {podeSolicitarExclusaoMtr ? (
                             <button
                               className="mini-btn mini-btn-danger"
-                              onClick={() => void handleDelete(item)}
+                              onClick={() => void iniciarSolicitacaoExclusaoMtr(item)}
                             >
-                              Remover
+                              Solicitar exclusão
                             </button>
                           ) : null}
                           <MtrCicloVidaAcoes
@@ -5651,6 +5664,18 @@ ${MTR_LISTA_CARD_UI_CSS}
           </div>
         )}
       </div>
+
+      <SolicitarExclusaoMotivoDialog
+        open={mtrExclusaoPendente != null}
+        title="Motivo da exclusão da MTR"
+        message={
+          mtrExclusaoPendente
+            ? `MTR ${mtrExclusaoPendente.numero} — informe o motivo para enviar à fila da Thais.`
+            : undefined
+        }
+        onConfirm={(motivo) => void confirmarSolicitacaoExclusaoMtr(motivo)}
+        onCancel={() => setMtrExclusaoPendente(null)}
+      />
     </MainLayout>
   )
 }

@@ -10,8 +10,10 @@ import { supabase } from '../lib/supabase'
 import {
   cargoEhDesenvolvedor,
   cargoPodeEditarProgramacao,
-  cargoPodeExcluirProgramacao,
+  cargoPodeSolicitarExclusaoProgramacao,
 } from '../lib/workflowPermissions'
+import { solicitarExclusaoOperacional } from '../lib/solicitacaoExclusaoOperacional'
+import { SolicitarExclusaoMotivoDialog } from '../components/operacional/SolicitarExclusaoMotivoDialog'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
@@ -798,7 +800,15 @@ export default function Programacao() {
   })
 
   const podeMutarProgramacao = cargoPodeEditarProgramacao(usuarioCargo, usuarioNome)
-  const podeExcluirProgramacao = cargoPodeExcluirProgramacao(usuarioCargo, usuarioNome)
+  const podeSolicitarExclusaoProgramacao = cargoPodeSolicitarExclusaoProgramacao(
+    usuarioCargo,
+    usuarioNome
+  )
+  const [exclusaoPendente, setExclusaoPendente] = useState<{
+    item: ProgramacaoItem
+    excluirSerieInteira: boolean
+    serieId: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (!sucesso) return
@@ -1258,15 +1268,18 @@ export default function Programacao() {
     setDiaPainelCalendario(null)
   }
 
-  async function excluirProgramacao(item: ProgramacaoItem) {
-    if (!podeExcluirProgramacao) {
-      setErro('Seu perfil não pode excluir programações. Apenas equipe Comercial ou Desenvolvedor.')
+  async function iniciarSolicitacaoExclusaoProgramacao(item: ProgramacaoItem) {
+    if (!podeSolicitarExclusaoProgramacao) {
+      setErro(
+        'Seu perfil não pode solicitar exclusão de programações. Equipe Comercial ou Operação.'
+      )
       return
     }
     const confirmar = await rgConfirm({
-      title: 'Excluir programação',
-      message: 'Tem certeza que deseja excluir esta programação?',
-      confirmLabel: 'Excluir',
+      title: 'Solicitar exclusão',
+      message:
+        'A exclusão será enviada para aprovação da Thais. Deseja continuar?',
+      confirmLabel: 'Continuar',
       variant: 'danger',
     })
     if (!confirmar) return
@@ -1277,55 +1290,43 @@ export default function Programacao() {
       excluirSerieInteira = await rgConfirm({
         title: 'Coleta fixa semanal',
         message:
-          'Esta programação faz parte de uma coleta fixa com várias datas no calendário. Deseja excluir TODAS as datas desta série? (Cancelar = excluir somente esta data)',
-        confirmLabel: 'Excluir toda a série',
+          'Esta programação faz parte de uma coleta fixa com várias datas no calendário. Deseja solicitar exclusão de TODAS as datas desta série? (Cancelar = somente esta data)',
+        confirmLabel: 'Toda a série',
         cancelLabel: 'Só esta data',
         variant: 'danger',
       })
     }
 
+    setExclusaoPendente({ item, excluirSerieInteira, serieId })
+  }
+
+  async function confirmarSolicitacaoExclusaoProgramacao(motivo: string) {
+    if (!exclusaoPendente) return
+    const { item, excluirSerieInteira, serieId } = exclusaoPendente
+    setExclusaoPendente(null)
+
     try {
       setErro('')
       setSucesso('')
 
-      let query = supabase.from('programacoes').delete()
-      if (excluirSerieInteira && serieId) {
-        query = query.eq('programacao_serie_id', serieId)
-      } else {
-        query = query.eq('id', item.id)
-      }
+      const res = await solicitarExclusaoOperacional({
+        tipoEntidade: 'programacao',
+        entidadeId: item.id,
+        motivo,
+        excluirSerieInteira,
+        programacaoSerieId: excluirSerieInteira ? serieId : null,
+      })
 
-      const { data: removidas, error } = await query.select('id')
-
-      if (error) {
-        console.error('ERRO AO EXCLUIR PROGRAMAÇÃO:', error)
-        throw error
-      }
-
-      if (!removidas?.length) {
-        setErro(
-          'Nenhuma programação foi removida. O servidor pode ter bloqueado a exclusão (permissão) ou o registro já não existe. Peça ao suporte para aplicar o script RBAC no Supabase, se o problema continuar.'
-        )
+      if (!res.ok) {
+        setErro(res.message)
         return
       }
 
       setSucesso(
         excluirSerieInteira && serieId
-          ? `${removidas.length} programação(ões) da série excluída(s) com sucesso.`
-          : 'Programação excluída com sucesso.'
+          ? 'Solicitação de exclusão da série enviada para aprovação da Thais.'
+          : 'Solicitação de exclusão enviada para aprovação da Thais.'
       )
-      await carregarDados()
-
-      if (form.id === item.id || (excluirSerieInteira && form.programacaoSerieId === serieId)) {
-        limparFormulario()
-        setModalNovaProgramacaoAberto(false)
-      }
-      if (
-        formEdicaoModal?.id === item.id ||
-        (excluirSerieInteira && formEdicaoModal?.programacaoSerieId === serieId)
-      ) {
-        setFormEdicaoModal(null)
-      }
     } catch (error) {
       setErro(getSupabaseErrorMessage(error))
     }
@@ -2443,13 +2444,13 @@ export default function Programacao() {
                                 type="button"
                                 style={{
                                   ...botaoExcluirListaCompactStyle,
-                                  opacity: podeExcluirProgramacao ? 1 : 0.5,
-                                  cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
+                                  opacity: podeSolicitarExclusaoProgramacao ? 1 : 0.5,
+                                  cursor: podeSolicitarExclusaoProgramacao ? 'pointer' : 'not-allowed',
                                 }}
-                                onClick={() => void excluirProgramacao(item)}
-                                disabled={!podeExcluirProgramacao}
+                                onClick={() => void iniciarSolicitacaoExclusaoProgramacao(item)}
+                                disabled={!podeSolicitarExclusaoProgramacao}
                               >
-                                Excluir
+                                Solicitar exclusão
                               </button>
 
                             </div>
@@ -2771,13 +2772,13 @@ export default function Programacao() {
                           type="button"
                           style={{
                             ...botaoExcluirListaStyle,
-                            opacity: podeExcluirProgramacao ? 1 : 0.5,
-                            cursor: podeExcluirProgramacao ? 'pointer' : 'not-allowed',
+                            opacity: podeSolicitarExclusaoProgramacao ? 1 : 0.5,
+                            cursor: podeSolicitarExclusaoProgramacao ? 'pointer' : 'not-allowed',
                           }}
-                          onClick={() => void excluirProgramacao(item)}
-                          disabled={!podeExcluirProgramacao}
+                          onClick={() => void iniciarSolicitacaoExclusaoProgramacao(item)}
+                          disabled={!podeSolicitarExclusaoProgramacao}
                         >
-                          Excluir
+                          Solicitar exclusão
                         </button>
                       </div>
                     </div>
@@ -3274,6 +3275,18 @@ export default function Programacao() {
           </div>
         </div>
       ) : null}
+
+      <SolicitarExclusaoMotivoDialog
+        open={exclusaoPendente != null}
+        title="Motivo da exclusão"
+        message={
+          exclusaoPendente?.excluirSerieInteira
+            ? 'A solicitação abrange todas as datas da série de coleta fixa.'
+            : 'Informe o motivo para enviar à fila de aprovação da Thais.'
+        }
+        onConfirm={(motivo) => void confirmarSolicitacaoExclusaoProgramacao(motivo)}
+        onCancel={() => setExclusaoPendente(null)}
+      />
     </MainLayout>
   )
 }

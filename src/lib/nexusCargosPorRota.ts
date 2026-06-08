@@ -145,6 +145,9 @@ const USUARIOS = [C.desenvolvedor] as const
 /** Gestão de filas de solicitações (chat) — apenas Desenvolvedor. */
 const SOLICITACOES_AJUSTE_ADMIN = [C.desenvolvedor] as const
 
+/** Fila de exclusões de programação/MTR — Thais (Comercial Adm) e Desenvolvedor. */
+const FILA_EXCLUSAO_OPERACIONAL = [C.desenvolvedor, ...ACESSO_COMERCIAL_ADM] as const
+
 const RH_CARGOS_POR_ROTA = Object.fromEntries(
   RH_ROTAS_SISTEMA.map(({ path }) => [path, RH])
 ) as Record<string, readonly string[]>
@@ -189,6 +192,7 @@ export const NEXUS_CARGOS_POR_ROTA: Record<string, readonly string[]> = {
   '/envio-nf': [...ENVIO_NF],
   '/usuarios': [...USUARIOS],
   '/sistema/solicitacoes-ajuste': [...SOLICITACOES_AJUSTE_ADMIN],
+  '/sistema/fila-exclusoes': [...FILA_EXCLUSAO_OPERACIONAL],
   '/sistema/senha-pessoal': [...SOLICITACOES_AJUSTE_ADMIN],
   '/chat': [...DASHBOARD_E_CHAT, C.operadoresTimeR],
   ...RH_CARGOS_POR_ROTA,

@@ -125,6 +125,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     title: 'Sistema',
     items: [
       { label: 'Gestão de solicitações', path: '/sistema/solicitacoes-ajuste' },
+      { label: 'Fila de exclusões', path: '/sistema/fila-exclusoes' },
       { label: 'Senha pessoal (acompanhamento)', path: '/sistema/senha-pessoal' },
       { label: 'Usuários', path: '/usuarios' },
     ],

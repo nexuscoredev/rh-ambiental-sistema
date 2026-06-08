@@ -12,6 +12,8 @@ import {
   normalizarNomePessoa,
   rbacPode,
   usuarioEhDesenvolvedorMaster,
+  usuarioEhEquipeComercial,
+  usuarioEhOperacao,
   type UsuarioAcessoContext,
 } from './rbac'
 
@@ -506,6 +508,41 @@ export function cargoPodeExcluirProgramacao(
   nome?: string | null
 ): boolean {
   return rbacPode('programacao', 'excluir', ctxDeArgs(cargo, nome))
+}
+
+/** Comercial ou operação podem solicitar exclusão (motivo obrigatório → fila da Thais). */
+export function usuarioPodeSolicitarExclusaoOperacional(
+  cargo?: string | null,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  if (temAutoridadeMaximaSistema(cargo, nome, email)) return true
+  const ctx = ctxDeArgs(cargo, nome)
+  return usuarioEhEquipeComercial(ctx) || usuarioEhOperacao(ctx)
+}
+
+export function cargoPodeSolicitarExclusaoProgramacao(
+  cargo: string | null | undefined,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return usuarioPodeSolicitarExclusaoOperacional(cargo, nome, email)
+}
+
+export function cargoPodeSolicitarExclusaoMtr(
+  cargo: string | null | undefined,
+  nome?: string | null,
+  email?: string | null
+): boolean {
+  return usuarioPodeSolicitarExclusaoOperacional(cargo, nome, email)
+}
+
+/** Thais aprova/rejeita solicitações de exclusão de programação e MTR. */
+export function usuarioEhAprovadorExclusaoOperacionalThais(
+  nome?: string | null,
+  cargo?: string | null
+): boolean {
+  return usuarioEhAprovadorSolicitacoesThais(nome, cargo)
 }
 
 export const cargoPodeCriarMtr = cargoPodeMutarMtr
