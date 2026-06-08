@@ -9783,6 +9783,16 @@ a.rg-btn {
   color: #334155;
 }
 
+.frota-btn--danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.frota-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
 .frota-btn--sm {
   padding: 7px 12px;
   font-size: 12px;

@@ -5,9 +5,10 @@ import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloc
 import { FrotaDiarioResumoModal } from '../../components/frota/FrotaDiarioResumoModal'
 import { FrotaOrdemServicoPrint } from '../../components/frota/FrotaOrdemServicoPrint'
 import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
-import { rgAlert } from '../../lib/RgDialogProvider'
+import { rgAlert, rgConfirm } from '../../lib/RgDialogProvider'
 import {
   criarManutencaoFrota,
+  excluirManutencaoFrota,
   fetchDiarioPorData,
   fetchDiariosFrota,
   fetchManutencoesFrota,
@@ -45,7 +46,7 @@ const CHECKLIST_ITENS: { key: keyof FrotaDiarioChecklist; label: string }[] = [
 const OS_CLASSIFICACAO_INICIAL: FrotaOsClassificacao = { frota: true }
 
 export default function FrotaManutencao() {
-  const { podeMutar } = useFrotaPermissoes()
+  const { podeMutar, podeExcluir } = useFrotaPermissoes()
   const [caminhoes, setCaminhoes] = useState<CaminhaoOpt[]>([])
   const [veiculoId, setVeiculoId] = useState('')
   const [tab, setTab] = useState<'diario' | 'ordem_servico'>('diario')
@@ -84,6 +85,7 @@ export default function FrotaManutencao() {
   const [assCargo, setAssCargo] = useState('')
   const [diarioResumo, setDiarioResumo] = useState<FrotaDiarioRow | null>(null)
   const [osImpressao, setOsImpressao] = useState<FrotaOrdemServicoPrintData | null>(null)
+  const [excluindoOsId, setExcluindoOsId] = useState<string | null>(null)
   const diarioFormRef = useRef<HTMLFormElement>(null)
 
   const veiculo = caminhoes.find((c) => c.id === veiculoId)
@@ -153,6 +155,43 @@ export default function FrotaManutencao() {
     requestAnimationFrame(() => {
       window.setTimeout(() => window.print(), 200)
     })
+  }
+
+  async function handleExcluirOs(row: FrotaManutencaoRow) {
+    if (!podeExcluir) {
+      await rgAlert({
+        title: 'Permissão',
+        message: 'O seu perfil não pode excluir ordens de serviço.',
+      })
+      return
+    }
+    const rotulo = `OS ${row.numero_os ?? '—'}/${row.ano_os ?? ''}`
+    const ok = await rgConfirm({
+      title: 'Excluir ordem de serviço',
+      message: `Confirma a exclusão de ${rotulo}?\n\nEsta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setExcluindoOsId(row.id)
+    try {
+      await excluirManutencaoFrota(row.id)
+      if (veiculoId) await carregarVeiculo(veiculoId)
+      await rgAlert({
+        title: 'OS excluída',
+        message: `${rotulo} foi removida do histórico.`,
+        variant: 'success',
+      })
+    } catch (err) {
+      await rgAlert({
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir a OS.',
+        variant: 'danger',
+      })
+    } finally {
+      setExcluindoOsId(null)
+    }
   }
 
   function limparFormularioOs() {
@@ -698,6 +737,16 @@ export default function FrotaManutencao() {
                         >
                           Imprimir OS
                         </button>
+                        {podeExcluir ? (
+                          <button
+                            type="button"
+                            className="frota-btn frota-btn--danger frota-btn--sm"
+                            disabled={excluindoOsId === m.id}
+                            onClick={() => void handleExcluirOs(m)}
+                          >
+                            {excluindoOsId === m.id ? 'A excluir…' : 'Excluir OS'}
+                          </button>
+                        ) : null}
                       </div>
                     </li>
                   ))}

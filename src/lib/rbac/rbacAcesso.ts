@@ -259,6 +259,7 @@ export function rbacPode(
     case 'frota_operacional': {
       if (acao === 'excluir') {
         return (
+          cargoEhDesenvolvedor(ctx.cargo) ||
           nomeEhThais(ctx) ||
           cargoEhComercialAdm(ctx.cargo) ||
           diretoriaAcessoNegocio(ctx)

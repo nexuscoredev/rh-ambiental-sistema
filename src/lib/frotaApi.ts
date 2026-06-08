@@ -225,6 +225,11 @@ export async function criarManutencaoFrota(input: {
   return mapManutencao(data as Record<string, unknown>)
 }
 
+export async function excluirManutencaoFrota(id: string): Promise<void> {
+  const { error } = await supabase.from('frota_manutencao').delete().eq('id', id)
+  if (error) throw error
+}
+
 function mapDiario(r: Record<string, unknown>): FrotaDiarioRow {
   const cam = r.caminhoes as { placa?: string; modelo?: string } | null
   const checklist = (r.checklist && typeof r.checklist === 'object' ? r.checklist : {}) as FrotaDiarioChecklist

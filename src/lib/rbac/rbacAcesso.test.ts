@@ -100,6 +100,7 @@ describe('rbac — frota operacional', () => {
     expect(rbacPode('frota_operacional', 'editar', ctx('Rafaela', 'Comercial'))).toBe(true)
     expect(rbacPode('frota_operacional', 'editar', ctx('Ana Novaes', 'Diretoria'))).toBe(true)
     expect(rbacPode('frota_operacional', 'excluir', ctx('Thais', 'Comercial Adm'))).toBe(true)
+    expect(rbacPode('frota_operacional', 'excluir', ctx('Rafael Cavalcante', 'Desenvolvedor'))).toBe(true)
     expect(rbacPode('frota_operacional', 'excluir', ctx('Rafaela', 'Comercial'))).toBe(false)
     expect(rbacPode('frota_operacional', 'editar', ctx('Gabriel', 'Operadores (Time R)'))).toBe(false)
     expect(rbacPode('frota_operacional', 'editar', ctx('Motorista', 'Logística'))).toBe(false)
