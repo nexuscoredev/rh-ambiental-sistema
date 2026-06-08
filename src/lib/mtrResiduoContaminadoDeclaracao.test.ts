@@ -3,6 +3,7 @@ import {
   avisosConferenciaDeclaracao,
   DECLARACAO_RESIDUO_RG_ANEXO2,
   estadoFisicoDeclaracaoDesdeTexto,
+  formatarResiduosDeclaracaoTexto,
   montarDeclaracaoResiduoContaminadoFromMtr,
   type DeclaracaoResiduoContaminadoDados,
 } from './mtrResiduoContaminadoDeclaracao'
@@ -27,7 +28,7 @@ describe('mtrResiduoContaminadoDeclaracao', () => {
     expect(d.gerador.razaoSocial).toBe('Clínica Teste')
     expect(d.gerador.cnpj).toBe('12.345.678/0001-99')
     expect(d.gerador.endereco).toContain('Rua A, 10')
-    expect(d.classeResiduo).toBe('EFLUENTE')
+    expect(d.residuos).toEqual([''])
     expect(d.estadoFisico).toBe('liquido')
     expect(d.destino.razao_social).toContain('RG AMBIENTAL')
   })
@@ -38,12 +39,19 @@ describe('mtrResiduoContaminadoDeclaracao', () => {
     expect(estadoFisicoDeclaracaoDesdeTexto('')).toBe('')
   })
 
-  it('conferência não exige quantidade (Kg)', () => {
+  it('formatarResiduosDeclaracaoTexto junta vários tipos', () => {
+    expect(formatarResiduosDeclaracaoTexto(['EFLUENTE'])).toBe('EFLUENTE')
+    expect(formatarResiduosDeclaracaoTexto(['EFLUENTE', 'RSS'])).toBe('EFLUENTE e RSS')
+    expect(formatarResiduosDeclaracaoTexto(['A', 'B', 'C'])).toBe('A, B e C')
+    expect(formatarResiduosDeclaracaoTexto(['', '  '])).toBe('')
+  })
+
+  it('conferência exige pelo menos um resíduo e não exige quantidade (Kg)', () => {
     const base: DeclaracaoResiduoContaminadoDados = {
       numeroMtr: 'MTR-1',
       gerador: { razaoSocial: 'ETHOS', cnpj: '10.313.205/0001-80', endereco: 'Rua X' },
       quantidadeKg: '',
-      classeResiduo: 'EFLUENTE',
+      residuos: [''],
       estadoFisico: 'liquido',
       destino: DECLARACAO_RESIDUO_RG_ANEXO2,
       transporte: DECLARACAO_RESIDUO_RG_ANEXO2,
@@ -55,7 +63,8 @@ describe('mtrResiduoContaminadoDeclaracao', () => {
         data: '01/06/2026',
       },
     }
+    expect(avisosConferenciaDeclaracao(base)).toContain('Pelo menos um resíduo (tipo/classe)')
+    expect(avisosConferenciaDeclaracao({ ...base, residuos: ['EFLUENTE'] })).toEqual([])
     expect(avisosConferenciaDeclaracao(base)).not.toContain('Quantidade (Kg)')
-    expect(avisosConferenciaDeclaracao(base)).toEqual([])
   })
 })

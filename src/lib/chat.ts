@@ -569,6 +569,20 @@ export function formatarHoraCurta(iso: string | null): string {
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+/** Data e hora completas no balão da conversa (ex.: 08/06/2026, 11:37). */
+export function formatarDataHoraMensagem(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export {
   deveOcultarBalaoSuporteTecnico,
   emailSuporteTecnicoConfig,

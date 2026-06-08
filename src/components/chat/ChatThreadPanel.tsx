@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ChatAvatar } from './ChatAvatar'
 import { ChatComposerPicker } from './ChatComposerPicker'
-import { chatUrlAssinadaAnexo, chatMensagemLidaPeloOutro } from '../../lib/chat'
+import {
+  chatUrlAssinadaAnexo,
+  chatMensagemLidaPeloOutro,
+  formatarDataHoraMensagem,
+} from '../../lib/chat'
 import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatMensagemEhPedidoAjuste,
@@ -427,10 +431,7 @@ function MensagemBolha({
     if (u) window.open(u, '_blank', 'noopener,noreferrer')
   }
 
-  const hora = new Date(m.created_at).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const dataHora = formatarDataHoraMensagem(m.created_at)
   const lida = meu && chatMensagemLidaPeloOutro(m.created_at, outroLastReadAt)
 
   const mostrarTexto = !!(
@@ -514,7 +515,7 @@ function MensagemBolha({
             </span>
           ) : null}
           <time className="chat-interno-bubble__time" dateTime={m.created_at}>
-            {hora}
+            {dataHora}
           </time>
         </div>
       </div>

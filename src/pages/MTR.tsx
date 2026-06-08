@@ -2512,6 +2512,57 @@ export default function MTR() {
           font-weight: 500;
         }
 
+        .mtr-rc-modal-residuos {
+          margin-bottom: 12px;
+        }
+
+        .mtr-rc-modal-residuos__label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .mtr-rc-modal-residuos__row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .mtr-rc-modal-residuos__row input {
+          flex: 1;
+          height: 38px;
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          padding: 0 10px;
+          font-weight: 500;
+        }
+
+        .mtr-rc-modal-residuos__remove {
+          flex-shrink: 0;
+          border: 1px solid #fecaca;
+          background: #fff;
+          color: #b91c1c;
+          border-radius: 8px;
+          padding: 8px 10px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .mtr-rc-modal-residuos__add {
+          border: 1px dashed #94a3b8;
+          background: #f8fafc;
+          color: #0f766e;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
         .mtr-rc-modal-estados {
           border: 1px solid #e2e8f0;
           border-radius: 10px;

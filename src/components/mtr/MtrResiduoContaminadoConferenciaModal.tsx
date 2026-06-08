@@ -31,7 +31,13 @@ export function MtrResiduoContaminadoConferenciaModal({
 
   useEffect(() => {
     if (open && dadosIniciais) {
-      setDraft({ ...dadosIniciais, gerador: { ...dadosIniciais.gerador }, assinatura: { ...dadosIniciais.assinatura } })
+      setDraft({
+        ...dadosIniciais,
+        gerador: { ...dadosIniciais.gerador },
+        assinatura: { ...dadosIniciais.assinatura },
+        residuos:
+          dadosIniciais.residuos?.length > 0 ? [...dadosIniciais.residuos] : [''],
+      })
       setErro('')
     }
   }, [open, dadosIniciais])
@@ -118,6 +124,54 @@ export function MtrResiduoContaminadoConferenciaModal({
                   onChange={(e) => setDraft((p) => (p ? { ...p, quantidadeKg: e.target.value } : p))}
                 />
               </label>
+
+              <div className="mtr-rc-modal-residuos">
+                <span className="mtr-rc-modal-residuos__label">Resíduo(s) — tipo/classe</span>
+                {draft.residuos.map((valor, idx) => (
+                  <div key={idx} className="mtr-rc-modal-residuos__row">
+                    <input
+                      value={valor}
+                      placeholder="Ex.: EFLUENTE, RSS, óleo contaminado…"
+                      onChange={(e) =>
+                        setDraft((p) => {
+                          if (!p) return p
+                          const next = [...p.residuos]
+                          next[idx] = e.target.value
+                          return { ...p, residuos: next }
+                        })
+                      }
+                    />
+                    {draft.residuos.length > 1 ? (
+                      <button
+                        type="button"
+                        className="mtr-rc-modal-residuos__remove"
+                        aria-label={`Remover resíduo ${idx + 1}`}
+                        onClick={() =>
+                          setDraft((p) => {
+                            if (!p || p.residuos.length <= 1) return p
+                            return {
+                              ...p,
+                              residuos: p.residuos.filter((_, i) => i !== idx),
+                            }
+                          })
+                        }
+                      >
+                        Remover
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="mtr-rc-modal-residuos__add"
+                  onClick={() =>
+                    setDraft((p) => (p ? { ...p, residuos: [...p.residuos, ''] } : p))
+                  }
+                >
+                  + Adicionar mais
+                </button>
+              </div>
+
               <fieldset className="mtr-rc-modal-estados">
                 <legend>Estado físico</legend>
                 {ESTADOS.map(({ id, label }) => (

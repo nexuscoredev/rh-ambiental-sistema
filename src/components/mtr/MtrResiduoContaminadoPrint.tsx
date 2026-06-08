@@ -1,5 +1,9 @@
 import { BRAND_LOGO_MARK } from '../../lib/brandLogo'
-import type { DeclaracaoResiduoContaminadoDados } from '../../lib/mtrResiduoContaminadoDeclaracao'
+import {
+  formatarResiduosDeclaracaoTexto,
+  residuosDeclaracaoPreenchidos,
+  type DeclaracaoResiduoContaminadoDados,
+} from '../../lib/mtrResiduoContaminadoDeclaracao'
 import './mtrResiduoContaminadoPrint.css'
 
 type Props = {
@@ -52,6 +56,9 @@ function BlocoRg({
 export function MtrResiduoContaminadoPrint({ dados, exibirReferenciaMtr = false }: Props) {
   const qtd = (dados.quantidadeKg || '').trim()
   const ef = dados.estadoFisico
+  const residuosPreenchidos = residuosDeclaracaoPreenchidos(dados.residuos)
+  const textoResiduos = formatarResiduosDeclaracaoTexto(dados.residuos)
+  const rotuloResiduo = residuosPreenchidos.length === 1 ? 'resíduo' : 'resíduos'
 
   return (
     <article className="mtr-rc-decl" aria-label="Declaração de Remessa de Resíduos — Anexo 2">
@@ -72,7 +79,8 @@ export function MtrResiduoContaminadoPrint({ dados, exibirReferenciaMtr = false 
         <p className="mtr-rc-decl__paragrafo">
           Declaramos remeter a quantia de{' '}
           <span className="mtr-rc-decl__qtd-inline">{qtd || '\u00A0\u00A0\u00A0\u00A0\u00A0'}</span>
-          Kg, contendo resíduo <strong>{dados.classeResiduo}</strong>, sob estado físico:
+          Kg, contendo {rotuloResiduo}{' '}
+          <strong>{textoResiduos || '\u00A0\u00A0\u00A0\u00A0\u00A0'}</strong>, sob estado físico:
         </p>
 
         <div className="mtr-rc-decl__checks" role="group" aria-label="Estado físico">

@@ -21,8 +21,8 @@ export type DeclaracaoResiduoContaminadoDados = {
     endereco: string
   }
   quantidadeKg: string
-  /** Texto fixo do modelo: EFLUENTE */
-  classeResiduo: string
+  /** Tipos de resíduo informados manualmente na conferência. */
+  residuos: string[]
   estadoFisico: EstadoFisicoDeclaracao
   destino: typeof DECLARACAO_RESIDUO_RG_ANEXO2
   transporte: typeof DECLARACAO_RESIDUO_RG_ANEXO2
@@ -114,6 +114,19 @@ function quantidadeKgDeclaracao(mtr: MtrParaDeclaracaoResiduo): string {
   return ''
 }
 
+export function residuosDeclaracaoPreenchidos(residuos: string[]): string[] {
+  return residuos.map((r) => r.trim()).filter(Boolean)
+}
+
+/** Lista para o texto «contendo resíduo(s) …» no Anexo 2. */
+export function formatarResiduosDeclaracaoTexto(residuos: string[]): string {
+  const itens = residuosDeclaracaoPreenchidos(residuos)
+  if (itens.length === 0) return ''
+  if (itens.length === 1) return itens[0]
+  if (itens.length === 2) return `${itens[0]} e ${itens[1]}`
+  return `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`
+}
+
 function dataHojeBr(): string {
   const d = new Date()
   const dd = String(d.getDate()).padStart(2, '0')
@@ -138,7 +151,7 @@ export function montarDeclaracaoResiduoContaminadoFromMtr(mtr: MtrParaDeclaracao
       endereco: enderecoGeradorDeclaracao(mtr),
     },
     quantidadeKg: quantidadeKgDeclaracao(mtr),
-    classeResiduo: 'EFLUENTE',
+    residuos: [''],
     estadoFisico: estadoFisicoDeclaracaoDesdeTexto(mtr.detalhes?.residuo?.estado_fisico),
     destino: DECLARACAO_RESIDUO_RG_ANEXO2,
     transporte: DECLARACAO_RESIDUO_RG_ANEXO2,
@@ -158,5 +171,8 @@ export function avisosConferenciaDeclaracao(d: DeclaracaoResiduoContaminadoDados
   if (!d.gerador.cnpj || d.gerador.cnpj === '—') f.push('CNPJ do gerador')
   if (!d.gerador.endereco || d.gerador.endereco === '—') f.push('Endereço do gerador')
   if (!d.estadoFisico) f.push('Estado físico (marque Sólido, Líquido, Pastoso ou Lodo)')
+  if (residuosDeclaracaoPreenchidos(d.residuos).length === 0) {
+    f.push('Pelo menos um resíduo (tipo/classe)')
+  }
   return f
 }
