@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BemVindoAlertaSenhaPessoal } from '../components/bemVindo/BemVindoAlertaSenhaPessoal'
 import { NovidadesSistemaModal } from '../components/bemVindo/NovidadesSistemaModal'
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
@@ -47,6 +46,25 @@ export default function BemVindoNexus() {
   return (
     <MainLayout>
       <div className="welcome-nexus">
+        <div className="welcome-nexus__stripes" aria-hidden>
+          <svg viewBox="0 0 90 800" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(90,0) scale(-1,1)">
+              <path
+                fill="#6ec4b8"
+                d="M0,0 L55,0 C35,120 75,200 45,400 C15,600 70,680 50,800 L0,800 Z"
+              />
+              <path
+                fill="#d4ea6e"
+                d="M0,0 L42,0 C25,100 55,180 35,400 C15,620 48,700 38,800 L0,800 Z"
+              />
+              <path
+                fill="#e8f8f0"
+                d="M0,0 L28,0 C18,90 38,200 22,400 C6,580 32,700 24,800 L0,800 Z"
+              />
+              <rect x="0" y="0" width="6" height="800" fill="#6ec4b8" />
+            </g>
+          </svg>
+        </div>
         <div className="welcome-nexus__glow" aria-hidden />
         <div className="welcome-nexus__grid" aria-hidden />
 
@@ -73,8 +91,6 @@ export default function BemVindoNexus() {
           <p className="welcome-nexus__lead">
             Centralização de dados, padronização do fluxo e automação de processos.
           </p>
-
-          <BemVindoAlertaSenhaPessoal nome={nomeExibir} email={perfil?.email} />
 
           <div className="welcome-nexus__rule" aria-hidden />
 
