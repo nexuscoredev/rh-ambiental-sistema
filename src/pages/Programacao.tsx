@@ -368,16 +368,18 @@ function ProgramacaoRelatorioPrintRoot(p: ProgramacaoRelatorioPrintProps) {
           alt="RG Ambiental"
           decoding="async"
         />
-        <h1 className="programacao-relatorio-print__title">Calendário: visitas e coletas (impressão)</h1>
-        <p className="programacao-relatorio-print__meta">
-          Filtro: {p.filtroLabel}
-          <br />
-          Período: {p.periodoIniFmt} — {p.periodoFimFmt}
-          <br />
-          <span className="programacao-relatorio-print__meta-cap">{p.tituloPeriodo}</span>
-          <br />
-          Emitido em {p.geradoEm} · {p.total} programação(ões)
-        </p>
+        <div className="programacao-relatorio-print__header-main">
+          <h1 className="programacao-relatorio-print__title">Calendário: visitas e coletas (impressão)</h1>
+          <p className="programacao-relatorio-print__meta">
+            Filtro: {p.filtroLabel}
+            <br />
+            Período: {p.periodoIniFmt} — {p.periodoFimFmt}
+            <br />
+            <span className="programacao-relatorio-print__meta-cap">{p.tituloPeriodo}</span>
+            <br />
+            Emitido em {p.geradoEm} · {p.total} programação(ões)
+          </p>
+        </div>
       </header>
 
       {p.grupos.length === 0 ? (
@@ -412,8 +414,8 @@ function ProgramacaoRelatorioPrintRoot(p: ProgramacaoRelatorioPrintProps) {
                   <td>{item.tipoServico || '—'}</td>
                   <td>{item.mtrId ? 'Sim' : 'Não'}</td>
                   <td>{item.coletaId ? 'Sim' : 'Não'}</td>
-                  <td>{truncarTexto(item.observacoes || '', 80)}</td>
-                  <td>{truncarTexto(formatarLancadoPorResumo(item.criadoPorNome, item.createdAt) || '—', 72)}</td>
+                  <td>{truncarTexto(item.observacoes || '', 140)}</td>
+                  <td>{truncarTexto(formatarLancadoPorResumo(item.criadoPorNome, item.createdAt) || '—', 110)}</td>
                 </tr>
               ))
             )}

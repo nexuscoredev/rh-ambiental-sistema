@@ -2262,14 +2262,20 @@ a.rg-btn {
 }
 
 /* Programação — relatório para impressão/PDF (conteúdo em portal) */
+@page programacao-relatorio {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
 .programacao-relatorio-print-root {
   position: absolute;
   left: -99999px;
   top: 0;
-  width: 210mm;
+  width: 297mm;
   max-width: 100%;
-  padding: 16mm 14mm;
+  padding: 12mm 10mm;
   box-sizing: border-box;
+  page: programacao-relatorio;
   background: #fff;
   color: #0f172a;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -2277,7 +2283,17 @@ a.rg-btn {
 }
 
 .programacao-relatorio-print__header {
-  margin: 0 0 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 0 0 12px;
+}
+
+.programacao-relatorio-print__header-main {
+  flex: 1 1 280px;
+  min-width: 0;
 }
 
 .programacao-relatorio-print__logo {
@@ -2287,7 +2303,8 @@ a.rg-btn {
   height: auto;
   object-fit: contain;
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .programacao-relatorio-print__title {
@@ -2299,7 +2316,7 @@ a.rg-btn {
 }
 
 .programacao-relatorio-print__meta {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 10px;
   color: #64748b;
   line-height: 1.55;
@@ -2318,15 +2335,17 @@ a.rg-btn {
 .programacao-relatorio-print__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 9px;
+  font-size: 8.5px;
+  table-layout: fixed;
 }
 
 .programacao-relatorio-print__table th,
 .programacao-relatorio-print__table td {
   border: 1px solid #e2e8f0;
-  padding: 6px 7px;
+  padding: 5px 6px;
   text-align: left;
   vertical-align: top;
+  word-break: break-word;
 }
 
 .programacao-relatorio-print__table th {
@@ -2347,6 +2366,16 @@ a.rg-btn {
 }
 
 @media print {
+  html:has(.programacao-relatorio-print-root),
+  body:has(.programacao-relatorio-print-root) {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   body:has(.programacao-relatorio-print-root) > *:not(.programacao-relatorio-print-root) {
     display: none !important;
   }
@@ -2354,10 +2383,11 @@ a.rg-btn {
   body:has(.programacao-relatorio-print-root) .programacao-relatorio-print-root {
     position: static !important;
     left: auto !important;
-    width: auto !important;
+    width: 100% !important;
     max-width: none !important;
     padding: 0 !important;
     box-shadow: none !important;
+    page: programacao-relatorio;
   }
 
   body:has(.programacao-relatorio-print-root) .programacao-relatorio-print__logo {
