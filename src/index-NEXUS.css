@@ -9821,10 +9821,26 @@ a.rg-btn {
   border-color: #0f766e;
 }
 
+.frota-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #2dd4bf 0%, #0f766e 100%);
+  border-color: #0d9488;
+}
+
 .frota-btn--ghost {
   background: #fff;
   border-color: #cbd5e1;
   color: #334155;
+}
+
+.frota-btn--ghost:hover:not(:disabled) {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.frota-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .frota-btn--danger {
@@ -9917,10 +9933,98 @@ a.rg-btn {
 
 .frota-table__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
   justify-content: flex-end;
   white-space: nowrap;
+}
+
+.frota-table__col-acoes {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.frota-table--equip td:last-child,
+.frota-table--equip th:last-child {
+  text-align: right;
+}
+
+.frota-table__row--selected {
+  background: linear-gradient(90deg, #f0fdfa 0%, #fff 100%);
+}
+
+.frota-table__row--selected td {
+  border-bottom-color: #ccfbf1;
+}
+
+.frota-table__cliente {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.frota-table__empty {
+  padding: 28px 16px !important;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.frota-badge-custo {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.frota-badge-custo--sim {
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.frota-equip-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.frota-equip-bar__search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: min(100%, 260px);
+  font-weight: 700;
+  font-size: 12px;
+  color: #475569;
+}
+
+.frota-equip-bar__search span {
+  letter-spacing: 0.02em;
+}
+
+.frota-equip-bar__count {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f766e;
+  background: #ecfdf5;
+  border: 1px solid #99f6e4;
+  white-space: nowrap;
+}
+
+.frota-card__intro {
+  margin: -8px 0 16px;
 }
 
 .frota-timeline {
