@@ -1,0 +1,160 @@
+.frota-decl-entrega-print-root {
+  display: none;
+}
+
+.frota-decl-entrega {
+  position: relative;
+  max-width: 210mm;
+  min-height: 260mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, 'Liberation Sans', sans-serif;
+  font-size: 11.5pt;
+  line-height: 1.45;
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  overflow: hidden;
+}
+
+.frota-decl-entrega__stripes {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 52px;
+  pointer-events: none;
+}
+
+.frota-decl-entrega__stripes svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.frota-decl-entrega__body {
+  position: relative;
+  z-index: 1;
+  padding: 16mm 18mm 18mm 22mm;
+}
+
+.frota-decl-entrega__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.frota-decl-entrega__logo {
+  display: block;
+  height: 46px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+.frota-decl-entrega__local-data {
+  margin: 8px 0 0;
+  text-align: right;
+  font-size: 11pt;
+  white-space: nowrap;
+}
+
+.frota-decl-entrega__title {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: 12pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  letter-spacing: 0.04em;
+}
+
+.frota-decl-entrega__field {
+  margin: 0 0 8px;
+}
+
+.frota-decl-entrega__label {
+  font-weight: 800;
+}
+
+.frota-decl-entrega__valor {
+  font-weight: 400;
+}
+
+.frota-decl-entrega__saudacao {
+  margin: 18px 0 10px;
+}
+
+.frota-decl-entrega__texto {
+  margin: 0 0 18px;
+  text-align: justify;
+}
+
+.frota-decl-entrega__assinatura {
+  margin-top: 48px;
+  margin-left: auto;
+  width: min(72mm, 55%);
+  text-align: center;
+}
+
+.frota-decl-entrega__assinatura-linha {
+  border-top: 1px solid #111;
+  margin-bottom: 6px;
+}
+
+.frota-decl-entrega__assinatura-label {
+  margin: 0;
+  font-size: 10.5pt;
+}
+
+@media print {
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+
+  body:has(#frota-decl-entrega-print-root) .layout-sidebar,
+  body:has(#frota-decl-entrega-print-root) .layout-header,
+  body:has(#frota-decl-entrega-print-root) .chat-float-layer,
+  body:has(#frota-decl-entrega-print-root) .suporte-float-root,
+  body:has(#frota-decl-entrega-print-root) .pwa-install-fab,
+  body:has(#frota-decl-entrega-print-root) .frota-page {
+    display: none !important;
+  }
+
+  html:has(#frota-decl-entrega-print-root),
+  body:has(#frota-decl-entrega-print-root) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body:has(#frota-decl-entrega-print-root) .layout-root,
+  body:has(#frota-decl-entrega-print-root) .layout-main,
+  body:has(#frota-decl-entrega-print-root) .layout-main-scroll,
+  body:has(#frota-decl-entrega-print-root) .layout-main-scroll-inner {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+  }
+
+  #frota-decl-entrega-print-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #frota-decl-entrega-print-root,
+  #frota-decl-entrega-print-root * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

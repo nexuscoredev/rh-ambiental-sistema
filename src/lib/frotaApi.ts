@@ -1,4 +1,5 @@
 import { parseEquipamentosContratoJsonb } from './clienteContratoCadastro'
+import { formatarEnderecoClienteColeta } from './formatarEnderecoClienteColeta'
 import { parseOsClassificacao } from './frotaOrdemServico'
 import { supabase } from './supabase'
 import { parseFotosJson } from './frotaFotos'
@@ -18,7 +19,9 @@ import type {
 export async function fetchCatalogoEquipamentosClientes(): Promise<EquipamentoClienteCatalogo[]> {
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, nome, equipamentos_contrato, status')
+    .select(
+      'id, nome, razao_social, telefone, rua, numero, complemento, bairro, cidade, estado, cep, endereco_coleta, equipamentos_contrato, status'
+    )
     .eq('status', 'ativo')
     .order('nome')
 
@@ -27,6 +30,9 @@ export async function fetchCatalogoEquipamentosClientes(): Promise<EquipamentoCl
   const out: EquipamentoClienteCatalogo[] = []
   for (const row of data ?? []) {
     const nome = String(row.nome ?? '').trim() || 'Cliente'
+    const razao = String(row.razao_social ?? '').trim() || nome
+    const endereco = formatarEnderecoClienteColeta(row)
+    const telefone = String(row.telefone ?? '').trim()
     const lista = parseEquipamentosContratoJsonb(row.equipamentos_contrato)
     for (const eq of lista) {
       const desc = String(eq.descricao ?? '').trim()
@@ -34,6 +40,9 @@ export async function fetchCatalogoEquipamentosClientes(): Promise<EquipamentoCl
       out.push({
         cliente_id: String(row.id),
         cliente_nome: nome,
+        razao_social: razao,
+        endereco,
+        telefone,
         descricao: desc,
         com_custo: Boolean(eq.com_custo),
       })

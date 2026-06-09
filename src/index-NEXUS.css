@@ -9915,6 +9915,14 @@ a.rg-btn {
   color: #64748b;
 }
 
+.frota-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
 .frota-timeline {
   list-style: none;
   margin: 0;

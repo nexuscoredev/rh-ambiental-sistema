@@ -20,6 +20,9 @@ export type FrotaAssinatura = {
 export type EquipamentoClienteCatalogo = {
   cliente_id: string
   cliente_nome: string
+  razao_social: string
+  endereco: string
+  telefone: string
   descricao: string
   com_custo: boolean
 }
