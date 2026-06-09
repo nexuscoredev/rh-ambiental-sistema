@@ -48,20 +48,19 @@ export default function BemVindoNexus() {
       <div className="welcome-nexus">
         <div className="welcome-nexus__stripes" aria-hidden>
           <svg viewBox="0 0 90 800" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <g transform="translate(90,0) scale(-1,1)">
+            <g>
               <path
                 fill="#6ec4b8"
-                d="M0,0 L55,0 C35,120 75,200 45,400 C15,600 70,680 50,800 L0,800 Z"
+                d="M90,0 L35,0 C55,120 15,200 45,400 C75,600 20,680 40,800 L90,800 Z"
               />
               <path
                 fill="#d4ea6e"
-                d="M0,0 L42,0 C25,100 55,180 35,400 C15,620 48,700 38,800 L0,800 Z"
+                d="M90,0 L48,0 C65,100 35,180 55,400 C75,620 42,700 52,800 L90,800 Z"
               />
               <path
                 fill="#e8f8f0"
-                d="M0,0 L28,0 C18,90 38,200 22,400 C6,580 32,700 24,800 L0,800 Z"
+                d="M90,0 L62,0 C72,90 52,200 68,400 C84,580 58,700 66,800 L90,800 Z"
               />
-              <rect x="0" y="0" width="6" height="800" fill="#6ec4b8" />
             </g>
           </svg>
         </div>

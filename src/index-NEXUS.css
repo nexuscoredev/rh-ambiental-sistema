@@ -1498,11 +1498,12 @@ a.rg-btn {
   }
 
   .layout-main-scroll-inner:has(> .welcome-nexus) {
-    padding-right: var(--safe-right, 0px);
+    padding-right: 0;
   }
 
   .welcome-nexus {
     margin: -4px 0 0 0;
+    width: 100%;
     padding: 18px 0 24px 10px;
     border-radius: 14px 0 0 14px;
   }
@@ -6350,13 +6351,15 @@ a.rg-btn {
 /* -------------------------------------------------------------------------- */
 /* Boas-vindas — faixa decorativa colada à margem direita da área principal */
 .layout-main-scroll-inner:has(> .welcome-nexus) {
-  padding-right: var(--safe-right, 0px);
+  padding-right: 0;
 }
 
 .welcome-nexus {
   position: relative;
   min-height: calc(100vh - var(--header-height) - 48px);
   margin: -8px 0 0 -12px;
+  width: calc(100% + 12px);
+  max-width: none;
   padding: clamp(28px, 5.5vw, 72px) 0 clamp(28px, 5.5vw, 72px) clamp(18px, 3.6vw, 44px);
   overflow: hidden;
   border-radius: 16px 0 0 16px;
@@ -6369,13 +6372,14 @@ a.rg-btn {
 }
 
 .welcome-nexus__stripes {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: fixed;
+  top: var(--header-height);
+  right: var(--safe-right, 0px);
+  bottom: 0;
   width: min(120px, 18vw);
-  height: 100%;
+  height: auto;
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
   opacity: 0.95;
   -webkit-mask-image: linear-gradient(
     to bottom,
