@@ -12,6 +12,7 @@ export const TIPOS_CAMINHAO_GRUPOS: readonly { titulo: string; opcoes: readonly 
   },
   { titulo: 'Vácuo', opcoes: ['Vacuo de 13', 'Vacuo de 15'] },
   { titulo: 'Carreta', opcoes: ['Carreta de 30', 'Carreta de 40'] },
+  { titulo: 'Graneleira', opcoes: ['Graneleira'] },
   {
     titulo: 'Polli (caçamba)',
     opcoes: ['Polli (Caçamba de 5)', 'Polli (Caçamba de 7)', 'Polli (Caçamba de 10)'],
