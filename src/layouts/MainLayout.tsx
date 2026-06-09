@@ -40,7 +40,7 @@ import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
 import { SidebarNavMenu } from '../components/layout/SidebarNavMenu'
-import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { BRAND_LOGO_MARK, BRAND_LOGO_SIGLA } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 import { useRgDialog } from '../lib/RgDialogProvider'
 import {
@@ -603,8 +603,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
             >
               {logoCarregou ? (
                 <img
-                  className="layout-sidebar__logo-img"
-                  src={BRAND_LOGO_MARK}
+                  className={[
+                    'layout-sidebar__logo-img',
+                    !layoutMobile && sidebarRecolhida ? 'layout-sidebar__logo-img--sigla' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  src={
+                    !layoutMobile && sidebarRecolhida ? BRAND_LOGO_SIGLA : BRAND_LOGO_MARK
+                  }
                   alt="RG Ambiental"
                   onError={() => setLogoCarregou(false)}
                 />

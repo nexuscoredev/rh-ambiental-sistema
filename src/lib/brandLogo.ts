@@ -9,6 +9,9 @@
 export const BRAND_RG_WORDMARK = '/assets/logo/rg-ambiental-wordmark.png'
 
 export const BRAND_LOGO_MARK = BRAND_RG_WORDMARK
+
+/** Sigla Rg (sidebar recolhida) — gerada por `npm run build:brand`. */
+export const BRAND_LOGO_SIGLA = '/assets/logo/rg-ambiental-sigla.png'
 export const BRAND_LOGIN_WORDMARK = BRAND_RG_WORDMARK
 export const BRAND_WELCOME_LOGO = BRAND_RG_WORDMARK
 

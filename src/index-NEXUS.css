@@ -730,9 +730,10 @@ a.rg-btn {
   display: none;
 }
 
-.layout-sidebar--collapsed .layout-sidebar__logo-img {
-  max-height: 32px;
-  max-width: 44px;
+.layout-sidebar__logo-img--sigla {
+  max-height: 38px;
+  max-width: 52px;
+  object-fit: contain;
 }
 
 .layout-sidebar--collapsed .layout-sidebar__wordmark {

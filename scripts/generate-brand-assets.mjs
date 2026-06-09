@@ -94,6 +94,23 @@ async function buildRgMarkBuffer() {
 
 const srcBuf = await buildRgMarkBuffer()
 
+/** Sigla Rg só as letras (sidebar recolhida), recorte estreito do wordmark. */
+async function buildRgSiglaBuffer() {
+  const wm = readFileSync(wordmarkPath)
+  const meta = await sharp(wm).metadata()
+  const w = meta.width ?? 1024
+  const h = meta.height ?? 145
+  const cropW = Math.min(Math.round(w * 0.2), 220)
+  return sharp(wm)
+    .extract({ left: 0, top: 0, width: cropW, height: h })
+    .ensureAlpha()
+    .png()
+    .toBuffer()
+}
+
+const siglaBuf = await buildRgSiglaBuffer()
+await sharp(siglaBuf).png({ compressionLevel: 9 }).toFile(join(dir, 'rg-ambiental-sigla.png'))
+
 async function writeRoundRgIcon(size, outPath) {
   const svgBuf = Buffer.from(
     `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
@@ -148,4 +165,4 @@ await sharp(circle512)
   .png({ compressionLevel: 9 })
   .toFile(join(dir, 'pwa-maskable-512.png'))
 
-console.log('Brand: favicon ← rg-app-icon-source.png | PWA ← wordmark (Rg)')
+console.log('Brand: favicon ← rg-app-icon-source.png | PWA + sigla sidebar ← wordmark (Rg)')
