@@ -75,9 +75,10 @@ export function FrotaDeclaracaoEntregaPrint({ dados }: Props) {
 
           <footer className="frota-decl-entrega__assinatura">
             <div className="frota-decl-entrega__assinatura-linha" />
-            <p className="frota-decl-entrega__assinatura-label">
-              {dados.responsavelRecebimento.trim() || 'Responsável pelo recebimento'}
+            <p className="frota-decl-entrega__assinatura-empresa">
+              <strong>{razao || '—'}</strong>
             </p>
+            <p className="frota-decl-entrega__assinatura-label">Empresa responsável pelo recebimento</p>
           </footer>
         </div>
       </article>

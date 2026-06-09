@@ -175,6 +175,7 @@ export function usePedidosAjusteAdmin() {
 
   return {
     meuId,
+    usuarios,
     usuariosPorId,
     filaDev,
     filaThais,

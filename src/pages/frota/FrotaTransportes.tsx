@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { FrotaAssinaturaBloco } from '../../components/frota/FrotaAssinaturaBloco'
-import { FrotaDeclaracaoEntregaPrint } from '../../components/frota/FrotaDeclaracaoEntregaPrint'
-import '../../components/frota/frotaDeclaracaoEntregaPrint.css'
+import { FrotaAssinaturaEmpresaRecebimento } from '../../components/frota/FrotaAssinaturaEmpresaRecebimento'
 import { FrotaUploadFotos } from '../../components/frota/FrotaUploadFotos'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import {
@@ -16,7 +14,6 @@ import { uploadFotosFrota } from '../../lib/frotaFotos'
 import {
   gerarRelatorioFrotaMovimentacaoPdf,
   movimentacaoRowParaRelatorio,
-  type FrotaMovimentacaoRelatorioLinha,
 } from '../../lib/gerarRelatorioFrotaMovimentacaoPdf'
 import {
   FROTA_HUB_LABEL,
@@ -24,13 +21,6 @@ import {
   FROTA_TIPOS_MOVIMENTACAO,
   FROTA_TIPOS_MOVIMENTACAO_OPERACIONAL,
 } from '../../lib/frotaModulos'
-import {
-  fetchDadosClienteDeclaracaoEntrega,
-  montarDeclaracaoEntregaDeEquipamentoCatalogo,
-  montarDeclaracaoEntregaDeMovimentacao,
-  montarDeclaracaoEntregaDeMovimentacaoRow,
-  type FrotaDeclaracaoEntregaDados,
-} from '../../lib/frotaDeclaracaoEntrega'
 import type { EquipamentoClienteCatalogo, FrotaMovimentacaoRow, TipoMovimentacaoFrota } from '../../lib/frotaTypes'
 import { supabase } from '../../lib/supabase'
 import { RgReportPdfIcon } from '../../components/ui/RgReportPdfIcon'
@@ -41,15 +31,13 @@ type CaminhaoOpt = { id: string; placa: string; modelo: string | null }
 
 export default function FrotaTransportes() {
   const { podeMutar, podeRelatorio } = useFrotaPermissoes()
-  const [tab, setTab] = useState<'equipamentos' | 'movimentacao'>('movimentacao')
   const [catalogo, setCatalogo] = useState<EquipamentoClienteCatalogo[]>([])
   const [movimentos, setMovimentos] = useState<FrotaMovimentacaoRow[]>([])
   const [caminhoes, setCaminhoes] = useState<CaminhaoOpt[]>([])
-  const [buscaEq, setBuscaEq] = useState('')
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
 
-  const [tipo, setTipo] = useState<TipoMovimentacaoFrota>('instalacao')
+  const [tipo, setTipo] = useState<TipoMovimentacaoFrota>('troca')
   const [eqSel, setEqSel] = useState<EquipamentoClienteCatalogo | null>(null)
   const [caminhaoId, setCaminhaoId] = useState('')
   const [km, setKm] = useState('')
@@ -58,16 +46,8 @@ export default function FrotaTransportes() {
   const [fotosFiles, setFotosFiles] = useState<File[]>([])
   const [assNome, setAssNome] = useState('')
   const [assCargo, setAssCargo] = useState('')
+  const [assEmpresaRecebimento, setAssEmpresaRecebimento] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
-  const [declaracaoDraft, setDeclaracaoDraft] = useState<FrotaDeclaracaoEntregaDados | null>(null)
-  const [declaracaoEqKey, setDeclaracaoEqKey] = useState<string | null>(null)
-  const [declaracaoPrint, setDeclaracaoPrint] = useState<FrotaDeclaracaoEntregaDados | null>(null)
-  const [declaracaoModalMovimentacao, setDeclaracaoModalMovimentacao] = useState(false)
-
-  const chaveEquipamento = useCallback(
-    (eq: EquipamentoClienteCatalogo) => `${eq.cliente_id}::${eq.descricao}`,
-    []
-  )
 
   const placaPorId = useMemo(() => {
     const map = new Map<string, string>()
@@ -97,10 +77,16 @@ export default function FrotaTransportes() {
   useEffect(() => {
     void carregar()
     void (async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
-      const { data } = await supabase.from('usuarios').select('nome, cargo').eq('id', user.id).maybeSingle()
+      const { data } = await supabase
+        .from('usuarios')
+        .select('nome, cargo')
+        .eq('id', user.id)
+        .maybeSingle()
       const nome = String(data?.nome ?? user.email ?? '').trim()
       const cargo = String(data?.cargo ?? '').trim()
       setAssNome(nome)
@@ -109,18 +95,12 @@ export default function FrotaTransportes() {
   }, [carregar])
 
   useEffect(() => {
-    if (!declaracaoPrint) return
-    const t = window.setTimeout(() => window.print(), 200)
-    return () => window.clearTimeout(t)
-  }, [declaracaoPrint])
-
-  const catalogoFiltrado = useMemo(() => {
-    const t = buscaEq.trim().toLowerCase()
-    if (!t) return catalogo
-    return catalogo.filter(
-      (e) => e.cliente_nome.toLowerCase().includes(t) || e.descricao.toLowerCase().includes(t)
-    )
-  }, [catalogo, buscaEq])
+    if (!eqSel) {
+      setAssEmpresaRecebimento('')
+      return
+    }
+    setAssEmpresaRecebimento((eqSel.razao_social || eqSel.cliente_nome).trim())
+  }, [eqSel])
 
   const labelTipo = useCallback(
     (id: string) => FROTA_TIPOS_MOVIMENTACAO.find((t) => t.id === id)?.label ?? id,
@@ -132,80 +112,6 @@ export default function FrotaTransportes() {
     return placaPorId.get(id) ?? null
   }
 
-  function linhaFormularioRelatorio(): FrotaMovimentacaoRelatorioLinha | null {
-    if (!eqSel) return null
-    const kmNum = km ? Number(km.replace(',', '.')) : null
-    return {
-      tipoLabel: labelTipo(tipo),
-      cliente: eqSel.cliente_nome,
-      equipamento: eqSel.descricao,
-      veiculoPlaca: placaVeiculo(caminhaoId || null),
-      km: Number.isFinite(kmNum) ? kmNum : null,
-      observacoes: obs.trim() || null,
-      fotosCount: fotosUrls.length + fotosFiles.length,
-      assinaturaNome: assNome.trim() || null,
-      assinaturaCargo: assCargo.trim() || null,
-      assinaturaEm: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    }
-  }
-
-  async function abrirDeclaracaoMovimentacaoFormulario() {
-    if (!podeRelatorio) {
-      await rgAlert({
-        title: 'Permissão',
-        message: 'O seu perfil não pode gerar a declaração neste módulo.',
-      })
-      return
-    }
-    if (!eqSel) {
-      await rgAlert({ title: 'Equipamento', message: 'Selecione um equipamento antes de gerar a declaração.' })
-      return
-    }
-    let cliente = {
-      razaoSocial: eqSel.razao_social,
-      endereco: eqSel.endereco,
-      telefone: eqSel.telefone,
-    }
-    if (eqSel.cliente_id && (!cliente.endereco || !cliente.telefone)) {
-      try {
-        const fetched = await fetchDadosClienteDeclaracaoEntrega(eqSel.cliente_id)
-        cliente = {
-          razaoSocial: fetched.razaoSocial || cliente.razaoSocial,
-          endereco: fetched.endereco || cliente.endereco,
-          telefone: fetched.telefone || cliente.telefone,
-        }
-      } catch {
-        /* usa dados do catálogo */
-      }
-    }
-    setDeclaracaoDraft(
-      montarDeclaracaoEntregaDeMovimentacao({
-        clienteNome: eqSel.cliente_nome,
-        razaoSocial: cliente.razaoSocial,
-        endereco: cliente.endereco,
-        telefone: cliente.telefone,
-        equipamento: eqSel.descricao,
-        responsavelRecebimento: assNome.trim(),
-      })
-    )
-    setDeclaracaoModalMovimentacao(true)
-  }
-
-  async function abrirDeclaracaoMovimentoSalvo(m: FrotaMovimentacaoRow) {
-    if (!podeRelatorio) return
-    let cliente: Awaited<ReturnType<typeof fetchDadosClienteDeclaracaoEntrega>> | undefined
-    if (m.cliente_id) {
-      try {
-        cliente = await fetchDadosClienteDeclaracaoEntrega(m.cliente_id)
-      } catch {
-        /* preenche só com dados da movimentação */
-      }
-    }
-    setDeclaracaoDraft(montarDeclaracaoEntregaDeMovimentacaoRow(m, cliente))
-    setDeclaracaoModalMovimentacao(true)
-  }
-
   async function gerarRelatorioFormulario() {
     if (!podeRelatorio) {
       await rgAlert({
@@ -214,17 +120,36 @@ export default function FrotaTransportes() {
       })
       return
     }
-    if (tipo === 'instalacao') {
-      await abrirDeclaracaoMovimentacaoFormulario()
-      return
-    }
-    const linha = linhaFormularioRelatorio()
-    if (!linha) {
+    if (!eqSel) {
       await rgAlert({ title: 'Equipamento', message: 'Selecione um equipamento antes de gerar o relatório.' })
       return
     }
-    if (!assNome.trim()) {
-      await rgAlert({ title: 'Assinatura', message: 'Informe o nome do responsável para o relatório.' })
+    const kmNum = km ? Number(km.replace(',', '.')) : null
+    const linha = {
+      tipoLabel: labelTipo(tipo),
+      cliente: eqSel.cliente_nome,
+      equipamento: eqSel.descricao,
+      veiculoPlaca: placaVeiculo(caminhaoId || null),
+      km: Number.isFinite(kmNum) ? kmNum : null,
+      observacoes: obs.trim() || null,
+      fotosCount: fotosUrls.length + fotosFiles.length,
+      assinaturaNome:
+        tipo === 'instalacao' ? assEmpresaRecebimento.trim() || null : assNome.trim() || null,
+      assinaturaCargo:
+        tipo === 'instalacao'
+          ? 'Empresa responsável pelo recebimento'
+          : assCargo.trim() || null,
+      assinaturaEm: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    }
+    if (!linha.assinaturaNome) {
+      await rgAlert({
+        title: 'Assinatura',
+        message:
+          tipo === 'instalacao'
+            ? 'Informe a razão social da empresa responsável pelo recebimento.'
+            : 'Informe o nome do responsável para o relatório.',
+      })
       return
     }
     gerarRelatorioFrotaMovimentacaoPdf([linha])
@@ -232,10 +157,6 @@ export default function FrotaTransportes() {
 
   function gerarRelatorioMovimento(m: FrotaMovimentacaoRow) {
     if (!podeRelatorio) return
-    if (m.tipo_movimentacao === 'instalacao') {
-      void abrirDeclaracaoMovimentoSalvo(m)
-      return
-    }
     gerarRelatorioFrotaMovimentacaoPdf([
       movimentacaoRowParaRelatorio(m, labelTipo(m.tipo_movimentacao), placaVeiculo(m.caminhao_id)),
     ])
@@ -243,61 +164,17 @@ export default function FrotaTransportes() {
 
   function gerarRelatorioRecentes() {
     if (!podeRelatorio) return
-    const linhas = movimentos
-      .filter((m) => m.tipo_movimentacao !== 'instalacao')
-      .map((m) =>
-        movimentacaoRowParaRelatorio(m, labelTipo(m.tipo_movimentacao), placaVeiculo(m.caminhao_id))
-      )
+    const linhas = movimentos.map((m) =>
+      movimentacaoRowParaRelatorio(m, labelTipo(m.tipo_movimentacao), placaVeiculo(m.caminhao_id))
+    )
     if (!linhas.length) {
       void rgAlert({
         title: 'Histórico',
-        message: 'Não há movimentações (exceto instalação) para exportar em PDF.',
+        message: 'Não há movimentações para exportar em PDF.',
       })
       return
     }
     gerarRelatorioFrotaMovimentacaoPdf(linhas)
-  }
-
-  function abrirDeclaracaoEquipamento(eq: EquipamentoClienteCatalogo) {
-    setDeclaracaoEqKey(chaveEquipamento(eq))
-    setDeclaracaoModalMovimentacao(false)
-    setDeclaracaoDraft(montarDeclaracaoEntregaDeEquipamentoCatalogo(eq))
-  }
-
-  function fecharDeclaracaoModalMovimentacao() {
-    setDeclaracaoModalMovimentacao(false)
-    if (tab === 'movimentacao') {
-      setDeclaracaoDraft(null)
-    }
-  }
-
-  async function gerarDeclaracaoEntrega() {
-    if (!podeRelatorio) {
-      await rgAlert({
-        title: 'Permissão',
-        message: 'O seu perfil não pode gerar a declaração neste módulo.',
-      })
-      return
-    }
-    if (!declaracaoDraft) return
-    if (!declaracaoDraft.razaoSocial.trim()) {
-      await rgAlert({ title: 'Declaração', message: 'Informe a razão social do cliente.' })
-      return
-    }
-    if (!declaracaoDraft.equipamento.trim()) {
-      await rgAlert({ title: 'Declaração', message: 'Informe a descrição do equipamento.' })
-      return
-    }
-    if (!declaracaoDraft.dataEntrega.trim()) {
-      await rgAlert({ title: 'Declaração', message: 'Informe a data da entrega.' })
-      return
-    }
-    setDeclaracaoPrint({ ...declaracaoDraft })
-    setDeclaracaoModalMovimentacao(false)
-  }
-
-  function atualizarDeclaracao(campo: keyof FrotaDeclaracaoEntregaDados, valor: string) {
-    setDeclaracaoDraft((prev) => (prev ? { ...prev, [campo]: valor } : prev))
   }
 
   async function salvarMovimentacao(e: FormEvent) {
@@ -313,7 +190,15 @@ export default function FrotaTransportes() {
       await rgAlert({ title: 'Equipamento', message: 'Selecione um equipamento do catálogo do cliente.' })
       return
     }
-    if (!assNome.trim()) {
+    if (tipo === 'instalacao') {
+      if (!assEmpresaRecebimento.trim()) {
+        await rgAlert({
+          title: 'Assinatura',
+          message: 'Informe a razão social da empresa responsável pelo recebimento do equipamento.',
+        })
+        return
+      }
+    } else if (!assNome.trim()) {
       await rgAlert({ title: 'Assinatura', message: 'Informe o nome do responsável.' })
       return
     }
@@ -334,8 +219,10 @@ export default function FrotaTransportes() {
         observacoes: obs,
         fotos,
         assinatura: {
-          responsavel_nome: assNome.trim(),
-          responsavel_cargo: assCargo.trim(),
+          responsavel_nome:
+            tipo === 'instalacao' ? assEmpresaRecebimento.trim() : assNome.trim(),
+          responsavel_cargo:
+            tipo === 'instalacao' ? 'Empresa responsável pelo recebimento' : assCargo.trim(),
           assinatura_em: new Date().toISOString(),
         },
         created_by: userId,
@@ -372,291 +259,101 @@ export default function FrotaTransportes() {
           <div>
             <p className="frota-page__eyebrow">Operacional</p>
             <h1>Transportes</h1>
-            <p className="frota-page__lead">Equipamentos do contrato do cliente e registo de movimentação.</p>
+            <p className="frota-page__lead">
+              Registo de movimentação de equipamentos do contrato do cliente. A declaração de entrega de
+              equipamento é gerada apenas em <strong>Programação</strong> (tipo Instalações/Entregas).
+            </p>
           </div>
         </header>
 
         <FrotaPermissaoAviso somenteLeitura={!podeMutar} />
 
-        <div className="frota-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'equipamentos'}
-            className={tab === 'equipamentos' ? 'frota-tabs__btn--on' : ''}
-            onClick={() => setTab('equipamentos')}
-          >
-            Equipamentos
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'movimentacao'}
-            className={tab === 'movimentacao' ? 'frota-tabs__btn--on' : ''}
-            onClick={() => setTab('movimentacao')}
-          >
-            Movimentação
-          </button>
-        </div>
-
         {loading ? (
           <p className="frota-loading">A carregar…</p>
-        ) : tab === 'equipamentos' ? (
-          <div className="frota-layout-2 frota-layout-2--transportes">
-            <section className="frota-card">
-              <div className="frota-card__head-row">
-                <h2>Equipamentos em contrato</h2>
-                <span className="frota-equip-bar__count">
-                  {catalogoFiltrado.length} ativo(s)
-                </span>
-              </div>
-
-              <div className="frota-equip-bar">
-                <label className="frota-equip-bar__search">
-                  <span>Buscar</span>
-                  <input
-                    className="frota-input"
-                    placeholder="Cliente ou equipamento…"
-                    value={buscaEq}
-                    onChange={(e) => setBuscaEq(e.target.value)}
-                  />
-                </label>
-              </div>
-
-              <div className="frota-table-wrap">
-                <table className="frota-table frota-table--equip">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Equipamento</th>
-                      <th>Custo</th>
-                      <th className="frota-table__col-acoes">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {catalogoFiltrado.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="frota-table__empty">
-                          Nenhum equipamento encontrado nos contratos ativos.
-                        </td>
-                      </tr>
-                    ) : (
-                      catalogoFiltrado.map((e) => {
-                        const key = chaveEquipamento(e)
-                        const selecionado = declaracaoEqKey === key
-                        return (
-                          <tr
-                            key={key}
-                            className={selecionado ? 'frota-table__row--selected' : undefined}
-                          >
-                            <td>
-                              <strong className="frota-table__cliente">{e.cliente_nome}</strong>
-                            </td>
-                            <td>{e.descricao}</td>
-                            <td>
-                              <span
-                                className={`frota-badge-custo${e.com_custo ? ' frota-badge-custo--sim' : ''}`}
-                              >
-                                {e.com_custo ? 'Com custo' : 'Sem custo'}
-                              </span>
-                            </td>
-                            <td className="frota-table__actions">
-                              <button
-                                type="button"
-                                className={`frota-btn frota-btn--sm${selecionado ? ' frota-btn--primary' : ' frota-btn--ghost'}`}
-                                onClick={() => abrirDeclaracaoEquipamento(e)}
-                              >
-                                Declaração
-                              </button>
-                              <button
-                                type="button"
-                                className="frota-btn frota-btn--ghost frota-btn--sm"
-                                onClick={() => {
-                                  setEqSel(e)
-                                  setTab('movimentacao')
-                                }}
-                              >
-                                Movimentar
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <aside className="frota-card frota-card--form frota-card--aside">
-              <div className="frota-card__head-row">
-                <h2>Declaração de entrega</h2>
-              </div>
-              <p className="frota-muted frota-card__intro">
-                Documento padrão RG para assinatura do cliente (impressão ou PDF do navegador).
-              </p>
-              {!declaracaoDraft ? (
-                <div className="frota-empty-state">
-                  <p>Selecione um equipamento na tabela e clique em <strong>Declaração</strong>.</p>
-                </div>
-              ) : (
-                <form
-                  className="frota-form-grid"
-                  onSubmit={(ev) => {
-                    ev.preventDefault()
-                    void gerarDeclaracaoEntrega()
-                  }}
-                >
-                  <section className="frota-form-section frota-span2">
-                    <h3 className="frota-form-section__title">Destinatário</h3>
-                    <div className="frota-form-grid frota-form-grid--stack">
-                      <label className="frota-span2">
-                        <span>Razão social</span>
-                        <input
-                          value={declaracaoDraft.razaoSocial}
-                          onChange={(ev) => atualizarDeclaracao('razaoSocial', ev.target.value)}
-                        />
-                      </label>
-                      <label className="frota-span2">
-                        <span>Endereço</span>
-                        <textarea
-                          value={declaracaoDraft.endereco}
-                          onChange={(ev) => atualizarDeclaracao('endereco', ev.target.value)}
-                          rows={3}
-                        />
-                      </label>
-                      <label>
-                        <span>Telefone</span>
-                        <input
-                          value={declaracaoDraft.telefone}
-                          onChange={(ev) => atualizarDeclaracao('telefone', ev.target.value)}
-                        />
-                      </label>
-                    </div>
-                  </section>
-
-                  <section className="frota-form-section frota-span2">
-                    <h3 className="frota-form-section__title">Entrega</h3>
-                    <div className="frota-form-grid frota-form-grid--stack">
-                      <label className="frota-span2">
-                        <span>Equipamento</span>
-                        <input
-                          value={declaracaoDraft.equipamento}
-                          onChange={(ev) => atualizarDeclaracao('equipamento', ev.target.value)}
-                        />
-                      </label>
-                      <label>
-                        <span>Data da entrega</span>
-                        <input
-                          type="date"
-                          value={declaracaoDraft.dataEntrega}
-                          onChange={(ev) => atualizarDeclaracao('dataEntrega', ev.target.value)}
-                        />
-                      </label>
-                      <label>
-                        <span>Data do documento</span>
-                        <input
-                          type="date"
-                          value={declaracaoDraft.dataDocumento}
-                          onChange={(ev) => atualizarDeclaracao('dataDocumento', ev.target.value)}
-                        />
-                      </label>
-                      <label className="frota-span2">
-                        <span>Responsável pelo recebimento</span>
-                        <input
-                          value={declaracaoDraft.responsavelRecebimento}
-                          onChange={(ev) => atualizarDeclaracao('responsavelRecebimento', ev.target.value)}
-                          placeholder="Nome para linha de assinatura (opcional)"
-                        />
-                      </label>
-                    </div>
-                  </section>
-
-                  <div className="frota-form-actions frota-span2">
-                    <button
-                      type="submit"
-                      className="frota-btn frota-btn--primary"
-                      disabled={!podeRelatorio}
-                    >
-                      <RgReportPdfIcon className="frota-btn__icon" />
-                      Gerar declaração para assinatura
-                    </button>
-                  </div>
-                </form>
-              )}
-            </aside>
-          </div>
         ) : (
           <div className="frota-layout-2 frota-layout-2--transportes">
             <form className="frota-card frota-card--form" onSubmit={salvarMovimentacao}>
               <fieldset disabled={!podeMutar || salvando} className="frota-form-fieldset">
-              <h2>Nova movimentação</h2>
-              <div className="frota-form-grid">
-                <label>
-                  <span>Tipo</span>
-                  <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoMovimentacaoFrota)}>
-                    {FROTA_TIPOS_MOVIMENTACAO_OPERACIONAL.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="frota-span2">
-                  <span>Equipamento (contrato cliente)</span>
-                  <select
-                    value={eqSel ? `${eqSel.cliente_id}::${eqSel.descricao}` : ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      const found = catalogo.find((c) => `${c.cliente_id}::${c.descricao}` === v)
-                      setEqSel(found ?? null)
-                    }}
-                  >
-                    <option value="">Selecione…</option>
-                    {catalogo.map((c) => (
-                      <option key={`${c.cliente_id}-${c.descricao}`} value={`${c.cliente_id}::${c.descricao}`}>
-                        {c.cliente_nome} — {c.descricao}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="frota-form-grid frota-form-grid--veiculo-km">
-                <label>
-                  <span>Veículo RG (opcional)</span>
-                  <select value={caminhaoId} onChange={(e) => setCaminhaoId(e.target.value)}>
-                    <option value="">—</option>
-                    {caminhoes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.placa} {c.modelo ? `· ${c.modelo}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Km</span>
-                  <input value={km} onChange={(e) => setKm(e.target.value)} inputMode="decimal" placeholder="0" />
-                </label>
-              </div>
-              <div className="frota-form-grid">
-                <label className="frota-span2">
-                  <span>Observações</span>
-                  <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={3} placeholder="Detalhes da movimentação…" />
-                </label>
-              </div>
-              <FrotaUploadFotos
-                urls={fotosUrls}
-                onUrlsChange={setFotosUrls}
-                onFilesSelect={(f) => setFotosFiles((prev) => [...prev, ...f])}
-                disabled={!podeMutar || salvando}
-              />
-              <FrotaAssinaturaBloco
-                nome={assNome}
-                cargo={assCargo}
-                onNome={setAssNome}
-                onCargo={setAssCargo}
-                disabled={!podeMutar || salvando}
-              />
+                <h2>Nova movimentação</h2>
+                <div className="frota-form-grid">
+                  <label>
+                    <span>Tipo</span>
+                    <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoMovimentacaoFrota)}>
+                      {FROTA_TIPOS_MOVIMENTACAO_OPERACIONAL.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="frota-span2">
+                    <span>Equipamento (contrato cliente)</span>
+                    <select
+                      value={eqSel ? `${eqSel.cliente_id}::${eqSel.descricao}` : ''}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        const found = catalogo.find((c) => `${c.cliente_id}::${c.descricao}` === v)
+                        setEqSel(found ?? null)
+                      }}
+                    >
+                      <option value="">Selecione…</option>
+                      {catalogo.map((c) => (
+                        <option key={`${c.cliente_id}-${c.descricao}`} value={`${c.cliente_id}::${c.descricao}`}>
+                          {c.cliente_nome} — {c.descricao}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="frota-form-grid frota-form-grid--veiculo-km">
+                  <label>
+                    <span>Veículo RG (opcional)</span>
+                    <select value={caminhaoId} onChange={(e) => setCaminhaoId(e.target.value)}>
+                      <option value="">—</option>
+                      {caminhoes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.placa} {c.modelo ? `· ${c.modelo}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Km</span>
+                    <input value={km} onChange={(e) => setKm(e.target.value)} inputMode="decimal" placeholder="0" />
+                  </label>
+                </div>
+                <div className="frota-form-grid">
+                  <label className="frota-span2">
+                    <span>Observações</span>
+                    <textarea
+                      value={obs}
+                      onChange={(e) => setObs(e.target.value)}
+                      rows={3}
+                      placeholder="Detalhes da movimentação…"
+                    />
+                  </label>
+                </div>
+                <FrotaUploadFotos
+                  urls={fotosUrls}
+                  onUrlsChange={setFotosUrls}
+                  onFilesSelect={(f) => setFotosFiles((prev) => [...prev, ...f])}
+                  disabled={!podeMutar || salvando}
+                />
+                {tipo === 'instalacao' ? (
+                  <FrotaAssinaturaEmpresaRecebimento
+                    razaoSocial={assEmpresaRecebimento}
+                    onRazaoSocial={setAssEmpresaRecebimento}
+                    disabled={!podeMutar || salvando}
+                  />
+                ) : (
+                  <FrotaAssinaturaBloco
+                    nome={assNome}
+                    cargo={assCargo}
+                    onNome={setAssNome}
+                    onCargo={setAssCargo}
+                    disabled={!podeMutar || salvando}
+                  />
+                )}
               </fieldset>
               <div className="frota-form-actions">
                 <button
@@ -673,9 +370,7 @@ export default function FrotaTransportes() {
                   onClick={() => void gerarRelatorioFormulario()}
                 >
                   <RgReportPdfIcon className="frota-btn__icon" />
-                  {tipo === 'instalacao'
-                    ? 'Gerar declaração de entrega'
-                    : 'Gerar relatório para assinatura'}
+                  Gerar relatório para assinatura
                 </button>
               </div>
             </form>
@@ -735,9 +430,7 @@ export default function FrotaTransportes() {
                           onClick={() => gerarRelatorioMovimento(m)}
                         >
                           <RgReportPdfIcon className="frota-btn__icon" />
-                          {m.tipo_movimentacao === 'instalacao'
-                            ? 'Gerar declaração de entrega'
-                            : 'PDF para assinatura'}
+                          PDF para assinatura
                         </button>
                       </li>
                     )
@@ -748,115 +441,6 @@ export default function FrotaTransportes() {
           </div>
         )}
       </div>
-      {declaracaoModalMovimentacao && declaracaoDraft ? (
-        <div
-          className="frota-decl-modal-overlay"
-          role="presentation"
-          onClick={fecharDeclaracaoModalMovimentacao}
-        >
-          <div
-            className="frota-card frota-decl-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="frota-decl-mov-titulo"
-            onClick={(ev) => ev.stopPropagation()}
-          >
-            <div className="frota-card__head-row">
-              <h2 id="frota-decl-mov-titulo">Declaração de entrega</h2>
-              <button
-                type="button"
-                className="frota-btn frota-btn--ghost frota-btn--sm"
-                onClick={fecharDeclaracaoModalMovimentacao}
-              >
-                Fechar
-              </button>
-            </div>
-            <p className="frota-muted frota-card__intro">
-              Revise os dados antes de imprimir o documento padrão RG (Anexo 2).
-            </p>
-            <form
-              className="frota-form-grid"
-              onSubmit={(ev) => {
-                ev.preventDefault()
-                void gerarDeclaracaoEntrega()
-              }}
-            >
-              <section className="frota-form-section frota-span2">
-                <h3 className="frota-form-section__title">Destinatário</h3>
-                <div className="frota-form-grid frota-form-grid--stack">
-                  <label className="frota-span2">
-                    <span>Razão social</span>
-                    <input
-                      value={declaracaoDraft.razaoSocial}
-                      onChange={(ev) => atualizarDeclaracao('razaoSocial', ev.target.value)}
-                    />
-                  </label>
-                  <label className="frota-span2">
-                    <span>Endereço</span>
-                    <textarea
-                      value={declaracaoDraft.endereco}
-                      onChange={(ev) => atualizarDeclaracao('endereco', ev.target.value)}
-                      rows={3}
-                    />
-                  </label>
-                  <label>
-                    <span>Telefone</span>
-                    <input
-                      value={declaracaoDraft.telefone}
-                      onChange={(ev) => atualizarDeclaracao('telefone', ev.target.value)}
-                    />
-                  </label>
-                </div>
-              </section>
-              <section className="frota-form-section frota-span2">
-                <h3 className="frota-form-section__title">Entrega</h3>
-                <div className="frota-form-grid frota-form-grid--stack">
-                  <label className="frota-span2">
-                    <span>Equipamento</span>
-                    <input
-                      value={declaracaoDraft.equipamento}
-                      onChange={(ev) => atualizarDeclaracao('equipamento', ev.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>Data da entrega</span>
-                    <input
-                      type="date"
-                      value={declaracaoDraft.dataEntrega}
-                      onChange={(ev) => atualizarDeclaracao('dataEntrega', ev.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>Data do documento</span>
-                    <input
-                      type="date"
-                      value={declaracaoDraft.dataDocumento}
-                      onChange={(ev) => atualizarDeclaracao('dataDocumento', ev.target.value)}
-                    />
-                  </label>
-                  <label className="frota-span2">
-                    <span>Responsável pelo recebimento</span>
-                    <input
-                      value={declaracaoDraft.responsavelRecebimento}
-                      onChange={(ev) => atualizarDeclaracao('responsavelRecebimento', ev.target.value)}
-                      placeholder="Nome para linha de assinatura (opcional)"
-                    />
-                  </label>
-                </div>
-              </section>
-              <div className="frota-form-actions frota-span2">
-                <button type="submit" className="frota-btn frota-btn--primary" disabled={!podeRelatorio}>
-                  <RgReportPdfIcon className="frota-btn__icon" />
-                  Gerar declaração para assinatura
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-      {declaracaoPrint
-        ? createPortal(<FrotaDeclaracaoEntregaPrint dados={declaracaoPrint} />, document.body)
-        : null}
     </MainLayout>
   )
 }

@@ -58,6 +58,11 @@ export const FROTA_TIPOS_MOVIMENTACAO = [
   { id: 'instalacoes_entregas' as const, label: 'Instalações/Entregas' },
 ]
 
+/** Dropdown de tipo de serviço na programação (sem duplicata «Instalação»). */
+export const PROGRAMACAO_TIPOS_SERVICO = FROTA_TIPOS_MOVIMENTACAO.filter(
+  (t) => t.id !== 'instalacao'
+)
+
 /** Tipos no formulário de movimentação da frota (exclui serviços só de programação). */
 export const FROTA_TIPOS_MOVIMENTACAO_OPERACIONAL = FROTA_TIPOS_MOVIMENTACAO.filter(
   (t) => t.id !== 'instalacoes_entregas'

@@ -34,10 +34,14 @@ import {
   fetchDadosClienteDeclaracaoEntrega,
   type FrotaDeclaracaoEntregaDados,
 } from '../lib/frotaDeclaracaoEntrega'
-import { FROTA_TIPOS_MOVIMENTACAO } from '../lib/frotaModulos'
+import { FROTA_TIPOS_MOVIMENTACAO, PROGRAMACAO_TIPOS_SERVICO } from '../lib/frotaModulos'
+import { ProgramacaoDeclaracaoEntregaSecao } from '../components/programacao/ProgramacaoDeclaracaoEntregaSecao'
 import {
+  INSTALACAO_ENTREGA_CHIP_FLUXO,
   montarDeclaracaoEntregaDeProgramacao,
   programacaoEhInstalacaoEntrega,
+  programacaoInstalacaoFinalizada,
+  rotuloStatusProgramacaoExibir,
 } from '../lib/programacaoInstalacaoEntrega'
 import {
   TIPOS_CAMINHAO_CATALOGO,
@@ -181,13 +185,23 @@ function payloadContratoProgramacao(form: Pick<FormState, 'residuosSelecionados'
 
 function tipoServicoProgramacaoEhCatalogo(valor: string): boolean {
   const t = valor.trim()
-  return FROTA_TIPOS_MOVIMENTACAO.some((x) => x.label === t || x.id === t)
+  return (
+    PROGRAMACAO_TIPOS_SERVICO.some((x) => x.label === t || x.id === t) ||
+    t === 'Instalação' ||
+    t === 'instalacao'
+  )
 }
 
 function rotuloTipoServicoProgramacao(valor: string): string {
   const t = valor.trim()
-  const found = FROTA_TIPOS_MOVIMENTACAO.find((x) => x.label === t || x.id === t)
+  const found =
+    PROGRAMACAO_TIPOS_SERVICO.find((x) => x.label === t || x.id === t) ??
+    FROTA_TIPOS_MOVIMENTACAO.find((x) => x.label === t || x.id === t)
   return found?.label ?? t
+}
+
+function chaveEscopoDeclaracaoInline(f: FormState, formScope: 'novo' | 'edicao'): string {
+  return `${formScope}:${f.id ?? 'new'}`
 }
 
 const initialFormState: FormState = {
@@ -480,8 +494,17 @@ function resumoVeiculoPainelDia(item: ProgramacaoItem): {
   }
 }
 
-function ProgramacaoStatusLabel({ status }: { status: ProgramacaoStatus }) {
+function ProgramacaoStatusLabel({
+  status,
+  tipoServico,
+}: {
+  status: ProgramacaoStatus
+  tipoServico?: string
+}) {
   const s = getStatusStyle(status)
+  const rotulo = tipoServico
+    ? rotuloStatusProgramacaoExibir(status, tipoServico)
+    : STATUS_LABELS[status]
   return (
     <span
       style={{
@@ -503,7 +526,7 @@ function ProgramacaoStatusLabel({ status }: { status: ProgramacaoStatus }) {
         }}
         aria-hidden
       />
-      {STATUS_LABELS[status]}
+      {rotulo}
     </span>
   )
 }
@@ -784,6 +807,12 @@ export default function Programacao() {
   const [declaracaoModalAberto, setDeclaracaoModalAberto] = useState(false)
   const [declaracaoProgramacaoId, setDeclaracaoProgramacaoId] = useState<string | null>(null)
   const [declaracaoCarregando, setDeclaracaoCarregando] = useState(false)
+  const [declaracaoInlineDraft, setDeclaracaoInlineDraft] = useState<FrotaDeclaracaoEntregaDados | null>(
+    null
+  )
+  const [declaracaoInlineScope, setDeclaracaoInlineScope] = useState<string | null>(null)
+  const [declaracaoInlineCarregando, setDeclaracaoInlineCarregando] = useState(false)
+  const [declaracaoInlineGerando, setDeclaracaoInlineGerando] = useState(false)
 
   const programacaoUiDraft = useMemo(
     () => ({
@@ -874,6 +903,13 @@ export default function Programacao() {
     const t = window.setTimeout(() => window.print(), 200)
     return () => window.clearTimeout(t)
   }, [declaracaoPrint])
+
+  useEffect(() => {
+    if (!formEdicaoModal) return
+    if (!programacaoEhInstalacaoEntrega(formEdicaoModal.tipoServico)) return
+    void sincronizarDeclaracaoInline(formEdicaoModal, 'edicao')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sincroniza ao abrir edição com Instalações/Entregas
+  }, [formEdicaoModal?.id])
 
   useEffect(() => {
     void recarregarExclusaoPendenteResumo()
@@ -1126,12 +1162,15 @@ export default function Programacao() {
       const rows = progs.map((row) => {
         const mtrId = mtrMapByProgramacaoId.get(row.id) || ''
         const coletaId = row.coleta_id || coletaMapByProgramacaoId.get(row.id) || ''
+        const statusGravado = row.status_programacao as ProgramacaoStatus | null
         const statusDerivado: ProgramacaoStatus =
-          coletaId
-            ? 'EM_COLETA'
-            : mtrId
-            ? 'QUADRO_ATUALIZADO'
-            : row.status_programacao || 'PENDENTE'
+          statusGravado === 'CONCLUIDA' || statusGravado === 'CANCELADA'
+            ? statusGravado
+            : coletaId
+              ? 'EM_COLETA'
+              : mtrId
+                ? 'QUADRO_ATUALIZADO'
+                : statusGravado || 'PENDENTE'
 
         return {
           id: row.id,
@@ -1348,6 +1387,53 @@ export default function Programacao() {
     setDeclaracaoDraft((prev) => (prev ? { ...prev, [campo]: valor } : prev))
   }
 
+  function atualizarDeclaracaoInline(campo: keyof FrotaDeclaracaoEntregaDados, valor: string) {
+    setDeclaracaoInlineDraft((prev) => (prev ? { ...prev, [campo]: valor } : prev))
+  }
+
+  async function sincronizarDeclaracaoInline(f: FormState, formScope: 'novo' | 'edicao') {
+    if (!programacaoEhInstalacaoEntrega(f.tipoServico)) {
+      setDeclaracaoInlineDraft(null)
+      setDeclaracaoInlineScope(null)
+      return
+    }
+
+    const scope = chaveEscopoDeclaracaoInline(f, formScope)
+    setDeclaracaoInlineCarregando(true)
+    setErro('')
+    try {
+      const clienteNome = clientes.find((c) => c.id === f.clienteId)?.nome ?? ''
+      let razaoSocial = ''
+      let endereco = ''
+      let telefone = ''
+      if (f.clienteId) {
+        const cliente = await fetchDadosClienteDeclaracaoEntrega(f.clienteId)
+        razaoSocial = cliente.razaoSocial
+        endereco = cliente.endereco
+        telefone = cliente.telefone
+      }
+      setDeclaracaoInlineScope(scope)
+      setDeclaracaoInlineDraft(
+        montarDeclaracaoEntregaDeProgramacao({
+          clienteNome,
+          razaoSocial,
+          endereco,
+          telefone,
+          equipamentos: f.equipamentosSelecionados,
+          dataProgramada: f.dataProgramada,
+        })
+      )
+    } catch (err) {
+      setErro(
+        err instanceof Error ? err.message : 'Não foi possível carregar os dados do cliente.'
+      )
+      setDeclaracaoInlineDraft(null)
+      setDeclaracaoInlineScope(null)
+    } finally {
+      setDeclaracaoInlineCarregando(false)
+    }
+  }
+
   async function abrirDeclaracaoProgramacao(item: ProgramacaoItem) {
     if (!item.clienteId) {
       setErro('Cliente não identificado para gerar a declaração de entrega.')
@@ -1378,26 +1464,26 @@ export default function Programacao() {
     }
   }
 
-  async function confirmarDeclaracaoProgramacao() {
-    if (!declaracaoDraft) return
-    if (!declaracaoDraft.razaoSocial.trim()) {
+  async function finalizarProgramacaoComDeclaracao(
+    draft: FrotaDeclaracaoEntregaDados,
+    progId: string | null
+  ) {
+    if (!draft.razaoSocial.trim()) {
       setErro('Informe a razão social do cliente na declaração.')
-      return
+      return false
     }
-    if (!declaracaoDraft.equipamento.trim()) {
+    if (!draft.equipamento.trim()) {
       setErro('Informe o equipamento na declaração.')
-      return
+      return false
     }
-    if (!declaracaoDraft.dataEntrega.trim()) {
+    if (!draft.dataEntrega.trim()) {
       setErro('Informe a data da entrega na declaração.')
-      return
+      return false
     }
 
-    const progId = declaracaoProgramacaoId
-    setDeclaracaoPrint({ ...declaracaoDraft })
-    fecharDeclaracaoModal()
+    setDeclaracaoPrint({ ...draft })
 
-    if (!progId) return
+    if (!progId) return true
 
     const { error } = await supabase
       .from('programacoes')
@@ -1406,7 +1492,7 @@ export default function Programacao() {
 
     if (error) {
       setErro(getSupabaseErrorMessage(error))
-      return
+      return false
     }
 
     setProgramacoes((prev) =>
@@ -1414,7 +1500,32 @@ export default function Programacao() {
         p.id === progId ? { ...p, statusProgramacao: 'CONCLUIDA' as ProgramacaoStatus } : p
       )
     )
-    setSucesso('Declaração gerada e programação marcada como concluída.')
+    setSucesso(
+      'Declaração de entrega gerada. Programação finalizada — sem MTR, ticket ou faturamento neste fluxo.'
+    )
+    return true
+  }
+
+  async function confirmarDeclaracaoProgramacao() {
+    if (!declaracaoDraft) return
+    const progId = declaracaoProgramacaoId
+    const ok = await finalizarProgramacaoComDeclaracao(declaracaoDraft, progId)
+    if (ok) fecharDeclaracaoModal()
+  }
+
+  async function gerarDeclaracaoInlineFormulario(f: FormState) {
+    if (!declaracaoInlineDraft) return
+    if (!f.id) {
+      setErro('Salve a programação antes de gerar a declaração e finalizar o processo.')
+      return
+    }
+    setDeclaracaoInlineGerando(true)
+    setErro('')
+    try {
+      await finalizarProgramacaoComDeclaracao(declaracaoInlineDraft, f.id)
+    } finally {
+      setDeclaracaoInlineGerando(false)
+    }
   }
 
   function alternarSelecaoExclusaoPainel(itemId: string) {
@@ -2033,8 +2144,13 @@ export default function Programacao() {
 
   function renderFormFields(
     f: FormState,
-    patch: <K extends keyof FormState>(campo: K, valor: FormState[K]) => void
+    patch: <K extends keyof FormState>(campo: K, valor: FormState[K]) => void,
+    formScope: 'novo' | 'edicao' = 'novo'
   ) {
+    const escopoInline = chaveEscopoDeclaracaoInline(f, formScope)
+    const mostrarDeclaracaoInline =
+      programacaoEhInstalacaoEntrega(f.tipoServico) &&
+      (declaracaoInlineScope === escopoInline || declaracaoInlineCarregando)
     return (
       <>
         <div>
@@ -2042,9 +2158,21 @@ export default function Programacao() {
           <select
             value={f.clienteId}
             onChange={(event) => {
-              patch('clienteId', event.target.value)
+              const clienteId = event.target.value
+              patch('clienteId', clienteId)
               patch('residuosSelecionados', [])
               patch('equipamentosSelecionados', [])
+              if (programacaoEhInstalacaoEntrega(f.tipoServico)) {
+                void sincronizarDeclaracaoInline(
+                  {
+                    ...f,
+                    clienteId,
+                    residuosSelecionados: [],
+                    equipamentosSelecionados: [],
+                  },
+                  formScope
+                )
+              }
             }}
             style={inputStyle}
           >
@@ -2062,7 +2190,13 @@ export default function Programacao() {
           <input
             type="date"
             value={f.dataProgramada}
-            onChange={(event) => patch('dataProgramada', event.target.value)}
+            onChange={(event) => {
+              const dataProgramada = event.target.value
+              patch('dataProgramada', dataProgramada)
+              if (programacaoEhInstalacaoEntrega(f.tipoServico)) {
+                void sincronizarDeclaracaoInline({ ...f, dataProgramada }, formScope)
+              }
+            }}
             style={inputStyle}
           />
         </div>
@@ -2136,6 +2270,13 @@ export default function Programacao() {
               const v = event.target.value
               if (v === '__legado__') return
               patch('tipoServico', v)
+              const proximo = { ...f, tipoServico: v }
+              if (programacaoEhInstalacaoEntrega(v)) {
+                void sincronizarDeclaracaoInline(proximo, formScope)
+              } else {
+                setDeclaracaoInlineDraft(null)
+                setDeclaracaoInlineScope(null)
+              }
             }}
             style={inputStyle}
           >
@@ -2143,7 +2284,7 @@ export default function Programacao() {
             {f.tipoServico.trim() && !tipoServicoProgramacaoEhCatalogo(f.tipoServico) ? (
               <option value="__legado__">Outro (texto anterior): {f.tipoServico.trim()}</option>
             ) : null}
-            {FROTA_TIPOS_MOVIMENTACAO.map((t) => (
+            {PROGRAMACAO_TIPOS_SERVICO.map((t) => (
               <option key={t.id} value={t.label}>
                 {t.label}
               </option>
@@ -2162,9 +2303,36 @@ export default function Programacao() {
           residuosSelecionados={f.residuosSelecionados}
           equipamentosSelecionados={f.equipamentosSelecionados}
           onResiduosChange={(itens) => patch('residuosSelecionados', itens)}
-          onEquipamentosChange={(itens) => patch('equipamentosSelecionados', itens)}
+          onEquipamentosChange={(itens) => {
+            patch('equipamentosSelecionados', itens)
+            if (programacaoEhInstalacaoEntrega(f.tipoServico)) {
+              void sincronizarDeclaracaoInline({ ...f, equipamentosSelecionados: itens }, formScope)
+            }
+          }}
           labelStyle={labelStyle}
         />
+
+        {mostrarDeclaracaoInline && declaracaoInlineDraft ? (
+          <ProgramacaoDeclaracaoEntregaSecao
+            draft={declaracaoInlineDraft}
+            onChange={atualizarDeclaracaoInline}
+            onGerar={() => void gerarDeclaracaoInlineFormulario(f)}
+            carregando={declaracaoInlineCarregando}
+            gerando={declaracaoInlineGerando}
+            podeGerar={podeMutarProgramacao && !declaracaoInlineCarregando && Boolean(f.id)}
+            avisoSemId={
+              !f.id
+                ? 'Salve a programação antes de imprimir a declaração e marcar como Finalizado.'
+                : null
+            }
+            inputStyle={inputStyle}
+            labelStyle={labelStyle}
+          />
+        ) : programacaoEhInstalacaoEntrega(f.tipoServico) && declaracaoInlineCarregando ? (
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            A preparar declaração de entrega…
+          </p>
+        ) : null}
 
         <div>
           <label style={labelStyle}>Observações gerais</label>
@@ -2566,7 +2734,7 @@ export default function Programacao() {
                                         color: '#047857',
                                       }}
                                     >
-                                      Fluxo instalação — sem MTR/ticket
+                                      {INSTALACAO_ENTREGA_CHIP_FLUXO}
                                     </span>
                                   ) : (
                                     <>
@@ -2593,7 +2761,10 @@ export default function Programacao() {
                                 </div>
                               </div>
                               <div style={{ alignSelf: 'flex-start' }}>
-                                <ProgramacaoStatusLabel status={item.statusProgramacao} />
+                                <ProgramacaoStatusLabel
+                                  status={item.statusProgramacao}
+                                  tipoServico={item.tipoServico}
+                                />
                               </div>
                             </div>
 
@@ -2666,16 +2837,24 @@ export default function Programacao() {
 
                             <div style={acoesRowCompactStyle}>
                               {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
-                                <button
-                                  type="button"
-                                  className="rg-btn rg-btn--outline"
-                                  disabled={declaracaoCarregando}
-                                  onClick={() => void abrirDeclaracaoProgramacao(item)}
-                                  title="Gerar declaração de entrega (Anexo 2)"
-                                >
-                                  <RgReportPdfIcon />
-                                  Gerar declaração de entrega
-                                </button>
+                                programacaoInstalacaoFinalizada(item.statusProgramacao) ? (
+                                  <span
+                                    style={{ fontSize: '12px', color: '#047857', fontWeight: 600 }}
+                                  >
+                                    Declaração emitida — programação finalizada
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="rg-btn rg-btn--outline"
+                                    disabled={declaracaoCarregando}
+                                    onClick={() => void abrirDeclaracaoProgramacao(item)}
+                                    title="Gerar declaração de entrega e finalizar programação"
+                                  >
+                                    <RgReportPdfIcon />
+                                    Gerar declaração de entrega
+                                  </button>
+                                )
                               ) : (
                                 <>
                                   {item.mtrId ? (
@@ -3078,7 +3257,10 @@ export default function Programacao() {
                               Exclusão pendente
                             </span>
                           ) : null}
-                          <ProgramacaoStatusLabel status={item.statusProgramacao} />
+                          <ProgramacaoStatusLabel
+                            status={item.statusProgramacao}
+                            tipoServico={item.tipoServico}
+                          />
                         </div>
                       </div>
 
@@ -3120,7 +3302,7 @@ export default function Programacao() {
                               color: '#047857',
                             }}
                           >
-                            Fluxo instalação — sem MTR/ticket
+                            {INSTALACAO_ENTREGA_CHIP_FLUXO}
                           </span>
                         ) : (
                           <>
@@ -3157,16 +3339,22 @@ export default function Programacao() {
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
-                          <button
-                            type="button"
-                            className="rg-btn rg-btn--outline"
-                            disabled={declaracaoCarregando}
-                            onClick={() => void abrirDeclaracaoProgramacao(item)}
-                            title="Gerar declaração de entrega (Anexo 2)"
-                          >
-                            <RgReportPdfIcon />
-                            Gerar declaração de entrega
-                          </button>
+                          programacaoInstalacaoFinalizada(item.statusProgramacao) ? (
+                            <span style={{ fontSize: '12px', color: '#047857', fontWeight: 600 }}>
+                              Declaração emitida — programação finalizada
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="rg-btn rg-btn--outline"
+                              disabled={declaracaoCarregando}
+                              onClick={() => void abrirDeclaracaoProgramacao(item)}
+                              title="Gerar declaração de entrega e finalizar programação"
+                            >
+                              <RgReportPdfIcon />
+                              Gerar declaração de entrega
+                            </button>
+                          )
                         ) : (
                           <>
                             {item.mtrId ? (
@@ -3340,7 +3528,7 @@ export default function Programacao() {
               }}
             >
               <form onSubmit={salvarProgramacao} style={{ display: 'grid', gap: '16px' }}>
-                {renderFormFields(form, atualizarCampo)}
+                {renderFormFields(form, atualizarCampo, 'novo')}
 
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   <button
@@ -3522,7 +3710,10 @@ export default function Programacao() {
                                 <div style={itemClienteStyle}>{item.clienteNome}</div>
                               </div>
                               <div style={{ alignSelf: 'flex-start' }}>
-                                <ProgramacaoStatusLabel status={item.statusProgramacao} />
+                                <ProgramacaoStatusLabel
+                                  status={item.statusProgramacao}
+                                  tipoServico={item.tipoServico}
+                                />
                               </div>
                             </div>
                             <div style={itemAgendaMetaStripStyle}>
@@ -3544,16 +3735,22 @@ export default function Programacao() {
                             </div>
                             <div style={acoesRowCompactStyle}>
                               {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
-                                <button
-                                  type="button"
-                                  className="rg-btn rg-btn--outline"
-                                  disabled={declaracaoCarregando}
-                                  onClick={() => void abrirDeclaracaoProgramacao(item)}
-                                  title="Gerar declaração de entrega (Anexo 2)"
-                                >
-                                  <RgReportPdfIcon />
-                                  Gerar declaração de entrega
-                                </button>
+                                programacaoInstalacaoFinalizada(item.statusProgramacao) ? (
+                                  <span style={{ fontSize: '12px', color: '#047857', fontWeight: 600 }}>
+                                    Declaração emitida — programação finalizada
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="rg-btn rg-btn--outline"
+                                    disabled={declaracaoCarregando}
+                                    onClick={() => void abrirDeclaracaoProgramacao(item)}
+                                    title="Gerar declaração de entrega e finalizar programação"
+                                  >
+                                    <RgReportPdfIcon />
+                                    Gerar declaração de entrega
+                                  </button>
+                                )
                               ) : (
                                 <>
                                   {item.mtrId ? (
@@ -3693,7 +3890,7 @@ export default function Programacao() {
                 paddingRight: '6px',
               }}
             >
-              {renderFormFields(formEdicaoModal, atualizarCampoModal)}
+              {renderFormFields(formEdicaoModal, atualizarCampoModal, 'edicao')}
               {(() => {
                 const refItem = programacoes.find((p) => p.id === formEdicaoModal.id)
                 const nomePreview = cargoEhDesenvolvedor(usuarioCargo)
@@ -3785,7 +3982,8 @@ export default function Programacao() {
               Declaração de entrega
             </h2>
             <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
-              Revise os dados antes de imprimir. Ao confirmar, a programação será marcada como concluída.
+              Revise os dados antes de imprimir. Este fluxo não gera MTR, ticket nem faturamento — apenas a
+              declaração de entrega. Ao confirmar, a programação passa a <strong>Finalizado</strong>.
             </p>
             <form
               onSubmit={(ev) => {
@@ -3848,15 +4046,11 @@ export default function Programacao() {
                   />
                 </label>
               </div>
-              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                Responsável pelo recebimento
-                <input
-                  value={declaracaoDraft.responsavelRecebimento}
-                  onChange={(ev) => atualizarDeclaracao('responsavelRecebimento', ev.target.value)}
-                  placeholder="Nome para linha de assinatura (opcional)"
-                  style={declaracaoModalInputStyle}
-                />
-              </label>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                No documento impresso, a linha de assinatura identifica a{' '}
+                <strong style={{ color: '#334155' }}>empresa responsável pelo recebimento</strong> (
+                {declaracaoDraft.razaoSocial.trim() || 'razão social do cliente'}).
+              </p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button type="button" className="rg-btn rg-btn--outline" onClick={fecharDeclaracaoModal}>
                   Cancelar

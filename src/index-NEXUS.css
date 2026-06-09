@@ -9203,6 +9203,209 @@ a.rg-btn {
   border: none;
 }
 
+.solicitacoes-admin__dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solicitacoes-admin__dashboard-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.solicitacoes-admin__dashboard-toolbar h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.solicitacoes-admin__dashboard-toolbar p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.solicitacoes-admin__dashboard-periodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.solicitacoes-admin__dashboard-periodo {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.solicitacoes-admin__dashboard-periodo--on {
+  border-color: #0d9488;
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.solicitacoes-admin__dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .solicitacoes-admin__dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.solicitacoes-admin__dashboard-kpi {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.solicitacoes-admin__dashboard-kpi--melhoria {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+}
+
+.solicitacoes-admin__dashboard-kpi--atualizacao {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.solicitacoes-admin__dashboard-kpi--outro {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.solicitacoes-admin__dashboard-kpi-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.solicitacoes-admin__dashboard-kpi-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.solicitacoes-admin__dashboard-kpi-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.solicitacoes-admin__dashboard-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .solicitacoes-admin__dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.solicitacoes-admin__dashboard-chart {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px 16px 16px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.solicitacoes-admin__dashboard-chart--wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1200px) {
+  .solicitacoes-admin__dashboard-chart--wide {
+    grid-column: auto;
+  }
+}
+
+.solicitacoes-admin__dashboard-chart h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.solicitacoes-admin__dashboard-chart-slot {
+  height: 240px;
+  width: 100%;
+}
+
+.solicitacoes-admin__dashboard-chart-slot--donut {
+  position: relative;
+  height: 200px;
+}
+
+.solicitacoes-admin__dashboard-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.solicitacoes-admin__dashboard-legend {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.solicitacoes-admin__dashboard-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.solicitacoes-admin__dashboard-legend span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.solicitacoes-admin__empty {
+  margin: 12px 0;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+}
+
 /* —— Fila exclusões operacionais —— */
 .fila-exclusao__panel {
   padding: 20px 22px 24px;
@@ -10516,6 +10719,29 @@ a.rg-btn {
   font-size: 11px;
   color: #64748b;
   text-align: center;
+}
+
+.frota-assinatura__empresa-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.frota-assinatura__empresa-label input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.frota-assinatura__legenda--empresa {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .frota-fotos {

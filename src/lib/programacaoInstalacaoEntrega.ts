@@ -1,5 +1,29 @@
 import type { EquipamentoProgramacaoItem } from './programacaoContratoSelecao'
 import { hojeIsoLocal, type FrotaDeclaracaoEntregaDados } from './frotaDeclaracaoEntrega'
+import { STATUS_LABELS, type ProgramacaoStatus } from './programacaoStatusVisual'
+
+/**
+ * Regra de negócio aprovada (instalação/entrega):
+ * — Não gera MTR nem ticket; MTR só na coleta de resíduo futura.
+ * — Documento oficial: Declaração de Entrega de Equipamento.
+ * — Processo encerra na declaração; não entra em faturamento.
+ * — Programação pendente → status CONCLUIDA («Finalizado» na UI) ao confirmar a declaração.
+ */
+export const INSTALACAO_ENTREGA_CHIP_FLUXO = 'Instalação — só declaração, sem faturamento'
+
+export function programacaoInstalacaoFinalizada(status: ProgramacaoStatus): boolean {
+  return status === 'CONCLUIDA'
+}
+
+export function rotuloStatusProgramacaoExibir(
+  status: ProgramacaoStatus,
+  tipoServico: string
+): string {
+  if (programacaoEhInstalacaoEntrega(tipoServico) && status === 'CONCLUIDA') {
+    return 'Finalizado'
+  }
+  return STATUS_LABELS[status]
+}
 
 function normalizarTipoServicoKey(valor: string): string {
   return valor

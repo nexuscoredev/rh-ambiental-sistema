@@ -121,7 +121,7 @@ export function montarDeclaracaoEntregaDeMovimentacaoRow(
     telefone: cliente?.telefone,
     equipamento: m.equipamento_descricao,
     dataEntrega,
-    responsavelRecebimento: m.assinatura_responsavel_nome ?? '',
+    responsavelRecebimento: '',
   })
 }
 

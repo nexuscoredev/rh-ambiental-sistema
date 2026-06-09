@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import MainLayout from '../../layouts/MainLayout'
 import { ChatPedidosAjusteColuna } from '../../components/chat/ChatPedidosAjusteColuna'
+import { SolicitacoesAjusteDashboard } from '../../components/sistema/SolicitacoesAjusteDashboard'
 import { usePedidosAjusteAdmin } from '../../hooks/usePedidosAjusteAdmin'
 import { useChatFloat } from '../../contexts/ChatFloatContext'
 import {
@@ -12,7 +13,7 @@ import {
 } from '../../lib/chatPedidoAjuste'
 import { idDesenvolvedorAjustesConfig } from '../../lib/solicitacaoAjusteSistema'
 
-type AbaAdmin = 'filas' | 'respostas'
+type AbaAdmin = 'filas' | 'dashboard' | 'respostas'
 
 const EXEMPLO_PEDIDO = `${CHAT_PEDIDO_AJUSTE_PREFIX}
 
@@ -25,6 +26,7 @@ export default function SolicitacoesAjusteAdmin() {
   const { openChatWithUser } = useChatFloat()
   const [aba, setAba] = useState<AbaAdmin>('filas')
   const {
+    usuarios,
     usuariosPorId,
     filaDev,
     filaThais,
@@ -129,6 +131,19 @@ export default function SolicitacoesAjusteAdmin() {
           <button
             type="button"
             role="tab"
+            aria-selected={aba === 'dashboard'}
+            className={
+              aba === 'dashboard'
+                ? 'solicitacoes-admin__tab solicitacoes-admin__tab--on'
+                : 'solicitacoes-admin__tab'
+            }
+            onClick={() => setAba('dashboard')}
+          >
+            Dashboard
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={aba === 'respostas'}
             className={
               aba === 'respostas'
@@ -140,6 +155,8 @@ export default function SolicitacoesAjusteAdmin() {
             Respostas automáticas
           </button>
         </div>
+
+        {aba === 'dashboard' ? <SolicitacoesAjusteDashboard usuarios={usuarios} /> : null}
 
         {aba === 'filas' ? (
           <div className="solicitacoes-admin__grid" role="tabpanel">
