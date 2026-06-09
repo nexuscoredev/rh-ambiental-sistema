@@ -8,7 +8,7 @@ import {
   type ChangeEvent,
   type ReactNode,
 } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   EVENTO_FOTO_PERFIL_ATUALIZADA,
   uploadFotoPerfilUsuario,
@@ -33,13 +33,13 @@ import {
   type MenuItem,
   type MenuLeaf,
   isMenuBranch,
-  navLinkEndExact,
 } from '../lib/menuNavegacao'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useLayoutMobile } from '../hooks/useMediaQuery'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
+import { SidebarNavMenu } from '../components/layout/SidebarNavMenu'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 import { useRgDialog } from '../lib/RgDialogProvider'
@@ -596,80 +596,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
 
         <div className="layout-sidebar__nav-wrap">
-          <nav className="layout-sidebar__groups" aria-label="Navegação principal">
-            {menuGroupsVisiveis.map((group) => {
-              const secaoAberta = openSections[group.title] !== false
-              return (
-                <div key={group.title} className="layout-sidebar__group">
-                  <button
-                    type="button"
-                    className="layout-sidebar__group-toggle"
-                    aria-expanded={secaoAberta}
-                    onClick={() => alternarSecaoSidebar(group.title)}
-                  >
-                    <span className="layout-sidebar__group-label-bar" aria-hidden />
-                    <span className="layout-sidebar__group-title">{group.title}</span>
-                    <span className="layout-sidebar__group-chevron" aria-hidden>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </span>
-                  </button>
-                  {secaoAberta ? (
-                    <div className="layout-sidebar__group-items">
-                      {group.items.map((item) =>
-                        isMenuBranch(item) && item.children.length > 0 ? (
-                          <div key={item.path} className="layout-sidebar__nav-branch">
-                            <NavLink
-                              to={item.path}
-                              end={navLinkEndExact(item.path)}
-                              className="sidebar-nav-link"
-                              onClick={layoutMobile ? fecharMenuMobile : undefined}
-                            >
-                              <span className="sidebar-nav-link__label">{item.label}</span>
-                            </NavLink>
-                            <div className="layout-sidebar__nav-branch-children">
-                              {item.children.map((child) => (
-                                <NavLink
-                                  key={child.path}
-                                  to={child.path}
-                                  end={navLinkEndExact(child.path)}
-                                  className="sidebar-nav-link sidebar-nav-link--nested"
-                                  onClick={layoutMobile ? fecharMenuMobile : undefined}
-                                >
-                                  <span className="sidebar-nav-link__label">{child.label}</span>
-                                </NavLink>
-                              ))}
-                            </div>
-                          </div>
-                        ) : isMenuBranch(item) && item.children.length === 0 ? (
-                          <NavLink
-                            key={item.path}
-                            to={item.path}
-                            end={navLinkEndExact(item.path)}
-                            className="sidebar-nav-link"
-                            onClick={layoutMobile ? fecharMenuMobile : undefined}
-                          >
-                            <span className="sidebar-nav-link__label">{item.label}</span>
-                          </NavLink>
-                        ) : (
-                          <NavLink
-                            key={item.path}
-                            to={item.path}
-                            end={navLinkEndExact(item.path)}
-                            className="sidebar-nav-link"
-                            onClick={layoutMobile ? fecharMenuMobile : undefined}
-                          >
-                            <span className="sidebar-nav-link__label">{item.label}</span>
-                          </NavLink>
-                        )
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </nav>
+          <SidebarNavMenu
+            groups={menuGroupsVisiveis}
+            openSections={openSections}
+            activePathname={location.pathname}
+            onToggleSection={alternarSecaoSidebar}
+            onNavClick={layoutMobile ? fecharMenuMobile : undefined}
+          />
         </div>
 
         <div className="layout-sidebar__footer">
