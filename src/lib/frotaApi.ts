@@ -20,9 +20,10 @@ export async function fetchCatalogoEquipamentosClientes(): Promise<EquipamentoCl
   const { data, error } = await supabase
     .from('clientes')
     .select(
-      'id, nome, razao_social, telefone, rua, numero, complemento, bairro, cidade, estado, cep, endereco_coleta, equipamentos_contrato, status'
+      'id, nome, razao_social, telefone, rua, numero, complemento, bairro, cidade, estado, cep, endereco_coleta, equipamentos, equipamentos_contrato, status'
     )
-    .eq('status', 'ativo')
+    // Cadastro grava «Ativo» / «Inativo» (não «ativo» em minúsculas)
+    .or('status.eq.Ativo,status.eq.ativo,status.is.null')
     .order('nome')
 
   if (error) throw error
@@ -33,10 +34,11 @@ export async function fetchCatalogoEquipamentosClientes(): Promise<EquipamentoCl
     const razao = String(row.razao_social ?? '').trim() || nome
     const endereco = formatarEnderecoClienteColeta(row)
     const telefone = String(row.telefone ?? '').trim()
-    const lista = parseEquipamentosContratoJsonb(row.equipamentos_contrato)
+    const lista = parseEquipamentosContratoJsonb(row.equipamentos_contrato, row.equipamentos).filter((eq) =>
+      Boolean(String(eq.descricao ?? '').trim())
+    )
     for (const eq of lista) {
       const desc = String(eq.descricao ?? '').trim()
-      if (!desc) continue
       out.push({
         cliente_id: String(row.id),
         cliente_nome: nome,
