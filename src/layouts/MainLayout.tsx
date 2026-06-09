@@ -126,6 +126,23 @@ function obterIniciais(nome?: string | null, email?: string | null) {
 
 /** v2: padrão recolhido; chave nova para não herdar estado antigo “tudo aberto”. */
 const SIDEBAR_SECTIONS_KEY = 'rg-sidebar-sections-open-v2'
+const SIDEBAR_COLLAPSED_KEY = 'rg-sidebar-collapsed-v1'
+
+function lerSidebarRecolhida(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function salvarSidebarRecolhida(recolhida: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, recolhida ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
 
 function lerSecoesSidebar(): Record<string, boolean> | null {
   try {
@@ -217,8 +234,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const ajustePanelId = useId()
   const layoutMobile = useLayoutMobile()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [sidebarRecolhida, setSidebarRecolhida] = useState(() => lerSidebarRecolhida())
 
   const fecharMenuMobile = useCallback(() => setMobileNavOpen(false), [])
+
+  function alternarSidebarRecolhida() {
+    setSidebarRecolhida((prev) => {
+      const next = !prev
+      salvarSidebarRecolhida(next)
+      return next
+    })
+  }
 
   useEffect(() => {
     setMobileNavOpen(false)
@@ -534,6 +560,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     'layout-root',
     layoutMobile ? 'layout-root--mobile' : '',
     layoutMobile && mobileNavOpen ? 'layout-root--mobile-nav-open' : '',
+    !layoutMobile && sidebarRecolhida ? 'layout-root--sidebar-collapsed' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -552,7 +579,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       <aside
         id="layout-sidebar"
-        className="layout-sidebar"
+        className={[
+          'layout-sidebar',
+          !layoutMobile && sidebarRecolhida ? 'layout-sidebar--collapsed' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         aria-hidden={layoutMobile && !mobileNavOpen ? true : undefined}
       >
         <div className="layout-sidebar__brand">
@@ -593,6 +625,38 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </button>
             ) : null}
           </div>
+          {!layoutMobile ? (
+            <button
+              type="button"
+              className="layout-sidebar__collapse-btn"
+              aria-label={sidebarRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+              aria-expanded={!sidebarRecolhida}
+              title={sidebarRecolhida ? 'Expandir menu' : 'Recolher menu'}
+              onClick={alternarSidebarRecolhida}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className={
+                  sidebarRecolhida
+                    ? 'layout-sidebar__collapse-icon layout-sidebar__collapse-icon--expand'
+                    : 'layout-sidebar__collapse-icon'
+                }
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              <span className="layout-sidebar__collapse-label">
+                {sidebarRecolhida ? 'Expandir' : 'Recolher'}
+              </span>
+            </button>
+          ) : null}
         </div>
 
         <div className="layout-sidebar__nav-wrap">
@@ -602,6 +666,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             activePathname={location.pathname}
             onToggleSection={alternarSecaoSidebar}
             onNavClick={layoutMobile ? fecharMenuMobile : undefined}
+            recolhida={!layoutMobile && sidebarRecolhida}
           />
         </div>
 
@@ -622,7 +687,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
                 </svg>
               </span>
-              Solicitar ajuste no sistema
+              <span className="layout-sidebar-suporte__text">Solicitar ajuste no sistema</span>
             </button>
           </div>
           <p
