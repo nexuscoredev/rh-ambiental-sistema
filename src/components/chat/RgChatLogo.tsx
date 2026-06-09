@@ -1,9 +1,10 @@
 import { useId } from 'react'
+import { BRAND_CHAT_BOLA } from '../../lib/brandLogo'
 
-/** Logótipo RG CHAT — alinhado à marca Rg (itálico). */
+/** Logótipo RG CHAT — bola branca com texto preto e fundo transparente. */
 export function RgChatLogo({ className }: { className?: string }) {
   const uid = useId().replace(/:/g, '')
-  const gradId = `rgchat-glow-${uid}`
+  const clipId = `rgchat-ball-${uid}`
 
   return (
     <svg
@@ -14,43 +15,50 @@ export function RgChatLogo({ className }: { className?: string }) {
       aria-hidden
     >
       <defs>
-        <linearGradient id={gradId} x1="40" y1="14" x2="40" y2="66" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fff" stopOpacity="0.14" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
+        <clipPath id={clipId}>
+          <circle cx="40" cy="40" r="39" />
+        </clipPath>
       </defs>
-      <circle cx="40" cy="40" r="33" fill={`url(#${gradId})`} />
-      <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.42)" strokeWidth="1.25" />
-      <text
-        x="40"
-        y="44"
-        textAnchor="middle"
-        fill="#fff"
-        style={{
-          fontFamily:
-            'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          fontSize: '22px',
-          fontStyle: 'italic',
-          fontWeight: 800,
-          letterSpacing: '-0.06em',
-        }}
-      >
-        Rg
-      </text>
-      <text
-        x="40"
-        y="58"
-        textAnchor="middle"
-        fill="rgba(255,255,255,0.92)"
-        style={{
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          fontSize: '10px',
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-        }}
-      >
-        CHAT
-      </text>
+      <g clipPath={`url(#${clipId})`}>
+        <image
+          href={BRAND_CHAT_BOLA}
+          x="0"
+          y="0"
+          width="80"
+          height="80"
+          preserveAspectRatio="xMidYMid slice"
+        />
+        <text
+          x="40"
+          y="43"
+          textAnchor="middle"
+          fill="#000000"
+          style={{
+            fontFamily:
+              'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: '20px',
+            fontStyle: 'italic',
+            fontWeight: 800,
+            letterSpacing: '-0.05em',
+          }}
+        >
+          RG
+        </text>
+        <text
+          x="40"
+          y="56"
+          textAnchor="middle"
+          fill="#000000"
+          style={{
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '9px',
+            fontWeight: 800,
+            letterSpacing: '0.16em',
+          }}
+        >
+          CHAT
+        </text>
+      </g>
     </svg>
   )
 }

@@ -12,6 +12,12 @@ export const BRAND_LOGO_MARK = BRAND_RG_WORDMARK
 export const BRAND_LOGIN_WORDMARK = BRAND_RG_WORDMARK
 export const BRAND_WELCOME_LOGO = BRAND_RG_WORDMARK
 
+/** Mascote decorativo na página de boas-vindas (canto inferior direito). */
+export const BRAND_WELCOME_MASCOTE = '/assets/welcome/mascote-rg-celebracao.png'
+
+/** Bola branca do botão flutuante RG CHAT. */
+export const BRAND_CHAT_BOLA = '/assets/chat/rg-chat-bola.png'
+
 /** Ícone quadrado 512×512 gerado por build:brand (favicon/PWA). */
 export const BRAND_ICON_SQUARE_SRC = '/assets/logo/rg-ambiental-icon-square.png'
 

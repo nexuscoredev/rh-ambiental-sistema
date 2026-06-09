@@ -1509,8 +1509,26 @@ a.rg-btn {
   }
 
   .welcome-nexus__stripes {
-    width: min(64px, 14vw);
+    width: min(56px, 10vw);
     opacity: 0.88;
+  }
+
+  .welcome-nexus__stripes svg {
+    width: calc(100% + 10px);
+    transform: translateX(10px);
+  }
+
+  .welcome-nexus__mascot {
+    right: calc(24px + var(--safe-right, 0px));
+    bottom: calc(0px + var(--safe-bottom, 0px));
+    width: min(168px, 38vw);
+  }
+
+  .chat-float-fab--welcome {
+    right: calc(138px + var(--safe-right, 0px));
+    bottom: calc(10px + var(--safe-bottom, 0px));
+    width: 58px;
+    height: 58px;
   }
 
   .welcome-nexus__inner {
@@ -6053,12 +6071,11 @@ a.rg-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #0f766e, #14b8a6);
-  color: #fff;
-  box-shadow:
-    0 4px 18px rgba(13, 148, 136, 0.5),
-    0 2px 8px rgba(15, 23, 42, 0.2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: transparent;
+  color: #000;
+  overflow: visible;
+  box-shadow: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .chat-float-fab:active {
@@ -6067,9 +6084,21 @@ a.rg-btn {
 
 .chat-float-fab:hover {
   transform: scale(1.04);
-  box-shadow:
-    0 6px 22px rgba(13, 148, 136, 0.55),
-    0 4px 12px rgba(15, 23, 42, 0.18);
+  filter: drop-shadow(0 10px 22px rgba(15, 23, 42, 0.22));
+}
+
+.chat-float-fab--welcome {
+  right: calc(192px + var(--safe-right, 0px));
+  bottom: calc(18px + var(--safe-bottom, 0px));
+  width: 70px;
+  height: 70px;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 4;
+}
+
+.chat-float-fab--welcome:active {
+  cursor: pointer;
 }
 
 .chat-float-fab__badge {
@@ -6093,10 +6122,13 @@ a.rg-btn {
 
 .chat-float-fab__logo {
   display: block;
-  width: 52px;
-  height: 52px;
+  width: 100%;
+  height: 100%;
   flex-shrink: 0;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  border-radius: 50%;
+  overflow: hidden;
+  background: transparent;
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.18));
 }
 
 .chat-float-open {
@@ -6374,13 +6406,14 @@ a.rg-btn {
 .welcome-nexus__stripes {
   position: fixed;
   top: var(--header-height);
-  right: var(--safe-right, 0px);
+  right: calc(-1 * var(--safe-right, 0px));
   bottom: 0;
-  width: min(120px, 18vw);
+  width: min(88px, 11vw);
   height: auto;
   pointer-events: none;
   z-index: 2;
   opacity: 0.95;
+  overflow: hidden;
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -6393,8 +6426,23 @@ a.rg-btn {
 
 .welcome-nexus__stripes svg {
   display: block;
-  width: 100%;
+  width: calc(100% + 14px);
   height: 100%;
+  margin-left: auto;
+  transform: translateX(14px);
+}
+
+.welcome-nexus__mascot {
+  position: fixed;
+  right: calc(36px + var(--safe-right, 0px));
+  bottom: calc(0px + var(--safe-bottom, 0px));
+  width: min(220px, 26vw);
+  height: auto;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 1;
+  filter: drop-shadow(0 10px 22px rgba(15, 23, 42, 0.16));
+  user-select: none;
 }
 
 .welcome-nexus__glow {

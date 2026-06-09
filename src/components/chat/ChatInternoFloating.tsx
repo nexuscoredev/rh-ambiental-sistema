@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation } from 'react-router-dom'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import {
@@ -116,6 +117,8 @@ type Props = {
 const CHAT_NOTIFICACAO_AUDIO_SRC = '/msn-sound_1.mp3'
 
 export function ChatInternoFloating({ naoLidasBadge }: Props) {
+  const location = useLocation()
+  const naBoasVindas = location.pathname === '/bem-vindo'
   const { open, setOpen, pendingUserId, clearPendingUserId } = useChatFloat()
   const { isOnline } = usePresencaAoVivo()
   const { usuario } = usePerfilUsuario()
@@ -234,7 +237,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
 
   const handleFabPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
-      if (open) return
+      if (open || naBoasVindas) return
       const el = fabRef.current
       if (!el) return
       // Botão primário / toque.
@@ -257,7 +260,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
         /* ignore */
       }
     },
-    [fabPos, open]
+    [fabPos, naBoasVindas, open]
   )
 
   const handleFabPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
@@ -1021,7 +1024,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       {!open ? (
         <button
           type="button"
-          className="chat-float-fab"
+          className={`chat-float-fab${naBoasVindas ? ' chat-float-fab--welcome' : ''}`}
           ref={fabRef}
           title="RG CHAT — abrir conversas"
           aria-label={
@@ -1032,7 +1035,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
           aria-expanded={false}
           aria-haspopup="dialog"
           style={
-            fabPos
+            fabPos && !naBoasVindas
               ? ({
                   left: `${fabPos.x}px`,
                   top: `${fabPos.y}px`,
