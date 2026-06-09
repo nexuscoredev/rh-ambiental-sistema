@@ -22,13 +22,23 @@ import {
 import { SolicitarExclusaoMotivoDialog } from '../components/operacional/SolicitarExclusaoMotivoDialog'
 import { formatarLancadoPorResumo } from '../lib/formatLancamentoAutor'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
+import { FrotaDeclaracaoEntregaPrint } from '../components/frota/FrotaDeclaracaoEntregaPrint'
+import '../components/frota/frotaDeclaracaoEntregaPrint.css'
 import { RgReportPdfIcon } from '../components/ui/RgReportPdfIcon'
 import { FloatingAlert } from '../components/ui/FloatingAlert'
 import ProgramacaoCalendarioMes from '../components/programacao/ProgramacaoCalendarioMes'
 import ProgramacaoFiltroCaminhao from '../components/programacao/ProgramacaoFiltroCaminhao'
 import { RhHubHeroBanner } from '../components/hub/RhHubHeroBanner'
 import { ProgramacaoClienteContratoCampos } from '../components/programacao/ProgramacaoClienteContratoCampos'
+import {
+  fetchDadosClienteDeclaracaoEntrega,
+  type FrotaDeclaracaoEntregaDados,
+} from '../lib/frotaDeclaracaoEntrega'
 import { FROTA_TIPOS_MOVIMENTACAO } from '../lib/frotaModulos'
+import {
+  montarDeclaracaoEntregaDeProgramacao,
+  programacaoEhInstalacaoEntrega,
+} from '../lib/programacaoInstalacaoEntrega'
 import {
   TIPOS_CAMINHAO_CATALOGO,
   TIPOS_CAMINHAO_GRUPOS,
@@ -769,6 +779,11 @@ export default function Programacao() {
   const [relatorioDiaRef, setRelatorioDiaRef] = useState(() => todayIsoLocal())
   const [relatorioMesRef, setRelatorioMesRef] = useState(() => getMonthInputValue())
   const [relatorioPrintTick, setRelatorioPrintTick] = useState({ n: 0, em: '' })
+  const [declaracaoDraft, setDeclaracaoDraft] = useState<FrotaDeclaracaoEntregaDados | null>(null)
+  const [declaracaoPrint, setDeclaracaoPrint] = useState<FrotaDeclaracaoEntregaDados | null>(null)
+  const [declaracaoModalAberto, setDeclaracaoModalAberto] = useState(false)
+  const [declaracaoProgramacaoId, setDeclaracaoProgramacaoId] = useState<string | null>(null)
+  const [declaracaoCarregando, setDeclaracaoCarregando] = useState(false)
 
   const programacaoUiDraft = useMemo(
     () => ({
@@ -853,6 +868,12 @@ export default function Programacao() {
     const t = window.setTimeout(() => setSucesso(''), 4500)
     return () => window.clearTimeout(t)
   }, [sucesso])
+
+  useEffect(() => {
+    if (!declaracaoPrint) return
+    const t = window.setTimeout(() => window.print(), 200)
+    return () => window.clearTimeout(t)
+  }, [declaracaoPrint])
 
   useEffect(() => {
     void recarregarExclusaoPendenteResumo()
@@ -1315,6 +1336,85 @@ export default function Programacao() {
   function editarProgramacaoDoPainel(item: ProgramacaoItem) {
     editarProgramacao(item)
     setDiaPainelCalendario(null)
+  }
+
+  function fecharDeclaracaoModal() {
+    setDeclaracaoModalAberto(false)
+    setDeclaracaoDraft(null)
+    setDeclaracaoProgramacaoId(null)
+  }
+
+  function atualizarDeclaracao(campo: keyof FrotaDeclaracaoEntregaDados, valor: string) {
+    setDeclaracaoDraft((prev) => (prev ? { ...prev, [campo]: valor } : prev))
+  }
+
+  async function abrirDeclaracaoProgramacao(item: ProgramacaoItem) {
+    if (!item.clienteId) {
+      setErro('Cliente não identificado para gerar a declaração de entrega.')
+      return
+    }
+    setDeclaracaoCarregando(true)
+    setErro('')
+    try {
+      const cliente = await fetchDadosClienteDeclaracaoEntrega(item.clienteId)
+      setDeclaracaoProgramacaoId(item.id)
+      setDeclaracaoDraft(
+        montarDeclaracaoEntregaDeProgramacao({
+          clienteNome: item.clienteNome,
+          razaoSocial: cliente.razaoSocial,
+          endereco: cliente.endereco,
+          telefone: cliente.telefone,
+          equipamentos: item.equipamentosSelecionados,
+          dataProgramada: item.dataProgramada,
+        })
+      )
+      setDeclaracaoModalAberto(true)
+    } catch (err) {
+      setErro(
+        err instanceof Error ? err.message : 'Não foi possível carregar os dados do cliente.'
+      )
+    } finally {
+      setDeclaracaoCarregando(false)
+    }
+  }
+
+  async function confirmarDeclaracaoProgramacao() {
+    if (!declaracaoDraft) return
+    if (!declaracaoDraft.razaoSocial.trim()) {
+      setErro('Informe a razão social do cliente na declaração.')
+      return
+    }
+    if (!declaracaoDraft.equipamento.trim()) {
+      setErro('Informe o equipamento na declaração.')
+      return
+    }
+    if (!declaracaoDraft.dataEntrega.trim()) {
+      setErro('Informe a data da entrega na declaração.')
+      return
+    }
+
+    const progId = declaracaoProgramacaoId
+    setDeclaracaoPrint({ ...declaracaoDraft })
+    fecharDeclaracaoModal()
+
+    if (!progId) return
+
+    const { error } = await supabase
+      .from('programacoes')
+      .update({ status_programacao: 'CONCLUIDA' })
+      .eq('id', progId)
+
+    if (error) {
+      setErro(getSupabaseErrorMessage(error))
+      return
+    }
+
+    setProgramacoes((prev) =>
+      prev.map((p) =>
+        p.id === progId ? { ...p, statusProgramacao: 'CONCLUIDA' as ProgramacaoStatus } : p
+      )
+    )
+    setSucesso('Declaração gerada e programação marcada como concluída.')
   }
 
   function alternarSelecaoExclusaoPainel(itemId: string) {
@@ -2458,24 +2558,38 @@ export default function Programacao() {
                                 <div style={itemNumeroStyle}>Programação {item.numero || '—'}</div>
                                 <div style={itemClienteStyle}>{item.clienteNome}</div>
                                 <div style={itemAgendaChipsRowStyle}>
-                                  <span
-                                    style={{
-                                      ...statusBadgeCompactStyle,
-                                      backgroundColor: item.mtrId ? '#dbeafe' : '#f1f5f9',
-                                      color: item.mtrId ? '#1d4ed8' : '#64748b',
-                                    }}
-                                  >
-                                    {item.mtrId ? 'MTR' : 'Sem MTR'}
-                                  </span>
-                                  <span
-                                    style={{
-                                      ...statusBadgeCompactStyle,
-                                      backgroundColor: item.coletaId ? '#dcfce7' : '#f1f5f9',
-                                      color: item.coletaId ? '#15803d' : '#64748b',
-                                    }}
-                                  >
-                                    {item.coletaId ? 'Coleta' : 'Sem coleta'}
-                                  </span>
+                                  {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
+                                    <span
+                                      style={{
+                                        ...statusBadgeCompactStyle,
+                                        backgroundColor: '#ecfdf5',
+                                        color: '#047857',
+                                      }}
+                                    >
+                                      Fluxo instalação — sem MTR/ticket
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <span
+                                        style={{
+                                          ...statusBadgeCompactStyle,
+                                          backgroundColor: item.mtrId ? '#dbeafe' : '#f1f5f9',
+                                          color: item.mtrId ? '#1d4ed8' : '#64748b',
+                                        }}
+                                      >
+                                        {item.mtrId ? 'MTR' : 'Sem MTR'}
+                                      </span>
+                                      <span
+                                        style={{
+                                          ...statusBadgeCompactStyle,
+                                          backgroundColor: item.coletaId ? '#dcfce7' : '#f1f5f9',
+                                          color: item.coletaId ? '#15803d' : '#64748b',
+                                        }}
+                                      >
+                                        {item.coletaId ? 'Coleta' : 'Sem coleta'}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               <div style={{ alignSelf: 'flex-start' }}>
@@ -2551,36 +2665,51 @@ export default function Programacao() {
                             ) : null}
 
                             <div style={acoesRowCompactStyle}>
-                              {item.mtrId ? (
+                              {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
                                 <button
                                   type="button"
                                   className="rg-btn rg-btn--outline"
-                                  onClick={() => irMtr(item)}
-                                  title="Abrir MTR desta programação"
+                                  disabled={declaracaoCarregando}
+                                  onClick={() => void abrirDeclaracaoProgramacao(item)}
+                                  title="Gerar declaração de entrega (Anexo 2)"
                                 >
-                                  MTR
+                                  <RgReportPdfIcon />
+                                  Gerar declaração de entrega
                                 </button>
-                              ) : null}
-                              {item.coletaId ? (
+                              ) : (
                                 <>
-                                  <button
-                                    type="button"
-                                    className="rg-btn rg-btn--outline"
-                                    onClick={() => irControleMassa(item)}
-                                    title="Abrir Controle de Massa desta coleta"
-                                  >
-                                    Massa
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rg-btn rg-btn--outline"
-                                    onClick={() => irFaturamento(item)}
-                                    title="Abrir Faturamento desta coleta"
-                                  >
-                                    Faturar
-                                  </button>
+                                  {item.mtrId ? (
+                                    <button
+                                      type="button"
+                                      className="rg-btn rg-btn--outline"
+                                      onClick={() => irMtr(item)}
+                                      title="Abrir MTR desta programação"
+                                    >
+                                      MTR
+                                    </button>
+                                  ) : null}
+                                  {item.coletaId ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="rg-btn rg-btn--outline"
+                                        onClick={() => irControleMassa(item)}
+                                        title="Abrir Controle de Massa desta coleta"
+                                      >
+                                        Massa
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rg-btn rg-btn--outline"
+                                        onClick={() => irFaturamento(item)}
+                                        title="Abrir Faturamento desta coleta"
+                                      >
+                                        Faturar
+                                      </button>
+                                    </>
+                                  ) : null}
                                 </>
-                              ) : null}
+                              )}
                               <button
                                 type="button"
                                 style={{
@@ -2983,24 +3112,38 @@ export default function Programacao() {
                           marginBottom: '12px',
                         }}
                       >
-                        <span
-                          style={{
-                            ...statusBadgeCompactStyle,
-                            backgroundColor: item.mtrId ? '#dbeafe' : '#f1f5f9',
-                            color: item.mtrId ? '#1d4ed8' : '#64748b',
-                          }}
-                        >
-                          {item.mtrId ? 'MTR vinculada' : 'Sem MTR'}
-                        </span>
-                        <span
-                          style={{
-                            ...statusBadgeCompactStyle,
-                            backgroundColor: item.coletaId ? '#dcfce7' : '#f1f5f9',
-                            color: item.coletaId ? '#15803d' : '#64748b',
-                          }}
-                        >
-                          {item.coletaId ? 'Coleta criada' : 'Sem coleta'}
-                        </span>
+                        {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
+                          <span
+                            style={{
+                              ...statusBadgeCompactStyle,
+                              backgroundColor: '#ecfdf5',
+                              color: '#047857',
+                            }}
+                          >
+                            Fluxo instalação — sem MTR/ticket
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              style={{
+                                ...statusBadgeCompactStyle,
+                                backgroundColor: item.mtrId ? '#dbeafe' : '#f1f5f9',
+                                color: item.mtrId ? '#1d4ed8' : '#64748b',
+                              }}
+                            >
+                              {item.mtrId ? 'MTR vinculada' : 'Sem MTR'}
+                            </span>
+                            <span
+                              style={{
+                                ...statusBadgeCompactStyle,
+                                backgroundColor: item.coletaId ? '#dcfce7' : '#f1f5f9',
+                                color: item.coletaId ? '#15803d' : '#64748b',
+                              }}
+                            >
+                              {item.coletaId ? 'Coleta criada' : 'Sem coleta'}
+                            </span>
+                          </>
+                        )}
                         <span
                           style={{
                             ...statusBadgeCompactStyle,
@@ -3013,56 +3156,71 @@ export default function Programacao() {
                       </div>
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {item.mtrId ? (
+                        {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
                           <button
                             type="button"
                             className="rg-btn rg-btn--outline"
-                            onClick={() => {
-                              irMtr(item)
-                              setDiaPainelCalendario(null)
-                            }}
-                            title="Abrir MTR desta programação"
+                            disabled={declaracaoCarregando}
+                            onClick={() => void abrirDeclaracaoProgramacao(item)}
+                            title="Gerar declaração de entrega (Anexo 2)"
                           >
-                            MTR
+                            <RgReportPdfIcon />
+                            Gerar declaração de entrega
                           </button>
-                        ) : null}
-                        {item.coletaId ? (
+                        ) : (
                           <>
-                            <button
-                              type="button"
-                              className="rg-btn rg-btn--outline"
-                              onClick={() => {
-                                irControleMassa(item)
-                                setDiaPainelCalendario(null)
-                              }}
-                              title="Abrir Controle de Massa desta coleta"
-                            >
-                              Massa
-                            </button>
-                            <button
-                              type="button"
-                              className="rg-btn rg-btn--outline"
-                              onClick={() => {
-                                irFaturamento(item)
-                                setDiaPainelCalendario(null)
-                              }}
-                              title="Abrir Faturamento desta coleta"
-                            >
-                              Faturar
-                            </button>
-                            <button
-                              type="button"
-                              className="rg-btn rg-btn--outline"
-                              onClick={() => {
-                                irFinanceiro(item)
-                                setDiaPainelCalendario(null)
-                              }}
-                              title="Abrir Financeiro desta coleta"
-                            >
-                              Financeiro
-                            </button>
+                            {item.mtrId ? (
+                              <button
+                                type="button"
+                                className="rg-btn rg-btn--outline"
+                                onClick={() => {
+                                  irMtr(item)
+                                  setDiaPainelCalendario(null)
+                                }}
+                                title="Abrir MTR desta programação"
+                              >
+                                MTR
+                              </button>
+                            ) : null}
+                            {item.coletaId ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="rg-btn rg-btn--outline"
+                                  onClick={() => {
+                                    irControleMassa(item)
+                                    setDiaPainelCalendario(null)
+                                  }}
+                                  title="Abrir Controle de Massa desta coleta"
+                                >
+                                  Massa
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rg-btn rg-btn--outline"
+                                  onClick={() => {
+                                    irFaturamento(item)
+                                    setDiaPainelCalendario(null)
+                                  }}
+                                  title="Abrir Faturamento desta coleta"
+                                >
+                                  Faturar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rg-btn rg-btn--outline"
+                                  onClick={() => {
+                                    irFinanceiro(item)
+                                    setDiaPainelCalendario(null)
+                                  }}
+                                  title="Abrir Financeiro desta coleta"
+                                >
+                                  Financeiro
+                                </button>
+                              </>
+                            ) : null}
                           </>
-                        ) : null}
+                        )}
                         <button
                           type="button"
                           style={{
@@ -3213,6 +3371,9 @@ export default function Programacao() {
       ) : null}
 
       {createPortal(<ProgramacaoRelatorioPrintRoot {...relatorioPrintDocumentProps} />, document.body)}
+      {declaracaoPrint
+        ? createPortal(<FrotaDeclaracaoEntregaPrint dados={declaracaoPrint} />, document.body)
+        : null}
 
       {relatorioAberto ? (
         <div
@@ -3382,42 +3543,57 @@ export default function Programacao() {
                               </span>
                             </div>
                             <div style={acoesRowCompactStyle}>
-                              {item.mtrId ? (
+                              {programacaoEhInstalacaoEntrega(item.tipoServico) ? (
                                 <button
                                   type="button"
                                   className="rg-btn rg-btn--outline"
-                                  onClick={() => {
-                                    irMtr(item)
-                                    setRelatorioAberto(false)
-                                  }}
+                                  disabled={declaracaoCarregando}
+                                  onClick={() => void abrirDeclaracaoProgramacao(item)}
+                                  title="Gerar declaração de entrega (Anexo 2)"
                                 >
-                                  MTR
+                                  <RgReportPdfIcon />
+                                  Gerar declaração de entrega
                                 </button>
-                              ) : null}
-                              {item.coletaId ? (
+                              ) : (
                                 <>
-                                  <button
-                                    type="button"
-                                    className="rg-btn rg-btn--outline"
-                                    onClick={() => {
-                                      irControleMassa(item)
-                                      setRelatorioAberto(false)
-                                    }}
-                                  >
-                                    Massa
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rg-btn rg-btn--outline"
-                                    onClick={() => {
-                                      irFaturamento(item)
-                                      setRelatorioAberto(false)
-                                    }}
-                                  >
-                                    Faturar
-                                  </button>
+                                  {item.mtrId ? (
+                                    <button
+                                      type="button"
+                                      className="rg-btn rg-btn--outline"
+                                      onClick={() => {
+                                        irMtr(item)
+                                        setRelatorioAberto(false)
+                                      }}
+                                    >
+                                      MTR
+                                    </button>
+                                  ) : null}
+                                  {item.coletaId ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="rg-btn rg-btn--outline"
+                                        onClick={() => {
+                                          irControleMassa(item)
+                                          setRelatorioAberto(false)
+                                        }}
+                                      >
+                                        Massa
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rg-btn rg-btn--outline"
+                                        onClick={() => {
+                                          irFaturamento(item)
+                                          setRelatorioAberto(false)
+                                        }}
+                                      >
+                                        Faturar
+                                      </button>
+                                    </>
+                                  ) : null}
                                 </>
-                              ) : null}
+                              )}
                               <button
                                 type="button"
                                 style={{
@@ -3585,6 +3761,109 @@ export default function Programacao() {
                 </button>
                 <button type="button" className="rg-btn rg-btn--outline" onClick={fecharModalEdicao}>
                   Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {declaracaoModalAberto && declaracaoDraft ? (
+        <div
+          style={declaracaoModalOverlayStyle}
+          role="presentation"
+          onClick={fecharDeclaracaoModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prog-decl-entrega-titulo"
+            style={declaracaoModalBoxStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="prog-decl-entrega-titulo" style={{ margin: '0 0 8px', fontSize: '18px', color: '#0f172a' }}>
+              Declaração de entrega
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+              Revise os dados antes de imprimir. Ao confirmar, a programação será marcada como concluída.
+            </p>
+            <form
+              onSubmit={(ev) => {
+                ev.preventDefault()
+                void confirmarDeclaracaoProgramacao()
+              }}
+              style={{ display: 'grid', gap: '12px' }}
+            >
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Razão social
+                <input
+                  value={declaracaoDraft.razaoSocial}
+                  onChange={(ev) => atualizarDeclaracao('razaoSocial', ev.target.value)}
+                  style={declaracaoModalInputStyle}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Endereço
+                <textarea
+                  value={declaracaoDraft.endereco}
+                  onChange={(ev) => atualizarDeclaracao('endereco', ev.target.value)}
+                  rows={3}
+                  style={declaracaoModalInputStyle}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Telefone
+                <input
+                  value={declaracaoDraft.telefone}
+                  onChange={(ev) => atualizarDeclaracao('telefone', ev.target.value)}
+                  style={declaracaoModalInputStyle}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Equipamento(s)
+                <textarea
+                  value={declaracaoDraft.equipamento}
+                  onChange={(ev) => atualizarDeclaracao('equipamento', ev.target.value)}
+                  rows={2}
+                  style={declaracaoModalInputStyle}
+                />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  Data da entrega
+                  <input
+                    type="date"
+                    value={declaracaoDraft.dataEntrega}
+                    onChange={(ev) => atualizarDeclaracao('dataEntrega', ev.target.value)}
+                    style={declaracaoModalInputStyle}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  Data do documento
+                  <input
+                    type="date"
+                    value={declaracaoDraft.dataDocumento}
+                    onChange={(ev) => atualizarDeclaracao('dataDocumento', ev.target.value)}
+                    style={declaracaoModalInputStyle}
+                  />
+                </label>
+              </div>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Responsável pelo recebimento
+                <input
+                  value={declaracaoDraft.responsavelRecebimento}
+                  onChange={(ev) => atualizarDeclaracao('responsavelRecebimento', ev.target.value)}
+                  placeholder="Nome para linha de assinatura (opcional)"
+                  style={declaracaoModalInputStyle}
+                />
+              </label>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button type="button" className="rg-btn rg-btn--outline" onClick={fecharDeclaracaoModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="rg-btn rg-btn--primary">
+                  <RgReportPdfIcon />
+                  Gerar declaração de entrega
                 </button>
               </div>
             </form>
@@ -4011,6 +4290,27 @@ const relatorioModalAcoesStyle: CSSProperties = {
   paddingTop: '16px',
   borderTop: '1px solid #e5e7eb',
   flexShrink: 0,
+}
+
+const declaracaoModalOverlayStyle: CSSProperties = {
+  ...calendarPainelOverlayStyle,
+  zIndex: 10120,
+}
+
+const declaracaoModalBoxStyle: CSSProperties = {
+  ...calendarPainelModalStyle,
+  maxWidth: '560px',
+  width: 'min(560px, calc(100vw - 32px))',
+}
+
+const declaracaoModalInputStyle: CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  borderRadius: '10px',
+  border: '1px solid #cbd5e1',
+  padding: '10px 12px',
+  fontSize: '14px',
+  fontWeight: 400,
 }
 
 const relatorioModalOverlayStyle: CSSProperties = {

@@ -1,5 +1,7 @@
+import { formatarEnderecoClienteColeta } from './formatarEnderecoClienteColeta'
 import { RG_AMBIENTAL_DADOS_CORPORATIVOS } from './rgAmbientalDadosCorporativos'
-import type { EquipamentoClienteCatalogo } from './frotaTypes'
+import { supabase } from './supabase'
+import type { EquipamentoClienteCatalogo, FrotaMovimentacaoRow } from './frotaTypes'
 
 export type FrotaDeclaracaoEntregaDados = {
   razaoSocial: string
@@ -54,4 +56,77 @@ export function montarDeclaracaoEntregaDefaults(eq: EquipamentoClienteCatalogo):
 
 export function localDocumentoRg(): string {
   return RG_AMBIENTAL_DADOS_CORPORATIVOS.municipio
+}
+
+export type ClienteDeclaracaoEntregaDados = {
+  nome: string
+  razaoSocial: string
+  endereco: string
+  telefone: string
+}
+
+export async function fetchDadosClienteDeclaracaoEntrega(
+  clienteId: string
+): Promise<ClienteDeclaracaoEntregaDados> {
+  const { data, error } = await supabase
+    .from('clientes')
+    .select(
+      'nome, razao_social, telefone, rua, numero, complemento, bairro, cidade, estado, cep, endereco_coleta'
+    )
+    .eq('id', clienteId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  const nome = String(data?.nome ?? '').trim() || 'Cliente'
+  return {
+    nome,
+    razaoSocial: String(data?.razao_social ?? '').trim() || nome,
+    endereco: formatarEnderecoClienteColeta(data ?? {}),
+    telefone: String(data?.telefone ?? '').trim(),
+  }
+}
+
+export function montarDeclaracaoEntregaDeMovimentacao(input: {
+  clienteNome: string
+  razaoSocial?: string
+  endereco?: string
+  telefone?: string
+  equipamento: string
+  dataEntrega?: string
+  responsavelRecebimento?: string
+}): FrotaDeclaracaoEntregaDados {
+  const hoje = hojeIsoLocal()
+  const dataEntrega = (input.dataEntrega || '').slice(0, 10) || hoje
+  return {
+    razaoSocial: (input.razaoSocial || input.clienteNome).trim(),
+    endereco: (input.endereco ?? '').trim(),
+    telefone: (input.telefone ?? '').trim(),
+    equipamento: input.equipamento.trim(),
+    dataEntrega,
+    dataDocumento: hoje,
+    responsavelRecebimento: (input.responsavelRecebimento ?? '').trim(),
+  }
+}
+
+export function montarDeclaracaoEntregaDeMovimentacaoRow(
+  m: FrotaMovimentacaoRow,
+  cliente?: Partial<ClienteDeclaracaoEntregaDados>
+): FrotaDeclaracaoEntregaDados {
+  const dataEntrega = m.created_at ? m.created_at.slice(0, 10) : hojeIsoLocal()
+  return montarDeclaracaoEntregaDeMovimentacao({
+    clienteNome: m.cliente_nome ?? cliente?.nome ?? 'Cliente',
+    razaoSocial: cliente?.razaoSocial,
+    endereco: cliente?.endereco,
+    telefone: cliente?.telefone,
+    equipamento: m.equipamento_descricao,
+    dataEntrega,
+    responsavelRecebimento: m.assinatura_responsavel_nome ?? '',
+  })
+}
+
+export function montarDeclaracaoEntregaDeEquipamentoCatalogo(
+  eq: EquipamentoClienteCatalogo
+): FrotaDeclaracaoEntregaDados {
+  return montarDeclaracaoEntregaDefaults(eq)
 }

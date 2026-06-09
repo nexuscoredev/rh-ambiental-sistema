@@ -55,4 +55,10 @@ export const FROTA_TIPOS_MOVIMENTACAO = [
   { id: 'retirada' as const, label: 'Retirada' },
   { id: 'carregamento_hora' as const, label: 'Carregamento na hora' },
   { id: 'instalacao' as const, label: 'Instalação' },
+  { id: 'instalacoes_entregas' as const, label: 'Instalações/Entregas' },
 ]
+
+/** Tipos no formulário de movimentação da frota (exclui serviços só de programação). */
+export const FROTA_TIPOS_MOVIMENTACAO_OPERACIONAL = FROTA_TIPOS_MOVIMENTACAO.filter(
+  (t) => t.id !== 'instalacoes_entregas'
+)
