@@ -7,6 +7,7 @@ import {
   useState,
   type ChangeEvent,
   type ReactNode,
+  type TouchEvent,
 } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -217,6 +218,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [fotoIndisponivel, setFotoIndisponivel] = useState(false)
   const [enviandoFoto, setEnviandoFoto] = useState(false)
   const inputFotoRef = useRef<HTMLInputElement>(null)
+  const sidebarTouchStartX = useRef(0)
   const versaoExibir = useVersaoRgExibir()
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -262,6 +264,38 @@ export default function MainLayout({ children }: MainLayoutProps) {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [mobileNavOpen, layoutMobile])
+
+  useEffect(() => {
+    if (!layoutMobile || !mobileNavOpen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [layoutMobile, mobileNavOpen])
+
+  useEffect(() => {
+    if (!layoutMobile || !mobileNavOpen) return
+    const timer = window.requestAnimationFrame(() => {
+      document
+        .querySelector('#layout-sidebar .sidebar-nav-link[aria-current="page"]')
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+    return () => window.cancelAnimationFrame(timer)
+  }, [layoutMobile, mobileNavOpen, location.pathname])
+
+  function onSidebarTouchStart(ev: TouchEvent) {
+    if (!layoutMobile || !mobileNavOpen) return
+    sidebarTouchStartX.current = ev.touches[0]?.clientX ?? 0
+  }
+
+  function onSidebarTouchEnd(ev: TouchEvent) {
+    if (!layoutMobile || !mobileNavOpen) return
+    const endX = ev.changedTouches[0]?.clientX ?? 0
+    if (endX - sidebarTouchStartX.current < -56) {
+      fecharMenuMobile()
+    }
+  }
 
   const atualizarBadgeChat = useCallback(async () => {
     const {
@@ -581,11 +615,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
         id="layout-sidebar"
         className={[
           'layout-sidebar',
+          layoutMobile ? 'layout-sidebar--mobile-drawer' : '',
           !layoutMobile && sidebarRecolhida ? 'layout-sidebar--collapsed' : '',
         ]
           .filter(Boolean)
           .join(' ')}
         aria-hidden={layoutMobile && !mobileNavOpen ? true : undefined}
+        onTouchStart={layoutMobile ? onSidebarTouchStart : undefined}
+        onTouchEnd={layoutMobile ? onSidebarTouchEnd : undefined}
       >
         <div className="layout-sidebar__brand">
           <div
@@ -606,6 +643,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   className={[
                     'layout-sidebar__logo-img',
                     !layoutMobile && sidebarRecolhida ? 'layout-sidebar__logo-img--sigla' : '',
+                    layoutMobile ? 'layout-sidebar__logo-img--mobile-drawer' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -718,12 +756,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
               className="layout-mobile-menu-btn"
               aria-expanded={mobileNavOpen}
               aria-controls="layout-sidebar"
+              aria-label={mobileNavOpen ? 'Fechar menu' : 'Abrir menu'}
               onClick={() => setMobileNavOpen((v) => !v)}
             >
               <span className="layout-mobile-menu-btn__icon" aria-hidden>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
+                {mobileNavOpen ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                )}
               </span>
               <span className="layout-mobile-menu-btn__label">Menu</span>
             </button>
@@ -736,7 +781,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
               aria-label="Página inicial"
             >
               {logoCarregou ? (
-                <img src={BRAND_LOGO_MARK} alt="" decoding="async" />
+                <img
+                  className="layout-mobile-header-mark__img layout-mobile-header-mark__img--sigla"
+                  src={BRAND_LOGO_SIGLA}
+                  alt=""
+                  decoding="async"
+                />
               ) : (
                 <span className="layout-mobile-header-mark__fallback">RG</span>
               )}

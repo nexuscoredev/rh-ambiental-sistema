@@ -9,6 +9,7 @@ import {
 /** Folha completa (inclui `.welcome-nexus`, PWA, etc.) — alinhada ao deploy Vercel. */
 import "./index-NEXUS.css";
 import "./styles/mobile-app-pages.css";
+import "./styles/mobile-layout-shell.css";
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
