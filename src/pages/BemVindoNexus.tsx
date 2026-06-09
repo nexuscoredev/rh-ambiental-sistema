@@ -4,7 +4,7 @@ import { NovidadesSistemaModal } from '../components/bemVindo/NovidadesSistemaMo
 import MainLayout from '../layouts/MainLayout'
 import { supabase } from '../lib/supabase'
 import { primeiraRotaOperacionalPermitida, type UsuarioComPaginas } from '../lib/paginasSistema'
-import { BRAND_WELCOME_LOGO, BRAND_WELCOME_MASCOTE } from '../lib/brandLogo'
+import { BRAND_WELCOME_LOGO } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 
 type PerfilBemVindo = UsuarioComPaginas & { nome?: string | null }
@@ -64,14 +64,6 @@ export default function BemVindoNexus() {
             </g>
           </svg>
         </div>
-        <img
-          className="welcome-nexus__mascot"
-          src={BRAND_WELCOME_MASCOTE}
-          alt=""
-          aria-hidden
-          decoding="async"
-          draggable={false}
-        />
         <div className="welcome-nexus__glow" aria-hidden />
         <div className="welcome-nexus__grid" aria-hidden />
 
