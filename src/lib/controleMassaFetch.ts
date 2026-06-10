@@ -516,6 +516,25 @@ export function resolverDataCampoPesagemForm(opts: {
   return ''
 }
 
+/** Data exibida na lista de apoio do Controle de Massa (mesma prioridade do formulário + programação). */
+export function resolverDataExibicaoListaColeta(opts: {
+  pesagem?: { data: string | null } | null
+  coletaDataExecucao?: string | null
+  coletaDataAgendada?: string | null
+  dataProgramada?: string | null
+}): string {
+  const fromForm = resolverDataCampoPesagemForm({
+    coletaId: '',
+    prevColetaId: '',
+    prevData: '',
+    pesagem: opts.pesagem,
+    coletaDataExecucao: opts.coletaDataExecucao,
+    coletaDataAgendada: opts.coletaDataAgendada,
+  })
+  if (fromForm) return fromForm
+  return normalizarDataIsoCampo(opts.dataProgramada)
+}
+
 /** Valor `time` do Postgres → `HH:mm` para `<input type="time">`. */
 export function horaDbParaInputTime(raw: string | null | undefined): string {
   if (!raw?.trim()) return ''

@@ -30,6 +30,7 @@ import {
   horaInputTimeParaDb,
   normalizarDataIsoCampo,
   resolverDataCampoPesagemForm,
+  resolverDataExibicaoListaColeta,
 } from "../lib/controleMassaFetch";
 import { obterProximoNumeroTicketOperacional } from "../lib/nextTicketOperacionalNumero";
 import { waitForTicketPrintRoot } from "../lib/waitForTicketPrintRoot";
@@ -97,6 +98,7 @@ import {
   chavesDescricaoSegmentoTicket,
   gravarDescricaoTicketArmazenada,
   lerDescricaoTicketArmazenada,
+  resolverDescricaoTicketMultiSegmento,
 } from "../lib/controleMassaDescricaoTicket";
 
 function preencherNumeroTicketNoForm(
@@ -1268,12 +1270,6 @@ export default function ControleMassa() {
     [resolverChavesNotaTicketAtiva]
   );
 
-  const lerNotaTicketParaColeta = useCallback(
-    (coletaId: string) =>
-      lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, { coletaId }),
-    []
-  );
-
   const listaOperacao = useMemo(() => {
     const hojeIso = new Date().toISOString().slice(0, 10);
     // base será definido mais abaixo via `coletasListaOrdenadas`; aqui usamos `todasColetas` como fallback
@@ -1441,12 +1437,29 @@ export default function ControleMassa() {
     setCamposImpressaoPesagem(camposPesagem);
     setImprimindoTicketColetaId(coletaId);
 
+    descricaoTicketPorChaveRef.current = gravarDescricaoTicketArmazenada(
+      descricaoTicketPorChaveRef.current,
+      form.descricao_ticket,
+      resolverChavesNotaTicketAtiva(indiceSegmentoTicketAtivo, form.coleta_id)
+    );
+
+    const idxSeg = ticketsSegmentoImpressao.findIndex((s) => s.coletaId === coletaId);
+    const coletaIdSeg0 =
+      ticketsSegmentoImpressao[0]?.coletaId?.trim() ||
+      coletasImpressaoSessao[0]?.trim() ||
+      "";
+
     const gt = await garantirTicketAposPesagem({
       coletaId,
       numeroTicket,
       tipoTicket,
       descricaoExtra: (() => {
-        const nota = lerNotaTicketParaColeta(coletaId).trim();
+        const nota = resolverDescricaoTicketMultiSegmento(descricaoTicketPorChaveRef.current, {
+          indiceSegmento: idxSeg >= 0 ? idxSeg : 0,
+          coletaId,
+          coletaIdSegmento0: coletaIdSeg0,
+          fallbackForm: form.descricao_ticket,
+        }).trim();
         return nota || null;
       })(),
     });
@@ -2476,6 +2489,17 @@ export default function ControleMassa() {
       const segmentos = segmentosResiduoParaTickets(form.residuos_linhas);
       const mtrNumeroSeg =
         mtrsLista.find((m) => m.id === mtrIdSegmentacao)?.numero?.trim() ?? "";
+      const coletaIdSegmento0 =
+        ticketsSegmentoImpressao[0]?.coletaId?.trim() ||
+        form.coleta_id.trim() ||
+        "";
+
+      descricaoTicketPorChaveRef.current = gravarDescricaoTicketArmazenada(
+        descricaoTicketPorChaveRef.current,
+        form.descricao_ticket,
+        resolverChavesNotaTicketAtiva(indiceSegmentoTicketAtivo, form.coleta_id)
+      );
+
       let coletasMtr = ordenarColetasParaTickets(
         todasColetas.filter((c) => c.mtr_id === mtrIdSegmentacao),
         {
@@ -2578,10 +2602,15 @@ export default function ControleMassa() {
         coletasUsadas.add(coletaIdSeg);
 
         const coletaSeg = todasColetas.find((c) => c.id === coletaIdSeg) ?? coletasMtr.find((c) => c.id === coletaIdSeg);
-        const notaSegmento = lerDescricaoTicketArmazenada(descricaoTicketPorChaveRef.current, {
-          coletaId: coletaIdSeg,
-          indiceSegmento: i,
-        });
+        const notaSegmento = resolverDescricaoTicketMultiSegmento(
+          descricaoTicketPorChaveRef.current,
+          {
+            indiceSegmento: i,
+            coletaId: coletaIdSeg,
+            coletaIdSegmento0,
+            fallbackForm: form.descricao_ticket,
+          }
+        );
 
         const persist = await persistirPesagemUmSegmento({
           coletaId: coletaIdSeg,
@@ -2932,6 +2961,14 @@ export default function ControleMassa() {
       const mtrNo = c.mtr_id ? mtrsLista.find((m) => m.id === c.mtr_id)?.numero ?? "" : "";
       const tc = c.programacao_id ? tipoCaminhaoPorProgramacao[c.programacao_id] ?? "" : "";
       const up = c.id ? ultimaPesagemPorColeta.get(c.id) : undefined;
+      const dataLista = resolverDataExibicaoListaColeta({
+        pesagem: up,
+        coletaDataExecucao: c.data_execucao,
+        coletaDataAgendada: c.data_agendada,
+        dataProgramada: c.programacao_id
+          ? dataProgramadaPorProgramacao[c.programacao_id]
+          : null,
+      });
       const ticketNo = c.id ? (numeroTicketPorColeta.get(c.id) ?? "").trim() : "";
       const ticketTipo = c.id ? formatarTipoTicketLista(tipoTicketPorColeta.get(c.id)) : "";
       const blob = [
@@ -2943,7 +2980,7 @@ export default function ControleMassa() {
         mtrNo,
         tc,
         formatarEtapaParaUI(c.etapaFluxo),
-        up?.data ?? "",
+        dataLista,
         ticketNo,
         ticketTipo,
       ]
@@ -2958,6 +2995,7 @@ export default function ControleMassa() {
     mtrsLista,
     tipoCaminhaoPorProgramacao,
     ultimaPesagemPorColeta,
+    dataProgramadaPorProgramacao,
     tipoTicketPorColeta,
     numeroTicketPorColeta,
   ]);
@@ -3520,7 +3558,15 @@ export default function ControleMassa() {
                       ? mtrsLista.find((m) => m.id === c.mtr_id)?.numero ?? "—"
                       : "—";
                     const up = ultimaPesagemPorColeta.get(c.id);
-                    const dataP = up?.data ? formatarDataIsoCurta(up.data) : "—";
+                    const dataIsoLista = resolverDataExibicaoListaColeta({
+                      pesagem: up,
+                      coletaDataExecucao: c.data_execucao,
+                      coletaDataAgendada: c.data_agendada,
+                      dataProgramada: c.programacao_id
+                        ? dataProgramadaPorProgramacao[c.programacao_id]
+                        : null,
+                    });
+                    const dataP = dataIsoLista ? formatarDataIsoCurta(dataIsoLista) : "—";
                     return (
                       <tr
                         key={c.id}

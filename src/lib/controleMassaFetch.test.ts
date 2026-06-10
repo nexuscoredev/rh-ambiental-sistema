@@ -4,6 +4,7 @@ import {
   controleMassaJanelaDias,
   dataCorteIsoControleMassa,
   resolverDataCampoPesagemForm,
+  resolverDataExibicaoListaColeta,
 } from './controleMassaFetch'
 
 describe('controleMassaJanelaDias', () => {
@@ -40,6 +41,31 @@ describe('resolverDataCampoPesagemForm', () => {
         coletaDataExecucao: '2026-04-15',
       })
     ).toBe('2026-04-15')
+  })
+})
+
+describe('resolverDataExibicaoListaColeta', () => {
+  it('usa pesagem, coleta e programação como fallback', () => {
+    expect(
+      resolverDataExibicaoListaColeta({
+        pesagem: { data: '2024-06-05' },
+        coletaDataExecucao: '2024-01-01',
+      })
+    ).toBe('2024-06-05')
+
+    expect(
+      resolverDataExibicaoListaColeta({
+        coletaDataExecucao: '2024-06-05',
+      })
+    ).toBe('2024-06-05')
+
+    expect(
+      resolverDataExibicaoListaColeta({
+        dataProgramada: '2024-06-05T00:00:00+00:00',
+      })
+    ).toBe('2024-06-05')
+
+    expect(resolverDataExibicaoListaColeta({})).toBe('')
   })
 })
 

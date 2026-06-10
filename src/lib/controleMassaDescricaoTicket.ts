@@ -46,3 +46,32 @@ export function chavesDescricaoSegmentoTicket(
   if (cid) return { coletaId: cid }
   return { indiceSegmento: indice }
 }
+
+/**
+ * Nota do ticket para um segmento (vários resíduos → tickets 104757-1, 104757-2, …).
+ * Usa a nota específica do segmento; se vazia, reutiliza a do ticket 1 (segmento 0).
+ */
+export function resolverDescricaoTicketMultiSegmento(
+  map: Map<string, string>,
+  opts: {
+    indiceSegmento: number
+    coletaId?: string
+    coletaIdSegmento0?: string
+    fallbackForm?: string | null
+  }
+): string {
+  const especifica = lerDescricaoTicketArmazenada(map, {
+    coletaId: opts.coletaId,
+    indiceSegmento: opts.indiceSegmento,
+  }).trim()
+  if (especifica) return especifica
+
+  const fallbackForm = (opts.fallbackForm ?? '').trim()
+  if (opts.indiceSegmento === 0) return fallbackForm
+
+  const notaSeg0 = lerDescricaoTicketArmazenada(map, {
+    coletaId: opts.coletaIdSegmento0,
+    indiceSegmento: 0,
+  }).trim()
+  return notaSeg0 || fallbackForm
+}
