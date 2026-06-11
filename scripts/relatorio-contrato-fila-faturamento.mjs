@@ -156,8 +156,14 @@ for (const c of coletasDet) {
   const veiculos = Array.isArray(cl?.veiculos_contrato) ? cl.veiculos_contrato : []
   const caminhaoComValor = veiculos.filter((v) => Number(v.valor) > 0 && !v.sem_custo)
 
+  const residuoSugerido =
+    motivo === 'VALOR_ZERO_NO_CONTRATO'
+      ? (match?.tipo_residuo ?? tipoColeta)
+      : tipoColeta
+
   linhas.push({
     numero_coleta: vw.numero_coleta ?? c.numero_coleta,
+    cliente_id: c.cliente_id ?? '',
     cliente: cl?.nome ?? vw.cliente_nome ?? c.cliente ?? '',
     razao_social: cl?.razao_social ?? '',
     mtr: vw.mtr_numero ?? '',
@@ -180,6 +186,11 @@ for (const c of coletasDet) {
         : motivo === 'VALOR_ZERO_NO_CONTRATO'
           ? 'Preencher valor (R$/kg ou unidade) no cadastro do cliente e salvar'
           : 'Migrar/preencher residuos_contrato no cadastro do cliente',
+    residuo_contrato_correto: residuoSugerido,
+    valor_corrigido: '',
+    unidade_medida_nova: match?.unidade_medida ?? 'kg',
+    faturamento_minimo_kg_novo: match?.faturamento_minimo ?? '',
+    confirmado: '',
   })
 }
 
@@ -224,8 +235,9 @@ const xlsxPath = resolve(outDirs[0], `${baseName}.xlsx`)
 const csvPublic = resolve(outDirs[1], `${baseName}.csv`)
 const xlsxPublic = resolve(outDirs[1], `${baseName}.xlsx`)
 
-const headers = [
+const headersLeitura = [
   'numero_coleta',
+  'cliente_id',
   'cliente',
   'razao_social',
   'mtr',
@@ -245,6 +257,26 @@ const headers = [
   'acao_sugerida',
 ]
 
+const headersPreenchimento = [
+  'residuo_contrato_correto',
+  'valor_corrigido',
+  'unidade_medida_nova',
+  'faturamento_minimo_kg_novo',
+  'confirmado',
+]
+
+const headers = [...headersLeitura, ...headersPreenchimento]
+
+const instrucoes = [
+  { campo: 'residuo_contrato_correto', obrigatorio: 'SIM (ajustar se necessário)', descricao: 'Nome do resíduo no cadastro do cliente. Já vem sugerido; altere só se o contrato usar outro nome.' },
+  { campo: 'valor_corrigido', obrigatorio: 'SIM', descricao: 'Valor unitário (R$/kg ou unidade). Ex.: 0,85 ou 1.250,00' },
+  { campo: 'unidade_medida_nova', obrigatorio: 'Não', descricao: 'kg, m3 ou litros. Padrão: kg' },
+  { campo: 'faturamento_minimo_kg_novo', obrigatorio: 'Não', descricao: 'Peso mínimo faturável em kg (ex.: 1000)' },
+  { campo: 'confirmado', obrigatorio: 'SIM para importar', descricao: 'Digite SIM na linha que deve ser aplicada no cadastro. Linhas vazias são ignoradas.' },
+  { campo: '—', obrigatorio: '—', descricao: 'Após preencher, devolva o Excel e rode: npm run importar:contrato-planilha -- caminho/arquivo.xlsx' },
+  { campo: '—', obrigatorio: '—', descricao: 'O script mostra prévia (dry-run). Para gravar: npm run importar:contrato-planilha -- caminho/arquivo.xlsx --apply' },
+]
+
 const csvLines = [
   headers.join(';'),
   ...linhas.map((row) => headers.map((h) => csvEscape(row[h])).join(';')),
@@ -254,8 +286,10 @@ writeFileSync(csvPath, csvContent, 'utf8')
 writeFileSync(csvPublic, csvContent, 'utf8')
 
 const wb = XLSX.utils.book_new()
+const wsInstrucoes = XLSX.utils.json_to_sheet(instrucoes)
 const wsColetas = XLSX.utils.json_to_sheet(linhas, { header: headers })
 const wsResumo = XLSX.utils.json_to_sheet(resumoClientes)
+XLSX.utils.book_append_sheet(wb, wsInstrucoes, 'Como preencher')
 XLSX.utils.book_append_sheet(wb, wsColetas, 'Coletas')
 XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo por cliente')
 XLSX.writeFile(wb, xlsxPath)

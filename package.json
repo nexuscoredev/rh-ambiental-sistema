@@ -21,6 +21,8 @@
     "test": "vitest run",
     "test:faturamento-guard": "vitest run src/lib/faturamentoLogicaCongelada.test.ts src/lib/faturamentoPrecoContrato.test.ts src/lib/faturamentoConsolidacaoMtr.test.ts src/lib/faturamentoRelatorioMedicao.test.ts src/lib/faturamentoDetalheConta.test.ts src/lib/faturamentoDesvinculacao.test.ts src/lib/faturamentoEsteira.test.ts",
     "guard:faturamento": "node scripts/guard-faturamento-logica.mjs",
+    "relatorio:contrato-fila": "node scripts/relatorio-contrato-fila-faturamento.mjs",
+    "importar:contrato-planilha": "node scripts/importar-contrato-planilha.mjs",
     "preview": "vite preview --port 4173 --strictPort",
     "seed:simulacao-coletas": "tsx scripts/seed-simulacao-coletas.ts",
     "seed:fluxo-completo-20": "tsx scripts/seed-fluxo-completo-20.ts",
