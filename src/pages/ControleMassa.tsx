@@ -157,6 +157,40 @@ function normalizarTextoBusca(s: string): string {
     .trim();
 }
 
+type FiltrosColunasListaApoio = {
+  coleta: string;
+  mtr: string;
+  data: string;
+  placa: string;
+  cliente: string;
+  residuo: string;
+  tipo_ticket: string;
+  numero_ticket: string;
+  etapa: string;
+};
+
+const filtrosColunasListaInicial = (): FiltrosColunasListaApoio => ({
+  coleta: "",
+  mtr: "",
+  data: "",
+  placa: "",
+  cliente: "",
+  residuo: "",
+  tipo_ticket: "",
+  numero_ticket: "",
+  etapa: "",
+});
+
+function colunaFiltroCombina(filtro: string, valor: string): boolean {
+  const t = normalizarTextoBusca(filtro);
+  if (!t) return true;
+  return normalizarTextoBusca(valor).includes(t);
+}
+
+function temFiltroColunasListaAtivo(f: FiltrosColunasListaApoio): boolean {
+  return Object.values(f).some((v) => v.trim());
+}
+
 type ColetaOpcao = {
   id: string;
   numero: string;
@@ -962,6 +996,9 @@ export default function ControleMassa() {
   const [tabelaAberta, setTabelaAberta] = useState(false);
   const [filtroOperacao, setFiltroOperacao] = useState<"pendentes" | "hoje" | "todas">("pendentes");
   const [buscaColetasLista, setBuscaColetasLista] = useState("");
+  const [filtrosColunasLista, setFiltrosColunasLista] = useState<FiltrosColunasListaApoio>(
+    filtrosColunasListaInicial
+  );
   const [tipoCaminhaoPorProgramacao, setTipoCaminhaoPorProgramacao] = useState<Record<string, string>>(
     {}
   );
@@ -1006,6 +1043,7 @@ export default function ControleMassa() {
       tabelaAberta,
       filtroOperacao,
       buscaColetasLista,
+      filtrosColunasLista,
       mtrSemColetaSelecionado,
       mtrPickerAberto,
       filtroMtr,
@@ -1017,6 +1055,7 @@ export default function ControleMassa() {
       tabelaAberta,
       filtroOperacao,
       buscaColetasLista,
+      filtrosColunasLista,
       mtrSemColetaSelecionado,
       mtrPickerAberto,
       filtroMtr,
@@ -1035,6 +1074,11 @@ export default function ControleMassa() {
       setTabelaAberta(d.tabelaAberta);
       setFiltroOperacao(d.filtroOperacao);
       setBuscaColetasLista(d.buscaColetasLista);
+      setFiltrosColunasLista(
+        d.filtrosColunasLista
+          ? { ...filtrosColunasListaInicial(), ...d.filtrosColunasLista }
+          : filtrosColunasListaInicial()
+      );
       setMtrSemColetaSelecionado(d.mtrSemColetaSelecionado);
       setMtrPickerAberto(d.mtrPickerAberto);
       setFiltroMtr(d.filtroMtr);
@@ -2953,11 +2997,18 @@ export default function ControleMassa() {
     return arr;
   }, [todasColetas]);
 
+  const coletasListaBase = useMemo(
+    () => (modoTela === "operacao" ? listaOperacao : coletasListaOrdenadas),
+    [modoTela, listaOperacao, coletasListaOrdenadas]
+  );
+
   const coletasListaFiltradas = useMemo(() => {
-    const base = modoTela === "operacao" ? listaOperacao : coletasListaOrdenadas;
     const t = normalizarTextoBusca(buscaColetasLista);
-    if (!t) return base;
-    return base.filter((c) => {
+    const fc = filtrosColunasLista;
+    const filtroCol = temFiltroColunasListaAtivo(fc);
+    if (!t && !filtroCol) return coletasListaBase;
+
+    return coletasListaBase.filter((c) => {
       const mtrNo = c.mtr_id ? mtrsLista.find((m) => m.id === c.mtr_id)?.numero ?? "" : "";
       const tc = c.programacao_id ? tipoCaminhaoPorProgramacao[c.programacao_id] ?? "" : "";
       const up = c.id ? ultimaPesagemPorColeta.get(c.id) : undefined;
@@ -2969,29 +3020,45 @@ export default function ControleMassa() {
           ? dataProgramadaPorProgramacao[c.programacao_id]
           : null,
       });
+      const dataP = dataLista ? formatarDataIsoCurta(dataLista) : "";
       const ticketNo = c.id ? (numeroTicketPorColeta.get(c.id) ?? "").trim() : "";
       const ticketTipo = c.id ? formatarTipoTicketLista(tipoTicketPorColeta.get(c.id)) : "";
-      const blob = [
-        c.numero,
-        c.cliente,
-        c.tipo_residuo,
-        c.placa,
-        c.motorista,
-        mtrNo,
-        tc,
-        formatarEtapaParaUI(c.etapaFluxo),
-        dataLista,
-        ticketNo,
-        ticketTipo,
-      ]
-        .join(" ");
-      return normalizarTextoBusca(blob).includes(t);
+      const etapaUi = formatarEtapaParaUI(c.etapaFluxo);
+
+      if (t) {
+        const blob = [
+          c.numero,
+          c.cliente,
+          c.tipo_residuo,
+          c.placa,
+          c.motorista,
+          mtrNo,
+          tc,
+          etapaUi,
+          dataLista,
+          dataP,
+          ticketNo,
+          ticketTipo,
+        ].join(" ");
+        if (!normalizarTextoBusca(blob).includes(t)) return false;
+      }
+
+      if (!colunaFiltroCombina(fc.coleta, String(c.numero))) return false;
+      if (!colunaFiltroCombina(fc.mtr, mtrNo)) return false;
+      if (!colunaFiltroCombina(fc.data, dataP)) return false;
+      if (!colunaFiltroCombina(fc.placa, c.placa ?? "")) return false;
+      if (!colunaFiltroCombina(fc.cliente, c.cliente ?? "")) return false;
+      if (!colunaFiltroCombina(fc.residuo, c.tipo_residuo ?? "")) return false;
+      if (!colunaFiltroCombina(fc.tipo_ticket, ticketTipo)) return false;
+      if (!colunaFiltroCombina(fc.numero_ticket, ticketNo)) return false;
+      if (!colunaFiltroCombina(fc.etapa, etapaUi)) return false;
+
+      return true;
     });
   }, [
-    coletasListaOrdenadas,
-    listaOperacao,
-    modoTela,
+    coletasListaBase,
     buscaColetasLista,
+    filtrosColunasLista,
     mtrsLista,
     tipoCaminhaoPorProgramacao,
     ultimaPesagemPorColeta,
@@ -2999,6 +3066,21 @@ export default function ControleMassa() {
     tipoTicketPorColeta,
     numeroTicketPorColeta,
   ]);
+
+  const patchFiltroColunaLista = useCallback(
+    (chave: keyof FiltrosColunasListaApoio, valor: string) => {
+      setFiltrosColunasLista((prev) => ({ ...prev, [chave]: valor }));
+    },
+    []
+  );
+
+  const limparFiltrosListaApoio = useCallback(() => {
+    setBuscaColetasLista("");
+    setFiltrosColunasLista(filtrosColunasListaInicial());
+  }, []);
+
+  const temFiltroListaApoioAtivo =
+    Boolean(buscaColetasLista.trim()) || temFiltroColunasListaAtivo(filtrosColunasLista);
 
   return (
     <MainLayout>
@@ -3456,10 +3538,10 @@ export default function ControleMassa() {
                       outline: "none",
                     }}
                   />
-                  {buscaColetasLista.trim() ? (
+                  {temFiltroListaApoioAtivo ? (
                     <button
                       type="button"
-                      onClick={() => setBuscaColetasLista("")}
+                      onClick={limparFiltrosListaApoio}
                       style={{
                         height: "36px",
                         padding: "0 12px",
@@ -3472,7 +3554,7 @@ export default function ControleMassa() {
                         color: "#0f172a",
                       }}
                     >
-                      Limpar filtro
+                      Limpar filtros
                     </button>
                   ) : null}
                   <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 700 }}>
@@ -3480,7 +3562,7 @@ export default function ControleMassa() {
                     <strong style={{ color: "#0f172a" }}>
                       {coletasListaFiltradas.length}
                     </strong>{" "}
-                    de {coletasListaOrdenadas.length}
+                    de {coletasListaBase.length}
                   </span>
                 </div>
               </div>
@@ -3514,16 +3596,15 @@ export default function ControleMassa() {
                   color: "#111827",
                 }}
               >
-                <thead>
-                  <tr
-                    style={{
-                      background: "#f8fafc",
-                      borderBottom: "1px solid #e5e7eb",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 1,
-                    }}
-                  >
+                <thead
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
+                    background: "#f8fafc",
+                  }}
+                >
+                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <th style={thListaColetaStyle}>Coleta</th>
                     <th style={thListaColetaStyle}>MTR</th>
                     <th style={thListaColetaStyle}>Data</th>
@@ -3550,6 +3631,124 @@ export default function ControleMassa() {
                     <th style={{ ...thListaColetaStyle, textAlign: "right" }}>Líq.</th>
                     {modoTela === "auditoria" ? <th style={thListaColetaStyle}>Etapa</th> : null}
                     <th style={{ ...thListaColetaStyle, whiteSpace: "nowrap" }}>Ações</th>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f1f5f9" }}>
+                    <th style={thFiltroColListaStyle}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.coleta}
+                        onChange={(e) => patchFiltroColunaLista("coleta", e.target.value)}
+                        placeholder="N.º"
+                        aria-label="Filtrar coluna coleta"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    <th style={thFiltroColListaStyle}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.mtr}
+                        onChange={(e) => patchFiltroColunaLista("mtr", e.target.value)}
+                        placeholder="MTR"
+                        aria-label="Filtrar coluna MTR"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    <th style={thFiltroColListaStyle}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.data}
+                        onChange={(e) => patchFiltroColunaLista("data", e.target.value)}
+                        placeholder="Data"
+                        aria-label="Filtrar coluna data"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    {modoTela === "auditoria" ? (
+                      <>
+                        <th style={thFiltroColListaStyle} aria-hidden />
+                        <th style={thFiltroColListaStyle} aria-hidden />
+                        <th style={thFiltroColListaStyle}>
+                          <input
+                            type="text"
+                            value={filtrosColunasLista.tipo_ticket}
+                            onChange={(e) => patchFiltroColunaLista("tipo_ticket", e.target.value)}
+                            placeholder="Tipo"
+                            aria-label="Filtrar coluna tipo ticket"
+                            style={inputFiltroColListaStyle}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </th>
+                        <th style={thFiltroColListaStyle}>
+                          <input
+                            type="text"
+                            value={filtrosColunasLista.numero_ticket}
+                            onChange={(e) => patchFiltroColunaLista("numero_ticket", e.target.value)}
+                            placeholder="N.º"
+                            aria-label="Filtrar coluna número ticket"
+                            style={inputFiltroColListaStyle}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </th>
+                      </>
+                    ) : null}
+                    <th style={thFiltroColListaStyle}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.placa}
+                        onChange={(e) => patchFiltroColunaLista("placa", e.target.value)}
+                        placeholder="Placa"
+                        aria-label="Filtrar coluna placa"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    {modoTela === "auditoria" ? <th style={thFiltroColListaStyle} aria-hidden /> : null}
+                    <th style={{ ...thFiltroColListaStyle, minWidth: "140px" }}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.cliente}
+                        onChange={(e) => patchFiltroColunaLista("cliente", e.target.value)}
+                        placeholder="Cliente"
+                        aria-label="Filtrar coluna cliente"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    <th style={{ ...thFiltroColListaStyle, minWidth: "120px" }}>
+                      <input
+                        type="text"
+                        value={filtrosColunasLista.residuo}
+                        onChange={(e) => patchFiltroColunaLista("residuo", e.target.value)}
+                        placeholder="Resíduo"
+                        aria-label="Filtrar coluna resíduo"
+                        style={inputFiltroColListaStyle}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                    {modoTela === "auditoria" ? (
+                      <>
+                        <th style={thFiltroColListaStyle} aria-hidden />
+                        <th style={thFiltroColListaStyle} aria-hidden />
+                      </>
+                    ) : null}
+                    <th style={thFiltroColListaStyle} aria-hidden />
+                    {modoTela === "auditoria" ? (
+                      <th style={thFiltroColListaStyle}>
+                        <input
+                          type="text"
+                          value={filtrosColunasLista.etapa}
+                          onChange={(e) => patchFiltroColunaLista("etapa", e.target.value)}
+                          placeholder="Etapa"
+                          aria-label="Filtrar coluna etapa"
+                          style={inputFiltroColListaStyle}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </th>
+                    ) : null}
+                    <th style={thFiltroColListaStyle} aria-hidden />
                   </tr>
                 </thead>
                 <tbody>
@@ -4524,6 +4723,27 @@ const thListaColetaStyle: CSSProperties = {
   color: "#0f172a",
   whiteSpace: "nowrap",
   fontSize: "11px",
+};
+
+const thFiltroColListaStyle: CSSProperties = {
+  padding: "4px 6px 6px",
+  verticalAlign: "top",
+  background: "#f1f5f9",
+};
+
+const inputFiltroColListaStyle: CSSProperties = {
+  width: "100%",
+  minWidth: "52px",
+  height: "26px",
+  borderRadius: "6px",
+  border: "1px solid #cbd5e1",
+  padding: "0 6px",
+  fontSize: "10px",
+  fontWeight: 600,
+  color: "#0f172a",
+  background: "#ffffff",
+  boxSizing: "border-box",
+  outline: "none",
 };
 
 const tdListaColetaStyle: CSSProperties = {
