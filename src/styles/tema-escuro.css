@@ -335,6 +335,44 @@
   filter: brightness(0.92) contrast(1.04);
 }
 
+[data-theme='dark'] .treinamento-kb__hero-main,
+[data-theme='dark'] .treinamento-kb__trilha-progresso,
+[data-theme='dark'] .treinamento-kb__loja,
+[data-theme='dark'] .treinamento-kb__celebracao {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .treinamento-kb__loja {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-subtle, #1e293b) 100%);
+}
+
+[data-theme='dark'] .treinamento-kb__conquista {
+  background: var(--bg-subtle, #1e293b);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .treinamento-kb__conquista--ok {
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(180, 83, 9, 0.15) 120%);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+[data-theme='dark'] .treinamento-kb__loja-item,
+[data-theme='dark'] .treinamento-kb__next-module,
+[data-theme='dark'] .treinamento-kb__complete {
+  background: var(--bg-subtle, #1e293b);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .treinamento-kb__complete--done {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+[data-theme='dark'] .treinamento-kb__flow-step--done {
+  background: linear-gradient(165deg, var(--bg-card) 0%, rgba(22, 163, 74, 0.1) 100%);
+}
+
 [data-theme='dark'] .rh-modulo__status {
   background: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.3);

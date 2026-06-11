@@ -79,7 +79,13 @@ export default function RhHub() {
                     ))}
                   </ul>
                   <span className="rh-hub__card-footer">
-                    <span className="rh-hub__card-badge">Em breve</span>
+                    <span
+                      className={`rh-hub__card-badge${mod.slug === 'treinamentos' || mod.slug === 'departamento-pessoal' ? ' rh-hub__card-badge--live' : ''}`}
+                    >
+                      {mod.slug === 'treinamentos' || mod.slug === 'departamento-pessoal'
+                        ? 'Disponível'
+                        : 'Em breve'}
+                    </span>
                     <span className="rh-hub__card-cta">Abrir →</span>
                   </span>
                 </Link>

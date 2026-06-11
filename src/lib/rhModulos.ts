@@ -65,7 +65,7 @@ export const RH_MODULOS: readonly RhModulo[] = [
     path: '/rh/treinamentos',
     label: 'Treinamentos',
     descricao:
-      'Base de conhecimento operacional: programação, MTR, ticket, faturamento e financeiro — passo a passo para novos colaboradores.',
+      'Academia RG gamificada: trilha operacional com XP, conquistas e Pontos RG para brindes — onboarding profissional com capturas reais.',
     ordem: 7,
   },
   {

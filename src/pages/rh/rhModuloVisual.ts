@@ -40,7 +40,7 @@ export const RH_MODULO_VISUAL: Record<string, RhModuloVisual> = {
   treinamentos: {
     accent: '#2563eb',
     accentSoft: '#dbeafe',
-    tags: ['Fluxo operacional', 'Onboarding', 'KB'],
+    tags: ['XP', 'Trilha', 'Brindes RG'],
   },
   'documentos-esocial': {
     accent: '#334155',
