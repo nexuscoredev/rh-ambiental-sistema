@@ -1,28 +1,22 @@
 import type { CSSProperties } from 'react'
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import {
-  TreinamentoCardMeta,
   TreinamentoCelebracaoModal,
-  TreinamentoConcluirModulo,
   TreinamentoConquistasGrid,
-  TreinamentoFlowStepBadge,
+  TreinamentoCurriculum,
+  TreinamentoLeituraProgresso,
   TreinamentoLojaBrindes,
+  TreinamentoModuloBloqueado,
   TreinamentoPainelXp,
-  TreinamentoProximoModulo,
+  TreinamentoQuiz,
   TreinamentoTrilhaProgresso,
 } from '../../components/treinamento/TreinamentoGamificacaoUi'
 import { useTreinamentoProgresso } from '../../hooks/useTreinamentoProgresso'
 import MainLayout from '../../layouts/MainLayout'
-import {
-  KB_ARTIGOS_ORDENADOS,
-  KB_ARTIGO_FLUXO_SLUG,
-  KB_FLUXO_ETAPAS,
-  KB_SETORES_APOIO,
-  KB_SETORES_FLUXO,
-  kbArtigoPorSlug,
-} from '../../lib/treinamentoKb/conteudo'
-import type { KbArtigo, KbCaptura, KbSecao } from '../../lib/treinamentoKb/types'
+import { kbArtigoPorSlug } from '../../lib/treinamentoKb/conteudo'
+import { kbUsuarioPodeVerArtigo } from '../../lib/treinamentoKb/treinamentoAcesso'
+import type { KbCaptura, KbSecao } from '../../lib/treinamentoKb/types'
 import { RH_HUB_PATH } from '../../lib/rhModulos'
 import { RhModuloIcon } from './RhModuloIcon'
 import { rhVisual } from './rhModuloVisual'
@@ -39,56 +33,19 @@ function useTreinamentoCtx() {
   return ctx
 }
 
-function KbCardGrid({
-  artigos,
-  isConcluido,
-}: {
-  artigos: typeof KB_ARTIGOS_ORDENADOS
-  isConcluido: (slug: string) => boolean
-}) {
-  return (
-    <div className="treinamento-kb__grid">
-      {artigos.map((art) => {
-        const done = isConcluido(art.slug)
-        return (
-          <Link
-            key={art.slug}
-            to={`${BASE}/${art.slug}`}
-            className={`treinamento-kb__card${done ? ' treinamento-kb__card--done' : ''}`}
-            style={
-              {
-                '--kb-accent': art.accent,
-                '--kb-accent-soft': art.accentSoft,
-              } as CSSProperties
-            }
-          >
-            <TreinamentoCardMeta slug={art.slug} concluido={done} />
-            <span className="treinamento-kb__card-emoji" aria-hidden>
-              {art.emoji}
-            </span>
-            <h3>{art.titulo}</h3>
-            <p>{art.resumo}</p>
-            <ul className="treinamento-kb__card-tags">
-              {art.tags.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
-            <span className="treinamento-kb__card-link">
-              {done ? 'Revisar guia →' : 'Iniciar missão →'}
-            </span>
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
 function TreinamentoKbIndice() {
   const vis = rhVisual('treinamentos')
-  const { stats, isConcluido, celebracao, fecharCelebracao } = useTreinamentoCtx()
+  const {
+    stats,
+    curriculum,
+    celebracao,
+    fecharCelebracao,
+    statusModulo,
+    progressoLeitura,
+  } = useTreinamentoCtx()
 
   return (
-    <div className="page-shell treinamento-kb treinamento-kb--gamified">
+    <div className="page-shell treinamento-kb treinamento-kb--gamified treinamento-kb--course">
       {celebracao ? (
         <TreinamentoCelebracaoModal resultado={celebracao} onFechar={fecharCelebracao} />
       ) : null}
@@ -96,11 +53,11 @@ function TreinamentoKbIndice() {
       <nav className="treinamento-kb__breadcrumb" aria-label="Navegação">
         <Link to={RH_HUB_PATH}>RH</Link>
         <span aria-hidden>/</span>
-        <span>Treinamentos</span>
+        <span>Academia RG</span>
       </nav>
 
       <header
-        className="treinamento-kb__hero treinamento-kb__hero--gamified"
+        className="treinamento-kb__hero treinamento-kb__hero--gamified treinamento-kb__hero--course"
         style={
           {
             '--kb-accent': vis.accent,
@@ -113,88 +70,30 @@ function TreinamentoKbIndice() {
             <RhModuloIcon slug="treinamentos" />
           </div>
           <div className="treinamento-kb__hero-copy">
-            <p className="treinamento-kb__eyebrow">Academia RG · Gamificação</p>
-            <h1 className="treinamento-kb__title">Treinamentos operacionais</h1>
+            <p className="treinamento-kb__eyebrow">Curso corporativo · Certificação RG</p>
+            <h1 className="treinamento-kb__title">Academia RG Ambiental</h1>
             <p className="treinamento-kb__lead">
-              Aprenda o fluxo da RG Ambiental, ganhe XP, suba de nível e acumule Pontos RG para
-              trocar por brindes. Conteúdo visual, passo a passo, pensado para onboarding de
-              qualidade.
+              Trilha de desenvolvimento personalizada pelo seu cargo. Cada módulo exige leitura
+              completa, avaliação aprovada e desbloqueio sequencial — como um curso profissional,
+              com Pontos RG para brindes futuros.
             </p>
           </div>
         </div>
         <TreinamentoPainelXp stats={stats} />
       </header>
 
-      <TreinamentoTrilhaProgresso percentual={stats.percentualTrilha} />
+      <TreinamentoTrilhaProgresso
+        percentual={stats.percentualTrilha}
+        modulosConcluidos={stats.modulosConcluidos}
+        totalModulos={stats.totalModulos}
+      />
 
-      <section className="treinamento-kb__flow" aria-labelledby="kb-flow-title">
-        <div className="treinamento-kb__section-head">
-          <h2 id="kb-flow-title">Trilha principal</h2>
-          <p>Complete na ordem recomendada — cada etapa libera XP e aproxima você da certificação.</p>
-        </div>
-        <div className="treinamento-kb__flow-track">
-          {KB_FLUXO_ETAPAS.map((etapa, i) => {
-            const done = isConcluido(etapa.artigoSlug)
-            return (
-              <Link
-                key={etapa.artigoSlug}
-                to={`${BASE}/${etapa.artigoSlug}`}
-                className={`treinamento-kb__flow-step${done ? ' treinamento-kb__flow-step--done' : ''}`}
-              >
-                <TreinamentoFlowStepBadge concluido={done} />
-                <span className="treinamento-kb__flow-emoji" aria-hidden>
-                  {etapa.emoji}
-                </span>
-                <span className="treinamento-kb__flow-num">Missão {etapa.ordem}</span>
-                <strong>{etapa.titulo}</strong>
-                <span className="treinamento-kb__flow-resumo">{etapa.resumo}</span>
-                {i < KB_FLUXO_ETAPAS.length - 1 ? (
-                  <span className="treinamento-kb__flow-arrow" aria-hidden>
-                    →
-                  </span>
-                ) : null}
-              </Link>
-            )
-          })}
-        </div>
-        <Link to={`${BASE}/${KB_ARTIGO_FLUXO_SLUG}`} className="treinamento-kb__flow-cta">
-          Visão geral do fluxo completo →
-        </Link>
-      </section>
-
-      <section className="treinamento-kb__sectors" aria-labelledby="kb-sectors-title">
-        <div className="treinamento-kb__section-head">
-          <h2 id="kb-sectors-title">Módulos — fluxo operacional</h2>
-          <p>Manuais detalhados com capturas reais do sistema.</p>
-        </div>
-        <KbCardGrid artigos={KB_SETORES_FLUXO} isConcluido={isConcluido} />
-      </section>
-
-      <section className="treinamento-kb__sectors" aria-labelledby="kb-apoio-title">
-        <div className="treinamento-kb__section-head">
-          <h2 id="kb-apoio-title">Setores de apoio</h2>
-          <p>Cadastro, frota e conferência — missões complementares.</p>
-        </div>
-        <div className="treinamento-kb__flow-track treinamento-kb__flow-track--apoio">
-          {KB_SETORES_APOIO.map((etapa) => {
-            const done = isConcluido(etapa.artigoSlug)
-            return (
-              <Link
-                key={etapa.artigoSlug}
-                to={`${BASE}/${etapa.artigoSlug}`}
-                className={`treinamento-kb__flow-step${done ? ' treinamento-kb__flow-step--done' : ''}`}
-              >
-                <TreinamentoFlowStepBadge concluido={done} />
-                <span className="treinamento-kb__flow-emoji" aria-hidden>
-                  {etapa.emoji}
-                </span>
-                <strong>{etapa.titulo}</strong>
-                <span className="treinamento-kb__flow-resumo">{etapa.resumo}</span>
-              </Link>
-            )
-          })}
-        </div>
-      </section>
+      <TreinamentoCurriculum
+        artigos={curriculum}
+        base={BASE}
+        statusModulo={statusModulo}
+        progressoLeitura={progressoLeitura}
+      />
 
       <TreinamentoConquistasGrid desbloqueadas={stats.conquistasDesbloqueadas} />
       <TreinamentoLojaBrindes pontos={stats.pontosResgate} />
@@ -216,10 +115,43 @@ function CapturasKb({ capturas }: { capturas: KbCaptura[] }) {
   )
 }
 
-function SecaoKb({ secao }: { secao: KbSecao }) {
+function SecaoKb({
+  secao,
+  lida,
+  onVisible,
+}: {
+  secao: KbSecao
+  lida: boolean
+  onVisible: (secaoId: string) => void
+}) {
+  const ref = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || lida) return
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.6)) {
+          onVisible(secao.id)
+        }
+      },
+      { threshold: [0.6] },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [secao.id, lida, onVisible])
+
   return (
-    <section id={secao.id} className="treinamento-kb__article-section">
-      <h2>{secao.titulo}</h2>
+    <section
+      ref={ref}
+      id={secao.id}
+      className={`treinamento-kb__article-section${lida ? ' treinamento-kb__article-section--read' : ''}`}
+    >
+      <div className="treinamento-kb__section-title-row">
+        <h2>{secao.titulo}</h2>
+        {lida ? <span className="treinamento-kb__section-read">✓ Lida</span> : null}
+      </div>
       {secao.paragrafos?.map((p) => (
         <p key={p.slice(0, 40)} className="treinamento-kb__p">
           {p}
@@ -275,9 +207,38 @@ function SecaoKb({ secao }: { secao: KbSecao }) {
   )
 }
 
-function TreinamentoKbArtigo({ artigo }: { artigo: KbArtigo }) {
-  const { isConcluido, concluirModulo, celebracao, fecharCelebracao } = useTreinamentoCtx()
+function TreinamentoKbArtigoRoute() {
+  const { artigoSlug } = useParams<{ artigoSlug: string }>()
+  const artigo = kbArtigoPorSlug(artigoSlug)
+  const ctx = useTreinamentoCtx()
+  const {
+    usuario,
+    isConcluido,
+    statusModulo,
+    marcarSecaoLida,
+    secoesLidasDoModulo,
+    leituraCompleta,
+    progressoLeitura,
+    certificarModuloQuiz,
+    celebracao,
+    fecharCelebracao,
+    curriculum,
+  } = ctx
+
+  if (!artigo) return <Navigate to={BASE} replace />
+
+  if (!kbUsuarioPodeVerArtigo(artigo.slug, usuario)) {
+    return <TreinamentoModuloBloqueado titulo={artigo.titulo} motivo="sem_acesso" base={BASE} />
+  }
+
+  const status = statusModulo(artigo.slug)
+  if (status === 'bloqueado_prereq') {
+    return <TreinamentoModuloBloqueado titulo={artigo.titulo} motivo="prerequisito" base={BASE} />
+  }
+
   const concluido = isConcluido(artigo.slug)
+  const lidas = secoesLidasDoModulo(artigo.slug)
+  const prog = progressoLeitura(artigo.slug)
 
   return (
     <div className="page-shell treinamento-kb treinamento-kb--article treinamento-kb--gamified">
@@ -288,7 +249,7 @@ function TreinamentoKbArtigo({ artigo }: { artigo: KbArtigo }) {
       <nav className="treinamento-kb__breadcrumb" aria-label="Navegação">
         <Link to={RH_HUB_PATH}>RH</Link>
         <span aria-hidden>/</span>
-        <Link to={BASE}>Treinamentos</Link>
+        <Link to={BASE}>Academia RG</Link>
         <span aria-hidden>/</span>
         <span>{artigo.titulo}</span>
       </nav>
@@ -306,7 +267,6 @@ function TreinamentoKbArtigo({ artigo }: { artigo: KbArtigo }) {
           {artigo.emoji}
         </span>
         <div>
-          <TreinamentoCardMeta slug={artigo.slug} concluido={concluido} />
           <h1>{artigo.titulo}</h1>
           <p className="treinamento-kb__article-lead">{artigo.resumo}</p>
           <ul className="treinamento-kb__card-tags">
@@ -322,19 +282,24 @@ function TreinamentoKbArtigo({ artigo }: { artigo: KbArtigo }) {
         ) : null}
       </header>
 
+      <TreinamentoLeituraProgresso lidas={prog.lidas} total={prog.total} percentual={prog.percentual} />
+
       <div className="treinamento-kb__article-layout">
         <nav className="treinamento-kb__toc" aria-label="Índice do artigo">
-          <h2>Neste guia</h2>
+          <h2>Neste módulo</h2>
           <ul>
             {artigo.secoes.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`}>{s.titulo}</a>
+                <a href={`#${s.id}`}>
+                  {lidas.includes(s.id) ? '✓ ' : ''}
+                  {s.titulo}
+                </a>
               </li>
             ))}
           </ul>
-          <h2>Outros módulos</h2>
+          <h2>Sua trilha</h2>
           <ul>
-            {KB_ARTIGOS_ORDENADOS.filter((a) => a.slug !== artigo.slug).map((a) => (
+            {curriculum.map((a) => (
               <li key={a.slug}>
                 <Link to={`${BASE}/${a.slug}`}>
                   {a.emoji} {a.titulo}
@@ -343,63 +308,31 @@ function TreinamentoKbArtigo({ artigo }: { artigo: KbArtigo }) {
               </li>
             ))}
           </ul>
-          <TreinamentoConcluirModulo
-            slug={artigo.slug}
-            titulo={artigo.titulo}
-            concluido={concluido}
-            onConcluir={() => concluirModulo(artigo.slug)}
-          />
           <Link to={BASE} className="treinamento-kb__back">
             ← Academia RG
           </Link>
         </nav>
 
         <article className="treinamento-kb__article-body">
-          {artigo.slug === KB_ARTIGO_FLUXO_SLUG ? (
-            <div className="treinamento-kb__flow treinamento-kb__flow--inline">
-              <div className="treinamento-kb__flow-track">
-                {KB_FLUXO_ETAPAS.map((etapa, i) => (
-                  <Link
-                    key={etapa.artigoSlug}
-                    to={`${BASE}/${etapa.artigoSlug}`}
-                    className="treinamento-kb__flow-step treinamento-kb__flow-step--compact"
-                  >
-                    <span className="treinamento-kb__flow-emoji">{etapa.emoji}</span>
-                    <strong>{etapa.titulo}</strong>
-                    {i < KB_FLUXO_ETAPAS.length - 1 ? (
-                      <span className="treinamento-kb__flow-arrow">→</span>
-                    ) : null}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
           {artigo.secoes.map((sec) => (
-            <SecaoKb key={sec.id} secao={sec} />
+            <SecaoKb
+              key={sec.id}
+              secao={sec}
+              lida={lidas.includes(sec.id)}
+              onVisible={(id) => marcarSecaoLida(artigo.slug, id)}
+            />
           ))}
-          <TreinamentoConcluirModulo
+
+          <TreinamentoQuiz
             slug={artigo.slug}
-            titulo={artigo.titulo}
+            leituraCompleta={leituraCompleta(artigo.slug)}
             concluido={concluido}
-            onConcluir={() => concluirModulo(artigo.slug)}
-          />
-          <TreinamentoProximoModulo
-            artigoAtual={artigo}
-            artigos={KB_ARTIGOS_ORDENADOS}
-            base={BASE}
-            isConcluido={isConcluido}
+            onCertificar={(respostas) => certificarModuloQuiz(artigo.slug, respostas)}
           />
         </article>
       </div>
     </div>
   )
-}
-
-function TreinamentoKbArtigoRoute() {
-  const { artigoSlug } = useParams<{ artigoSlug: string }>()
-  const artigo = kbArtigoPorSlug(artigoSlug)
-  if (!artigo) return <Navigate to={BASE} replace />
-  return <TreinamentoKbArtigo artigo={artigo} />
 }
 
 function TreinamentoRoutes() {
@@ -412,7 +345,7 @@ function TreinamentoRoutes() {
   )
 }
 
-/** KB de treinamento operacional gamificada — montada em `/rh/treinamentos/*`. */
+/** Academia RG — curso gamificado por cargo em `/rh/treinamentos/*`. */
 export default function RhTreinamentosArea() {
   const progresso = useTreinamentoProgresso()
 

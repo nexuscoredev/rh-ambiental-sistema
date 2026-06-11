@@ -373,6 +373,25 @@
   background: linear-gradient(165deg, var(--bg-card) 0%, rgba(22, 163, 74, 0.1) 100%);
 }
 
+[data-theme='dark'] .treinamento-kb__curriculum-list,
+[data-theme='dark'] .treinamento-kb__curriculum-item,
+[data-theme='dark'] .treinamento-kb__quiz,
+[data-theme='dark'] .treinamento-kb__leitura,
+[data-theme='dark'] .treinamento-kb__blocked {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .treinamento-kb__curriculum-item--concluido {
+  background: linear-gradient(90deg, rgba(22, 163, 74, 0.12) 0%, var(--bg-card) 50%);
+}
+
+[data-theme='dark'] .treinamento-kb__quiz-opcao {
+  background: var(--bg-subtle, #1e293b);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
 [data-theme='dark'] .rh-modulo__status {
   background: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.3);

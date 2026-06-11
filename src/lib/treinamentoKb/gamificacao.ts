@@ -3,9 +3,13 @@
 export type KbNivelDificuldade = 'Iniciante' | 'Intermediário' | 'Avançado'
 
 export type KbArtigoMeta = {
-  xpRecompensa: number
+  /** XP base ao certificar (após quiz + leitura). */
+  xpCertificacao: number
+  /** XP por secção lida (engajamento). */
+  xpPorSecao: number
   duracaoMin: number
   nivel: KbNivelDificuldade
+  fase: number
 }
 
 export type KbNivelJogador = {
@@ -35,34 +39,89 @@ export type KbBrinde = {
   disponivel: boolean
 }
 
-/** Metadados por artigo — XP e tempo estimado de leitura. */
+/** Metadados por artigo — trilha de desenvolvimento (XP exige leitura + quiz). */
 export const KB_ARTIGO_META: Record<string, KbArtigoMeta> = {
-  'fluxo-completo': { xpRecompensa: 120, duracaoMin: 12, nivel: 'Iniciante' },
-  programacao: { xpRecompensa: 100, duracaoMin: 10, nivel: 'Iniciante' },
-  mtr: { xpRecompensa: 100, duracaoMin: 12, nivel: 'Intermediário' },
-  'ticket-pesagem': { xpRecompensa: 100, duracaoMin: 10, nivel: 'Intermediário' },
-  faturamento: { xpRecompensa: 120, duracaoMin: 14, nivel: 'Avançado' },
-  financeiro: { xpRecompensa: 100, duracaoMin: 10, nivel: 'Intermediário' },
-  frota: { xpRecompensa: 80, duracaoMin: 8, nivel: 'Iniciante' },
-  clientes: { xpRecompensa: 90, duracaoMin: 10, nivel: 'Intermediário' },
-  'conferencia-transporte': { xpRecompensa: 80, duracaoMin: 8, nivel: 'Iniciante' },
+  'fluxo-completo': {
+    xpCertificacao: 80,
+    xpPorSecao: 8,
+    duracaoMin: 15,
+    nivel: 'Iniciante',
+    fase: 1,
+  },
+  programacao: {
+    xpCertificacao: 100,
+    xpPorSecao: 10,
+    duracaoMin: 12,
+    nivel: 'Iniciante',
+    fase: 2,
+  },
+  clientes: {
+    xpCertificacao: 90,
+    xpPorSecao: 10,
+    duracaoMin: 12,
+    nivel: 'Intermediário',
+    fase: 2,
+  },
+  mtr: {
+    xpCertificacao: 110,
+    xpPorSecao: 10,
+    duracaoMin: 14,
+    nivel: 'Intermediário',
+    fase: 3,
+  },
+  'ticket-pesagem': {
+    xpCertificacao: 110,
+    xpPorSecao: 10,
+    duracaoMin: 12,
+    nivel: 'Intermediário',
+    fase: 3,
+  },
+  'conferencia-transporte': {
+    xpCertificacao: 85,
+    xpPorSecao: 8,
+    duracaoMin: 10,
+    nivel: 'Iniciante',
+    fase: 3,
+  },
+  frota: {
+    xpCertificacao: 85,
+    xpPorSecao: 8,
+    duracaoMin: 10,
+    nivel: 'Iniciante',
+    fase: 4,
+  },
+  faturamento: {
+    xpCertificacao: 140,
+    xpPorSecao: 12,
+    duracaoMin: 18,
+    nivel: 'Avançado',
+    fase: 4,
+  },
+  financeiro: {
+    xpCertificacao: 120,
+    xpPorSecao: 10,
+    duracaoMin: 14,
+    nivel: 'Avançado',
+    fase: 5,
+  },
 }
 
+/** Níveis mais exigentes — curso completo leva semanas. */
 export const KB_NIVEIS: KbNivelJogador[] = [
   {
     nivel: 1,
     titulo: 'Aprendiz RG',
     xpMin: 0,
-    xpMax: 199,
+    xpMax: 349,
     cor: '#64748b',
     corSuave: '#f1f5f9',
     emoji: '🌱',
   },
   {
     nivel: 2,
-    titulo: 'Operador',
-    xpMin: 200,
-    xpMax: 449,
+    titulo: 'Operador certificado',
+    xpMin: 350,
+    xpMax: 799,
     cor: '#0d9488',
     corSuave: '#ccfbf1',
     emoji: '⚙️',
@@ -70,8 +129,8 @@ export const KB_NIVEIS: KbNivelJogador[] = [
   {
     nivel: 3,
     titulo: 'Especialista',
-    xpMin: 450,
-    xpMax: 749,
+    xpMin: 800,
+    xpMax: 1399,
     cor: '#2563eb',
     corSuave: '#dbeafe',
     emoji: '🎯',
@@ -79,16 +138,16 @@ export const KB_NIVEIS: KbNivelJogador[] = [
   {
     nivel: 4,
     titulo: 'Mestre Ambiental',
-    xpMin: 750,
-    xpMax: 1099,
+    xpMin: 1400,
+    xpMax: 2199,
     cor: '#7c3aed',
     corSuave: '#ede9fe',
     emoji: '🏆',
   },
   {
     nivel: 5,
-    titulo: 'Lenda RG',
-    xpMin: 1100,
+    titulo: 'Embaixador RG',
+    xpMin: 2200,
     xpMax: null,
     cor: '#b45309',
     corSuave: '#fef3c7',
@@ -98,46 +157,39 @@ export const KB_NIVEIS: KbNivelJogador[] = [
 
 export const KB_CONQUISTAS: KbConquista[] = [
   {
-    id: 'primeira_missao',
-    titulo: 'Primeira missão',
-    descricao: 'Concluiu o primeiro módulo de treinamento.',
+    id: 'primeira_certificacao',
+    titulo: 'Primeira certificação',
+    descricao: 'Aprovou o quiz e certificou o primeiro módulo do seu perfil.',
     emoji: '🚀',
-    xpBonus: 25,
+    xpBonus: 30,
   },
   {
-    id: 'trilha_fluxo',
-    titulo: 'Trilha operacional',
-    descricao: 'Completou todos os módulos do fluxo principal.',
-    emoji: '🔄',
-    xpBonus: 75,
-  },
-  {
-    id: 'trilha_apoio',
-    titulo: 'Suporte total',
-    descricao: 'Dominou Frota, Clientes e Conferência de transportes.',
-    emoji: '🛡️',
-    xpBonus: 60,
-  },
-  {
-    id: 'trilha_mestre',
-    titulo: 'Certificação RG',
-    descricao: 'Concluiu 100% da base de conhecimento operacional.',
+    id: 'trilha_perfil',
+    titulo: 'Trilha do perfil',
+    descricao: 'Certificou 100% dos módulos liberados para o seu cargo.',
     emoji: '🎓',
-    xpBonus: 150,
+    xpBonus: 200,
   },
   {
     id: 'sequencia_3',
     titulo: 'Constância',
-    descricao: 'Estudou 3 dias seguidos na plataforma.',
+    descricao: 'Estudou 3 dias seguidos.',
     emoji: '🔥',
-    xpBonus: 40,
+    xpBonus: 50,
   },
   {
     id: 'sequencia_7',
     titulo: 'Dedicação',
-    descricao: 'Manteve sequência de 7 dias de aprendizado.',
+    descricao: 'Manteve sequência de 7 dias.',
     emoji: '💎',
-    xpBonus: 100,
+    xpBonus: 120,
+  },
+  {
+    id: 'quiz_perfeito',
+    titulo: 'Precisão total',
+    descricao: 'Acertou 100% em 3 avaliações seguidas.',
+    emoji: '🎯',
+    xpBonus: 80,
   },
 ]
 
@@ -147,55 +199,50 @@ export const KB_BRINDES: KbBrinde[] = [
     titulo: 'Caneca RG Ambiental',
     descricao: 'Caneca térmica sustentável com logo oficial.',
     emoji: '☕',
-    pontosNecessarios: 400,
+    pontosNecessarios: 1800,
     disponivel: false,
   },
   {
     id: 'camiseta',
     titulo: 'Camiseta oficial',
-    descricao: 'Camiseta algodão orgânico — tamanho a escolher com RH.',
+    descricao: 'Algodão orgânico — tamanho com RH.',
     emoji: '👕',
-    pontosNecessarios: 800,
+    pontosNecessarios: 3200,
     disponivel: false,
   },
   {
     id: 'kit',
     titulo: 'Kit sustentabilidade',
-    descricao: 'Garrafa reutilizável + ecobag + adesivos RG.',
+    descricao: 'Garrafa + ecobag + adesivos RG.',
     emoji: '🎁',
-    pontosNecessarios: 1200,
+    pontosNecessarios: 4800,
     disponivel: false,
   },
   {
     id: 'vale',
     titulo: 'Vale-presente parceiro',
-    descricao: 'Parceria local — consulte RH para opções disponíveis.',
+    descricao: 'Consulte RH para opções.',
     emoji: '🎫',
-    pontosNecessarios: 2000,
+    pontosNecessarios: 6500,
     disponivel: false,
   },
 ]
 
-export const KB_FLUXO_SLUGS = [
-  'programacao',
-  'mtr',
-  'ticket-pesagem',
-  'faturamento',
-  'financeiro',
-] as const
-
-export const KB_APOIO_SLUGS_GAM = ['frota', 'clientes', 'conferencia-transporte'] as const
-
-export const KB_TOTAL_ARTIGOS = 9
-
 export function kbMetaArtigo(slug: string): KbArtigoMeta {
-  return KB_ARTIGO_META[slug] ?? { xpRecompensa: 50, duracaoMin: 8, nivel: 'Iniciante' }
+  return (
+    KB_ARTIGO_META[slug] ?? {
+      xpCertificacao: 60,
+      xpPorSecao: 6,
+      duracaoMin: 10,
+      nivel: 'Iniciante',
+      fase: 1,
+    }
+  )
 }
 
-export function kbXpTotalPossivel(): number {
-  const base = Object.values(KB_ARTIGO_META).reduce((s, m) => s + m.xpRecompensa, 0)
-  const bonus = KB_CONQUISTAS.reduce((s, c) => s + c.xpBonus, 0)
-  return base + bonus
+/** @deprecated use xpCertificacao */
+export function kbXpRecompensaModulo(slug: string): number {
+  return kbMetaArtigo(slug).xpCertificacao
 }
 
 export function kbNivelPorXp(xp: number): KbNivelJogador {
