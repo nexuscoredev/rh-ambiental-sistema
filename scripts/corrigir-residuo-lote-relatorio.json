@@ -1,0 +1,17 @@
+{
+  "dryRun": false,
+  "dias": 365,
+  "ok": 1,
+  "falhas": 0,
+  "totalRegs": 0,
+  "itens": [
+    {
+      "coleta": 90012,
+      "cliente": "AUTOKIT IND. E COM. DE ARTEFATOS DE BORRACHA LTDA.",
+      "mtr": "MTR-20260526-101310",
+      "de": "RECICLADO",
+      "para": "BORRACHA - IBC",
+      "fonte_mtr_itens": "BORRACHA - IBC — —"
+    }
+  ]
+}
