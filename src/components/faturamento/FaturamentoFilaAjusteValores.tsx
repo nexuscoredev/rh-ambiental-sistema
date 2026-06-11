@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { FaturamentoResumoViewRow } from '../../lib/faturamentoResumo'
 import { agruparFilaFaturamentoPorMtr } from '../../lib/faturamentoConsolidacaoMtr'
@@ -6,6 +6,9 @@ import {
   coletaNaFilaAjusteValoresMedicao,
   rotuloEsteiraLinha,
 } from '../../lib/faturamentoEsteira'
+
+const FILA_AJUSTE_VISIVEL_INICIAL = 5
+const FILA_AJUSTE_CARREGAR_MAIS = 20
 
 const card: CSSProperties = {
   background: '#fff',
@@ -33,6 +36,17 @@ export function FaturamentoFilaAjusteValores({
 }: Props) {
   const pendentes = useMemo(() => linhas.filter(coletaNaFilaAjusteValoresMedicao), [linhas])
   const itensMtr = useMemo(() => agruparFilaFaturamentoPorMtr(pendentes), [pendentes])
+  const [visiveis, setVisiveis] = useState(FILA_AJUSTE_VISIVEL_INICIAL)
+
+  useEffect(() => {
+    setVisiveis(FILA_AJUSTE_VISIVEL_INICIAL)
+  }, [linhas])
+
+  const itensVisiveis = useMemo(() => itensMtr.slice(0, visiveis), [itensMtr, visiveis])
+  const restantes = Math.max(0, itensMtr.length - visiveis)
+  const proximoLote = Math.min(FILA_AJUSTE_CARREGAR_MAIS, restantes)
+  const listaExpandida = visiveis > FILA_AJUSTE_VISIVEL_INICIAL
+  const mostrarControlesLista = itensMtr.length > FILA_AJUSTE_VISIVEL_INICIAL
 
   if (carregando || pendentes.length === 0) {
     return null
@@ -54,8 +68,15 @@ export function FaturamentoFilaAjusteValores({
         </p>
       ) : null}
 
+      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+        {itensMtr.length} na fila
+        {mostrarControlesLista
+          ? ` · a mostrar ${Math.min(visiveis, itensMtr.length)}`
+          : null}
+      </p>
+
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {itensMtr.map((item) => {
+        {itensVisiveis.map((item) => {
           if (item.kind === 'unico') {
             const lider = item.row
             return (
@@ -122,6 +143,49 @@ export function FaturamentoFilaAjusteValores({
           )
         })}
       </ul>
+
+      {mostrarControlesLista ? (
+        <div
+          style={{
+            marginTop: '14px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '10px',
+            alignItems: 'center',
+          }}
+        >
+          {restantes > 0 ? (
+            <>
+              <button
+                type="button"
+                className="rg-btn rg-btn--outline"
+                style={{ fontSize: 13, padding: '10px 16px', fontWeight: 700 }}
+                onClick={() => setVisiveis((v) => v + proximoLote)}
+              >
+                Carregar mais {proximoLote} ({restantes} restante{restantes === 1 ? '' : 's'})
+              </button>
+              <button
+                type="button"
+                className="rg-btn rg-btn--outline"
+                style={{ fontSize: 12, padding: '8px 12px' }}
+                onClick={() => setVisiveis(itensMtr.length)}
+              >
+                Mostrar todos ({itensMtr.length})
+              </button>
+            </>
+          ) : null}
+          {listaExpandida ? (
+            <button
+              type="button"
+              className="rg-btn rg-btn--outline"
+              style={{ fontSize: 12, padding: '8px 12px', fontWeight: 700 }}
+              onClick={() => setVisiveis(FILA_AJUSTE_VISIVEL_INICIAL)}
+            >
+              Recolher lista (mostrar {FILA_AJUSTE_VISIVEL_INICIAL})
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   )
 }
