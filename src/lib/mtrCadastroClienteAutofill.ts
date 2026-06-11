@@ -289,13 +289,10 @@ export type GeradorCidadePatch = {
 }
 
 /** Campo «Atividade» (secção 1. Gerador) — observações do cadastro; não usar tipo de serviço da programação. */
-export function atividadeGeradorDesdeClienteProgramacao(
-  row: {
-    observacoes_operacionais?: string | null
-    observacoes_gerais?: string | null
-  },
-  _programacao: { tipo_servico?: string | null }
-): string {
+export function atividadeGeradorDesdeClienteProgramacao(row: {
+  observacoes_operacionais?: string | null
+  observacoes_gerais?: string | null
+}): string {
   const obs = (s: string | null | undefined, max = 120) => (s ?? '').trim().slice(0, max)
   const candidatos = [obs(row.observacoes_operacionais), obs(row.observacoes_gerais)].filter(Boolean)
   for (const c of candidatos) {

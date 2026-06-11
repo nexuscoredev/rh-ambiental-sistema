@@ -14,6 +14,7 @@ import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
 import { PresencaAoVivoProvider } from './contexts/PresencaAoVivoContext'
 import { RgDialogProvider } from './lib/RgDialogProvider'
+import { TemaAplicacaoProvider } from './lib/TemaAplicacaoProvider'
 import { PwaPremiumShell } from './components/pwa/PwaPremiumShell'
 
 import Login from './pages/Login'
@@ -408,6 +409,7 @@ function App() {
 
   return (
     <PerfilUsuarioProvider value={{ usuario, carregandoUsuario }}>
+      <TemaAplicacaoProvider>
       <RgDialogProvider>
       <BrowserRouter>
         <PwaPremiumShell />
@@ -1030,6 +1032,7 @@ function App() {
         </ChatFloatProvider>
     </BrowserRouter>
       </RgDialogProvider>
+      </TemaAplicacaoProvider>
     </PerfilUsuarioProvider>
   )
 }

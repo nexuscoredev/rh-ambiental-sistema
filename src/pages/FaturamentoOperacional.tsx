@@ -50,6 +50,7 @@ import {
   type PassoUiEsteiraFaturamento,
 } from '../lib/faturamentoEsteira'
 import { FaturamentoModalRegisto } from '../components/faturamento/FaturamentoModalRegisto'
+import { enriquecerLinhaResiduoDesdeMtr } from '../lib/faturamentoOperacionalSync'
 import { RhHubHeroBanner } from '../components/hub/RhHubHeroBanner'
 import {
   escolherColetaLiderFaturamento,
@@ -298,6 +299,40 @@ export default function FaturamentoOperacional() {
     if (modalGrupo.length > 1) return escolherColetaLiderFaturamento(modalGrupo)
     return linhasView.find((r) => r.coleta_id === modalColetaId) ?? null
   }, [linhasView, modalColetaId, modalGrupo])
+
+  const [modalRowEnriquecida, setModalRowEnriquecida] = useState<FaturamentoResumoViewRow | null>(
+    null
+  )
+  const [modalGrupoEnriquecido, setModalGrupoEnriquecido] = useState<
+    FaturamentoResumoViewRow[] | undefined
+  >(undefined)
+
+  useEffect(() => {
+    if (!modalAberto || !modalRow) {
+      setModalRowEnriquecida(null)
+      setModalGrupoEnriquecido(undefined)
+      return
+    }
+    let cancel = false
+    void (async () => {
+      const row = await enriquecerLinhaResiduoDesdeMtr(modalRow)
+      let grupo: FaturamentoResumoViewRow[] | undefined
+      if (modalGrupo.length > 1) {
+        grupo = await Promise.all(modalGrupo.map((c) => enriquecerLinhaResiduoDesdeMtr(c)))
+      }
+      if (!cancel) {
+        setModalRowEnriquecida(row)
+        setModalGrupoEnriquecido(grupo)
+      }
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [modalAberto, modalRow, modalGrupo])
+
+  const modalRowParaModal = modalRowEnriquecida ?? modalRow
+  const modalGrupoParaModal =
+    modalGrupoEnriquecido ?? (modalGrupo.length > 1 ? modalGrupo : undefined)
 
   const linhaContextoEsteira = useMemo((): FaturamentoResumoViewRow | null => {
     if (modalColetaId) {
@@ -671,8 +706,8 @@ export default function FaturamentoOperacional() {
 
       <FaturamentoModalRegisto
         open={modalAberto && modalPreparacaoMedicao}
-        row={modalRow}
-        coletasConsolidadas={modalGrupo.length > 1 ? modalGrupo : undefined}
+        row={modalRowParaModal}
+        coletasConsolidadas={modalGrupoParaModal}
         modoPreparacaoMedicao={modalPreparacaoMedicao}
         podeConfirmarEmissao={podeConfirmarEmissao}
         podeEditarResumosFinanceiros={podeEditarResumos}

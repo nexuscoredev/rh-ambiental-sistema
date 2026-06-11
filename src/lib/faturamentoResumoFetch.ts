@@ -340,7 +340,7 @@ export async function fetchVwFaturamentoResumoPorMtrId(
   let ticketAprovacaoAtivo = true
   let esteiraMedicaoAtiva = true
 
-  let qb = supabase
+  const qb = supabase
     .from('vw_faturamento_resumo')
     .select(sel)
     .eq('mtr_id', mid)

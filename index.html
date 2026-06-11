@@ -19,6 +19,16 @@
     <meta name="apple-mobile-web-app-title" content="RG Ambiental" />
     <meta name="format-detection" content="telephone=no" />
     <title>Sistema RG Ambiental</title>
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('rg-tema-aplicacao') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ChatAvatar } from '../components/chat/ChatAvatar'
+import { TemaToggle } from '../components/layout/TemaToggle'
 import { usePerfilUsuario } from '../contexts/PerfilUsuarioContext'
+import { useTemaAplicacao } from '../lib/TemaAplicacaoProvider'
 import MainLayout from '../layouts/MainLayout'
 import { alterarSenhaPropria, SENHA_MINIMA_CARACTERES } from '../lib/alterarSenhaPropria'
 import {
@@ -13,6 +15,7 @@ import { supabase } from '../lib/supabase'
 
 export default function MinhaConta() {
   const { usuario } = usePerfilUsuario()
+  const { tema } = useTemaAplicacao()
   const [fotoUrl, setFotoUrl] = useState<string | null>(usuario?.foto_url ?? null)
   const [senhaAtual, setSenhaAtual] = useState('')
   const [senhaNova, setSenhaNova] = useState('')
@@ -234,6 +237,22 @@ export default function MinhaConta() {
               Voltar ao início
             </Link>
           </aside>
+
+          <section className="minha-conta__card minha-conta__card--tema" aria-labelledby="minha-conta-tema">
+            <h3 id="minha-conta-tema" className="minha-conta__card-title">
+              Aparência
+            </h3>
+            <p className="minha-conta__card-lead">
+              Escolha entre tema claro ou escuro. A preferência fica guardada neste navegador e também
+              pode ser alterada pelo botão no cabeçalho.
+            </p>
+            <div className="minha-conta__tema-row">
+              <TemaToggle />
+              <span className="minha-conta__tema-atual">
+                Atual: {tema === 'dark' ? 'Escuro' : 'Claro'}
+              </span>
+            </div>
+          </section>
         </div>
       </div>
     </MainLayout>

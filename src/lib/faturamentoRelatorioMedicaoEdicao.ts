@@ -92,7 +92,7 @@ export function aplicarRascunhoLinhaMedicao(
   const vt = parseNumeroCampoMedicao(draft.valorTaxa)
   const totFixo = draft.totalManual ? parseNumeroCampoMedicao(draft.total) : null
 
-  let next: LinhaRelatorioMedicao = { ...linha }
+  const next: LinhaRelatorioMedicao = { ...linha }
   if (qv != null) next.quantViagens = Math.max(0, Math.round(qv))
   if (vf != null) next.valorFrete = vf
   if (pk != null) next.pesoKg = pk

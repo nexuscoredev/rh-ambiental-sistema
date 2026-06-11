@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { rbacPode, type UsuarioAcessoContext } from '../lib/rbac'
 import { useUsuarioAcesso } from '../lib/useUsuarioAcesso'
 
@@ -14,5 +13,5 @@ export function frotaPermissoesDe(ctx: UsuarioAcessoContext) {
 /** Permissões UI da frota (edição, inclusão, relatório; exclusão só Comercial Adm). */
 export function useFrotaPermissoes() {
   const ctx = useUsuarioAcesso()
-  return useMemo(() => frotaPermissoesDe(ctx), [ctx.cargo, ctx.nome, ctx.email])
+  return frotaPermissoesDe(ctx)
 }

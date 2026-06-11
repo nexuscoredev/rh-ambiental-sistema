@@ -39,6 +39,7 @@ import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
+import { TemaToggle } from '../components/layout/TemaToggle'
 import { BRAND_LOGO_MARK } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
 import { useRgDialog } from '../lib/RgDialogProvider'
@@ -647,6 +648,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <LayoutCabecalhoBusca usuario={usuario} />
 
           <div className="layout-header-actions">
+            <TemaToggle />
+
             <select
               className={`layout-presenca-select layout-presenca-select--${presenca}`}
               value={presenca}

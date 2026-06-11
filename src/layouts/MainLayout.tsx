@@ -40,6 +40,7 @@ import { useLayoutMobile } from '../hooks/useMediaQuery'
 import { ChatInternoFloating } from '../components/chat/ChatInternoFloating'
 import SolicitarAjusteSistemaFloat from '../components/SolicitarAjusteSistemaFloat'
 import { LayoutCabecalhoBusca } from '../components/layout/LayoutCabecalhoBusca'
+import { TemaToggle } from '../components/layout/TemaToggle'
 import { SidebarNavMenu } from '../components/layout/SidebarNavMenu'
 import { BRAND_LOGO_MARK, BRAND_LOGO_SIGLA } from '../lib/brandLogo'
 import { useVersaoRgExibir } from '../lib/appDisplayVersion'
@@ -810,6 +811,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <LayoutCabecalhoBusca usuario={usuario} />
 
           <div className="layout-header-actions">
+            <TemaToggle />
+
             <select
               className={`layout-presenca-select layout-presenca-select--${presenca}`}
               value={presenca}

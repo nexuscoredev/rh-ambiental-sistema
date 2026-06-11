@@ -65,7 +65,7 @@ export const RH_MODULOS: readonly RhModulo[] = [
     path: '/rh/treinamentos',
     label: 'Treinamentos',
     descricao:
-      'Capacitações obrigatórias, NR, certificados, calendário de treinamentos e registro de presença.',
+      'Base de conhecimento operacional: programação, MTR, ticket, faturamento e financeiro — passo a passo para novos colaboradores.',
     ordem: 7,
   },
   {

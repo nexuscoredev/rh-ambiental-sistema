@@ -41,8 +41,8 @@ export const FROTA_DIVISOES: readonly FrotaDivisao[] = [
   },
 ] as const
 
-/** Menu lateral: uma entrada para o hub (subáreas abrem pelos cartões na página). */
-export const FROTA_MENU_CHILDREN = [{ label: FROTA_HUB_LABEL, path: FROTA_HUB_PATH }]
+/** Hub abre subáreas pelos cartões; sem entrada duplicada no menu lateral. */
+export const FROTA_MENU_CHILDREN: { label: string; path: string }[] = []
 
 export const FROTA_ROTAS_SISTEMA: { path: string; label: string }[] = [
   { path: FROTA_HUB_PATH, label: FROTA_HUB_LABEL },

@@ -36,6 +36,7 @@ export default function Login() {
 
   return (
     <div
+      className="login-page"
       style={{
         minHeight: "100dvh",
         background: "#020b2d",
@@ -46,6 +47,7 @@ export default function Login() {
       }}
     >
       <div
+        className="login-card"
         style={{
           width: "100%",
           maxWidth: 430,
@@ -77,6 +79,7 @@ export default function Login() {
 
         {/* TÍTULO */}
         <h1
+          className="login-card__title"
           style={{
             margin: 0,
             textAlign: "center",

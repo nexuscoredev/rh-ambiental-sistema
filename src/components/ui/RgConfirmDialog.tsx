@@ -53,9 +53,9 @@ const variantStyles: Record<
 const btnCancel: CSSProperties = {
   padding: '10px 18px',
   borderRadius: '10px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  color: '#475569',
+  border: '1px solid var(--rg-confirm-cancel-border, #cbd5e1)',
+  background: 'var(--rg-confirm-cancel-bg, #fff)',
+  color: 'var(--rg-confirm-cancel-color, #475569)',
   fontWeight: 700,
   fontSize: '14px',
   cursor: 'pointer',
@@ -91,6 +91,7 @@ export function RgConfirmDialog({
 
   return (
     <div
+      className="rg-confirm-overlay"
       role="alertdialog"
       aria-modal
       aria-labelledby="rg-confirm-title"
@@ -99,7 +100,7 @@ export function RgConfirmDialog({
         position: 'fixed',
         inset: 0,
         zIndex: 13000,
-        background: 'rgba(15, 23, 42, 0.5)',
+        background: 'var(--rg-confirm-overlay, rgba(15, 23, 42, 0.5))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -107,26 +108,29 @@ export function RgConfirmDialog({
       }}
     >
       <div
+        className={`rg-confirm-panel rg-confirm-dialog rg-confirm-dialog--${variant}`}
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: '#fff',
+          background: 'var(--rg-confirm-bg, #fff)',
           borderRadius: '16px',
-          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.22)',
-          border: '1px solid #e2e8f0',
+          boxShadow: 'var(--rg-confirm-shadow, 0 24px 60px rgba(15, 23, 42, 0.22))',
+          border: '1px solid var(--rg-confirm-border, #e2e8f0)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
+          className="rg-confirm-header"
           style={{
             display: 'flex',
             gap: '14px',
             padding: '22px 22px 16px',
-            borderBottom: '1px solid #f1f5f9',
+            borderBottom: '1px solid var(--rg-confirm-header-border, #f1f5f9)',
           }}
         >
           <div
+            className="rg-confirm-icon"
             aria-hidden
             style={{
               width: 44,
@@ -158,25 +162,33 @@ export function RgConfirmDialog({
             </div>
             <h2
               id="rg-confirm-title"
-              style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}
+              className="rg-confirm-title"
+              style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: 800,
+                color: 'var(--rg-confirm-title-color, #0f172a)',
+                lineHeight: 1.3,
+              }}
             >
               {title}
             </h2>
           </div>
           <button
             type="button"
+            className="rg-confirm-close"
             onClick={onCancel}
             disabled={loading}
             aria-label="Fechar"
             style={{
-              background: '#f1f5f9',
+              background: 'var(--rg-confirm-close-bg, #f1f5f9)',
               border: 'none',
               borderRadius: '10px',
               width: 36,
               height: 36,
               fontSize: 20,
               cursor: loading ? 'not-allowed' : 'pointer',
-              color: '#64748b',
+              color: 'var(--rg-confirm-close-color, #64748b)',
               lineHeight: 1,
               flexShrink: 0,
             }}
@@ -185,13 +197,14 @@ export function RgConfirmDialog({
           </button>
         </div>
 
-        <div id="rg-confirm-desc" style={{ padding: '16px 22px 20px' }}>
+        <div id="rg-confirm-desc" className="rg-confirm-body" style={{ padding: '16px 22px 20px' }}>
           {message ? (
             <p
+              className="rg-confirm-message"
               style={{
                 margin: '0 0 12px',
                 fontSize: '14px',
-                color: '#334155',
+                color: 'var(--rg-confirm-text-color, #334155)',
                 lineHeight: 1.55,
                 whiteSpace: typeof message === 'string' && message.includes('\n') ? 'pre-line' : undefined,
               }}
@@ -201,14 +214,15 @@ export function RgConfirmDialog({
           ) : null}
           {details && details.length > 0 ? (
             <ul
+              className="rg-confirm-details"
               style={{
                 margin: 0,
                 padding: '12px 14px 12px 28px',
                 borderRadius: '10px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: 'var(--rg-confirm-details-bg, #f8fafc)',
+                border: '1px solid var(--rg-confirm-details-border, #e2e8f0)',
                 fontSize: '13px',
-                color: '#475569',
+                color: 'var(--rg-confirm-details-color, #475569)',
                 lineHeight: 1.5,
               }}
             >
@@ -222,14 +236,15 @@ export function RgConfirmDialog({
         </div>
 
         <div
+          className="rg-confirm-footer"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '10px',
             justifyContent: 'flex-end',
             padding: '14px 22px 20px',
-            borderTop: '1px solid #f1f5f9',
-            background: '#fafafa',
+            borderTop: '1px solid var(--rg-confirm-footer-border, #f1f5f9)',
+            background: 'var(--rg-confirm-footer-bg, #fafafa)',
           }}
         >
           {!isAlert ? (

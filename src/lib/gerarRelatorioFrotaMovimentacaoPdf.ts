@@ -147,7 +147,7 @@ function gerarPdfUnico(linha: FrotaMovimentacaoRelatorioLinha): void {
   y += 12
   desenharAssinatura(doc, linha, y, margem)
 
-  const slug = linha.equipamento.slice(0, 24).replace(/[^\w\-]+/g, '_')
+  const slug = linha.equipamento.slice(0, 24).replace(/[^\w-]+/g, '_')
   doc.save(`movimentacao-frota_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`)
 }
 

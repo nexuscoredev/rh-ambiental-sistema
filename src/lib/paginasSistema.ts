@@ -5,6 +5,7 @@ import { PRESIDENTE_ROTAS_SISTEMA } from './presidenteModulos'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
 import { nomeEhOperacaoTimeRCadastroEstendido } from './rbac'
 import {
+  cargoEhDesenvolvedor,
   cargoEhOperacionalTimeT,
   cargoTemAutoridadeMaximaSistema,
 } from './workflowPermissions'
@@ -251,11 +252,11 @@ export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: str
   const minhaConta = normalizarPath(ROTA_MINHA_CONTA)
   if (path === minhaConta || path.startsWith(`${minhaConta}/`)) return true
 
-  if (cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)) return true
-
   if (rotaUsuarios(path)) {
-    return cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)
+    return cargoEhDesenvolvedor(usuario.cargo)
   }
+
+  if (cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)) return true
 
   const em = (usuario.email || '').trim().toLowerCase()
   if (EMAILS_BYPASS_PAGINAS.has(em)) return true
