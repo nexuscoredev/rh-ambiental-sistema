@@ -28,7 +28,8 @@ import {
   criarResumoFinanceiroConsolidado,
   escolherColetaLiderFaturamento,
 } from './faturamentoConsolidacaoMtr'
-import { montarLinhaTicketResumo } from './faturamentoResumoTicket'
+import { montarLinhaTicketResumo, tipoResiduoExibicaoColeta } from './faturamentoResumoTicket'
+import { buscarMtrHerancaPesagem } from './mtrHerancaTicketPesagem'
 
 type ColetaOperacionalRow = {
   id: string
@@ -462,6 +463,27 @@ export async function sincronizarAposAlteracaoOperacionalColeta(
     const msg = e instanceof Error ? e.message : 'Falha ao sincronizar dados operacionais.'
     return { ok: false, message: msg }
   }
+}
+
+/**
+ * Alinha o texto de resíduo da linha com a MTR quando `tipo_residuo` da coleta está desatualizado
+ * (ex.: «RECICLADO» na coleta vs «BORRACHA - IBC» em `mtrs.detalhes.residuos_itens`).
+ */
+export async function enriquecerLinhaResiduoDesdeMtr(
+  row: FaturamentoResumoViewRow
+): Promise<FaturamentoResumoViewRow> {
+  let tipo = tipoResiduoExibicaoColeta(row)
+  const mtrId = (row.mtr_id ?? '').trim()
+  if (!mtrId) {
+    return tipo && tipo !== row.tipo_residuo ? { ...row, tipo_residuo: tipo } : row
+  }
+
+  const heranca = await buscarMtrHerancaPesagem(mtrId)
+  const fromMtr = (heranca?.tipo_residuo ?? '').trim()
+  if (fromMtr) tipo = fromMtr
+
+  if (!tipo || tipo === row.tipo_residuo) return row
+  return { ...row, tipo_residuo: tipo }
 }
 
 /** Recalcula resumo a partir dos dados atuais da coleta + contrato. */

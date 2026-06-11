@@ -63,6 +63,8 @@ export type FaturamentoResumoViewRow = {
   liberado_financeiro: boolean | null
   coleta_observacoes: string | null
   tipo_residuo: string
+  /** Itens estruturados da pesagem (`coletas.residuos_itens`), quando expostos na view. */
+  residuos_itens?: unknown
   cidade: string
   created_at: string
   ticket_impresso_em?: string | null

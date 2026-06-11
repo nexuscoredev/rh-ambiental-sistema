@@ -104,14 +104,11 @@ function textoResiduoPrincipalMtr(row: {
   tipo_residuo?: string | null;
   detalhes?: unknown;
 }): string {
-  const tipo = String(row.tipo_residuo ?? "").trim();
-  if (tipo) return tipo;
-
   const linhas = linhasResiduoFromMtrRow(row);
   const textos = linhasComConteudo(linhas).map((l) => l.texto.trim()).filter(Boolean);
   if (textos.length > 1) return textos.join(SEPARADOR_RESIDUOS_TEXTO);
   if (textos.length === 1) return textos[0];
-  return "";
+  return String(row.tipo_residuo ?? "").trim();
 }
 
 function linhasResiduoFromMtrRow(row: {

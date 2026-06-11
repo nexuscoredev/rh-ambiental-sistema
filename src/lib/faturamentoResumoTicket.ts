@@ -1,5 +1,10 @@
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
-import { SEPARADOR_RESIDUOS_TEXTO } from './residuosPesagem'
+import {
+  combinarResiduosTexto,
+  linhasComConteudo,
+  parseResiduosFromRow,
+  SEPARADOR_RESIDUOS_TEXTO,
+} from './residuosPesagem'
 
 function pesoParaCampo(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(Number(v))) return ''
@@ -14,6 +19,15 @@ export type LinhaTicketResumoFinanceiro = {
   peso_tara_kg: string
   peso_bruto_kg: string
   peso_liquido_kg: string
+}
+
+/** Texto de resíduo da coleta: prioriza `residuos_itens` (pesagem) e depois `tipo_residuo`. */
+export function tipoResiduoExibicaoColeta(
+  row: Pick<FaturamentoResumoViewRow, 'tipo_residuo' | 'residuos_itens'>
+): string {
+  const linhas = parseResiduosFromRow(row)
+  const texto = combinarResiduosTexto(linhasComConteudo(linhas))
+  return texto.trim() || (row.tipo_residuo ?? '').trim()
 }
 
 /** Extrai rótulos de resíduo a partir do texto gravado na coleta (tipo_residuo). */
@@ -38,8 +52,9 @@ export function formatarResiduosListaResumo(rotulos: string[]): string {
 }
 
 export function montarLinhaTicketResumo(row: FaturamentoResumoViewRow): LinhaTicketResumoFinanceiro {
-  const rotulos = rotulosResiduoFromTextoColeta(row.tipo_residuo ?? '')
-  const residuoFormatado = formatarResiduosListaResumo(rotulos) || (row.tipo_residuo ?? '').trim() || '—'
+  const tipoExibicao = tipoResiduoExibicaoColeta(row)
+  const rotulos = rotulosResiduoFromTextoColeta(tipoExibicao)
+  const residuoFormatado = formatarResiduosListaResumo(rotulos) || tipoExibicao || '—'
   return {
     coleta_numero: String(row.numero_coleta ?? row.numero ?? '—'),
     ticket_numero: (row.ticket_comprovante ?? '').trim() || '—',
@@ -59,7 +74,7 @@ export function montarTicketResumoUnicoColeta(row: FaturamentoResumoViewRow): {
   peso_liquido_kg: string
 } {
   const linha = montarLinhaTicketResumo(row)
-  const rotulos = rotulosResiduoFromTextoColeta(row.tipo_residuo ?? '')
+  const rotulos = rotulosResiduoFromTextoColeta(tipoResiduoExibicaoColeta(row))
   return {
     eh_consolidado_mtr: false,
     peso_tara_kg: linha.peso_tara_kg,

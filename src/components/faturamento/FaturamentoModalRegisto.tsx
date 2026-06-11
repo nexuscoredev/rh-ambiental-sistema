@@ -49,6 +49,7 @@ import {
 import { encerrarTicketDefinitivoFaturamento } from '../../lib/faturamentoTicketFluxo'
 import {
   aplicarResumoFinanceiroNaOperacional,
+  enriquecerLinhaResiduoDesdeMtr,
   persistirResumoPendenteGrupoMtr,
   recalcularResumoDesdeOperacional,
 } from '../../lib/faturamentoOperacionalSync'
@@ -522,11 +523,16 @@ export function FaturamentoModalRegisto({
     return aplicarResumoFinanceiroNaOperacional(refId, resumo)
   }
 
-  function recalcularTudoDoOperacional() {
+  async function recalcularTudoDoOperacional() {
     if (!row) return
-    const grupo =
+    const rowRef = await enriquecerLinhaResiduoDesdeMtr(row)
+    const grupoRaw =
       grupoConsolidado && grupoConsolidado.length > 1 ? grupoConsolidado : undefined
-    let next = recalcularResumoDesdeOperacional(row, grupo, sugestaoContrato, {
+    const grupo =
+      grupoRaw && grupoRaw.length > 1
+        ? await Promise.all(grupoRaw.map((c) => enriquecerLinhaResiduoDesdeMtr(c)))
+        : grupoRaw
+    let next = recalcularResumoDesdeOperacional(rowRef, grupo, sugestaoContrato, {
       tipoCaminhao: contextoMtr?.tipoCaminhao,
       acondicionamento: contextoMtr?.acondicionamento,
     })

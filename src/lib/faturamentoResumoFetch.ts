@@ -121,7 +121,7 @@ function mensagemCorrecaoViewFaturamento(): string {
 }
 
 const SEL_VW_FATURAMENTO_BASE =
-  'coleta_id, numero, numero_coleta, cliente_id, cliente_nome, cliente_razao_social, cliente_margem_lucro_percentual, data_agendada, data_programacao, data_execucao, programacao_id, programacao_numero, programacao_observacoes, mtr_id, mtr_numero, mtr_observacoes, ticket_comprovante, peso_tara, peso_bruto, peso_liquido, motorista, placa, valor_coleta, status_pagamento, data_vencimento, referencia_nf, numero_nf_coleta, faturamento_referencia_nf, faturamento_registro_status, faturamento_registro_valor, confirmacao_recebimento, fluxo_status, etapa_operacional, status_processo, liberado_financeiro, coleta_observacoes, tipo_residuo, cidade, created_at, ultima_aprovacao_decisao, ultima_aprovacao_obs, ultima_aprovacao_em, conferencia_documentos_ok, conferencia_operacional_obs, conferencia_em, status_conferencia, pendencias_resumo, faturamento_sla_vencido, status_faturamento, conta_receber_nf_enviada_em, conta_receber_nf_envio_obs, conta_receber_valor_pago, conta_receber_valor_travado'
+  'coleta_id, numero, numero_coleta, cliente_id, cliente_nome, cliente_razao_social, cliente_margem_lucro_percentual, data_agendada, data_programacao, data_execucao, programacao_id, programacao_numero, programacao_observacoes, mtr_id, mtr_numero, mtr_observacoes, ticket_comprovante, peso_tara, peso_bruto, peso_liquido, motorista, placa, valor_coleta, status_pagamento, data_vencimento, referencia_nf, numero_nf_coleta, faturamento_referencia_nf, faturamento_registro_status, faturamento_registro_valor, confirmacao_recebimento, fluxo_status, etapa_operacional, status_processo, liberado_financeiro, coleta_observacoes, tipo_residuo, residuos_itens, cidade, created_at, ultima_aprovacao_decisao, ultima_aprovacao_obs, ultima_aprovacao_em, conferencia_documentos_ok, conferencia_operacional_obs, conferencia_em, status_conferencia, pendencias_resumo, faturamento_sla_vencido, status_faturamento, conta_receber_nf_enviada_em, conta_receber_nf_envio_obs, conta_receber_valor_pago, conta_receber_valor_travado'
 
 const SEL_VW_FATURAMENTO_TICKET_APROVACAO =
   ', ticket_impresso_em, faturamento_ticket_aprovado_em, faturamento_ticket_aprovacao_obs'
@@ -141,6 +141,11 @@ export function isEsteiraColumnMissingError(err: { message?: string }): boolean 
     msg.includes('cliente_email_nf') ||
     msg.includes('mtr_status')
   )
+}
+
+function isResiduosItensColumnMissingError(err: { message?: string }): boolean {
+  const msg = String(err.message ?? '').toLowerCase()
+  return msg.includes('residuos_itens') && (msg.includes('column') || msg.includes('vw_faturamento_resumo'))
 }
 
 function isTicketAprovacaoColumnMissingError(err: { message?: string }): boolean {
@@ -203,6 +208,12 @@ export async function fetchVwFaturamentoResumoPaginated(
       .range(from, to)
 
     if (error) {
+      if (page === 0 && isResiduosItensColumnMissingError(error) && sel.includes('residuos_itens')) {
+        sel = sel.replace(', residuos_itens', '')
+        page = -1
+        byId.clear()
+        continue
+      }
       if (page === 0 && esteiraMedicaoAtiva && isEsteiraColumnMissingError(error)) {
         esteiraMedicaoAtiva = false
         sel = `${SEL_VW_FATURAMENTO_BASE}${ticketAprovacaoAtivo ? SEL_VW_FATURAMENTO_TICKET_APROVACAO : ''}`

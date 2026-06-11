@@ -1,4 +1,5 @@
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
+import { tipoResiduoExibicaoColeta } from './faturamentoResumoTicket'
 import type { ResultadoPrecoContrato } from './faturamentoPrecoContrato'
 import type { LinhaTicketResumoFinanceiro } from './faturamentoResumoTicket'
 import {
@@ -145,11 +146,12 @@ export function criarResumoFinanceiroDoOperacional(
     sugestao?.equipamentosContrato?.[0]?.descricao?.trim() ||
     (ctx?.acondicionamento ?? '').trim() ||
     'Equipamento'
-  const rotulosColeta = rotulosResiduoFromTextoColeta(row.tipo_residuo ?? '')
+  const tipoColeta = tipoResiduoExibicaoColeta(row)
+  const rotulosColeta = rotulosResiduoFromTextoColeta(tipoColeta)
   const resRot =
     sugestao?.residuoContrato?.tipo_residuo?.trim() ||
     formatarResiduosListaResumo(rotulosColeta) ||
-    (row.tipo_residuo ?? '').trim()
+    tipoColeta
   const unidade = sugestao?.unidadeMedida ?? 'kg'
   const qtd =
     sugestao && sugestao.quantidadeFaturada > 0

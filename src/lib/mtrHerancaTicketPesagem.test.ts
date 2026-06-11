@@ -20,7 +20,7 @@ describe("mtrHerancaTicketPesagem", () => {
 
     expect(h.placa).toBe("ABC-1D23");
     expect(h.motorista).toBe("João Silva");
-    expect(h.tipo_residuo).toBe("Lodo");
+    expect(h.tipo_residuo).toBe("Lodo industrial — SÓLIDO");
     expect(h.tipo_caminhao).toBe("Truck");
     expect(h.linhas_residuo[0]?.texto).toContain("Lodo");
   });
@@ -85,6 +85,36 @@ describe("mtrHerancaTicketPesagem", () => {
     expect(mescladas[0]?.peso_bruto).toBe("1000");
     expect(mescladas[0]?.peso_tara).toBe("200");
     expect(mescladas[0]?.peso_liquido).toBe("800");
+  });
+
+  it("prioriza residuos_itens da MTR sobre caracterizacao legada (Autokit)", () => {
+    const h = extrairHerancaMtrParaPesagem({
+      tipo_residuo: "RECICLADO — —",
+      detalhes: {
+        residuo: {
+          fonte_origem: "Industrial",
+          caracterizacao: "RECICLADO",
+          estado_fisico: "—",
+          acondicionamento: "Baú",
+          quantidade_aproximada: "1.000",
+          onu: "",
+        },
+        residuos_lista: [
+          {
+            fonte_origem: "Industrial",
+            caracterizacao: "RECICLADO",
+            estado_fisico: "—",
+            acondicionamento: "Baú",
+            quantidade_aproximada: "1.000",
+            onu: "",
+          },
+        ],
+        residuos_itens: [{ texto: "BORRACHA - IBC — —", catalogo_id: null }],
+      },
+    });
+
+    expect(h.tipo_residuo).toContain("BORRACHA - IBC");
+    expect(h.linhas_residuo[0]?.texto).toContain("BORRACHA - IBC");
   });
 
   it("linhasResiduoHerancaOuColeta não expande várias linhas MTR sobre coleta já definida", () => {

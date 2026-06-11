@@ -414,10 +414,6 @@ export function listaResiduosParaDocumentoMtr(
   },
   tipoResiduoTopo?: string
 ): MtrResiduoDetalhesCampos[] {
-  if (detalhes.residuos_lista && detalhes.residuos_lista.length > 0) {
-    return detalhes.residuos_lista
-  }
-
   const itens = detalhes.residuos_itens ?? []
   const textosPesagem = itens.map((l) => l.texto.trim()).filter(Boolean)
   if (textosPesagem.length > 0) {
@@ -430,6 +426,10 @@ export function listaResiduosParaDocumentoMtr(
       quantidade_aproximada: index === 0 ? base.quantidade_aproximada : '',
       onu: index === 0 ? base.onu : '',
     }))
+  }
+
+  if (detalhes.residuos_lista && detalhes.residuos_lista.length > 0) {
+    return detalhes.residuos_lista
   }
 
   const base = detalhes.residuo
