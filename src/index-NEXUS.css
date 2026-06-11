@@ -13204,10 +13204,12 @@ a.rg-btn {
   width: 100%;
   padding: 22px 24px;
   border-radius: 18px;
-  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-  color: #f8fafc;
-  border: 1px solid #334155;
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.2);
+  background: linear-gradient(145deg, #0f766e 0%, #0d9488 48%, #115e59 100%);
+  color: #f0fdfa;
+  border: 1px solid #14b8a6;
+  box-shadow:
+    0 12px 40px rgba(15, 118, 110, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .treinamento-kb__xp-panel-top {
   display: flex;
@@ -13238,7 +13240,7 @@ a.rg-btn {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: #ccfbf1;
 }
 .treinamento-kb__level-title {
   display: block;
@@ -13251,9 +13253,9 @@ a.rg-btn {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 800;
-  background: rgba(249, 115, 22, 0.2);
-  color: #fdba74;
-  border: 1px solid rgba(249, 115, 22, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fef3c7;
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 .treinamento-kb__xp-bar-wrap {
   margin-bottom: 16px;
@@ -13262,20 +13264,22 @@ a.rg-btn {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #94a3b8;
+  color: #ccfbf1;
   margin-bottom: 6px;
 }
 .treinamento-kb__xp-bar {
   height: 10px;
   border-radius: 999px;
-  background: #334155;
+  background: rgba(6, 78, 59, 0.45);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 .treinamento-kb__xp-bar-fill {
   height: 100%;
   border-radius: 999px;
   transition: width 0.5s ease;
-  background: linear-gradient(90deg, #0d9488, #2563eb);
+  background: linear-gradient(90deg, #fef9c3, #ecfccb, #fff);
+  box-shadow: 0 0 8px rgba(254, 249, 195, 0.5);
 }
 .treinamento-kb__xp-stats {
   display: grid;
@@ -13286,8 +13290,8 @@ a.rg-btn {
   text-align: center;
   padding: 10px 8px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 .treinamento-kb__xp-stat-value {
   display: block;
@@ -13300,7 +13304,7 @@ a.rg-btn {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #a7f3d0;
   margin-top: 2px;
 }
 .treinamento-kb__trilha-progresso {
@@ -13735,7 +13739,7 @@ a.rg-btn {
   gap: 12px;
   margin-bottom: 18px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 .treinamento-kb__xp-panel-logo {
   width: 44px;
@@ -13746,8 +13750,9 @@ a.rg-btn {
   border-radius: 12px;
   font-size: 14px;
   font-weight: 900;
-  color: #fff;
-  background: linear-gradient(135deg, #0f766e, #2563eb);
+  color: #0f766e;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .treinamento-kb__xp-panel-course {
   display: block;
@@ -13755,19 +13760,19 @@ a.rg-btn {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: #99f6e4;
 }
 .treinamento-kb__xp-panel-user {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: #fff;
 }
 .treinamento-kb__xp-hint {
   margin: 14px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: #94a3b8;
+  color: #ccfbf1;
 }
 .treinamento-kb__trilha-sub {
   margin: 4px 0 0;

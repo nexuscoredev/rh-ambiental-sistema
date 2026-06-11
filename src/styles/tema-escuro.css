@@ -392,6 +392,14 @@
   color: var(--text-primary);
 }
 
+[data-theme='dark'] .treinamento-kb__xp-panel {
+  background: linear-gradient(145deg, #115e59 0%, #0f766e 50%, #134e4a 100%);
+  border-color: #2dd4bf;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
 [data-theme='dark'] .rh-modulo__status {
   background: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.3);
