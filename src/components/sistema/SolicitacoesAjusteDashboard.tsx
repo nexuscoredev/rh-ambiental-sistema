@@ -16,8 +16,10 @@ import {
   type DashboardSolicitacoesDados,
   type PeriodoDashboardSolicitacoes,
 } from '../../lib/solicitacaoAjusteDashboard'
+import { gerarRelatorioDashboardSolicitacoesPdf } from '../../lib/gerarRelatorioDashboardSolicitacoesPdf'
 import type { ChatUsuarioLista } from '../../types/chat'
 import { useVersaoRgExibir } from '../../lib/appDisplayVersion'
+import { RgReportPdfIcon } from '../ui/RgReportPdfIcon'
 
 type Props = {
   usuarios: ChatUsuarioLista[]
@@ -37,6 +39,7 @@ export function SolicitacoesAjusteDashboard({ usuarios }: Props) {
   const [dados, setDados] = useState<DashboardSolicitacoesDados | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [gerandoPdf, setGerandoPdf] = useState(false)
 
   const usuariosPorId = useMemo(() => new Map(usuarios.map((u) => [u.id, u])), [usuarios])
 
@@ -66,6 +69,18 @@ export function SolicitacoesAjusteDashboard({ usuarios }: Props) {
   const donutSol = dados?.porSolicitante ?? []
   const cores = coresDonutSolicitacoes()
 
+  function exportarPdfGestao() {
+    if (!dados || gerandoPdf) return
+    setGerandoPdf(true)
+    try {
+      gerarRelatorioDashboardSolicitacoesPdf({ dados, periodo })
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.')
+    } finally {
+      setGerandoPdf(false)
+    }
+  }
+
   return (
     <section className="solicitacoes-admin__dashboard" role="tabpanel" aria-label="Dashboard de solicitações">
       <div className="solicitacoes-admin__dashboard-toolbar">
@@ -76,21 +91,33 @@ export function SolicitacoesAjusteDashboard({ usuarios }: Props) {
             <strong>{versaoExibir}</strong>
           </p>
         </div>
-        <div className="solicitacoes-admin__dashboard-periodos" role="group" aria-label="Agrupar por período">
-          {PERIODOS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={
-                periodo === p.id
-                  ? 'solicitacoes-admin__dashboard-periodo solicitacoes-admin__dashboard-periodo--on'
-                  : 'solicitacoes-admin__dashboard-periodo'
-              }
-              onClick={() => setPeriodo(p.id)}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="solicitacoes-admin__dashboard-toolbar-actions">
+          <div className="solicitacoes-admin__dashboard-periodos" role="group" aria-label="Agrupar por período">
+            {PERIODOS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={
+                  periodo === p.id
+                    ? 'solicitacoes-admin__dashboard-periodo solicitacoes-admin__dashboard-periodo--on'
+                    : 'solicitacoes-admin__dashboard-periodo'
+                }
+                onClick={() => setPeriodo(p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="rg-btn rg-btn--outline solicitacoes-admin__dashboard-pdf"
+            disabled={carregando || !dados || gerandoPdf}
+            title="Gerar PDF para apresentação à gestão"
+            onClick={() => exportarPdfGestao()}
+          >
+            <RgReportPdfIcon className="rg-btn__icon" />
+            {gerandoPdf ? 'A gerar…' : 'PDF gestão'}
+          </button>
         </div>
       </div>
 

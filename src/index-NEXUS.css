@@ -300,6 +300,12 @@ a.rg-btn {
   font-weight: 600;
 }
 
+.programacao-filtro-caminhao--painel {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  gap: 10px;
+}
+
 .rg-kpi-card {
   min-width: 225px;
   background: #ffffff;
@@ -4873,7 +4879,7 @@ a.rg-btn {
 
 .chat-interno-pedido-ajuste__badge {
   display: inline-block;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 10px;
@@ -4882,6 +4888,50 @@ a.rg-btn {
   text-transform: uppercase;
   color: #92400e;
   background: rgba(245, 158, 11, 0.2);
+}
+
+.chat-interno-pedido-ajuste__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.chat-interno-pedido-ajuste__editar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  border-radius: 8px;
+  background: #fff;
+  color: #0f766e;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.chat-interno-pedido-ajuste__editar:hover {
+  background: #f0fdfa;
+  border-color: #14b8a6;
+  color: #0d9488;
+}
+
+.chat-interno-pedido-ajuste__corpo .chat-interno-bubble__text {
+  margin: 0;
+}
+
+.chat-interno-pedido-ajuste__pagina {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.55);
 }
 
 .chat-interno-bubble--pedido-ajuste-resolvido .chat-interno-pedido-ajuste__badge {
@@ -5190,17 +5240,25 @@ a.rg-btn {
   color: #64748b;
 }
 
+.chat-interno-pedido-card__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .chat-interno-pedido-card__btn {
-  width: 100%;
+  width: auto;
+  flex: 1 1 calc(50% - 3px);
+  min-width: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 10px 12px;
+  padding: 7px 10px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 1px 4px rgba(13, 148, 136, 0.28);
   transition:
     filter 0.15s ease,
     transform 0.12s ease,
@@ -5220,12 +5278,6 @@ a.rg-btn {
   opacity: 0.55;
   cursor: not-allowed;
   filter: grayscale(0.2);
-}
-
-.chat-interno-pedido-card__acoes {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .chat-interno-pedido-card__btn--secundario {
@@ -5643,6 +5695,18 @@ a.rg-btn {
   flex-direction: column;
   gap: 8px;
   width: 100%;
+}
+
+.chat-pedido-feedback__acoes--dupla {
+  flex-direction: row;
+}
+
+.chat-pedido-feedback__acoes--dupla .chat-pedido-feedback__btn {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  font-size: 12px;
+  padding: 8px 10px;
 }
 
 .chat-pedido-feedback__btn {
@@ -9512,6 +9576,17 @@ a.rg-btn {
   margin: 0;
   font-size: 12px;
   color: #64748b;
+}
+
+.solicitacoes-admin__dashboard-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.solicitacoes-admin__dashboard-pdf {
+  white-space: nowrap;
 }
 
 .solicitacoes-admin__dashboard-periodos {

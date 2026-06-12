@@ -19,6 +19,10 @@ type Props = {
   totalNoMes: number
   totalFiltradoNoMes: number
   inputStyle: CSSProperties
+  /** Onde o filtro aparece: página inteira ou painel do dia. */
+  variant?: 'page' | 'painel'
+  /** Texto do contador «X de Y …». */
+  contagemEscopo?: 'mes' | 'dia'
 }
 
 const chipBase: CSSProperties = {
@@ -50,6 +54,8 @@ export default function ProgramacaoFiltroCaminhao({
   totalNoMes,
   totalFiltradoNoMes,
   inputStyle,
+  variant = 'page',
+  contagemEscopo = 'mes',
 }: Props) {
   const [busca, setBusca] = useState('')
   const [mostrarTodosTipos, setMostrarTodosTipos] = useState(false)
@@ -124,8 +130,17 @@ export default function ProgramacaoFiltroCaminhao({
     if (!ativo) onFiltroCaminhaoIdChange('')
   }
 
+  const contagemLabel = contagemEscopo === 'dia' ? 'neste dia' : 'no mês'
+
   return (
-    <section className="programacao-filtro-caminhao" aria-label="Filtrar caminhões">
+    <section
+      className={
+        variant === 'painel'
+          ? 'programacao-filtro-caminhao programacao-filtro-caminhao--painel'
+          : 'programacao-filtro-caminhao'
+      }
+      aria-label="Filtrar caminhões"
+    >
       <div className="programacao-filtro-caminhao__head">
         <div>
           <h2 className="programacao-filtro-caminhao__title">Filtrar caminhões</h2>
@@ -134,7 +149,7 @@ export default function ProgramacaoFiltroCaminhao({
           </p>
         </div>
         <span className="programacao-filtro-caminhao__count">
-          {totalFiltradoNoMes} de {totalNoMes} no mês
+          {totalFiltradoNoMes} de {totalNoMes} {contagemLabel}
         </span>
       </div>
 

@@ -66,6 +66,28 @@ export function parsePedidoAjusteConteudo(conteudo: string): PedidoAjusteParsead
   return { descricao, pagina, solicitante }
 }
 
+/** Monta o corpo completo de um pedido de ajuste (mesmo formato do envio). */
+export function montarConteudoPedidoAjuste(opts: {
+  descricao: string
+  pagina?: string
+  solicitante?: string
+}): string {
+  const linhas = [CHAT_PEDIDO_AJUSTE_PREFIX, '', opts.descricao.trim()]
+  const pagina = opts.pagina?.trim()
+  if (pagina && pagina !== '—') linhas.push('', `Página: ${pagina}`)
+  const solicitante = opts.solicitante?.trim()
+  if (solicitante) linhas.push(`— ${solicitante}`)
+  return linhas.join('\n')
+}
+
+/** Solicitante pode editar enquanto o dev ainda não respondeu (ou pediu mais detalhes). */
+export function pedidoAjusteSolicitantePodeEditar(
+  status: PedidoAjusteStatus | null | undefined
+): boolean {
+  if (!status) return true
+  return status === 'aguardando_detalhes'
+}
+
 /** Mensagem automática ao marcar pedido como resolvido (cita a solicitação). */
 export function montarRespostaPedidoAjusteResolvido(conteudoPedido: string): string {
   const pedido = parsePedidoAjusteConteudo(conteudoPedido)
@@ -95,6 +117,8 @@ export function etiquetaEventoPedidoAjusteHistorico(
       return 'Desenvolvedor pediu mais detalhes'
     case 'detalhes_respondidos_solicitante':
       return 'Solicitante enviou complemento'
+    case 'editado_solicitante':
+      return 'Solicitante editou o pedido'
     case 'enviado_fila_thais':
       return 'Enviado para aprovação da Thais'
     case 'aprovado_fila_thais':
@@ -186,6 +210,7 @@ export type PedidoAjusteHistoricoItem = {
     | 'aprovado_fila_thais'
     | 'detalhes_solicitados_dev'
     | 'detalhes_respondidos_solicitante'
+    | 'editado_solicitante'
   actorId: string
   texto: string | null
   ciclo: number
@@ -1331,6 +1356,103 @@ export async function chatResponderDetalhesPedidoAjuste(
 
   if (upErr) throw new Error(mensagemErroPedidoAjuste(upErr))
   return resposta
+}
+
+/** Status dos pedidos numa conversa (null = ainda sem tratamento). */
+export async function chatMapStatusPedidosAjusteNaConversa(
+  conversaId: string
+): Promise<Map<string, PedidoAjusteStatus | null>> {
+  const map = new Map<string, PedidoAjusteStatus | null>()
+  const { data, error } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('mensagem_id, status')
+    .eq('conversa_id', conversaId)
+
+  if (error) {
+    if (/does not exist|relation|42P01/i.test(error.message)) return map
+    throw new Error(mensagemErroPedidoAjuste(error))
+  }
+
+  for (const row of data ?? []) {
+    map.set(String(row.mensagem_id), (row.status ?? null) as PedidoAjusteStatus | null)
+  }
+  return map
+}
+
+export async function chatEditarPedidoAjusteSolicitante(
+  mensagemPedidoId: string,
+  descricao: string
+): Promise<ChatMensagem> {
+  const trimmed = descricao.trim()
+  if (trimmed.length < 3) {
+    throw new Error('Descreva a solicitação com pelo menos 3 caracteres.')
+  }
+
+  const rpc = await supabase.rpc('chat_editar_pedido_ajuste_solicitante', {
+    p_mensagem_id: mensagemPedidoId,
+    p_descricao: trimmed,
+  })
+
+  if (!rpc.error && rpc.data != null) {
+    return mensagemPrimeiraLinhaRpc(rpc.data)
+  }
+
+  if (rpc.error && !rpcIndisponivel(rpc.error)) {
+    throw new Error(mensagemErroPedidoAjuste(rpc.error))
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const uid = user?.id
+  if (!uid) throw new Error('Sessão inválida.')
+
+  const { data: msg } = await supabase
+    .from('chat_mensagens')
+    .select('id, conversa_id, remetente_id, conteudo')
+    .eq('id', mensagemPedidoId)
+    .maybeSingle()
+
+  if (!msg) throw new Error('Pedido não encontrado.')
+  if (String(msg.remetente_id) !== uid) {
+    throw new Error('Apenas quem enviou a solicitação pode editá-la.')
+  }
+
+  const parseado = parsePedidoAjusteConteudo(String(msg.conteudo ?? ''))
+  if (!parseado) throw new Error('Esta mensagem não é um pedido de ajuste.')
+
+  const { data: reg } = await supabase
+    .from('chat_pedido_ajuste_resolvido')
+    .select('status')
+    .eq('mensagem_id', mensagemPedidoId)
+    .maybeSingle()
+
+  const status = (reg?.status ?? null) as PedidoAjusteStatus | null
+  if (!pedidoAjusteSolicitantePodeEditar(status)) {
+    throw new Error('Este pedido já está em tratamento ou encerrado; não pode ser editado.')
+  }
+
+  const novoConteudo = montarConteudoPedidoAjuste({
+    descricao: trimmed,
+    pagina: parseado.pagina,
+    solicitante: parseado.solicitante,
+  })
+
+  const { data: atualizada, error: upErr } = await supabase
+    .from('chat_mensagens')
+    .update({ conteudo: novoConteudo })
+    .eq('id', mensagemPedidoId)
+    .select('*')
+    .single()
+
+  if (upErr || !atualizada) {
+    throw new Error(
+      mensagemErroPedidoAjuste(upErr) ||
+        'Não foi possível editar a solicitação. Peça ao suporte para aplicar a migração de edição.'
+    )
+  }
+
+  return atualizada as ChatMensagem
 }
 
 export async function chatDecidirPedidoAjusteSolicitante(

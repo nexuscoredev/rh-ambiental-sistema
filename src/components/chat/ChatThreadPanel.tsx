@@ -9,6 +9,7 @@ import {
 import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatMensagemEhPedidoAjuste,
+  parsePedidoAjusteConteudo,
   type PedidoAjusteAguardandoFeedback,
 } from '../../lib/chatPedidoAjuste'
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
@@ -16,6 +17,7 @@ import type { ChatMensagem } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
 import { ChatPedidoAjusteFeedback } from './ChatPedidoAjusteFeedback'
 import { ChatPedidoAjusteDetalhes } from './ChatPedidoAjusteDetalhes'
+import { ChatPedidoAjusteEditar } from './ChatPedidoAjusteEditar'
 import type { PedidoAjusteAguardandoDetalhes } from '../../lib/chatPedidoAjuste'
 
 type Props = {
@@ -50,6 +52,12 @@ type Props = {
   pedidosAguardandoDetalhes?: PedidoAjusteAguardandoDetalhes[]
   respondendoDetalhesId?: string | null
   onResponderDetalhesPedido?: (mensagemPedidoId: string, complemento: string) => Promise<void>
+  /** IDs de pedidos do solicitante que ainda podem ser editados. */
+  pedidosEditaveisIds?: Set<string>
+  editandoPedidoId?: string | null
+  onIniciarEditarPedido?: (mensagemPedidoId: string) => void
+  onCancelarEditarPedido?: () => void
+  onSalvarEditarPedido?: (mensagemPedidoId: string, descricao: string) => Promise<void>
 }
 
 export function ChatThreadPanel({
@@ -74,6 +82,11 @@ export function ChatThreadPanel({
   pedidosAguardandoDetalhes = [],
   respondendoDetalhesId = null,
   onResponderDetalhesPedido,
+  pedidosEditaveisIds,
+  editandoPedidoId = null,
+  onIniciarEditarPedido,
+  onCancelarEditarPedido,
+  onSalvarEditarPedido,
   outroLastReadAt = null,
 }: Props) {
   const feedbackPorResposta = new Map(
@@ -256,6 +269,17 @@ export function ChatThreadPanel({
                 m={m}
                 meuId={meuId}
                 outroLastReadAt={outroLastReadAt}
+                pedidoEditavel={pedidosEditaveisIds?.has(m.id) ?? false}
+                editandoPedido={editandoPedidoId === m.id}
+                onIniciarEditarPedido={
+                  onIniciarEditarPedido ? () => onIniciarEditarPedido(m.id) : undefined
+                }
+                onCancelarEditarPedido={onCancelarEditarPedido}
+                onSalvarEditarPedido={
+                  onSalvarEditarPedido
+                    ? (descricao) => onSalvarEditarPedido(m.id, descricao)
+                    : undefined
+                }
                 feedbackPedido={
                   feedback && onDecidirPedidoAjuste
                     ? {
@@ -393,22 +417,49 @@ type DetalhesPedidoProps = {
   onEnviar: (texto: string) => Promise<void>
 }
 
+
+function IconeLapis({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function MensagemBolha({
   m,
   meuId,
   outroLastReadAt,
+  pedidoEditavel = false,
+  editandoPedido = false,
+  onIniciarEditarPedido,
+  onCancelarEditarPedido,
+  onSalvarEditarPedido,
   feedbackPedido,
   detalhesPedido,
 }: {
   m: ChatMensagem
   meuId: string
   outroLastReadAt?: string | null
+  pedidoEditavel?: boolean
+  editandoPedido?: boolean
+  onIniciarEditarPedido?: () => void
+  onCancelarEditarPedido?: () => void
+  onSalvarEditarPedido?: (descricao: string) => Promise<void>
   feedbackPedido?: FeedbackPedidoProps
   detalhesPedido?: DetalhesPedidoProps
 }) {
   const meu = m.remetente_id === meuId
   const [url, setUrl] = useState<string | null>(null)
   const ehPedidoAjuste = chatMensagemEhPedidoAjuste(m)
+  const pedidoParseado = ehPedidoAjuste ? parsePedidoAjusteConteudo(m.conteudo ?? '') : null
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
   const temAnexo = !!(m.anexo_path && m.anexo_nome)
   const ehFigurinha = chatMensagemEhFigurinha(m)
   const ehImagemAnexo = temAnexo && !ehFigurinha && !!m.anexo_mime?.startsWith('image/')
@@ -436,7 +487,8 @@ function MensagemBolha({
 
   const mostrarTexto = !!(
     m.conteudo &&
-    (!temAnexo || (m.conteudo.trim() !== 'Anexo enviado' && !ehFigurinha))
+    (!temAnexo || (m.conteudo.trim() !== 'Anexo enviado' && !ehFigurinha)) &&
+    !(ehPedidoAjuste && pedidoParseado)
   )
 
   return (
@@ -449,8 +501,29 @@ function MensagemBolha({
         }
       >
         {ehPedidoAjuste ? (
-          <div className="chat-interno-pedido-ajuste__badge" aria-hidden>
-            Pedido de ajuste
+          <div className="chat-interno-pedido-ajuste__head">
+            <div className="chat-interno-pedido-ajuste__badge" aria-hidden>
+              Pedido de ajuste
+            </div>
+            {meu && pedidoEditavel && onIniciarEditarPedido && !editandoPedido ? (
+              <button
+                type="button"
+                className="chat-interno-pedido-ajuste__editar"
+                title="Editar solicitação"
+                aria-label="Editar solicitação"
+                onClick={onIniciarEditarPedido}
+              >
+                <IconeLapis />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {ehPedidoAjuste && pedidoParseado ? (
+          <div className="chat-interno-pedido-ajuste__corpo">
+            <p className="chat-interno-bubble__text">{pedidoParseado.descricao}</p>
+            {pedidoParseado.pagina ? (
+              <p className="chat-interno-pedido-ajuste__pagina">Página: {pedidoParseado.pagina}</p>
+            ) : null}
           </div>
         ) : null}
         {mostrarTexto ? <p className="chat-interno-bubble__text">{m.conteudo}</p> : null}
@@ -553,6 +626,21 @@ function MensagemBolha({
                 variant: 'warning',
               })
               throw e
+            }
+          }}
+        />
+      ) : null}
+      {editandoPedido && pedidoParseado && onCancelarEditarPedido && onSalvarEditarPedido ? (
+        <ChatPedidoAjusteEditar
+          descricaoInicial={pedidoParseado.descricao}
+          enviando={salvandoEdicao}
+          onCancelar={onCancelarEditarPedido}
+          onSalvar={async (texto) => {
+            setSalvandoEdicao(true)
+            try {
+              await onSalvarEditarPedido(texto)
+            } finally {
+              setSalvandoEdicao(false)
             }
           }}
         />

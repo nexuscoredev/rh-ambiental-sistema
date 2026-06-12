@@ -16,6 +16,8 @@ import {
 import { chatEnviarFigurinha, type ChatSticker } from '../../lib/chatStickers'
 import {
   chatDecidirPedidoAjusteSolicitante,
+  chatEditarPedidoAjusteSolicitante,
+  chatMapStatusPedidosAjusteNaConversa,
   chatAprovarPedidoAjusteFilaThais,
   chatEnviarPedidoAjusteFilaThais,
   chatListarHistoricoPedidosAjuste,
@@ -27,10 +29,13 @@ import {
   chatMarcarPedidoAjusteResolvido,
   chatPedirDetalhesPedidoAjuste,
   chatResponderDetalhesPedidoAjuste,
+  pedidoAjusteSolicitantePodeEditar,
+  chatMensagemEhPedidoAjuste,
   type PedidoAjusteAguardandoDetalhes,
   type PedidoAjusteAguardandoFeedback,
   type PedidoAjusteFilaItem,
   type PedidoAjusteHistoricoItem,
+  type PedidoAjusteStatus,
 } from '../../lib/chatPedidoAjuste'
 import { ChatPedidosAjusteColuna } from './ChatPedidosAjusteColuna'
 import {
@@ -182,6 +187,10 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
   >([])
   const [respondendoDetalhesId, setRespondendoDetalhesId] = useState<string | null>(null)
   const [pedindoDetalhesId, setPedindoDetalhesId] = useState<string | null>(null)
+  const [statusPedidosConversa, setStatusPedidosConversa] = useState<
+    Map<string, PedidoAjusteStatus | null>
+  >(new Map())
+  const [editandoPedidoId, setEditandoPedidoId] = useState<string | null>(null)
   const [aprovandoThaisId, setAprovandoThaisId] = useState<string | null>(null)
   const [enviandoThaisId, setEnviandoThaisId] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -418,21 +427,37 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
     if (!uid || podeApagarHistoricoChat) {
       setPedidosAguardandoFeedback([])
       setPedidosAguardandoDetalhes([])
+      setStatusPedidosConversa(new Map())
       return
     }
     try {
-      const [feedback, detalhes] = await Promise.all([
+      const [feedback, detalhes, statusMap] = await Promise.all([
         chatListarPedidosAguardandoFeedbackSolicitante(conversaId, uid),
         chatListarPedidosAguardandoDetalhesSolicitante(conversaId, uid),
+        chatMapStatusPedidosAjusteNaConversa(conversaId),
       ])
       setPedidosAguardandoFeedback(feedback)
       setPedidosAguardandoDetalhes(detalhes)
+      setStatusPedidosConversa(statusMap)
     } catch (e) {
       console.error('[chat] feedback pedidos ajuste:', e)
       setPedidosAguardandoFeedback([])
       setPedidosAguardandoDetalhes([])
+      setStatusPedidosConversa(new Map())
     }
   }, [podeApagarHistoricoChat])
+
+  const pedidosEditaveisIds = useMemo(() => {
+    if (!meuId || podeApagarHistoricoChat) return new Set<string>()
+    const ids = new Set<string>()
+    for (const m of mensagens) {
+      if (m.remetente_id !== meuId) continue
+      if (!chatMensagemEhPedidoAjuste(m)) continue
+      const status = statusPedidosConversa.get(m.id) ?? null
+      if (pedidoAjusteSolicitantePodeEditar(status)) ids.add(m.id)
+    }
+    return ids
+  }, [mensagens, meuId, podeApagarHistoricoChat, statusPedidosConversa])
 
   useEffect(() => {
     let cancel = false
@@ -593,6 +618,7 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       queueMicrotask(() => {
         setMensagens([])
         setCarregandoMensagens(false)
+        setEditandoPedidoId(null)
       })
     }
   }, [conversaId])
@@ -858,6 +884,38 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
       meuId,
       modoPedidosColuna,
       veColunaSolicitacoes,
+      recarregarPedidosAguardandoFeedback,
+      recarregarPedidosAjustePendentes,
+    ]
+  )
+
+  const handleSalvarEditarPedido = useCallback(
+    async (mensagemPedidoId: string, descricao: string) => {
+      if (!meuId || podeApagarHistoricoChat) return
+      setErro('')
+      try {
+        const atualizada = await chatEditarPedidoAjusteSolicitante(mensagemPedidoId, descricao)
+        setMensagens((prev) =>
+          prev.map((m) => (m.id === atualizada.id ? { ...m, ...atualizada } : m))
+        )
+        setEditandoPedidoId(null)
+        if (conversaIdRef.current) {
+          void recarregarPedidosAguardandoFeedback(conversaIdRef.current)
+          void recarregarConversas()
+        }
+        if (veColunaSolicitacoes) {
+          void recarregarPedidosAjustePendentes()
+        }
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível editar a solicitação.')
+        throw e
+      }
+    },
+    [
+      meuId,
+      podeApagarHistoricoChat,
+      veColunaSolicitacoes,
+      recarregarConversas,
       recarregarPedidosAguardandoFeedback,
       recarregarPedidosAjustePendentes,
     ]
@@ -1189,6 +1247,17 @@ export function ChatInternoFloating({ naoLidasBadge }: Props) {
                   respondendoDetalhesId={respondendoDetalhesId}
                   onResponderDetalhesPedido={
                     podeApagarHistoricoChat ? undefined : handleResponderDetalhesPedido
+                  }
+                  pedidosEditaveisIds={pedidosEditaveisIds}
+                  editandoPedidoId={editandoPedidoId}
+                  onIniciarEditarPedido={
+                    podeApagarHistoricoChat ? undefined : (id) => setEditandoPedidoId(id)
+                  }
+                  onCancelarEditarPedido={
+                    podeApagarHistoricoChat ? undefined : () => setEditandoPedidoId(null)
+                  }
+                  onSalvarEditarPedido={
+                    podeApagarHistoricoChat ? undefined : handleSalvarEditarPedido
                   }
                 />
               ) : (

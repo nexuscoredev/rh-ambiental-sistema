@@ -3,7 +3,9 @@ import {
   CHAT_PEDIDO_AJUSTE_PREFIX,
   etiquetaEventoPedidoAjusteHistorico,
   montarRespostaPedidoAjusteResolvido,
+  montarConteudoPedidoAjuste,
   parsePedidoAjusteConteudo,
+  pedidoAjusteSolicitantePodeEditar,
   pedidoVisivelNaFilaDesenvolvedor,
   rotuloSituacaoPedidoAjuste,
 } from './chatPedidoAjuste'
@@ -115,6 +117,27 @@ Página: /programacao
         devA
       )
     ).toBe(false)
+  })
+
+  it('monta corpo do pedido no formato padrão', () => {
+    const corpo = montarConteudoPedidoAjuste({
+      descricao: 'Campo de busca no quadro',
+      pagina: '/programacao',
+      solicitante: 'Rafaela Thomaz',
+    })
+    expect(parsePedidoAjusteConteudo(corpo)).toEqual({
+      descricao: 'Campo de busca no quadro',
+      pagina: '/programacao',
+      solicitante: 'Rafaela Thomaz',
+    })
+  })
+
+  it('define quando solicitante pode editar', () => {
+    expect(pedidoAjusteSolicitantePodeEditar(null)).toBe(true)
+    expect(pedidoAjusteSolicitantePodeEditar('aguardando_detalhes')).toBe(true)
+    expect(pedidoAjusteSolicitantePodeEditar('aguardando_solicitante')).toBe(false)
+    expect(pedidoAjusteSolicitantePodeEditar('aprovado')).toBe(false)
+    expect(pedidoAjusteSolicitantePodeEditar('reaberto')).toBe(false)
   })
 
   it('rotula situação do pedido para relatório', () => {

@@ -49,6 +49,10 @@ import {
   combinaFiltrosProgramacaoCaminhao,
 } from '../lib/programacaoTiposCaminhao'
 import {
+  OPCOES_MAO_OBRA_PROGRAMACAO,
+  isMissingProgramacaoMaoObraColumnError,
+} from '../lib/programacaoMaoObra'
+import {
   parseEquipamentosProgramacaoJson,
   parseResiduosProgramacaoJson,
   tipoResiduoLegadoProgramacao,
@@ -84,6 +88,7 @@ type ProgramacaoRow = {
   tipo_residuo: string | null
   residuos_programacao?: unknown
   equipamentos_programacao?: unknown
+  mao_obra_programacao?: string | null
   observacoes: string | null
   coleta_fixa: boolean | null
   periodicidade: string | null
@@ -109,6 +114,7 @@ type ProgramacaoItem = {
   tipoServico: string
   residuosSelecionados: ResiduoProgramacaoItem[]
   equipamentosSelecionados: EquipamentoProgramacaoItem[]
+  maoObraProgramacao: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -131,6 +137,7 @@ type FormState = {
   tipoServico: string
   residuosSelecionados: ResiduoProgramacaoItem[]
   equipamentosSelecionados: EquipamentoProgramacaoItem[]
+  maoObraProgramacao: string
   observacoes: string
   coletaFixa: boolean
   periodicidade: string
@@ -213,6 +220,7 @@ const initialFormState: FormState = {
   tipoServico: '',
   residuosSelecionados: [],
   equipamentosSelecionados: [],
+  maoObraProgramacao: '',
   observacoes: '',
   coletaFixa: false,
   periodicidade: '',
@@ -819,8 +827,6 @@ export default function Programacao() {
       form,
       formEdicaoModal,
       mesSelecionado,
-      filtroTipoCaminhao,
-      filtroCaminhaoId,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -834,8 +840,6 @@ export default function Programacao() {
       form,
       formEdicaoModal,
       mesSelecionado,
-      filtroTipoCaminhao,
-      filtroCaminhaoId,
       diaPainelCalendario,
       modalNovaProgramacaoAberto,
       relatorioAberto,
@@ -856,8 +860,6 @@ export default function Programacao() {
         d.formEdicaoModal ? { ...initialFormState, ...d.formEdicaoModal, id: d.formEdicaoModal.id } : null
       )
       setMesSelecionado(d.mesSelecionado)
-      setFiltroTipoCaminhao(d.filtroTipoCaminhao ?? '')
-      setFiltroCaminhaoId(d.filtroCaminhaoId ?? '')
       setDiaPainelCalendario(d.diaPainelCalendario)
       setModalNovaProgramacaoAberto(d.modalNovaProgramacaoAberto)
       setRelatorioAberto(d.relatorioAberto)
@@ -918,6 +920,8 @@ export default function Programacao() {
   useEffect(() => {
     setSelecionadosExclusaoPainel(new Set())
     setBuscaClientePainelDia('')
+    setFiltroTipoCaminhao('')
+    setFiltroCaminhaoId('')
   }, [diaPainelCalendario])
 
   useEffect(() => {
@@ -1038,7 +1042,7 @@ export default function Programacao() {
       }
 
       const progSelect =
-        'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, residuos_programacao, equipamentos_programacao, observacoes, coleta_fixa, periodicidade, programacao_dias_semana, programacao_serie_id, status_programacao, coleta_id, caminhao_id, created_at, criado_por_user_id, criado_por_nome'
+        'id, numero, cliente_id, cliente, data_programada, tipo_caminhao, tipo_servico, tipo_residuo, residuos_programacao, equipamentos_programacao, mao_obra_programacao, observacoes, coleta_fixa, periodicidade, programacao_dias_semana, programacao_serie_id, status_programacao, coleta_id, caminhao_id, created_at, criado_por_user_id, criado_por_nome'
 
       const [
         { data: clientesData, error: clientesError },
@@ -1073,6 +1077,9 @@ export default function Programacao() {
         if (msg.includes('equipamentos_programacao')) {
           progSelectLegado = progSelectLegado.replace(', equipamentos_programacao', '')
         }
+        if (msg.includes('mao_obra_programacao') || isMissingProgramacaoMaoObraColumnError(programacoesError)) {
+          progSelectLegado = progSelectLegado.replace(', mao_obra_programacao', '')
+        }
         if (msg.includes('tipo_residuo')) {
           progSelectLegado = progSelectLegado.replace(', tipo_residuo', '')
         }
@@ -1089,6 +1096,7 @@ export default function Programacao() {
               tipo_residuo: row.tipo_residuo ?? null,
               residuos_programacao: row.residuos_programacao ?? null,
               equipamentos_programacao: row.equipamentos_programacao ?? null,
+              mao_obra_programacao: row.mao_obra_programacao ?? null,
             }))
           } else {
             console.error('ERRO AO CARREGAR PROGRAMAÇÕES:', programacoesError)
@@ -1186,6 +1194,7 @@ export default function Programacao() {
           caminhaoPlaca: row.caminhao_id ? placaPorCaminhaoId.get(row.caminhao_id) || '' : '',
           tipoServico: rotuloTipoServicoProgramacao(row.tipo_servico || ''),
           ...contratoSelecaoDaProgramacaoRow(row),
+          maoObraProgramacao: (row.mao_obra_programacao ?? '').trim(),
           observacoes: row.observacoes || '',
           coletaFixa: row.coleta_fixa ?? false,
           periodicidade: normalizarPeriodicidadeUi(row.periodicidade || ''),
@@ -1361,6 +1370,7 @@ export default function Programacao() {
       tipoServico: item.tipoServico,
       residuosSelecionados: [...item.residuosSelecionados],
       equipamentosSelecionados: [...item.equipamentosSelecionados],
+      maoObraProgramacao: item.maoObraProgramacao,
       observacoes: item.observacoes,
       coletaFixa: item.coletaFixa,
       periodicidade: item.periodicidade,
@@ -1721,6 +1731,7 @@ export default function Programacao() {
         caminhao_id: formEdicaoModal.caminhaoId.trim() || null,
         tipo_servico: formEdicaoModal.tipoServico.trim(),
         ...payloadContratoProgramacao(formEdicaoModal),
+        mao_obra_programacao: formEdicaoModal.maoObraProgramacao.trim() || null,
         observacoes: formEdicaoModal.observacoes.trim() || null,
         coleta_fixa: formEdicaoModal.coletaFixa,
         periodicidade: formEdicaoModal.coletaFixa ? (diasGravar.length > 0 ? 'Semanal' : formEdicaoModal.periodicidade.trim() || null) : null,
@@ -1823,6 +1834,7 @@ export default function Programacao() {
         caminhao_id: form.caminhaoId.trim() || null,
         tipo_servico: form.tipoServico.trim(),
         ...payloadContratoProgramacao(form),
+        mao_obra_programacao: form.maoObraProgramacao.trim() || null,
         observacoes: form.observacoes.trim() || null,
         coleta_fixa: form.coletaFixa,
         periodicidade: form.coletaFixa
@@ -1901,39 +1913,56 @@ export default function Programacao() {
     }
   }
 
-  const programacoesComFiltroCaminhao = useMemo(() => {
-    return programacoes.filter((item) =>
-      combinaFiltrosProgramacaoCaminhao(item, {
-        filtroTipo: filtroTipoCaminhao,
-        filtroCaminhaoId,
-      })
-    )
-  }, [programacoes, filtroTipoCaminhao, filtroCaminhaoId])
-
   const programacoesNoMes = useMemo(() => {
     return programacoes.filter(
       (item) => item.dataProgramada && item.dataProgramada.startsWith(mesSelecionado)
     )
   }, [programacoes, mesSelecionado])
 
-  const contagensTipoCaminhaoNoMes = useMemo(() => {
-    const map = new Map<string, number>()
+  const agendaAgrupada = useMemo(() => {
+    const grupos = new Map<string, ProgramacaoItem[]>()
+
     for (const item of programacoesNoMes) {
+      if (!grupos.has(item.dataProgramada)) {
+        grupos.set(item.dataProgramada, [])
+      }
+      grupos.get(item.dataProgramada)?.push(item)
+    }
+
+    return Array.from(grupos.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [programacoesNoMes])
+
+  const calendarCells = useMemo(() => {
+    return getCalendarCells(mesSelecionado, programacoesNoMes)
+  }, [mesSelecionado, programacoesNoMes])
+
+  const itensDiaPainelCalendario = useMemo(() => {
+    if (!diaPainelCalendario) return []
+    return programacoes
+      .filter((i) => i.dataProgramada === diaPainelCalendario)
+      .sort((a, b) =>
+        String(a.numero || '').localeCompare(String(b.numero || ''), undefined, { numeric: true })
+      )
+  }, [diaPainelCalendario, programacoes])
+
+  const contagensTipoCaminhaoNoDiaPainel = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const item of itensDiaPainelCalendario) {
       const tipo = (item.tipoCaminhao || '').trim() || 'Sem tipo'
       map.set(tipo, (map.get(tipo) || 0) + 1)
     }
     return Array.from(map.entries())
       .map(([tipo, count]) => ({ tipo, count }))
       .sort((a, b) => b.count - a.count || a.tipo.localeCompare(b.tipo, 'pt-BR'))
-  }, [programacoesNoMes])
+  }, [itensDiaPainelCalendario])
 
-  const veiculosProgramacaoNoMes = useMemo(() => {
+  const veiculosProgramacaoNoDiaPainel = useMemo(() => {
     const porId = new Map<string, { id: string; placa: string; tipoCaminhao: string }>()
     const base = filtroTipoCaminhao
-      ? programacoesNoMes.filter((item) =>
+      ? itensDiaPainelCalendario.filter((item) =>
           combinaFiltrosProgramacaoCaminhao(item, { filtroTipo: filtroTipoCaminhao })
         )
-      : programacoesNoMes
+      : itensDiaPainelCalendario
     for (const item of base) {
       if (!item.caminhaoId || porId.has(item.caminhaoId)) continue
       porId.set(item.caminhaoId, {
@@ -1943,40 +1972,16 @@ export default function Programacao() {
       })
     }
     return Array.from(porId.values()).sort((a, b) => a.placa.localeCompare(b.placa, 'pt-BR'))
-  }, [programacoesNoMes, filtroTipoCaminhao])
+  }, [itensDiaPainelCalendario, filtroTipoCaminhao])
 
-  const programacoesFiltradas = useMemo(() => {
-    return programacoesComFiltroCaminhao.filter((item) => {
-      if (!item.dataProgramada) return false
-      return item.dataProgramada.startsWith(mesSelecionado)
-    })
-  }, [programacoesComFiltroCaminhao, mesSelecionado])
-
-  const agendaAgrupada = useMemo(() => {
-    const grupos = new Map<string, ProgramacaoItem[]>()
-
-    for (const item of programacoesFiltradas) {
-      if (!grupos.has(item.dataProgramada)) {
-        grupos.set(item.dataProgramada, [])
-      }
-      grupos.get(item.dataProgramada)?.push(item)
-    }
-
-    return Array.from(grupos.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [programacoesFiltradas])
-
-  const calendarCells = useMemo(() => {
-    return getCalendarCells(mesSelecionado, programacoesComFiltroCaminhao)
-  }, [mesSelecionado, programacoesComFiltroCaminhao])
-
-  const itensDiaPainelCalendario = useMemo(() => {
-    if (!diaPainelCalendario) return []
-    return programacoesComFiltroCaminhao
-      .filter((i) => i.dataProgramada === diaPainelCalendario)
-      .sort((a, b) =>
-        String(a.numero || '').localeCompare(String(b.numero || ''), undefined, { numeric: true })
-      )
-  }, [diaPainelCalendario, programacoesComFiltroCaminhao])
+  const itensDiaPainelComFiltroCaminhao = useMemo(() => {
+    return itensDiaPainelCalendario.filter((item) =>
+      combinaFiltrosProgramacaoCaminhao(item, {
+        filtroTipo: filtroTipoCaminhao,
+        filtroCaminhaoId,
+      })
+    )
+  }, [itensDiaPainelCalendario, filtroTipoCaminhao, filtroCaminhaoId])
 
   const itensDiaPainelCalendarioFiltrados = useMemo(() => {
     const q = buscaClientePainelDia
@@ -1984,15 +1989,15 @@ export default function Programacao() {
       .normalize('NFD')
       .replace(/\p{M}/gu, '')
       .trim()
-    if (!q) return itensDiaPainelCalendario
-    return itensDiaPainelCalendario.filter((item) => {
+    if (!q) return itensDiaPainelComFiltroCaminhao
+    return itensDiaPainelComFiltroCaminhao.filter((item) => {
       const nome = String(item.clienteNome ?? '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/\p{M}/gu, '')
       return nome.includes(q)
     })
-  }, [buscaClientePainelDia, itensDiaPainelCalendario])
+  }, [buscaClientePainelDia, itensDiaPainelComFiltroCaminhao])
 
   const relatorioRange = useMemo(() => {
     if (relatorioFiltro === 'dia') {
@@ -2133,12 +2138,12 @@ export default function Programacao() {
     return () => window.clearTimeout(timer)
   }, [contextoDestaqueId, mesSelecionado, loading])
 
-  const totalProgramacoes = programacoesFiltradas.length
-  const totalFixas = programacoesFiltradas.filter((item) => item.coletaFixa).length
-  const totalQuadroAtualizado = programacoesFiltradas.filter(
+  const totalProgramacoes = programacoesNoMes.length
+  const totalFixas = programacoesNoMes.filter((item) => item.coletaFixa).length
+  const totalQuadroAtualizado = programacoesNoMes.filter(
     (item) => item.statusProgramacao === 'QUADRO_ATUALIZADO'
   ).length
-  const totalPendentes = programacoesFiltradas.filter(
+  const totalPendentes = programacoesNoMes.filter(
     (item) => item.statusProgramacao === 'PENDENTE'
   ).length
 
@@ -2312,6 +2317,26 @@ export default function Programacao() {
           labelStyle={labelStyle}
         />
 
+        <div>
+          <label style={labelStyle}>Mão de obra</label>
+          <select
+            value={f.maoObraProgramacao}
+            onChange={(event) => patch('maoObraProgramacao', event.target.value)}
+            style={inputStyle}
+          >
+            <option value="">Selecione (opcional)</option>
+            {OPCOES_MAO_OBRA_PROGRAMACAO.map((op) => (
+              <option key={op} value={op}>
+                {op}
+              </option>
+            ))}
+          </select>
+          <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            Informe se esta visita inclui mão de obra contratada (C/) ou não (S/). Ajuda o operacional, a MTR e
+            o faturamento.
+          </p>
+        </div>
+
         {mostrarDeclaracaoInline && declaracaoInlineDraft ? (
           <ProgramacaoDeclaracaoEntregaSecao
             draft={declaracaoInlineDraft}
@@ -2418,10 +2443,6 @@ export default function Programacao() {
   const heroStats = useMemo(
     () => [
       {
-        value: loading ? '…' : programacoesFiltradas.length,
-        label: 'visíveis',
-      },
-      {
         value: loading ? '…' : programacoesNoMes.length,
         label: 'no mês',
       },
@@ -2431,7 +2452,7 @@ export default function Programacao() {
         soft: true,
       },
     ],
-    [loading, programacoesFiltradas.length, programacoesNoMes.length, mesSelecionado]
+    [loading, programacoesNoMes.length, mesSelecionado]
   )
 
   return (
@@ -2504,18 +2525,6 @@ export default function Programacao() {
             Relatório (PDF)
           </button>
         </div>
-
-        <ProgramacaoFiltroCaminhao
-          filtroTipo={filtroTipoCaminhao}
-          onFiltroTipoChange={setFiltroTipoCaminhao}
-          filtroCaminhaoId={filtroCaminhaoId}
-          onFiltroCaminhaoIdChange={setFiltroCaminhaoId}
-          contagensTipoNoMes={contagensTipoCaminhaoNoMes}
-          veiculosNoMes={veiculosProgramacaoNoMes}
-          totalNoMes={programacoesNoMes.length}
-          totalFiltradoNoMes={programacoesFiltradas.length}
-          inputStyle={inputStyle}
-        />
 
       {erro ? <FloatingAlert message={erro} variant="error" onClose={() => setErro('')} /> : null}
       {sucesso ? (
@@ -2622,29 +2631,6 @@ export default function Programacao() {
             <p style={cardDescricaoStyle}>
               Clique no dia para ver todas as programações e agendar nesta data. Use «Nova programação»
               no topo da página ou no painel do dia. Dias fora do mês aparecem mais claros.
-              {filtroTipoCaminhao || filtroCaminhaoId ? (
-                <>
-                  {' '}
-                  Filtro ativo
-                  {filtroTipoCaminhao ? (
-                    <>
-                      {' '}
-                      · tipo <strong>{filtroTipoCaminhao}</strong>
-                    </>
-                  ) : null}
-                  {filtroCaminhaoId ? (
-                    <>
-                      {' '}
-                      · placa{' '}
-                      <strong>
-                        {veiculosProgramacaoNoMes.find((v) => v.id === filtroCaminhaoId)?.placa ||
-                          filtroCaminhaoId}
-                      </strong>
-                    </>
-                  ) : null}
-                  .
-                </>
-              ) : null}
             </p>
 
             <ProgramacaoCalendarioMes
@@ -2671,9 +2657,7 @@ export default function Programacao() {
               <div style={estadoVazioStyle}>Carregando programação...</div>
             ) : agendaAgrupada.length === 0 ? (
               <div style={estadoVazioStyle}>
-                {filtroTipoCaminhao || filtroCaminhaoId
-                  ? 'Nenhuma programação corresponde ao filtro de caminhão neste mês.'
-                  : 'Nenhuma programação encontrada para o mês selecionado.'}
+                Nenhuma programação encontrada para o mês selecionado.
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '14px' }}>
@@ -3015,7 +2999,7 @@ export default function Programacao() {
                 </div>
                 <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
                   {itensDiaPainelCalendarioFiltrados.length}
-                  {buscaClientePainelDia.trim() &&
+                  {(buscaClientePainelDia.trim() || filtroTipoCaminhao || filtroCaminhaoId) &&
                   itensDiaPainelCalendarioFiltrados.length !== itensDiaPainelCalendario.length
                     ? ` de ${itensDiaPainelCalendario.length}`
                     : ''}{' '}
@@ -3034,6 +3018,19 @@ export default function Programacao() {
 
             {itensDiaPainelCalendario.length > 0 ? (
               <>
+                <ProgramacaoFiltroCaminhao
+                  filtroTipo={filtroTipoCaminhao}
+                  onFiltroTipoChange={setFiltroTipoCaminhao}
+                  filtroCaminhaoId={filtroCaminhaoId}
+                  onFiltroCaminhaoIdChange={setFiltroCaminhaoId}
+                  contagensTipoNoMes={contagensTipoCaminhaoNoDiaPainel}
+                  veiculosNoMes={veiculosProgramacaoNoDiaPainel}
+                  totalNoMes={itensDiaPainelCalendario.length}
+                  totalFiltradoNoMes={itensDiaPainelComFiltroCaminhao.length}
+                  inputStyle={inputStyle}
+                  variant="painel"
+                  contagemEscopo="dia"
+                />
                 <label
                   style={{
                     display: 'block',
@@ -3126,9 +3123,7 @@ export default function Programacao() {
                     padding: '20px',
                   }}
                 >
-                  {filtroTipoCaminhao || filtroCaminhaoId
-                    ? 'Nenhuma programação corresponde ao filtro de caminhão neste dia.'
-                    : 'Nenhuma programação neste dia.'}
+                  Nenhuma programação neste dia.
                 </div>
                 <button
                   type="button"
@@ -3157,7 +3152,9 @@ export default function Programacao() {
                   padding: '20px',
                 }}
               >
-                Nenhuma programação corresponde ao cliente «{buscaClientePainelDia.trim()}» neste dia.
+                {buscaClientePainelDia.trim()
+                  ? `Nenhuma programação corresponde ao cliente «${buscaClientePainelDia.trim()}» neste dia.`
+                  : 'Nenhuma programação corresponde ao filtro de caminhão neste dia.'}
               </div>
             ) : (
               <>
@@ -3335,6 +3332,17 @@ export default function Programacao() {
                         >
                           {chipVeiculo.texto}
                         </span>
+                        {item.maoObraProgramacao ? (
+                          <span
+                            style={{
+                              ...statusBadgeCompactStyle,
+                              backgroundColor: '#f3e8ff',
+                              color: '#6b21a8',
+                            }}
+                          >
+                            {item.maoObraProgramacao}
+                          </span>
+                        ) : null}
                       </div>
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
