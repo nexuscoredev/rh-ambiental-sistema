@@ -2682,6 +2682,7 @@ export default function Clientes() {
           }}
         >
           <div
+            className="clientes-page__cadastro-head"
             style={{
               padding: "18px 20px",
               borderBottom: "1px solid #e5e7eb",
@@ -3414,6 +3415,7 @@ export default function Clientes() {
         )}
 
         <div
+          className="clientes-page__lista"
           style={{
             background: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -4350,12 +4352,12 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   height: "40px",
   borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--input-bg, #ffffff)",
   outline: "none",
   padding: "0 12px",
   fontSize: "14px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   boxSizing: "border-box",
 };
 
@@ -4370,20 +4372,20 @@ const fieldLabelStackStyle: React.CSSProperties = {
 const fieldLabelTextStyle: React.CSSProperties = {
   fontSize: "12px",
   fontWeight: 700,
-  color: "#334155",
+  color: "var(--text-primary, #334155)",
   letterSpacing: "0.01em",
 };
 
 const fieldLabelHelpStyle: React.CSSProperties = {
   fontSize: "11px",
-  color: "#64748b",
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.35,
 };
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "14px 12px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   whiteSpace: "normal",
   lineHeight: 1.35,
