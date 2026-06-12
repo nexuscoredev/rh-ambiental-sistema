@@ -12,6 +12,7 @@ import {
   TreinamentoQuiz,
   TreinamentoTrilhaProgresso,
 } from '../../components/treinamento/TreinamentoGamificacaoUi'
+import { TreinamentoPlantaProgresso } from '../../components/treinamento/TreinamentoPlantaProgresso'
 import { useTreinamentoProgresso } from '../../hooks/useTreinamentoProgresso'
 import MainLayout from '../../layouts/MainLayout'
 import { kbArtigoPorSlug } from '../../lib/treinamentoKb/conteudo'
@@ -352,6 +353,7 @@ export default function RhTreinamentosArea() {
   return (
     <MainLayout>
       <TreinamentoProgressoContext.Provider value={progresso}>
+        <TreinamentoPlantaProgresso percentual={progresso.stats.percentualTrilha} />
         <TreinamentoRoutes />
       </TreinamentoProgressoContext.Provider>
     </MainLayout>

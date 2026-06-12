@@ -13728,6 +13728,71 @@ a.rg-btn {
 .treinamento-kb--course {
   max-width: 960px;
 }
+
+/* Planta RG — cresce do chão conforme % da trilha (desktop) */
+.treinamento-kb__planta {
+  position: fixed;
+  right: clamp(16px, 2.5vw, 40px);
+  bottom: 96px;
+  width: 128px;
+  z-index: 5;
+  pointer-events: none;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+@media (min-width: 1080px) {
+  .treinamento-kb__planta {
+    display: flex;
+  }
+}
+.treinamento-kb__planta-pct {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #0f766e;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #99f6e4;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.15);
+}
+.treinamento-kb__planta-viewport {
+  position: relative;
+  width: 128px;
+  overflow: hidden;
+  transition: height 0.9s cubic-bezier(0.34, 1.15, 0.64, 1);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.treinamento-kb__planta-svg {
+  width: 128px;
+  height: 340px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 6px 16px rgba(15, 118, 110, 0.22));
+}
+.treinamento-kb__planta-label {
+  margin: 0;
+  max-width: 120px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #0f766e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.treinamento-kb__planta-viewport::after {
+  content: '';
+  position: absolute;
+  width: 90px;
+  height: 8px;
+  bottom: 0;
+  border-radius: 50%;
+  background: rgba(87, 83, 78, 0.25);
+  filter: blur(2px);
+}
 .treinamento-kb__hero--course .treinamento-kb__hero-main {
   background: linear-gradient(135deg, #fff 0%, #eff6ff 45%, #ecfdf5 100%);
   border: 1px solid #cbd5e1;

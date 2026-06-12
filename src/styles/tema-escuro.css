@@ -392,6 +392,16 @@
   color: var(--text-primary);
 }
 
+[data-theme='dark'] .treinamento-kb__planta-pct {
+  background: rgba(17, 94, 89, 0.95);
+  color: #ccfbf1;
+  border-color: #2dd4bf;
+}
+
+[data-theme='dark'] .treinamento-kb__planta-label {
+  color: #5eead4;
+}
+
 [data-theme='dark'] .treinamento-kb__xp-panel {
   background: linear-gradient(145deg, #115e59 0%, #0f766e 50%, #134e4a 100%);
   border-color: #2dd4bf;
