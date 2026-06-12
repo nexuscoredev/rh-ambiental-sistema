@@ -59,31 +59,51 @@ const input: CSSProperties = {
 type Props = {
   veiculos: VeiculoContratoItem[]
   equipamentos: EquipamentoContratoItem[]
+  maoObra?: EquipamentoContratoItem[]
   disabled?: boolean
-  onChange: (veiculos: VeiculoContratoItem[], equipamentos: EquipamentoContratoItem[]) => void
+  onChange: (
+    veiculos: VeiculoContratoItem[],
+    equipamentos: EquipamentoContratoItem[],
+    maoObra: EquipamentoContratoItem[]
+  ) => void
 }
 
 export function MtrVeiculosEquipamentosForm({
   veiculos,
   equipamentos,
+  maoObra = [],
   disabled = false,
   onChange,
 }: Props) {
   const listaVeiculos = veiculos.length > 0 ? veiculos : [veiculoContratoInicial()]
   const listaEquip = equipamentos.length > 0 ? equipamentos : [equipamentoContratoInicial()]
+  const listaMaoObra = maoObra.length > 0 ? maoObra : [equipamentoContratoInicial()]
 
-  function emitir(v: VeiculoContratoItem[], e: EquipamentoContratoItem[]) {
-    onChange(veiculosContratoSemValoresMtr(v), equipamentosContratoSemValoresMtr(e))
+  function emitir(
+    v: VeiculoContratoItem[],
+    e: EquipamentoContratoItem[],
+    mo: EquipamentoContratoItem[]
+  ) {
+    onChange(
+      veiculosContratoSemValoresMtr(v),
+      equipamentosContratoSemValoresMtr(e),
+      equipamentosContratoSemValoresMtr(mo)
+    )
   }
 
   function patchVeiculo(index: number, campo: 'tipo_veiculo', valor: string) {
     const next = listaVeiculos.map((row, i) => (i === index ? { ...row, [campo]: valor } : row))
-    emitir(next, listaEquip)
+    emitir(next, listaEquip, listaMaoObra)
   }
 
   function patchEquipamento(index: number, campo: 'descricao', valor: string) {
     const next = listaEquip.map((row, i) => (i === index ? { ...row, [campo]: valor } : row))
-    emitir(listaVeiculos, next)
+    emitir(listaVeiculos, next, listaMaoObra)
+  }
+
+  function patchMaoObra(index: number, campo: 'descricao', valor: string) {
+    const next = listaMaoObra.map((row, i) => (i === index ? { ...row, [campo]: valor } : row))
+    emitir(listaVeiculos, listaEquip, next)
   }
 
   return (
@@ -125,7 +145,7 @@ export function MtrVeiculosEquipamentosForm({
               cursor: disabled ? 'not-allowed' : 'pointer',
             }}
             disabled={disabled}
-            onClick={() => emitir([...listaVeiculos, veiculoContratoInicial()], listaEquip)}
+            onClick={() => emitir([...listaVeiculos, veiculoContratoInicial()], listaEquip, listaMaoObra)}
           >
             + Adicionar veículo
           </button>
@@ -153,7 +173,9 @@ export function MtrVeiculosEquipamentosForm({
                     cursor: disabled || listaVeiculos.length <= 1 ? 'not-allowed' : 'pointer',
                   }}
                   disabled={disabled || listaVeiculos.length <= 1}
-                  onClick={() => emitir(listaVeiculos.filter((_, i) => i !== index), listaEquip)}
+                  onClick={() =>
+                    emitir(listaVeiculos.filter((_, i) => i !== index), listaEquip, listaMaoObra)
+                  }
                 >
                   Remover
                 </button>
@@ -193,7 +215,9 @@ export function MtrVeiculosEquipamentosForm({
               cursor: disabled ? 'not-allowed' : 'pointer',
             }}
             disabled={disabled}
-            onClick={() => emitir(listaVeiculos, [...listaEquip, equipamentoContratoInicial()])}
+            onClick={() =>
+              emitir(listaVeiculos, [...listaEquip, equipamentoContratoInicial()], listaMaoObra)
+            }
           >
             + Adicionar equipamento
           </button>
@@ -221,7 +245,9 @@ export function MtrVeiculosEquipamentosForm({
                     cursor: disabled || listaEquip.length <= 1 ? 'not-allowed' : 'pointer',
                   }}
                   disabled={disabled || listaEquip.length <= 1}
-                  onClick={() => emitir(listaVeiculos, listaEquip.filter((_, i) => i !== index))}
+                  onClick={() =>
+                    emitir(listaVeiculos, listaEquip.filter((_, i) => i !== index), listaMaoObra)
+                  }
                 >
                   Remover
                 </button>
@@ -234,6 +260,78 @@ export function MtrVeiculosEquipamentosForm({
                   disabled={disabled}
                   placeholder="Ex.: caçamba 3 m³, lona…"
                   onChange={(e) => patchEquipamento(index, 'descricao', e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: '22px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Mão de obra</div>
+          <button
+            type="button"
+            style={{
+              ...btnAdicionar,
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+            }}
+            disabled={disabled}
+            onClick={() =>
+              emitir(listaVeiculos, listaEquip, [...listaMaoObra, equipamentoContratoInicial()])
+            }
+          >
+            + Adicionar mão de obra
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {listaMaoObra.map((item, index) => (
+            <div key={`mtr-mao-obra-${index}`} style={cardItem}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '10px',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                  Mão de obra {index + 1}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    ...btnRemover,
+                    opacity: listaMaoObra.length <= 1 || disabled ? 0.45 : 1,
+                    cursor: disabled || listaMaoObra.length <= 1 ? 'not-allowed' : 'pointer',
+                  }}
+                  disabled={disabled || listaMaoObra.length <= 1}
+                  onClick={() =>
+                    emitir(listaVeiculos, listaEquip, listaMaoObra.filter((_, i) => i !== index))
+                  }
+                >
+                  Remover
+                </button>
+              </div>
+              <div>
+                <label style={labelCampo}>Descrição</label>
+                <input
+                  style={input}
+                  value={asTextoFormulario(item.descricao)}
+                  disabled={disabled}
+                  placeholder="Ex.: operador, hora técnica…"
+                  onChange={(e) => patchMaoObra(index, 'descricao', e.target.value)}
                 />
               </div>
             </div>

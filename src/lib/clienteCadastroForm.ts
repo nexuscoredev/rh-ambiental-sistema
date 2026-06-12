@@ -1,5 +1,6 @@
 import {
   equipamentoContratoInicial,
+  maoObraContratoInicial,
   normalizarListasContratoForm,
   residuoContratoInicial,
   veiculoContratoInicial,
@@ -68,6 +69,7 @@ export type FormCliente = {
   equipamentos: string
   veiculos_contrato: VeiculoContratoItem[]
   equipamentos_contrato: EquipamentoContratoItem[]
+  mao_obra_contrato: EquipamentoContratoItem[]
   residuos: ResiduoForm[]
 }
 
@@ -126,6 +128,7 @@ export const formClienteInicial: FormCliente = {
   equipamentos: '',
   veiculos_contrato: [veiculoContratoInicial()],
   equipamentos_contrato: [equipamentoContratoInicial()],
+  mao_obra_contrato: [maoObraContratoInicial()],
   residuos: [{ ...residuoInicial }],
 }
 

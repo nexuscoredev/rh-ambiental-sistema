@@ -2,6 +2,7 @@ import { useCallback, useState, type ChangeEvent } from 'react'
 import { buscarEnderecoPorCepBr } from '../lib/cepAutofillBr'
 import {
   equipamentoContratoInicial,
+  maoObraContratoInicial,
   normalizarListasContratoForm,
   residuoContratoInicial,
   veiculoContratoInicial,
@@ -159,6 +160,42 @@ export function useClienteCadastroForm(initial?: Partial<FormCliente>) {
     })
   }
 
+  function handleMaoObraContratoChange(
+    index: number,
+    campo: keyof EquipamentoContratoItem,
+    valor: string | boolean
+  ) {
+    setForm((prev) => {
+      const lista = [...prev.mao_obra_contrato]
+      const atual = { ...lista[index], [campo]: valor }
+      if (campo === 'com_custo' && valor === false) atual.valor = ''
+      if (campo === 'valor' && typeof valor === 'string' && valor.trim()) {
+        atual.com_custo = true
+      }
+      lista[index] = atual
+      return { ...prev, mao_obra_contrato: lista }
+    })
+  }
+
+  function adicionarMaoObraContrato() {
+    setForm((prev) => ({
+      ...prev,
+      mao_obra_contrato: [...prev.mao_obra_contrato, maoObraContratoInicial()],
+    }))
+  }
+
+  function removerMaoObraContrato(index: number) {
+    setForm((prev) => {
+      if (prev.mao_obra_contrato.length === 1) {
+        return { ...prev, mao_obra_contrato: [maoObraContratoInicial()] }
+      }
+      return {
+        ...prev,
+        mao_obra_contrato: prev.mao_obra_contrato.filter((_, i) => i !== index),
+      }
+    })
+  }
+
   return {
     form,
     setForm,
@@ -175,5 +212,8 @@ export function useClienteCadastroForm(initial?: Partial<FormCliente>) {
     handleEquipamentoContratoChange,
     adicionarEquipamentoContrato,
     removerEquipamentoContrato,
+    handleMaoObraContratoChange,
+    adicionarMaoObraContrato,
+    removerMaoObraContrato,
   }
 }

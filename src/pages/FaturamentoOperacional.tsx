@@ -610,7 +610,6 @@ export default function FaturamentoOperacional() {
         <FaturamentoFilaAguardandoImpressao linhas={filaAguardandoImpressao} carregando={carregandoVista} />
 
         <FaturamentoFilaAprovacaoTicket
-          key={filaAprovacao.map((r) => r.coleta_id).join(',')}
           linhas={filaAprovacao}
           carregando={carregandoVista}
           podeAprovar={podeAprovarTicketFila}

@@ -313,10 +313,16 @@ export function calcularPrecoContratoMtrConsolidado(
   })
 
   const linhas = primeira.linhas.filter(
-    (l) => l.chave === 'caminhao' || l.chave.startsWith('equipamento')
+    (l) =>
+      l.chave === 'caminhao' ||
+      l.chave.startsWith('equipamento') ||
+      l.chave.startsWith('mao-obra')
   )
   const linhasResiduo = primeira.linhas.filter(
-    (l) => l.chave !== 'caminhao' && !l.chave.startsWith('equipamento')
+    (l) =>
+      l.chave !== 'caminhao' &&
+      !l.chave.startsWith('equipamento') &&
+      !l.chave.startsWith('mao-obra')
   )
   let valorResiduo = primeira.valorResiduo
 
@@ -326,6 +332,7 @@ export function calcularPrecoContratoMtrConsolidado(
       ...input,
       veiculosContratoRaw: [],
       equipamentosContratoRaw: [],
+      maoObraContratoRaw: [],
       descricaoVeiculoLegado: null,
       equipamentosTextoLegado: null,
       tipoCaminhaoMtr: input.tipoCaminhaoMtr,
@@ -335,7 +342,8 @@ export function calcularPrecoContratoMtrConsolidado(
     })
     valorResiduo += part.valorResiduo
     for (const l of part.linhas) {
-      if (l.chave === 'caminhao' || l.chave.startsWith('equipamento')) continue
+      if (l.chave === 'caminhao' || l.chave.startsWith('equipamento') || l.chave.startsWith('mao-obra'))
+        continue
       linhasResiduo.push({
         ...l,
         rotulo: `${(c.tipo_residuo || 'Resíduo').trim()} — ${l.rotulo}`,
@@ -346,7 +354,7 @@ export function calcularPrecoContratoMtrConsolidado(
   valorResiduo = Math.round(valorResiduo * 100) / 100
   const todasLinhas = [...linhas, ...linhasResiduo]
   const total = Math.round(
-    (primeira.valorCaminhao + primeira.valorEquipamentos + valorResiduo) * 100
+    (primeira.valorCaminhao + primeira.valorEquipamentos + primeira.valorMaoObra + valorResiduo) * 100
   ) / 100
 
   return {

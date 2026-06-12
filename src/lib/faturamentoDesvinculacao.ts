@@ -23,12 +23,14 @@ export type ResumoTicketFinanceiro = {
   eh_consolidado_mtr?: boolean
 }
 
-/** Snapshot financeiro da MTR: caminhão + equipamento + resíduo. */
+/** Snapshot financeiro da MTR: caminhão + equipamento + mão de obra + resíduo. */
 export type ResumoMtrFinanceiro = {
   caminhao_rotulo: string
   caminhao_valor: string
   equipamento_rotulo: string
   equipamento_valor: string
+  mao_obra_rotulo: string
+  mao_obra_valor: string
   residuo_rotulo: string
   residuo_quantidade: string
   residuo_unidade: string
@@ -112,6 +114,7 @@ export function totalResumoFinanceiro(r: ResumoFinanceiroDesvinculado): number {
   const mtr =
     parseNumeroCampo(r.mtr.caminhao_valor) +
     parseNumeroCampo(r.mtr.equipamento_valor) +
+    parseNumeroCampo(r.mtr.mao_obra_valor) +
     parseNumeroCampo(r.mtr.residuo_valor)
   const acrescimo = parseNumeroCampo(r.ajustes?.acrescimo ?? '')
   const desconto = parseNumeroCampo(r.ajustes?.desconto ?? '')
@@ -122,6 +125,7 @@ export function totalResumoMtr(m: ResumoMtrFinanceiro): number {
   return Math.round(
     (parseNumeroCampo(m.caminhao_valor) +
       parseNumeroCampo(m.equipamento_valor) +
+      parseNumeroCampo(m.mao_obra_valor) +
       parseNumeroCampo(m.residuo_valor)) *
       100
   ) / 100
@@ -146,6 +150,8 @@ export function criarResumoFinanceiroDoOperacional(
     sugestao?.equipamentosContrato?.[0]?.descricao?.trim() ||
     (ctx?.acondicionamento ?? '').trim() ||
     'Equipamento'
+  const moRot =
+    sugestao?.maoObraContrato?.[0]?.descricao?.trim() || 'Mão de obra'
   const tipoColeta = tipoResiduoExibicaoColeta(row)
   const rotulosColeta = rotulosResiduoFromTextoColeta(tipoColeta)
   const resRot =
@@ -165,6 +171,8 @@ export function criarResumoFinanceiroDoOperacional(
     caminhao_valor: moedaParaCampo(sugestao?.valorCaminhao),
     equipamento_rotulo: eqRot,
     equipamento_valor: moedaParaCampo(sugestao?.valorEquipamentos),
+    mao_obra_rotulo: moRot,
+    mao_obra_valor: moedaParaCampo(sugestao?.valorMaoObra),
     residuo_rotulo: resRot,
     residuo_quantidade: qtd > 0 ? String(qtd) : pesoParaCampo(row.peso_liquido),
     residuo_unidade: unidade,
@@ -234,6 +242,11 @@ function parseMtrRaw(o: Record<string, unknown>): ResumoMtrFinanceiro {
       typeof o.equipamento_valor === 'string'
         ? o.equipamento_valor
         : moedaParaCampo(o.equipamento_valor as number),
+    mao_obra_rotulo: typeof o.mao_obra_rotulo === 'string' ? o.mao_obra_rotulo : '',
+    mao_obra_valor:
+      typeof o.mao_obra_valor === 'string'
+        ? o.mao_obra_valor
+        : moedaParaCampo(o.mao_obra_valor as number),
     residuo_rotulo: typeof o.residuo_rotulo === 'string' ? o.residuo_rotulo : '',
     residuo_quantidade:
       typeof o.residuo_quantidade === 'string'
@@ -407,6 +420,11 @@ export function aplicarSugestaoContratoNoResumoMtr(
       (ctx?.acondicionamento ?? '').trim() ||
       'Equipamento',
     equipamento_valor: moedaParaCampo(sugestao.valorEquipamentos) || resumo.mtr.equipamento_valor,
+    mao_obra_rotulo:
+      sugestao.maoObraContrato?.[0]?.descricao?.trim() ||
+      resumo.mtr.mao_obra_rotulo ||
+      'Mão de obra',
+    mao_obra_valor: moedaParaCampo(sugestao.valorMaoObra) || resumo.mtr.mao_obra_valor,
     residuo_rotulo: sugestao.residuoContrato?.tipo_residuo?.trim() || resumo.mtr.residuo_rotulo,
     residuo_quantidade:
       sugestao.quantidadeFaturada > 0

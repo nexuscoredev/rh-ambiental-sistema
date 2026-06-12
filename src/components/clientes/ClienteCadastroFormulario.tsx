@@ -52,6 +52,9 @@ export function ClienteCadastroFormulario({
   handleEquipamentoContratoChange,
   adicionarEquipamentoContrato,
   removerEquipamentoContrato,
+  handleMaoObraContratoChange,
+  adicionarMaoObraContrato,
+  removerMaoObraContrato,
 }: ClienteCadastroFormularioProps) {
   const inputStyle = clienteInputStyle
   const grid4 = clienteGridCols('4', gridFluido)
@@ -707,6 +710,7 @@ export function ClienteCadastroFormulario({
                   inputStyle={inputStyle}
                   veiculos={form.veiculos_contrato}
                   equipamentos={form.equipamentos_contrato}
+                  maoObra={form.mao_obra_contrato}
                   residuos={form.residuos}
                   onVeiculoChange={handleVeiculoContratoChange}
                   onAdicionarVeiculo={adicionarVeiculoContrato}
@@ -714,6 +718,9 @@ export function ClienteCadastroFormulario({
                   onEquipamentoChange={handleEquipamentoContratoChange}
                   onAdicionarEquipamento={adicionarEquipamentoContrato}
                   onRemoverEquipamento={removerEquipamentoContrato}
+                  onMaoObraChange={handleMaoObraContratoChange}
+                  onAdicionarMaoObra={adicionarMaoObraContrato}
+                  onRemoverMaoObra={removerMaoObraContrato}
                   onResiduoChange={handleResiduoChange}
                   onAdicionarResiduo={adicionarResiduo}
                   onRemoverResiduo={removerResiduo}

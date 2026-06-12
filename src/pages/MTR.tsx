@@ -261,6 +261,7 @@ type MTRDetalhes = {
   residuos_contrato_catalogo?: ResiduoContratoItem[]
   contrato_veiculos?: { tipo_veiculo: string; sem_custo: boolean; valor: string }[]
   contrato_equipamentos?: { descricao: string; com_custo: boolean; valor: string }[]
+  contrato_mao_obra?: { descricao: string; com_custo: boolean; valor: string }[]
 }
 
 type MTRFormState = Omit<MTR, 'id' | 'created_at' | 'status' | 'criado_por_nome' | 'criado_por_user_id'>
@@ -477,6 +478,11 @@ function mergeMtrDetalhesProfundo(raw: MTRDetalhes | null | undefined): MTRDetal
     contrato_equipamentos: Array.isArray(rawAny.contrato_equipamentos)
       ? equipamentosContratoSemValoresMtr(
           parseEquipamentosContratoJsonb(rawAny.contrato_equipamentos).filter((e) => e.descricao.trim())
+        )
+      : undefined,
+    contrato_mao_obra: Array.isArray(rawAny.contrato_mao_obra)
+      ? equipamentosContratoSemValoresMtr(
+          parseEquipamentosContratoJsonb(rawAny.contrato_mao_obra).filter((e) => e.descricao.trim())
         )
       : undefined,
     blocos: { ...z.blocos, ...(raw.blocos ?? z.blocos) },
@@ -1390,6 +1396,9 @@ export default function MTR() {
             contrato_equipamentos: prev.detalhes?.contrato_equipamentos?.length
               ? prev.detalhes.contrato_equipamentos
               : contrato.equipamentos,
+            contrato_mao_obra: prev.detalhes?.contrato_mao_obra?.length
+              ? prev.detalhes.contrato_mao_obra
+              : contrato.maoObra,
           },
         }
       }
@@ -1428,6 +1437,9 @@ export default function MTR() {
           contrato_equipamentos: prev.detalhes?.contrato_equipamentos?.length
             ? prev.detalhes.contrato_equipamentos
             : contrato.equipamentos,
+          contrato_mao_obra: prev.detalhes?.contrato_mao_obra?.length
+            ? prev.detalhes.contrato_mao_obra
+            : contrato.maoObra,
         },
       }
     })
@@ -1769,6 +1781,7 @@ export default function MTR() {
           residuos_itens: linhasResiduo,
           contrato_veiculos: contrato.veiculos,
           contrato_equipamentos: contrato.equipamentos,
+          contrato_mao_obra: contrato.maoObra,
           residuos_contrato_catalogo: contrato.residuos,
           ...syncResiduos,
           gerador: {
@@ -5034,8 +5047,9 @@ ${MTR_LISTA_CARD_UI_CSS}
                           <MtrVeiculosEquipamentosForm
                               veiculos={form.detalhes?.contrato_veiculos ?? []}
                               equipamentos={form.detalhes?.contrato_equipamentos ?? []}
+                              maoObra={form.detalhes?.contrato_mao_obra ?? []}
                               disabled={!podeMutarMtr}
-                              onChange={(veiculos, equipamentos) => {
+                              onChange={(veiculos, equipamentos, maoObra) => {
                                 setForm((prev) => {
                                   const base = prev.detalhes ?? detalhesVazios()
                                   const prog = prev.programacao_id
@@ -5045,9 +5059,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                                     {
                                       veiculos,
                                       equipamentos,
+                                      maoObra,
                                       residuos: [],
                                       rotuloVeiculos: '',
                                       rotuloEquipamentos: '',
+                                      rotuloMaoObra: '',
                                       rotuloResiduos: '',
                                     },
                                     prog?.tipo_caminhao ?? ''
@@ -5069,6 +5085,7 @@ ${MTR_LISTA_CARD_UI_CSS}
                                       ...base,
                                       contrato_veiculos: veiculos,
                                       contrato_equipamentos: equipamentos,
+                                      contrato_mao_obra: maoObra,
                                       ...sync,
                                     },
                                   }
@@ -5087,9 +5104,11 @@ ${MTR_LISTA_CARD_UI_CSS}
                               {
                                 veiculos: form.detalhes?.contrato_veiculos ?? [],
                                 equipamentos: form.detalhes?.contrato_equipamentos ?? [],
+                                maoObra: form.detalhes?.contrato_mao_obra ?? [],
                                 residuos: form.detalhes?.residuos_contrato_catalogo ?? [],
                                 rotuloVeiculos: '',
                                 rotuloEquipamentos: '',
+                                rotuloMaoObra: '',
                                 rotuloResiduos: '',
                               },
                               eligibleProgramacoes.find((p) => p.id === form.programacao_id)

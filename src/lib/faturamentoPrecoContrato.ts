@@ -22,12 +22,14 @@ export type ResultadoPrecoContrato = {
   residuoContrato: ResiduoContratoItem | null
   veiculoContrato: VeiculoContratoItem | null
   equipamentosContrato: EquipamentoContratoItem[]
+  maoObraContrato: EquipamentoContratoItem[]
   unidadeMedida: string
   quantidadeFaturada: number
   valorUnitario: number
   faturamentoMinimoKg: number
   valorCaminhao: number
   valorEquipamentos: number
+  valorMaoObra: number
   valorResiduo: number
 }
 
@@ -269,6 +271,7 @@ function calcularLinhasResiduo(input: {
 export function calcularPrecoContratoColetaMtr(input: {
   veiculosContratoRaw: unknown
   equipamentosContratoRaw: unknown
+  maoObraContratoRaw?: unknown
   residuosContratoRaw: unknown
   legadoTipoResiduo?: string | null
   descricaoVeiculoLegado?: string | null
@@ -287,6 +290,7 @@ export function calcularPrecoContratoColetaMtr(input: {
     input.equipamentosContratoRaw,
     input.equipamentosTextoLegado
   )
+  const maoObraItens = parseEquipamentosContratoJsonb(input.maoObraContratoRaw, null)
 
   const hintsVeiculo = [
     ...hintsFromTexto(input.tipoCaminhaoMtr),
@@ -301,6 +305,7 @@ export function calcularPrecoContratoColetaMtr(input: {
 
   const veiculo = encontrarVeiculoContrato(veiculos, hintsVeiculo)
   const equipamentosFat = encontrarEquipamentosFaturaveis(equipamentos, hintsEquipamento)
+  const maoObraFat = encontrarEquipamentosFaturaveis(maoObraItens, hintsEquipamento)
 
   const partResiduo = calcularLinhasResiduo({
     residuosContratoRaw: input.residuosContratoRaw,
@@ -313,6 +318,7 @@ export function calcularPrecoContratoColetaMtr(input: {
   const linhas: PrecoBreakdownLinha[] = []
   let valorCaminhao = 0
   let valorEquipamentos = 0
+  let valorMaoObra = 0
 
   if (veiculo && !veiculo.sem_custo) {
     valorCaminhao = Math.round(parseNumero(veiculo.valor) * 100) / 100
@@ -337,13 +343,26 @@ export function calcularPrecoContratoColetaMtr(input: {
   }
   valorEquipamentos = Math.round(valorEquipamentos * 100) / 100
 
+  for (const mo of maoObraFat) {
+    const v = Math.round(parseNumero(mo.valor) * 100) / 100
+    if (v <= 0) continue
+    valorMaoObra += v
+    linhas.push({
+      chave: `mao-obra-${normalizarTexto(mo.descricao).slice(0, 24) || 'item'}`,
+      rotulo: `Mão de obra (${mo.descricao.trim()})`,
+      valor: v,
+    })
+  }
+  valorMaoObra = Math.round(valorMaoObra * 100) / 100
+
   linhas.push(...partResiduo.linhas)
 
-  const total = Math.round((valorCaminhao + valorEquipamentos + partResiduo.valorResiduo) * 100) / 100
+  const total =
+    Math.round((valorCaminhao + valorEquipamentos + valorMaoObra + partResiduo.valorResiduo) * 100) / 100
 
   let origem: PrecoContratoOrigem = 'nenhuma'
   if (total > 0) {
-    if (valorCaminhao > 0 || valorEquipamentos > 0) {
+    if (valorCaminhao > 0 || valorEquipamentos > 0 || valorMaoObra > 0) {
       origem = 'contrato_cliente_mtr_consolidado'
     } else {
       origem = partResiduo.origem
@@ -357,12 +376,14 @@ export function calcularPrecoContratoColetaMtr(input: {
     residuoContrato: partResiduo.residuoContrato,
     veiculoContrato: veiculo,
     equipamentosContrato: equipamentosFat,
+    maoObraContrato: maoObraFat,
     unidadeMedida: partResiduo.unidadeMedida,
     quantidadeFaturada: partResiduo.quantidadeFaturada,
     valorUnitario: partResiduo.valorUnitario,
     faturamentoMinimoKg: partResiduo.faturamentoMinimoKg,
     valorCaminhao,
     valorEquipamentos,
+    valorMaoObra,
     valorResiduo: partResiduo.valorResiduo,
   }
 }
@@ -388,7 +409,7 @@ export function calcularPrecoContratoCliente(input: {
 
 export function rotuloOrigemContrato(o: PrecoContratoOrigem): string {
   if (o === 'contrato_cliente_mtr_consolidado') {
-    return 'Contrato do cliente (Caminhão + Equipamento + Resíduo)'
+    return 'Contrato do cliente (Caminhão + Equipamento + Mão de obra + Resíduo)'
   }
   if (o === 'contrato_cliente_residuo') return 'Contrato do cliente (cadastro)'
   if (o === 'contrato_cliente_residuo_minimo') return 'Contrato do cliente (mínimo em kg aplicado)'

@@ -5,6 +5,7 @@ export type ContratoRelatorioMedicao = {
   residuos_contrato: unknown
   veiculos_contrato: unknown
   equipamentos_contrato: unknown
+  mao_obra_contrato?: unknown
   tipo_residuo_legado?: string | null
   descricao_veiculo_legado?: string | null
   equipamentos_texto_legado?: string | null
@@ -13,6 +14,8 @@ export type ContratoRelatorioMedicao = {
 export type ContextoMtrMedicao = {
   tipoCaminhao?: string | null
   acondicionamento?: string | null
+  /** Quando presente, usa seleção da MTR em vez do cadastro inteiro do cliente. */
+  inputPrecoContrato?: Parameters<typeof calcularPrecoContratoColetaMtr>[0]
 }
 
 export type LinhaRelatorioMedicao = {
@@ -128,22 +131,24 @@ export function montarLinhasRelatorioMedicao(
 
   return ordenadas.map((row) => {
     const ctx = ctxPorColetaId[row.coleta_id]
-    const preco = calcularPrecoContratoColetaMtr({
-      veiculosContratoRaw: contrato.veiculos_contrato,
-      equipamentosContratoRaw: contrato.equipamentos_contrato,
-      residuosContratoRaw: contrato.residuos_contrato,
-      legadoTipoResiduo: contrato.tipo_residuo_legado,
-      descricaoVeiculoLegado: contrato.descricao_veiculo_legado,
-      equipamentosTextoLegado: contrato.equipamentos_texto_legado,
-      tipoCaminhaoMtr: ctx?.tipoCaminhao ?? null,
-      acondicionamentoMtr: ctx?.acondicionamento ?? null,
-      tipoResiduoColeta: row.tipo_residuo,
-      pesoLiquidoKg: row.peso_liquido,
-    })
+    const preco = calcularPrecoContratoColetaMtr(
+      ctx?.inputPrecoContrato ?? {
+        veiculosContratoRaw: contrato.veiculos_contrato,
+        equipamentosContratoRaw: contrato.equipamentos_contrato,
+        residuosContratoRaw: contrato.residuos_contrato,
+        legadoTipoResiduo: contrato.tipo_residuo_legado,
+        descricaoVeiculoLegado: contrato.descricao_veiculo_legado,
+        equipamentosTextoLegado: contrato.equipamentos_texto_legado,
+        tipoCaminhaoMtr: ctx?.tipoCaminhao ?? null,
+        acondicionamentoMtr: ctx?.acondicionamento ?? null,
+        tipoResiduoColeta: row.tipo_residuo,
+        pesoLiquidoKg: row.peso_liquido,
+      }
+    )
 
     const aplicaFrete = comFrete.has(row.coleta_id)
     const valorFrete = aplicaFrete
-      ? Math.round((preco.valorCaminhao + preco.valorEquipamentos) * 100) / 100
+      ? Math.round((preco.valorCaminhao + preco.valorEquipamentos + preco.valorMaoObra) * 100) / 100
       : 0
     const total = aplicaFrete
       ? preco.total

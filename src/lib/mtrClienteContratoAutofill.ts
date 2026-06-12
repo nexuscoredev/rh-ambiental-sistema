@@ -5,11 +5,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   isMissingClienteContratoColumnsError,
   parseEquipamentosContratoJsonb,
+  parseMaoObraContratoJsonb,
   parseResiduosContratoJsonb,
   parseVeiculosContratoJsonb,
   rotuloEquipamentosContratoResumo,
   rotuloVeiculosContratoResumo,
   equipamentosContratoSemValoresMtr,
+  maoObraContratoSemValoresMtr,
   veiculosContratoSemValoresMtr,
   formatarPesoKgCampoContrato,
   type EquipamentoContratoItem,
@@ -36,6 +38,7 @@ export type ClienteRowContratoMtr = {
   equipamentos?: string | null
   veiculos_contrato?: unknown
   equipamentos_contrato?: unknown
+  mao_obra_contrato?: unknown
   residuos_contrato?: unknown
   frequencia_coleta?: string | null
 }
@@ -43,9 +46,11 @@ export type ClienteRowContratoMtr = {
 export type MtrContratoClienteSnapshot = {
   veiculos: VeiculoContratoItem[]
   equipamentos: EquipamentoContratoItem[]
+  maoObra: EquipamentoContratoItem[]
   residuos: ResiduoContratoItem[]
   rotuloVeiculos: string
   rotuloEquipamentos: string
+  rotuloMaoObra: string
   rotuloResiduos: string
 }
 
@@ -56,6 +61,7 @@ export function parseContratoClienteMtr(row: ClienteRowContratoMtr): MtrContrato
   const equipamentos = parseEquipamentosContratoJsonb(row.equipamentos_contrato, row.equipamentos).filter(
     (e) => e.descricao.trim()
   )
+  const maoObra = parseMaoObraContratoJsonb(row.mao_obra_contrato).filter((e) => e.descricao.trim())
   const residuos = parseResiduosContratoJsonb(row.residuos_contrato, {
     tipo_residuo: row.tipo_residuo,
     classificacao: row.classificacao,
@@ -77,9 +83,11 @@ export function parseContratoClienteMtr(row: ClienteRowContratoMtr): MtrContrato
   return {
     veiculos: veiculosContratoSemValoresMtr(veiculos),
     equipamentos: equipamentosContratoSemValoresMtr(equipamentos),
+    maoObra: maoObraContratoSemValoresMtr(maoObra),
     residuos,
     rotuloVeiculos: rotuloVeiculosContratoResumo(row.veiculos_contrato, row.descricao_veiculo),
     rotuloEquipamentos: rotuloEquipamentosContratoResumo(row.equipamentos_contrato, row.equipamentos),
+    rotuloMaoObra: rotuloEquipamentosContratoResumo(row.mao_obra_contrato, null),
     rotuloResiduos,
   }
 }
@@ -256,7 +264,7 @@ export function residuoDetalhesLimpo(): MtrResiduoDetalhesCampos {
 }
 
 const MTR_SEL_CLIENTE_CONTRATO =
-  'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, veiculos_contrato, equipamentos_contrato, residuos_contrato, frequencia_coleta'
+  'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, veiculos_contrato, equipamentos_contrato, mao_obra_contrato, residuos_contrato, frequencia_coleta'
 
 const MTR_SEL_CLIENTE_CONTRATO_LEGADO =
   'nome, razao_social, cnpj, cep, rua, numero, complemento, bairro, cidade, estado, endereco_coleta, responsavel_nome, telefone, tipo_residuo, unidade_medida, classificacao, licenca_numero, codigo_ibama, destino, mtr_destino, residuo_destino, observacoes_operacionais, observacoes_gerais, link_google_maps, descricao_veiculo, mtr_coleta, equipamentos, frequencia_coleta'
@@ -532,6 +540,7 @@ export function acondicionamentoFromContratoVeiculoEquipamento(
 export function snapshotContratoFromDetalhesMtr(detalhes: {
   contrato_veiculos?: VeiculoContratoItem[]
   contrato_equipamentos?: EquipamentoContratoItem[]
+  contrato_mao_obra?: EquipamentoContratoItem[]
   residuos_lista?: MtrResiduoDetalhesCampos[]
   residuo?: MtrResiduoDetalhesCampos
   residuos_itens?: ResiduoPesagemItem[]
@@ -539,6 +548,7 @@ export function snapshotContratoFromDetalhesMtr(detalhes: {
   if (!detalhes) return null
   const veiculos = detalhes.contrato_veiculos ?? []
   const equipamentos = detalhes.contrato_equipamentos ?? []
+  const maoObra = detalhes.contrato_mao_obra ?? []
   const listaDesc = listaResiduosFromDetalhesMtr({
     residuo: detalhes.residuo ?? residuoDetalhesVazio(),
     residuos_lista: detalhes.residuos_lista,
@@ -551,13 +561,16 @@ export function snapshotContratoFromDetalhesMtr(detalhes: {
     frequencia_coleta: '',
     faturamento_minimo: l.quantidade_aproximada.trim(),
   }))
-  if (veiculos.length === 0 && equipamentos.length === 0 && residuos.length === 0) return null
+  if (veiculos.length === 0 && equipamentos.length === 0 && maoObra.length === 0 && residuos.length === 0)
+    return null
   return {
     veiculos,
     equipamentos,
+    maoObra,
     residuos,
     rotuloVeiculos: rotuloVeiculosContratoResumo(veiculos, null),
     rotuloEquipamentos: rotuloEquipamentosContratoResumo(equipamentos, null),
+    rotuloMaoObra: rotuloEquipamentosContratoResumo(maoObra, null),
     rotuloResiduos: residuos.map((r) => rotuloResiduoContrato(r)).join(' · ') || '—',
   }
 }

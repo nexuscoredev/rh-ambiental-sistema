@@ -17,6 +17,10 @@ import {
 } from '../../lib/faturamentoEsteira'
 import { referenciaContratoComCaminhaoResumo } from '../../lib/faturamentoDetalheConta'
 import {
+  montarInputPrecoContratoColeta,
+  veiculosContratoRawParaResumo,
+} from '../../lib/faturamentoContratoDesdeMtr'
+import {
   calcularPrecoContratoColetaMtr,
   rotuloOrigemContrato,
   type ResultadoPrecoContrato,
@@ -120,6 +124,7 @@ export function FaturamentoModalRegisto({
     residuos_contrato: unknown
     veiculos_contrato: unknown
     equipamentos_contrato: unknown
+    mao_obra_contrato: unknown
     tipo_residuo_legado: string | null
     descricao_veiculo_legado: string | null
     equipamentos_texto_legado: string | null
@@ -127,8 +132,11 @@ export function FaturamentoModalRegisto({
   const [contextoMtr, setContextoMtr] = useState<{
     tipoCaminhao: string | null
     acondicionamento: string | null
+    detalhes: unknown
+    tipoResiduo: string | null
   } | null>(null)
   const [carregandoContrato, setCarregandoContrato] = useState(false)
+  const [carregandoContextoMtr, setCarregandoContextoMtr] = useState(false)
   /** Evita reinicializar o resumo a cada tecla (loop que congelava o formulário MTR). */
   const resumoInicializadoColetaRef = useRef<string | null>(null)
   /** Evita reaplicar preços do contrato em loop quando o resumo já foi preenchido. */
@@ -179,35 +187,38 @@ export function FaturamentoModalRegisto({
     return coletasPesoParaContratoFromResumo(grupoConsolidado, resumoFinanceiro)
   }, [grupoConsolidado, resumoFinanceiro])
 
+  const snapshotMtrContrato = useMemo(
+    () =>
+      row?.mtr_id && contextoMtr
+        ? { detalhes: contextoMtr.detalhes, tipo_residuo: contextoMtr.tipoResiduo }
+        : null,
+    [row?.mtr_id, contextoMtr]
+  )
+
   /** Referência do contrato usa peso do resumo MTR (inclui edição em kg). */
   const sugestaoContrato: ResultadoPrecoContrato | null = useMemo(() => {
     if (!row || !contratoCliente) return null
-    const inputBase = {
-      veiculosContratoRaw: contratoCliente.veiculos_contrato,
-      equipamentosContratoRaw: contratoCliente.equipamentos_contrato,
-      residuosContratoRaw: contratoCliente.residuos_contrato,
-      legadoTipoResiduo: contratoCliente.tipo_residuo_legado,
-      descricaoVeiculoLegado: contratoCliente.descricao_veiculo_legado,
-      equipamentosTextoLegado: contratoCliente.equipamentos_texto_legado,
-      tipoCaminhaoMtr: contextoMtr?.tipoCaminhao ?? null,
-      acondicionamentoMtr: contextoMtr?.acondicionamento ?? null,
-      tipoResiduoColeta: row.tipo_residuo,
+    const inputBase = montarInputPrecoContratoColeta({
+      contratoCliente,
+      mtr: snapshotMtrContrato,
+      tipoCaminhaoProgramacao: contextoMtr?.tipoCaminhao,
+      tipoResiduoColetaFallback: row.tipo_residuo,
       pesoLiquidoKg: pesoFaturamentoMtrKg ?? pesoColetaKg,
-    }
+    })
+    if (!inputBase) return null
     if (coletasPesoContrato && coletasPesoContrato.length > 1) {
       return calcularPrecoContratoMtrConsolidado(inputBase, coletasPesoContrato)
     }
     const qtd = pesoFaturamentoMtrKg ?? pesoColetaKg
     return calcularPrecoContratoColetaMtr({
       ...inputBase,
-      tipoResiduoColeta: row.tipo_residuo,
-      pesoLiquidoKg: pesoFaturamentoMtrKg ?? pesoColetaKg,
       quantidadeFaturada: qtd,
     })
   }, [
     row,
     contratoCliente,
     contextoMtr,
+    snapshotMtrContrato,
     pesoColetaKg,
     pesoFaturamentoMtrKg,
     coletasPesoContrato,
@@ -218,18 +229,14 @@ export function FaturamentoModalRegisto({
       if (!row || !contratoCliente) return null
       const pesoKg = pesoLiquidoKgDoResumoMtr(resumo.mtr)
       if (pesoKg == null || pesoKg <= 0) return null
-      const inputBase = {
-        veiculosContratoRaw: contratoCliente.veiculos_contrato,
-        equipamentosContratoRaw: contratoCliente.equipamentos_contrato,
-        residuosContratoRaw: contratoCliente.residuos_contrato,
-        legadoTipoResiduo: contratoCliente.tipo_residuo_legado,
-        descricaoVeiculoLegado: contratoCliente.descricao_veiculo_legado,
-        equipamentosTextoLegado: contratoCliente.equipamentos_texto_legado,
-        tipoCaminhaoMtr: contextoMtr?.tipoCaminhao ?? null,
-        acondicionamentoMtr: contextoMtr?.acondicionamento ?? null,
-        tipoResiduoColeta: row.tipo_residuo,
+      const inputBase = montarInputPrecoContratoColeta({
+        contratoCliente,
+        mtr: snapshotMtrContrato,
+        tipoCaminhaoProgramacao: contextoMtr?.tipoCaminhao,
+        tipoResiduoColetaFallback: row.tipo_residuo,
         pesoLiquidoKg: pesoKg,
-      }
+      })
+      if (!inputBase) return null
       if (grupoConsolidado && grupoConsolidado.length > 1) {
         const coletas = coletasPesoParaContratoFromResumo(grupoConsolidado, resumo)
         if (coletas.length > 1) {
@@ -238,12 +245,10 @@ export function FaturamentoModalRegisto({
       }
       return calcularPrecoContratoColetaMtr({
         ...inputBase,
-        tipoResiduoColeta: row.tipo_residuo,
-        pesoLiquidoKg: pesoKg,
         quantidadeFaturada: pesoKg,
       })
     },
-    [row, contratoCliente, contextoMtr, grupoConsolidado]
+    [row, contratoCliente, contextoMtr, snapshotMtrContrato, grupoConsolidado]
   )
 
   const reaplicarContratoNoResumo = useCallback(
@@ -458,17 +463,33 @@ export function FaturamentoModalRegisto({
   }, [row, montarResumoOperacional, contextoMtr])
 
   useEffect(() => {
-    if (!open || !coletaIdModal || carregando || carregandoContrato) return
+    if (!open || !coletaIdModal || carregando || carregandoContrato || carregandoContextoMtr) return
     if (resumoInicializadoColetaRef.current === coletaIdModal) return
     garantirResumoMontado()
-  }, [open, coletaIdModal, carregando, carregandoContrato, garantirResumoMontado])
+  }, [
+    open,
+    coletaIdModal,
+    carregando,
+    carregandoContrato,
+    carregandoContextoMtr,
+    garantirResumoMontado,
+  ])
 
   /** Após o contrato carregar, preenche caminhão/equipamento/resíduo se o resumo ainda estiver sem valores. */
   useEffect(() => {
-    if (!open || !coletaIdModal || carregandoContrato || !resumoFinanceiro || !sugestaoContrato) return
+    if (
+      !open ||
+      !coletaIdModal ||
+      carregandoContrato ||
+      carregandoContextoMtr ||
+      !resumoFinanceiro ||
+      !sugestaoContrato
+    )
+      return
     const temPrecoContrato =
       sugestaoContrato.valorCaminhao > 0 ||
       sugestaoContrato.valorEquipamentos > 0 ||
+      sugestaoContrato.valorMaoObra > 0 ||
       sugestaoContrato.valorResiduo > 0 ||
       sugestaoContrato.valorUnitario > 0
     if (!temPrecoContrato || !resumoMtrPrecosVazios(resumoFinanceiro.mtr)) return
@@ -489,6 +510,7 @@ export function FaturamentoModalRegisto({
     open,
     coletaIdModal,
     carregandoContrato,
+    carregandoContextoMtr,
     resumoFinanceiro,
     sugestaoContrato,
     contextoMtr?.tipoCaminhao,
@@ -562,7 +584,7 @@ export function FaturamentoModalRegisto({
     queueMicrotask(() => setCarregandoContrato(true))
     void (async () => {
       const selComContrato =
-        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
+        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, mao_obra_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
       let res = await supabase.from('clientes').select(selComContrato).eq('id', row.cliente_id).maybeSingle()
       if (cancel) return
       if (res.error && isMissingClienteContratoColumnsError(res.error)) {
@@ -581,6 +603,7 @@ export function FaturamentoModalRegisto({
           residuos_contrato: d.residuos_contrato ?? null,
           veiculos_contrato: d.veiculos_contrato ?? null,
           equipamentos_contrato: d.equipamentos_contrato ?? null,
+          mao_obra_contrato: d.mao_obra_contrato ?? null,
           tipo_residuo_legado: typeof d.tipo_residuo === 'string' ? d.tipo_residuo : null,
           descricao_veiculo_legado:
             typeof d.descricao_veiculo === 'string' ? d.descricao_veiculo : null,
@@ -596,13 +619,19 @@ export function FaturamentoModalRegisto({
 
   useEffect(() => {
     if (!open || !row) {
-      queueMicrotask(() => setContextoMtr(null))
+      queueMicrotask(() => {
+        setContextoMtr(null)
+        setCarregandoContextoMtr(false)
+      })
       return
     }
     let cancel = false
+    queueMicrotask(() => setCarregandoContextoMtr(true))
     void (async () => {
       let tipoCaminhao: string | null = null
       let acondicionamento: string | null = null
+      let detalhes: unknown = null
+      let tipoResiduo: string | null = null
 
       if (row.programacao_id) {
         const { data } = await supabase
@@ -617,18 +646,28 @@ export function FaturamentoModalRegisto({
       }
 
       if (row.mtr_id) {
-        const { data } = await supabase.from('mtrs').select('detalhes').eq('id', row.mtr_id).maybeSingle()
+        const { data } = await supabase
+          .from('mtrs')
+          .select('detalhes, tipo_residuo')
+          .eq('id', row.mtr_id)
+          .maybeSingle()
         if (!cancel && data && typeof data === 'object') {
-          const det = (data as { detalhes?: unknown }).detalhes
-          if (det && typeof det === 'object') {
-            const res = (det as { residuo?: { acondicionamento?: string } }).residuo
+          const d = data as { detalhes?: unknown; tipo_residuo?: string | null }
+          detalhes = d.detalhes ?? null
+          const tr = d.tipo_residuo
+          tipoResiduo = typeof tr === 'string' && tr.trim() ? tr.trim() : null
+          if (detalhes && typeof detalhes === 'object') {
+            const res = (detalhes as { residuo?: { acondicionamento?: string } }).residuo
             const ac = res?.acondicionamento
             acondicionamento = typeof ac === 'string' && ac.trim() ? ac.trim() : null
           }
         }
       }
 
-      if (!cancel) setContextoMtr({ tipoCaminhao, acondicionamento })
+      if (!cancel) {
+        setContextoMtr({ tipoCaminhao, acondicionamento, detalhes, tipoResiduo })
+        setCarregandoContextoMtr(false)
+      }
     })()
     return () => {
       cancel = true
@@ -1030,7 +1069,10 @@ export function FaturamentoModalRegisto({
                     : null
                 }
                 diferencaConta={diferencaConta}
-                veiculosContratoRaw={contratoCliente?.veiculos_contrato}
+                veiculosContratoRaw={veiculosContratoRawParaResumo(
+                  contratoCliente,
+                  snapshotMtrContrato
+                )}
                 tipoCaminhaoProgramacao={contextoMtr?.tipoCaminhao}
                 acondicionamentoMtr={contextoMtr?.acondicionamento}
                 descricaoVeiculoLegado={contratoCliente?.descricao_veiculo_legado}
@@ -1052,9 +1094,9 @@ export function FaturamentoModalRegisto({
                 </p>
               ) : null}
 
-              {carregandoContrato ? (
+              {carregandoContrato || carregandoContextoMtr ? (
                 <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
-                  A carregar contrato do cliente…
+                  A carregar contrato e seleção da MTR…
                 </p>
               ) : sugestaoContrato && sugestaoContrato.total <= 0 && row.cliente_id ? (
                 <p style={{ fontSize: '12px', color: '#b45309', margin: '0 0 12px' }}>

@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { FaturamentoResumoViewRow } from './faturamentoResumo'
+import { montarInputPrecoContratoColeta } from './faturamentoContratoDesdeMtr'
 import {
   montarLinhasRelatorioMedicao,
   type ContratoRelatorioMedicao,
@@ -22,7 +23,7 @@ export async function carregarLinhasRelatorioMedicao(
     const { data: cli, error: errCli } = await supabase
       .from('clientes')
       .select(
-        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, tipo_residuo, descricao_veiculo, equipamentos'
+        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, mao_obra_contrato, tipo_residuo, descricao_veiculo, equipamentos'
       )
       .eq('id', clienteId)
       .maybeSingle()
@@ -34,6 +35,17 @@ export async function carregarLinhasRelatorioMedicao(
       residuos_contrato: cli.residuos_contrato,
       veiculos_contrato: cli.veiculos_contrato,
       equipamentos_contrato: cli.equipamentos_contrato,
+      mao_obra_contrato: cli.mao_obra_contrato,
+      tipo_residuo_legado: cli.tipo_residuo,
+      descricao_veiculo_legado: cli.descricao_veiculo,
+      equipamentos_texto_legado: cli.equipamentos,
+    }
+
+    const contratoClienteFallback = {
+      residuos_contrato: cli.residuos_contrato,
+      veiculos_contrato: cli.veiculos_contrato,
+      equipamentos_contrato: cli.equipamentos_contrato,
+      mao_obra_contrato: cli.mao_obra_contrato,
       tipo_residuo_legado: cli.tipo_residuo,
       descricao_veiculo_legado: cli.descricao_veiculo,
       equipamentos_texto_legado: cli.equipamentos,
@@ -45,18 +57,21 @@ export async function carregarLinhasRelatorioMedicao(
     ]
 
     const ctxPorColeta: Record<string, ContextoMtrMedicao> = {}
-    const acondMtrMap = new Map<string, string | null>()
+    const mtrMap = new Map<string, { detalhes: unknown; tipo_residuo: string | null }>()
     if (mtrIds.length > 0) {
-      const { data: mtrs } = await supabase.from('mtrs').select('id, detalhes').in('id', mtrIds)
+      const { data: mtrs } = await supabase
+        .from('mtrs')
+        .select('id, detalhes, tipo_residuo')
+        .in('id', mtrIds)
       for (const m of mtrs ?? []) {
-        let ac: string | null = null
-        const det = (m as { detalhes?: unknown }).detalhes
-        if (det && typeof det === 'object') {
-          const res = (det as { residuo?: { acondicionamento?: string } }).residuo
-          const raw = res?.acondicionamento
-          ac = typeof raw === 'string' && raw.trim() ? raw.trim() : null
-        }
-        acondMtrMap.set(String(m.id), ac)
+        const row = m as { id?: string; detalhes?: unknown; tipo_residuo?: string | null }
+        const id = String(row.id ?? '')
+        if (!id) continue
+        const tr = row.tipo_residuo
+        mtrMap.set(id, {
+          detalhes: row.detalhes ?? null,
+          tipo_residuo: typeof tr === 'string' && tr.trim() ? tr.trim() : null,
+        })
       }
     }
     const progMap = new Map<string, string | null>()
@@ -72,9 +87,28 @@ export async function carregarLinhasRelatorioMedicao(
     }
 
     for (const r of linhasColeta) {
+      const tipoCaminhao = r.programacao_id ? progMap.get(r.programacao_id) ?? null : null
+      const mtrSnap = r.mtr_id ? mtrMap.get(r.mtr_id) : undefined
+      let acondicionamento: string | null = null
+      if (mtrSnap?.detalhes && typeof mtrSnap.detalhes === 'object') {
+        const res = (mtrSnap.detalhes as { residuo?: { acondicionamento?: string } }).residuo
+        const raw = res?.acondicionamento
+        acondicionamento = typeof raw === 'string' && raw.trim() ? raw.trim() : null
+      }
+      const inputPrecoContrato =
+        montarInputPrecoContratoColeta({
+          contratoCliente: contratoClienteFallback,
+          mtr: mtrSnap
+            ? { detalhes: mtrSnap.detalhes, tipo_residuo: mtrSnap.tipo_residuo }
+            : null,
+          tipoCaminhaoProgramacao: tipoCaminhao,
+          tipoResiduoColetaFallback: r.tipo_residuo,
+          pesoLiquidoKg: r.peso_liquido,
+        }) ?? undefined
       ctxPorColeta[r.coleta_id] = {
-        tipoCaminhao: r.programacao_id ? progMap.get(r.programacao_id) ?? null : null,
-        acondicionamento: r.mtr_id ? acondMtrMap.get(r.mtr_id) ?? null : null,
+        tipoCaminhao,
+        acondicionamento,
+        inputPrecoContrato,
       }
     }
 

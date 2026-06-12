@@ -61,12 +61,14 @@ describe('aplicarSugestaoContratoNoResumoMtr', () => {
       residuoContrato: null,
       veiculoContrato: null,
       equipamentosContrato: [],
+      maoObraContrato: [],
       unidadeMedida: 'kg',
       quantidadeFaturada: 1,
       valorUnitario: 300,
       faturamentoMinimoKg: 0,
       valorCaminhao: 0,
       valorEquipamentos: 0,
+      valorMaoObra: 0,
       valorResiduo: 300,
     }
     const next = aplicarSugestaoContratoNoResumoMtr(resumo, sugestao)
@@ -111,12 +113,14 @@ describe('aplicarSugestaoContratoNoResumoMtr', () => {
       },
       veiculoContrato: { tipo_veiculo: 'Truck', sem_custo: false, valor: '200' },
       equipamentosContrato: [{ descricao: 'Caçamba', com_custo: true, valor: '100' }],
+      maoObraContrato: [],
       unidadeMedida: 'kg',
       quantidadeFaturada: 5600,
       valorUnitario: 0.5,
       faturamentoMinimoKg: 0,
       valorCaminhao: 200,
       valorEquipamentos: 100,
+      valorMaoObra: 0,
       valorResiduo: 2800,
     }
     const next = aplicarSugestaoContratoNoResumoMtr(base, sugestao)

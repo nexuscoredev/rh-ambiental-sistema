@@ -24,6 +24,8 @@ const resumoBase: ResumoFinanceiroDesvinculado = {
     caminhao_valor: '',
     equipamento_rotulo: '',
     equipamento_valor: '',
+    mao_obra_rotulo: '',
+    mao_obra_valor: '',
     residuo_rotulo: '',
     residuo_quantidade: '',
     residuo_unidade: 'kg',

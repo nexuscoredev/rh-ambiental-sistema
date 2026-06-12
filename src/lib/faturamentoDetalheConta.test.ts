@@ -37,6 +37,8 @@ function resumoBase(): ResumoFinanceiroDesvinculado {
       caminhao_valor: '250',
       equipamento_rotulo: 'Caçamba',
       equipamento_valor: '0',
+      mao_obra_rotulo: '',
+      mao_obra_valor: '',
       residuo_rotulo: '2 resíduos (A · B)',
       residuo_quantidade: '576',
       residuo_unidade: 'kg',

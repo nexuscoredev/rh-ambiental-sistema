@@ -38,6 +38,9 @@ import {
 } from "../lib/clienteEmpresaGrupoFaturamento";
 import {
   descricaoVeiculoLegadoDeItens,
+  maoObraContratoInicial,
+  maoObraContratoParaJsonb,
+  parseMaoObraContratoJsonb,
   equipamentoContratoInicial,
   equipamentosContratoParaJsonb,
   equipamentosTextoLegadoDeItens,
@@ -55,6 +58,7 @@ import {
   veiculoContratoInicial,
   veiculosContratoParaJsonb,
   type EquipamentoContratoItem,
+  type MaoObraContratoItem,
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from "../lib/clienteContratoCadastro";
@@ -140,6 +144,7 @@ type Cliente = {
   equipamentos?: string | null;
   veiculos_contrato?: unknown;
   equipamentos_contrato?: unknown;
+  mao_obra_contrato?: unknown;
   residuos_contrato?: unknown;
 };
 
@@ -216,6 +221,7 @@ type FormCliente = {
 
   veiculos_contrato: VeiculoContratoItem[];
   equipamentos_contrato: EquipamentoContratoItem[];
+  mao_obra_contrato: MaoObraContratoItem[];
   residuos: ResiduoForm[];
 };
 
@@ -282,6 +288,7 @@ const formInicial: FormCliente = {
 
   veiculos_contrato: [veiculoContratoInicial()],
   equipamentos_contrato: [equipamentoContratoInicial()],
+  mao_obra_contrato: [maoObraContratoInicial()],
   residuos: [{ ...residuoInicial }],
 };
 
@@ -684,7 +691,7 @@ function montarResiduosDoCliente(cliente: Cliente): ResiduoForm[] {
 }
 
 const CLIENTES_SELECT_CONTRATO_JSON =
-  ", veiculos_contrato, equipamentos_contrato, residuos_contrato";
+  ", veiculos_contrato, equipamentos_contrato, mao_obra_contrato, residuos_contrato";
 
 const CLIENTES_SELECT_CORE =
   "id, nome, razao_social, cnpj, status, cep, rua, numero, complemento, bairro, cidade, estado";
@@ -1962,6 +1969,42 @@ export default function Clientes() {
     });
   }
 
+  function handleMaoObraContratoChange(
+    index: number,
+    campo: keyof MaoObraContratoItem,
+    valor: string | boolean
+  ) {
+    setForm((prev) => {
+      const lista = [...prev.mao_obra_contrato];
+      const atual = { ...lista[index], [campo]: valor };
+      if (campo === "com_custo" && valor === false) atual.valor = "";
+      if (campo === "valor" && typeof valor === "string" && valor.trim()) {
+        atual.com_custo = true;
+      }
+      lista[index] = atual;
+      return { ...prev, mao_obra_contrato: lista };
+    });
+  }
+
+  function adicionarMaoObraContrato() {
+    setForm((prev) => ({
+      ...prev,
+      mao_obra_contrato: [...prev.mao_obra_contrato, maoObraContratoInicial()],
+    }));
+  }
+
+  function removerMaoObraContrato(index: number) {
+    setForm((prev) => {
+      if (prev.mao_obra_contrato.length === 1) {
+        return { ...prev, mao_obra_contrato: [maoObraContratoInicial()] };
+      }
+      return {
+        ...prev,
+        mao_obra_contrato: prev.mao_obra_contrato.filter((_, i) => i !== index),
+      };
+    });
+  }
+
   function limparFormulario() {
     limparSessionDraftKey(CLIENTES_CADASTRO_DRAFT_KEY);
     setForm(formInicial);
@@ -2068,6 +2111,7 @@ export default function Clientes() {
           row.equipamentos_contrato,
           row.equipamentos
         ),
+        mao_obra_contrato: parseMaoObraContratoJsonb(row.mao_obra_contrato),
         residuos: montarResiduosDoCliente(row),
       })
       );
@@ -2276,6 +2320,7 @@ export default function Clientes() {
       if (usarContratoJson) {
         corpo.veiculos_contrato = veiculosContratoParaJsonb(form.veiculos_contrato);
         corpo.equipamentos_contrato = equipamentosContratoParaJsonb(form.equipamentos_contrato);
+        corpo.mao_obra_contrato = maoObraContratoParaJsonb(form.mao_obra_contrato);
         corpo.residuos_contrato = residuosContratoParaJsonb(residuosValidos);
       }
       return corpo;
@@ -3296,6 +3341,7 @@ export default function Clientes() {
                   inputStyle={inputStyle}
                   veiculos={form.veiculos_contrato}
                   equipamentos={form.equipamentos_contrato}
+                  maoObra={form.mao_obra_contrato}
                   residuos={form.residuos}
                   onVeiculoChange={handleVeiculoContratoChange}
                   onAdicionarVeiculo={adicionarVeiculoContrato}
@@ -3303,6 +3349,9 @@ export default function Clientes() {
                   onEquipamentoChange={handleEquipamentoContratoChange}
                   onAdicionarEquipamento={adicionarEquipamentoContrato}
                   onRemoverEquipamento={removerEquipamentoContrato}
+                  onMaoObraChange={handleMaoObraContratoChange}
+                  onAdicionarMaoObra={adicionarMaoObraContrato}
+                  onRemoverMaoObra={removerMaoObraContrato}
                   onResiduoChange={handleResiduoChange}
                   onAdicionarResiduo={adicionarResiduo}
                   onRemoverResiduo={removerResiduo}

@@ -137,6 +137,10 @@ function FaturamentoResumoDesvinculadoInner({
     () => parseNumeroCampo(resumo.mtr.equipamento_valor),
     [resumo.mtr.equipamento_valor]
   )
+  const maoObraMtrNum = useMemo(
+    () => parseNumeroCampo(resumo.mtr.mao_obra_valor),
+    [resumo.mtr.mao_obra_valor]
+  )
   const residuoMtrNum = useMemo(
     () => parseNumeroCampo(resumo.mtr.residuo_valor),
     [resumo.mtr.residuo_valor]
@@ -233,7 +237,7 @@ function FaturamentoResumoDesvinculadoInner({
         }}
       >
         <strong>Sincronização com operacional:</strong> ao editar, os valores são gravados no
-        registo de faturamento e <strong>espelhados na MTR</strong> (caminhão, equipamento, resíduo) e no{' '}
+        registo de faturamento e <strong>espelhados na MTR</strong> (caminhão, equipamento, mão de obra, resíduo) e no{' '}
         <strong>ticket</strong> (pesos e resíduos nas coletas), após uma breve pausa ou ao guardar.
         {!podeEditarResumos ? (
           <>
@@ -438,7 +442,7 @@ function FaturamentoResumoDesvinculadoInner({
               Resumo da MTR {podeEditar ? '(editável)' : ''}
             </div>
             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-              Caminhão + equipamento + resíduo
+              Caminhão + equipamento + mão de obra + resíduo
             </div>
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -615,6 +619,25 @@ function FaturamentoResumoDesvinculadoInner({
               placeholder="Valor R$"
             />
           </div>
+          <div>
+            <label style={label}>Mão de obra</label>
+            <input
+              style={{ ...input, marginBottom: '6px' }}
+              disabled={!podeEditar}
+              readOnly={!podeEditar}
+              value={resumo.mtr.mao_obra_rotulo}
+              onChange={(e) => patchMtrSemRecalc({ mao_obra_rotulo: e.target.value })}
+            />
+            <input
+              style={input}
+              disabled={!podeEditar}
+              readOnly={!podeEditar}
+              inputMode="decimal"
+              value={resumo.mtr.mao_obra_valor}
+              onChange={(e) => patchMtrSemRecalc({ mao_obra_valor: e.target.value })}
+              placeholder="Valor R$"
+            />
+          </div>
         </div>
 
         <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
@@ -701,8 +724,8 @@ function FaturamentoResumoDesvinculadoInner({
         >
           Subtotal MTR: {fmtBrlLocal(totalMtr)}
           <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 500, color: '#047857' }}>
-            Caminhão {fmtBrlLocal(caminhaoMtrNum)} + Equipamento {fmtBrlLocal(equipMtrNum)} + Resíduo{' '}
-            {fmtBrlLocal(residuoMtrNum)}
+            Caminhão {fmtBrlLocal(caminhaoMtrNum)} + Equipamento {fmtBrlLocal(equipMtrNum)} + Mão de obra{' '}
+            {fmtBrlLocal(maoObraMtrNum)} + Resíduo {fmtBrlLocal(residuoMtrNum)}
           </div>
         </div>
       </div>

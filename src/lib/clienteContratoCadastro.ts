@@ -146,6 +146,9 @@ export type EquipamentoContratoItem = {
   valor: string
 }
 
+/** Mão de obra — mesma estrutura de equipamento (descrição + com custo + valor). */
+export type MaoObraContratoItem = EquipamentoContratoItem
+
 export type ResiduoContratoItem = {
   tipo_residuo: string
   classificacao: string
@@ -167,6 +170,8 @@ export const equipamentoContratoInicial = (): EquipamentoContratoItem => ({
   valor: '',
 })
 
+export const maoObraContratoInicial = (): MaoObraContratoItem => equipamentoContratoInicial()
+
 /** Na MTR só se registam tipo/descrição — valores ficam no cadastro do cliente / faturamento. */
 export function veiculosContratoSemValoresMtr(itens: VeiculoContratoItem[]): VeiculoContratoItem[] {
   return itens.map((v) => ({ ...v, valor: '', sem_custo: true }))
@@ -176,6 +181,10 @@ export function equipamentosContratoSemValoresMtr(
   itens: EquipamentoContratoItem[]
 ): EquipamentoContratoItem[] {
   return itens.map((e) => ({ ...e, valor: '', com_custo: false }))
+}
+
+export function maoObraContratoSemValoresMtr(itens: MaoObraContratoItem[]): MaoObraContratoItem[] {
+  return equipamentosContratoSemValoresMtr(itens)
 }
 
 export const residuoContratoInicial = (): ResiduoContratoItem => ({
@@ -267,6 +276,10 @@ export function equipamentosContratoParaJsonb(itens: EquipamentoContratoItem[]):
   }))
 }
 
+export function maoObraContratoParaJsonb(itens: MaoObraContratoItem[]): unknown {
+  return equipamentosContratoParaJsonb(itens)
+}
+
 export function residuosContratoParaJsonb(itens: ResiduoContratoItem[]): unknown {
   return itens
     .filter(itemResiduoValido)
@@ -332,6 +345,10 @@ export function parseEquipamentosContratoJsonb(
     com_custo: false,
     valor: '',
   }))
+}
+
+export function parseMaoObraContratoJsonb(raw: unknown): MaoObraContratoItem[] {
+  return parseEquipamentosContratoJsonb(raw, null)
 }
 
 export function dividirListaPipe(valor: string | null | undefined | unknown): string[] {
@@ -469,6 +486,7 @@ export function rotuloEquipamentosContratoResumo(
 export function normalizarListasContratoForm<T extends {
   veiculos_contrato: VeiculoContratoItem[]
   equipamentos_contrato: EquipamentoContratoItem[]
+  mao_obra_contrato: MaoObraContratoItem[]
   residuos: ResiduoContratoItem[]
   descricao_veiculo?: string
   equipamentos?: string
@@ -484,6 +502,7 @@ export function normalizarListasContratoForm<T extends {
       form.equipamentos_contrato,
       form.equipamentos
     ),
+    mao_obra_contrato: parseMaoObraContratoJsonb(form.mao_obra_contrato),
     residuos: parseResiduosContratoJsonb(form.residuos, {
       tipo_residuo: form.tipo_residuo,
       classificacao: form.classificacao,
@@ -499,6 +518,7 @@ export function isMissingClienteContratoColumnsError(error: { message?: string }
   return (
     msg.includes('veiculos_contrato') ||
     msg.includes('equipamentos_contrato') ||
+    msg.includes('mao_obra_contrato') ||
     msg.includes('residuos_contrato') ||
     (msg.includes('schema cache') && msg.includes('clientes'))
   )

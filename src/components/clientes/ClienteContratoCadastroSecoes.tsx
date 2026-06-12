@@ -3,6 +3,7 @@ import {
   asTextoFormulario,
   UNIDADES_MEDIDA_RESIDUO_CLIENTES,
   type EquipamentoContratoItem,
+  type MaoObraContratoItem,
   type ResiduoContratoItem,
   type VeiculoContratoItem,
 } from '../../lib/clienteContratoCadastro'
@@ -50,6 +51,7 @@ type Props = {
   inputStyle: CSSProperties
   veiculos: VeiculoContratoItem[]
   equipamentos: EquipamentoContratoItem[]
+  maoObra: MaoObraContratoItem[]
   residuos: ResiduoContratoItem[]
   onVeiculoChange: (index: number, campo: keyof VeiculoContratoItem, valor: string | boolean) => void
   onAdicionarVeiculo: () => void
@@ -57,6 +59,9 @@ type Props = {
   onEquipamentoChange: (index: number, campo: keyof EquipamentoContratoItem, valor: string | boolean) => void
   onAdicionarEquipamento: () => void
   onRemoverEquipamento: (index: number) => void
+  onMaoObraChange: (index: number, campo: keyof MaoObraContratoItem, valor: string | boolean) => void
+  onAdicionarMaoObra: () => void
+  onRemoverMaoObra: (index: number) => void
   onResiduoChange: (index: number, campo: keyof ResiduoContratoItem, valor: string) => void
   onAdicionarResiduo: () => void
   onRemoverResiduo: (index: number) => void
@@ -66,6 +71,7 @@ export function ClienteContratoCadastroSecoes({
   inputStyle,
   veiculos,
   equipamentos,
+  maoObra,
   residuos,
   onVeiculoChange,
   onAdicionarVeiculo,
@@ -73,6 +79,9 @@ export function ClienteContratoCadastroSecoes({
   onEquipamentoChange,
   onAdicionarEquipamento,
   onRemoverEquipamento,
+  onMaoObraChange,
+  onAdicionarMaoObra,
+  onRemoverMaoObra,
   onResiduoChange,
   onAdicionarResiduo,
   onRemoverResiduo,
@@ -259,6 +268,94 @@ export function ClienteContratoCadastroSecoes({
                     type="checkbox"
                     checked={equip.com_custo}
                     onChange={(e) => onEquipamentoChange(index, 'com_custo', e.target.checked)}
+                  />
+                  Com custo
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: '22px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Mão de obra</div>
+          <button type="button" onClick={onAdicionarMaoObra} style={btnAdicionar}>
+            + Adicionar mão de obra
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {maoObra.map((item, index) => (
+            <div key={`mao-obra-contrato-${index}`} style={cardItem}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '10px',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                  Mão de obra {index + 1}
+                </span>
+                <button type="button" onClick={() => onRemoverMaoObra(index)} style={btnRemover}>
+                  Remover
+                </button>
+              </div>
+              <div
+                className="rg-mobile-stack-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr minmax(120px, 160px) auto',
+                  gap: '12px',
+                  alignItems: 'end',
+                }}
+              >
+                <div>
+                  <label style={labelCampo}>Descrição</label>
+                  <input
+                    value={asTextoFormulario(item.descricao)}
+                    onChange={(e) => onMaoObraChange(index, 'descricao', e.target.value)}
+                    placeholder="Ex.: operador, hora técnica…"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelCampo}>Valor (R$)</label>
+                  <input
+                    value={asTextoFormulario(item.valor)}
+                    onChange={(e) => onMaoObraChange(index, 'valor', e.target.value)}
+                    placeholder="0,00"
+                    disabled={!item.com_custo}
+                    style={{ ...inputStyle, opacity: item.com_custo ? 1 : 0.55 }}
+                  />
+                </div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    paddingBottom: '10px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={item.com_custo}
+                    onChange={(e) => onMaoObraChange(index, 'com_custo', e.target.checked)}
                   />
                   Com custo
                 </label>

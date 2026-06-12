@@ -362,6 +362,7 @@ export async function aplicarResumoFinanceiroNaOperacional(
   const m = resumo.mtr
   const camVal = parseNumeroCampo(m.caminhao_valor)
   const eqVal = parseNumeroCampo(m.equipamento_valor)
+  const moVal = parseNumeroCampo(m.mao_obra_valor)
   const qtd = parseNumeroCampo(m.residuo_quantidade || m.peso_liquido_kg)
   const unidade = (m.residuo_unidade || 'kg').trim() || 'kg'
 
@@ -390,6 +391,11 @@ export async function aplicarResumoFinanceiroNaOperacional(
     parseEquipamentosContratoJsonb(detBase.contrato_equipamentos),
     m.equipamento_rotulo,
     eqVal
+  )
+  const maoObra = patchEquipamentoContrato(
+    parseEquipamentosContratoJsonb(detBase.contrato_mao_obra),
+    m.mao_obra_rotulo,
+    moVal
   )
 
   const residuoPrincipal =
@@ -423,11 +429,13 @@ export async function aplicarResumoFinanceiroNaOperacional(
       ...detBase,
       contrato_veiculos: veiculos,
       contrato_equipamentos: equipamentos,
+      contrato_mao_obra: maoObra,
       residuo: listaNova[0] ?? residuoPrincipal,
       residuos_lista: listaNova.length > 1 ? listaNova : undefined,
       faturamento_espelho_mtr: {
         caminhao_valor: m.caminhao_valor,
         equipamento_valor: m.equipamento_valor,
+        mao_obra_valor: m.mao_obra_valor,
         residuo_valor: m.residuo_valor,
         residuo_valor_unitario: m.residuo_valor_unitario,
         residuo_quantidade: m.residuo_quantidade,
