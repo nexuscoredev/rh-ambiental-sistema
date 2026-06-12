@@ -5,6 +5,7 @@ import { useChatFloat } from '../contexts/ChatFloatContext'
 import { chatEnviarPedidoAjusteSistema, chatEnviarPedidoCadastroSistema } from '../lib/chat'
 import { ChatImagemAnexoEditor } from './chat/ChatImagemAnexoEditor'
 import { deveOcultarSolicitacaoAjuste } from '../lib/solicitacaoAjusteSistema'
+import { imagemColadaDoClipboard } from '../lib/clipboardImagem'
 import {
   ITENS_CADASTRO_SOLICITACAO,
   rotuloItemCadastroSolicitacao,
@@ -18,30 +19,6 @@ export type SolicitarAjusteSistemaFloatProps = {
   panelId: string
   /** Pré-preenche o campo ao abrir (ex.: pedido de reset na boas-vindas). */
   textoInicial?: string | null
-}
-
-function imagemColadaDoClipboard(e: ClipboardEvent): File | null {
-  const items = e.clipboardData?.items
-  if (!items?.length) return null
-  for (const item of items) {
-    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
-    const blob = item.getAsFile()
-    if (!blob) continue
-    const ext =
-      blob.type === 'image/jpeg'
-        ? 'jpg'
-        : blob.type === 'image/webp'
-          ? 'webp'
-          : blob.type === 'image/gif'
-            ? 'gif'
-            : 'png'
-    const nome =
-      blob.name?.trim() && !/^image\.\w+$/i.test(blob.name)
-        ? blob.name
-        : `print-tela-${Date.now()}.${ext}`
-    return new File([blob], nome, { type: blob.type || 'image/png' })
-  }
-  return null
 }
 
 export default function SolicitarAjusteSistemaFloat({

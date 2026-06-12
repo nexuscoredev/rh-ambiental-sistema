@@ -6268,6 +6268,24 @@ a.rg-btn {
   padding: 16px;
   background: #0b1220;
   overflow: auto;
+  position: relative;
+}
+
+.chat-imagem-editor__canvas--oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chat-imagem-editor__erro {
+  margin: 0;
+  max-width: 360px;
+  text-align: center;
+  color: #fca5a5;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .chat-imagem-editor__loading {

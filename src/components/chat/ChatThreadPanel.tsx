@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from 'react'
 import { ChatAvatar } from './ChatAvatar'
 import { ChatComposerPicker } from './ChatComposerPicker'
 import {
@@ -16,6 +16,7 @@ import {
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
 import type { ChatMensagem } from '../../types/chat'
 import { rgAlert } from '../../lib/RgDialogProvider'
+import { imagemColadaDoClipboard } from '../../lib/clipboardImagem'
 import { ChatPedidoAjusteFeedback } from './ChatPedidoAjusteFeedback'
 import { ChatPedidoAjusteDetalhes } from './ChatPedidoAjusteDetalhes'
 import { ChatPedidoAjusteEditar } from './ChatPedidoAjusteEditar'
@@ -155,6 +156,26 @@ export function ChatThreadPanel({
     } finally {
       setEnviandoImagemEditor(false)
     }
+  }
+
+  function abrirImagemParaEditor(f: File) {
+    if (f.size > 15 * 1024 * 1024) {
+      void rgAlert({
+        title: 'Anexo',
+        message: 'Ficheiro demasiado grande (máx. 15 MB).',
+        variant: 'warning',
+      })
+      return
+    }
+    setImagemEditor(f)
+  }
+
+  function colarImagemNoComposer(e: ClipboardEvent<HTMLTextAreaElement>) {
+    if (enviando || enviandoImagemEditor) return
+    const img = imagemColadaDoClipboard(e.nativeEvent)
+    if (!img) return
+    e.preventDefault()
+    abrirImagemParaEditor(img)
   }
 
   useEffect(() => {
@@ -358,16 +379,8 @@ export function ChatThreadPanel({
             const f = e.target.files?.[0]
             e.target.value = ''
             if (!f || enviando || enviandoImagemEditor) return
-            if (f.size > 15 * 1024 * 1024) {
-              void rgAlert({
-                title: 'Anexo',
-                message: 'Ficheiro demasiado grande (máx. 15 MB).',
-                variant: 'warning',
-              })
-              return
-            }
-            if ((f.type || '').toLowerCase().startsWith('image/')) {
-              setImagemEditor(f)
+            if ((f.type || '').toLowerCase().startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(f.name)) {
+              abrirImagemParaEditor(f)
               return
             }
             try {
@@ -412,9 +425,10 @@ export function ChatThreadPanel({
           ref={textareaRef}
           className="chat-interno-textarea"
           rows={1}
-          placeholder="Escreva uma mensagem…"
+          placeholder="Escreva uma mensagem ou cole um print (Ctrl+V)…"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
+          onPaste={colarImagemNoComposer}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

@@ -60,6 +60,27 @@ function nomeArquivoAnotado(nomeOriginal: string): string {
   return `${base}-anotado.png`
 }
 
+function aplicarImagemNoCanvas(
+  canvas: HTMLCanvasElement,
+  img: HTMLImageElement,
+  repintar: (lista: Traco[], tracoExtra?: Traco | null) => void
+) {
+  let largura = img.naturalWidth
+  let altura = img.naturalHeight
+  if (!largura || !altura) return false
+
+  if (largura > MAX_DIM || altura > MAX_DIM) {
+    const escala = MAX_DIM / Math.max(largura, altura)
+    largura = Math.round(largura * escala)
+    altura = Math.round(altura * escala)
+  }
+
+  canvas.width = largura
+  canvas.height = altura
+  repintar([])
+  return true
+}
+
 export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, onConfirm }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imagemBaseRef = useRef<HTMLImageElement | null>(null)
@@ -68,6 +89,8 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
   const tracosRef = useRef<Traco[]>([])
 
   const [carregando, setCarregando] = useState(false)
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
+  const [imagemCarregada, setImagemCarregada] = useState(false)
   const [tracos, setTracos] = useState<Traco[]>([])
   const [cor, setCor] = useState<string>(CORES[0].value)
 
@@ -95,36 +118,33 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
       imagemBaseRef.current = null
       tracoAtualRef.current = null
       aDesenharRef.current = false
+      setImagemCarregada(false)
+      setErroCarregamento(null)
+      setCarregando(false)
       return
     }
 
     let cancelado = false
     setCarregando(true)
+    setErroCarregamento(null)
+    setImagemCarregada(false)
+    setTracos([])
+
     const url = URL.createObjectURL(file)
     const img = new Image()
 
     img.onload = () => {
       if (cancelado) return
-      let largura = img.naturalWidth
-      let altura = img.naturalHeight
-      if (largura > MAX_DIM || altura > MAX_DIM) {
-        const escala = MAX_DIM / Math.max(largura, altura)
-        largura = Math.round(largura * escala)
-        altura = Math.round(altura * escala)
-      }
-
-      const canvas = canvasRef.current
-      if (!canvas) return
-      canvas.width = largura
-      canvas.height = altura
       imagemBaseRef.current = img
-      setTracos([])
-      repintar([])
+      setImagemCarregada(true)
       setCarregando(false)
     }
 
     img.onerror = () => {
-      if (!cancelado) setCarregando(false)
+      if (!cancelado) {
+        setCarregando(false)
+        setErroCarregamento('Não foi possível carregar a imagem. Tente colar de novo ou anexar o ficheiro.')
+      }
     }
 
     img.src = url
@@ -133,11 +153,25 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
       cancelado = true
       URL.revokeObjectURL(url)
     }
-  }, [open, file, repintar])
+  }, [open, file])
 
   useEffect(() => {
+    if (!imagemCarregada || !open) return
+    const img = imagemBaseRef.current
+    const canvas = canvasRef.current
+    if (!img || !canvas) return
+
+    const ok = aplicarImagemNoCanvas(canvas, img, repintar)
+    if (!ok) {
+      setErroCarregamento('A imagem colada está vazia ou inválida.')
+      setImagemCarregada(false)
+    }
+  }, [imagemCarregada, open, repintar])
+
+  useEffect(() => {
+    if (!imagemCarregada) return
     repintar(tracos)
-  }, [tracos, repintar])
+  }, [tracos, repintar, imagemCarregada])
 
   useEffect(() => {
     if (!open) return
@@ -150,7 +184,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
 
   function iniciarTraco(clientX: number, clientY: number) {
     const canvas = canvasRef.current
-    if (!canvas || carregando || enviando) return
+    if (!canvas || carregando || enviando || !imagemCarregada) return
     const ponto = pontoNoCanvas(canvas, clientX, clientY)
     const traco: Traco = { pontos: [ponto], cor, largura: LARGURA_TRACO }
     tracoAtualRef.current = traco
@@ -184,7 +218,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
 
   function confirmar() {
     const canvas = canvasRef.current
-    if (!canvas || !file || carregando || enviando) return
+    if (!canvas || !file || carregando || enviando || !imagemCarregada) return
     canvas.toBlob(
       (blob) => {
         if (!blob) return
@@ -214,7 +248,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
           <button
             type="button"
             className="chat-imagem-editor__head-btn chat-imagem-editor__head-btn--primary"
-            disabled={enviando || carregando}
+            disabled={enviando || carregando || !imagemCarregada}
             onClick={confirmar}
           >
             {enviando ? 'A enviar…' : 'Enviar'}
@@ -222,28 +256,36 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
         </header>
 
         <div className="chat-imagem-editor__stage">
+          <canvas
+            ref={canvasRef}
+            className={
+              imagemCarregada
+                ? 'chat-imagem-editor__canvas'
+                : 'chat-imagem-editor__canvas chat-imagem-editor__canvas--oculto'
+            }
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.currentTarget.setPointerCapture(e.pointerId)
+              iniciarTraco(e.clientX, e.clientY)
+            }}
+            onPointerMove={(e) => {
+              if (!aDesenharRef.current) return
+              continuarTraco(e.clientX, e.clientY)
+            }}
+            onPointerUp={() => terminarTraco()}
+            onPointerCancel={() => terminarTraco()}
+            onPointerLeave={() => {
+              if (aDesenharRef.current) terminarTraco()
+            }}
+          />
           {carregando ? (
             <p className="chat-imagem-editor__loading">A carregar imagem…</p>
-          ) : (
-            <canvas
-              ref={canvasRef}
-              className="chat-imagem-editor__canvas"
-              onPointerDown={(e) => {
-                e.preventDefault()
-                e.currentTarget.setPointerCapture(e.pointerId)
-                iniciarTraco(e.clientX, e.clientY)
-              }}
-              onPointerMove={(e) => {
-                if (!aDesenharRef.current) return
-                continuarTraco(e.clientX, e.clientY)
-              }}
-              onPointerUp={() => terminarTraco()}
-              onPointerCancel={() => terminarTraco()}
-              onPointerLeave={() => {
-                if (aDesenharRef.current) terminarTraco()
-              }}
-            />
-          )}
+          ) : null}
+          {erroCarregamento ? (
+            <p className="chat-imagem-editor__erro" role="alert">
+              {erroCarregamento}
+            </p>
+          ) : null}
         </div>
 
         <footer className="chat-imagem-editor__toolbar">
@@ -261,7 +303,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
                 title={c.label}
                 aria-label={c.label}
                 aria-pressed={cor === c.value}
-                disabled={enviando || carregando}
+                disabled={enviando || carregando || !imagemCarregada}
                 onClick={() => setCor(c.value)}
               />
             ))}
@@ -270,7 +312,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
             <button
               type="button"
               className="chat-imagem-editor__acao"
-              disabled={enviando || carregando || tracos.length === 0}
+              disabled={enviando || carregando || !imagemCarregada || tracos.length === 0}
               onClick={desfazer}
               title="Desfazer último traço"
             >
@@ -279,7 +321,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
             <button
               type="button"
               className="chat-imagem-editor__acao"
-              disabled={enviando || carregando || tracos.length === 0}
+              disabled={enviando || carregando || !imagemCarregada || tracos.length === 0}
               onClick={limparDesenhos}
               title="Limpar todos os desenhos"
             >
