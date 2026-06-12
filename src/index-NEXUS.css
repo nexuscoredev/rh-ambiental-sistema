@@ -31,6 +31,8 @@
   --text-secondary: #64748b;
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
+  --bg-subtle: #f8fafc;
+  --bg-inset: #f1f5f9;
   /* Paleta verde (acentos e sidebar) */
   --green-main: #22c55e;
   --green-dark: #052e16;
@@ -182,6 +184,27 @@ a.rg-btn {
   align-items: stretch;
 }
 
+/* Painel/card padrão — respeita tokens de tema (claro e escuro) */
+.rg-surface-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.rg-surface-panel__head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rg-surface-panel__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
 /* —— Programação: cabeçalho, barra de ações e filtro —— */
 
 .programacao-page__controls {
@@ -192,9 +215,9 @@ a.rg-btn {
   gap: 12px;
   margin-bottom: 14px;
   padding: 12px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--bg-card, #ffffff);
 }
 
 .programacao-page__controls-acoes {

@@ -144,6 +144,7 @@ export default function ProgramacaoCalendarioMes({
     <div className="programacao-calendario-mes" style={{ display: 'grid', gap: '12px' }}>
       {showMonthNav ? (
         <div
+          className="programacao-calendario-mes__nav"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,12 +152,13 @@ export default function ProgramacaoCalendarioMes({
             gap: '8px',
             padding: '10px 12px',
             borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            background: '#ffffff',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            background: 'var(--bg-card, #ffffff)',
           }}
         >
           <button
             type="button"
+            className="programacao-calendario-mes__nav-btn"
             aria-label={'M\u00eas anterior'}
             title={'M\u00eas anterior'}
             onClick={() => onMesChange(addMonthsYyyyMm(mesSelecionado, -1))}
@@ -165,12 +167,13 @@ export default function ProgramacaoCalendarioMes({
             <CalendarioNavSeta direction="prev" />
           </button>
           <div
+            className="programacao-calendario-mes__nav-title"
             style={{
               flex: 1,
               textAlign: 'center',
               fontSize: 'clamp(17px, 2.4vw, 22px)',
               fontWeight: 800,
-              color: '#0f172a',
+              color: 'var(--text-primary, #0f172a)',
               letterSpacing: '-0.02em',
               lineHeight: 1.2,
             }}
@@ -179,6 +182,7 @@ export default function ProgramacaoCalendarioMes({
           </div>
           <button
             type="button"
+            className="programacao-calendario-mes__nav-btn"
             aria-label={'Pr\u00f3ximo m\u00eas'}
             title={'Pr\u00f3ximo m\u00eas'}
             onClick={() => onMesChange(addMonthsYyyyMm(mesSelecionado, 1))}
@@ -190,13 +194,14 @@ export default function ProgramacaoCalendarioMes({
       ) : null}
 
       <div
+        className="programacao-calendario-mes__legend"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
           gap: '8px 14px',
           alignItems: 'center',
           fontSize: '11px',
-          color: '#64748b',
+          color: 'var(--text-secondary, #64748b)',
         }}
         aria-label="Legenda de status"
       >
@@ -250,10 +255,18 @@ export default function ProgramacaoCalendarioMes({
           }
 
           const cellBg = !cell.isCurrentMonth
-            ? '#fafafa'
+            ? 'var(--bg-inset, #fafafa)'
             : fimDeSemana
-              ? '#f8fafc'
-              : '#ffffff'
+              ? 'var(--bg-subtle, #f8fafc)'
+              : 'var(--bg-card, #ffffff)'
+
+          const cellClassName = [
+            'programacao-calendario-mes__cell',
+            !cell.isCurrentMonth ? 'programacao-calendario-mes__cell--off-month' : '',
+            cell.isCurrentMonth && fimDeSemana ? 'programacao-calendario-mes__cell--weekend' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
 
           return (
             <div
@@ -268,7 +281,7 @@ export default function ProgramacaoCalendarioMes({
                   abrirPainelDia()
                 }
               }}
-              className="programacao-calendario-mes__cell"
+              className={cellClassName}
               style={{
                 ...cellStyle,
                 background: cellBg,
@@ -305,7 +318,9 @@ export default function ProgramacaoCalendarioMes({
                       {cell.dayNumber}
                     </span>
                     {cell.items.length > 0 ? (
-                      <span style={countPillStyle}>{cell.items.length}</span>
+                      <span className="programacao-calendario-mes__count-pill" style={countPillStyle}>
+                        {cell.items.length}
+                      </span>
                     ) : null}
                   </div>
 
@@ -366,9 +381,9 @@ const navBtnStyle: CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 10,
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
-  color: '#334155',
+  border: '1px solid var(--border-color, #e2e8f0)',
+  background: 'var(--bg-subtle, #f8fafc)',
+  color: 'var(--text-primary, #334155)',
   fontSize: 20,
   fontWeight: 700,
   lineHeight: 1,
@@ -400,7 +415,7 @@ const gridStyle: CSSProperties = {
 
 const cellStyle: CSSProperties = {
   minHeight: '84px',
-  border: '1px solid #e8ecf1',
+  border: '1px solid var(--border-color, #e8ecf1)',
   borderRadius: '10px',
   padding: '6px 7px',
   boxSizing: 'border-box',
@@ -435,8 +450,8 @@ const countPillStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#f1f5f9',
-  color: '#475569',
+  background: 'var(--bg-inset, #f1f5f9)',
+  color: 'var(--text-secondary, #475569)',
   fontSize: '10px',
   fontWeight: 800,
 }
@@ -461,7 +476,7 @@ const previewTextStyle: CSSProperties = {
   minWidth: 0,
   fontSize: '10px',
   fontWeight: 600,
-  color: '#334155',
+  color: 'var(--text-primary, #334155)',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',

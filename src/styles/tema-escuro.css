@@ -911,6 +911,177 @@
   color: var(--text-primary);
 }
 
+/* ===== Padronização dark — todas as páginas (page-shell) ===== */
+
+[data-theme='dark'] .page-shell input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='hidden']),
+[data-theme='dark'] .page-shell select,
+[data-theme='dark'] .page-shell textarea {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .page-shell input::placeholder,
+[data-theme='dark'] .page-shell textarea::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme='dark'] .page-shell .rg-surface-panel,
+[data-theme='dark'] .page-shell [class$='__card'],
+[data-theme='dark'] .page-shell [class$='__cadastro'],
+[data-theme='dark'] .page-shell [class$='__lista'] {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+[data-theme='dark'] .page-shell [class$='__resumo-cards'] > div {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+[data-theme='dark'] .page-shell [class$='__resumo-cards'] > div > div:first-child {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .page-shell [class$='__resumo-cards'] > div > div:last-child {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .page-shell [class$='__card'] h2,
+[data-theme='dark'] .page-shell [class$='__card'] h3,
+[data-theme='dark'] .page-shell .rg-surface-panel__title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .page-shell [class$='__card'] p {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .page-shell .rg-surface-panel__head {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='dark'] .page-shell h1[style*='fontWeight: 800'],
+[data-theme='dark'] .page-shell h1[style*='font-weight: 800'] {
+  color: var(--text-primary) !important;
+}
+
+/* —— Programação — calendário e agenda —— */
+
+[data-theme='dark'] .programacao-calendario-mes__nav {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__nav-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__nav-btn {
+  background: var(--bg-subtle) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__legend {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__cell {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__cell--off-month {
+  background: var(--bg-inset) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__cell--weekend {
+  background: var(--bg-subtle) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__week > div {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .programacao-calendario-mes__preview,
+[data-theme='dark'] .programacao-calendario-mes__preview span {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .programacao-calendario-mes__count-pill {
+  background: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .programacao-page__agenda-grupo {
+  background: var(--bg-subtle) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .programacao-page__agenda-grupo-head {
+  background: var(--bg-card) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .programacao-page__agenda-item {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .programacao-page__estado-vazio {
+  background: var(--bg-subtle) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Páginas de cadastro com painéis inline (motoristas, caminhões, etc.) */
+[data-theme='dark'] .motoristas-page .rg-surface-panel,
+[data-theme='dark'] .caminhoes-page .rg-surface-panel,
+[data-theme='dark'] .controle-massa-page .rg-surface-panel,
+[data-theme='dark'] .representantes-page .rg-surface-panel,
+[data-theme='dark'] .envio-nf-page .rg-surface-panel,
+[data-theme='dark'] .clinicas-page .rg-surface-panel,
+[data-theme='dark'] .usuarios-page .rg-surface-panel,
+[data-theme='dark'] .pos-venda-page .rg-surface-panel {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+[data-theme='dark'] .motoristas-page .rg-surface-panel label,
+[data-theme='dark'] .caminhoes-page .rg-surface-panel label,
+[data-theme='dark'] .controle-massa-page .rg-surface-panel label,
+[data-theme='dark'] .representantes-page .rg-surface-panel label,
+[data-theme='dark'] .envio-nf-page .rg-surface-panel label,
+[data-theme='dark'] .clinicas-page .rg-surface-panel label,
+[data-theme='dark'] .usuarios-page .rg-surface-panel label {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .motoristas-page table th,
+[data-theme='dark'] .caminhoes-page table th,
+[data-theme='dark'] .controle-massa-page table th,
+[data-theme='dark'] .representantes-page table th,
+[data-theme='dark'] .usuarios-page table th,
+[data-theme='dark'] .clinicas-page table th {
+  background: var(--bg-subtle) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .motoristas-page table td,
+[data-theme='dark'] .caminhoes-page table td,
+[data-theme='dark'] .controle-massa-page table td,
+[data-theme='dark'] .representantes-page table td,
+[data-theme='dark'] .usuarios-page table td,
+[data-theme='dark'] .clinicas-page table td {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
 html.theme-transition,
 html.theme-transition *,
 html.theme-transition *::before,

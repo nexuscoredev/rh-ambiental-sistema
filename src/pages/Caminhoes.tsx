@@ -1237,28 +1237,9 @@ export default function Caminhoes() {
           </div>
 
           {mostrarCadastro && (
-            <div
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "18px",
-                overflow: "hidden",
-                boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
-              }}
-            >
-              <div
-                style={{
-                  padding: "18px 20px",
-                  borderBottom: "1px solid #e5e7eb",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 800,
-                    color: "#0f172a",
-                  }}
-                >
+            <div className="rg-surface-panel caminhoes-page__cadastro">
+              <div className="rg-surface-panel__head">
+                <div className="rg-surface-panel__title">
                   {editingId ? "Editar veículo" : "Novo veículo"}
                 </div>
               </div>
@@ -1827,12 +1808,9 @@ export default function Caminhoes() {
           )}
 
           <div
+            className="rg-surface-panel caminhoes-page__lista"
             style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "18px",
               padding: "16px 18px 10px 18px",
-              boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
             }}
           >
             <div
@@ -2490,19 +2468,19 @@ const inputStyle: CSSProperties = {
   width: "100%",
   height: "40px",
   borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--input-bg, #ffffff)",
   outline: "none",
   padding: "0 12px",
   fontSize: "14px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   boxSizing: "border-box",
 };
 
 const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "14px 12px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   whiteSpace: "nowrap",
 };

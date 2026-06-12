@@ -2631,9 +2631,9 @@ export default function Programacao() {
             </p>
 
             {loading ? (
-              <div style={estadoVazioStyle}>Carregando programação...</div>
+              <div className="programacao-page__estado-vazio" style={estadoVazioStyle}>Carregando programação...</div>
             ) : agendaAgrupada.length === 0 ? (
-              <div style={estadoVazioStyle}>
+              <div className="programacao-page__estado-vazio" style={estadoVazioStyle}>
                 Nenhuma programação encontrada para o mês selecionado.
               </div>
             ) : (
@@ -2645,8 +2645,8 @@ export default function Programacao() {
                     diaExpandido || itens.length <= limiar ? itens : itens.slice(0, limiar)
 
                   return (
-                  <div key={data} style={grupoAgendaStyle}>
-                    <div style={grupoAgendaHeaderStyle}>
+                  <div key={data} className="programacao-page__agenda-grupo" style={grupoAgendaStyle}>
+                    <div className="programacao-page__agenda-grupo-head" style={grupoAgendaHeaderStyle}>
                       <div style={grupoAgendaDataStyle}>{formatDate(data)}</div>
                       <div style={grupoAgendaCountStyle}>{itens.length} programação(ões)</div>
                     </div>
@@ -2665,6 +2665,7 @@ export default function Programacao() {
                           <div
                             key={item.id}
                             id={`prog-agenda-${item.id}`}
+                            className="programacao-page__agenda-item"
                             style={{
                               ...itemAgendaStyle,
                               borderLeft: `3px solid ${statusStyle.stripeColor}`,
@@ -3664,8 +3665,8 @@ export default function Programacao() {
                 }}
               >
                 {agendaRelatorioAgrupada.map(([data, itens]) => (
-                  <div key={data} style={grupoAgendaStyle}>
-                    <div style={grupoAgendaHeaderStyle}>
+                  <div key={data} className="programacao-page__agenda-grupo" style={grupoAgendaStyle}>
+                    <div className="programacao-page__agenda-grupo-head" style={grupoAgendaHeaderStyle}>
                       <div style={grupoAgendaDataStyle}>{formatDate(data)}</div>
                       <div style={grupoAgendaCountStyle}>{itens.length} programação(ões)</div>
                     </div>
@@ -3675,6 +3676,7 @@ export default function Programacao() {
                         return (
                           <div
                             key={item.id}
+                            className="programacao-page__agenda-item"
                             style={{
                               ...itemAgendaStyle,
                               borderLeft: `3px solid ${statusStyle.stripeColor}`,
@@ -4073,23 +4075,23 @@ const cardsGridStyle: CSSProperties = {
 }
 
 const cardResumoStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: 'var(--bg-card, #ffffff)',
+  border: '1px solid var(--border-color, #e5e7eb)',
   borderRadius: '18px',
   padding: '18px',
-  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+  boxShadow: 'var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))',
 }
 
 const cardResumoTituloStyle: CSSProperties = {
   fontSize: '13px',
-  color: '#64748b',
+  color: 'var(--text-secondary, #64748b)',
   marginBottom: '8px',
   fontWeight: 700,
 }
 
 const cardResumoValorStyle: CSSProperties = {
   fontSize: '24px',
-  color: '#0f172a',
+  color: 'var(--text-primary, #0f172a)',
   fontWeight: 800,
   textTransform: 'capitalize',
 }
@@ -4102,23 +4104,23 @@ const layoutPrincipalStyle: CSSProperties = {
 }
 
 const cardPrincipalStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: 'var(--bg-card, #ffffff)',
+  border: '1px solid var(--border-color, #e5e7eb)',
   borderRadius: '20px',
   padding: '20px',
-  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+  boxShadow: 'var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.04))',
 }
 
 const cardTituloStyle: CSSProperties = {
   margin: 0,
   fontSize: '20px',
-  color: '#0f172a',
+  color: 'var(--text-primary, #0f172a)',
   fontWeight: 800,
 }
 
 const cardDescricaoStyle: CSSProperties = {
   margin: '8px 0 18px',
-  color: '#64748b',
+  color: 'var(--text-secondary, #64748b)',
   fontSize: '14px',
 }
 
@@ -4126,7 +4128,7 @@ const labelStyle: CSSProperties = {
   display: 'block',
   fontSize: '13px',
   fontWeight: 700,
-  color: '#334155',
+  color: 'var(--text-primary, #334155)',
   marginBottom: '6px',
 }
 
@@ -4134,11 +4136,11 @@ const inputStyle: CSSProperties = {
   width: '100%',
   height: '42px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--input-border, #d1d5db)',
   padding: '0 12px',
   fontSize: '14px',
-  color: '#0f172a',
-  background: '#ffffff',
+  color: 'var(--text-primary, #0f172a)',
+  background: 'var(--input-bg, #ffffff)',
   outline: 'none',
   boxSizing: 'border-box',
 }
@@ -4147,11 +4149,11 @@ const textareaStyle: CSSProperties = {
   width: '100%',
   minHeight: '100px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--input-border, #d1d5db)',
   padding: '12px',
   fontSize: '14px',
-  color: '#0f172a',
-  background: '#ffffff',
+  color: 'var(--text-primary, #0f172a)',
+  background: 'var(--input-bg, #ffffff)',
   outline: 'none',
   resize: 'vertical',
   boxSizing: 'border-box',
@@ -4166,7 +4168,7 @@ const checkboxLabelStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
-  color: '#0f172a',
+  color: 'var(--text-primary, #0f172a)',
   fontWeight: 600,
   fontSize: '14px',
 }
@@ -4188,11 +4190,11 @@ const calendarPainelModalStyle: CSSProperties = {
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  background: '#ffffff',
+  background: 'var(--bg-card, #ffffff)',
   borderRadius: '18px',
   boxShadow: '0 24px 48px rgba(15, 23, 42, 0.2)',
   padding: '22px 20px 20px',
-  border: '1px solid #e2e8f0',
+  border: '1px solid var(--border-color, #e2e8f0)',
 }
 
 const novaProgramacaoModalOverlayStyle: CSSProperties = {
@@ -4205,9 +4207,9 @@ const calendarPainelFecharStyle: CSSProperties = {
   width: '40px',
   height: '40px',
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
-  color: '#64748b',
+  border: '1px solid var(--border-color, #e2e8f0)',
+  background: 'var(--bg-subtle, #f8fafc)',
+  color: 'var(--text-secondary, #64748b)',
   fontSize: '24px',
   lineHeight: 1,
   cursor: 'pointer',
@@ -4225,25 +4227,25 @@ const edicaoModalBoxStyle: CSSProperties = {
 }
 
 const estadoVazioStyle: CSSProperties = {
-  border: '1px dashed #d1d5db',
+  border: '1px dashed var(--border-color, #d1d5db)',
   borderRadius: '14px',
   padding: '26px',
   textAlign: 'center',
-  color: '#64748b',
-  background: '#f8fafc',
+  color: 'var(--text-secondary, #64748b)',
+  background: 'var(--bg-subtle, #f8fafc)',
 }
 
 const grupoAgendaStyle: CSSProperties = {
-  border: '1px solid #e5e7eb',
+  border: '1px solid var(--border-color, #e5e7eb)',
   borderRadius: '18px',
   overflow: 'hidden',
-  background: '#f8fafc',
+  background: 'var(--bg-subtle, #f8fafc)',
 }
 
 const grupoAgendaHeaderStyle: CSSProperties = {
   padding: '14px 16px',
-  borderBottom: '1px solid #e5e7eb',
-  background: '#ffffff',
+  borderBottom: '1px solid var(--border-color, #e5e7eb)',
+  background: 'var(--bg-card, #ffffff)',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -4253,13 +4255,13 @@ const grupoAgendaHeaderStyle: CSSProperties = {
 
 const grupoAgendaDataStyle: CSSProperties = {
   fontSize: '16px',
-  color: '#0f172a',
+  color: 'var(--text-primary, #0f172a)',
   fontWeight: 800,
 }
 
 const grupoAgendaCountStyle: CSSProperties = {
   fontSize: '13px',
-  color: '#64748b',
+  color: 'var(--text-secondary, #64748b)',
   fontWeight: 700,
 }
 
@@ -4271,8 +4273,8 @@ const grupoAgendaItensWrapStyle: CSSProperties = {
 }
 
 const itemAgendaStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e8ecf1',
+  background: 'var(--bg-card, #ffffff)',
+  border: '1px solid var(--border-color, #e8ecf1)',
   borderRadius: '10px',
   padding: '12px 14px',
   display: 'flex',
