@@ -38,8 +38,8 @@ const formInicial: ClinicaUnidadeForm = {
 }
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
@@ -313,7 +313,7 @@ export default function Clinicas() {
   return (
     <MainLayout>
       <div className="page-shell clinicas-page">
-        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>Clínicas</h1>
+        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>Clínicas</h1>
         <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>
           Cadastro mãe <strong>{grupoNome}</strong> e unidades de coleta. Gere ordens de serviço em lote — sem
           pesagem nem ticket — e fature em{' '}
@@ -329,7 +329,7 @@ export default function Clinicas() {
               marginTop: '16px',
               padding: '14px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
               fontSize: '14px',
@@ -364,8 +364,8 @@ export default function Clinicas() {
             style={{
               padding: '10px 18px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#f8fafc',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-subtle, #f8fafc)",
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -382,7 +382,7 @@ export default function Clinicas() {
               padding: '10px 18px',
               borderRadius: '10px',
               border: '1px solid #0d9488',
-              background: '#fff',
+              background: "var(--bg-card, #ffffff)",
               color: '#0f766e',
               fontWeight: 700,
               cursor: loading || gerandoPdf ? 'wait' : 'pointer',
@@ -407,13 +407,13 @@ export default function Clinicas() {
               onChange={(e) => setBusca(e.target.value)}
               style={{ minWidth: 220, flex: '1 1 200px' }}
             />
-            <label style={{ fontSize: '13px', color: '#475569' }}>
+            <label style={{ fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
               Data do serviço:{' '}
               <input
                 type="date"
                 value={dataServico}
                 onChange={(e) => setDataServico(e.target.value)}
-                style={{ marginLeft: '6px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                style={{ marginLeft: '6px', padding: '6px 8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
               />
             </label>
             <button
@@ -435,7 +435,7 @@ export default function Clinicas() {
           </div>
 
           {loading ? (
-            <p style={{ marginTop: '16px', color: '#64748b' }}>A carregar…</p>
+            <p style={{ marginTop: '16px', color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
           ) : (
             <div className="rg-mobile-table-scroll" style={{ marginTop: '16px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -486,8 +486,8 @@ export default function Clinicas() {
                             style={{
                               padding: '4px 10px',
                               borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
-                              background: '#fff',
+                              border: "1px solid var(--input-border, #cbd5e1)",
+                              background: "var(--bg-card, #ffffff)",
                               fontWeight: 700,
                               fontSize: '12px',
                               cursor: 'pointer',
@@ -503,7 +503,7 @@ export default function Clinicas() {
                               padding: '4px 10px',
                               borderRadius: '8px',
                               border: '1px solid #fecaca',
-                              background: '#fef2f2',
+                              background: "var(--status-error-bg, #fef2f2)",
                               color: '#b91c1c',
                               fontWeight: 700,
                               fontSize: '12px',
@@ -524,7 +524,7 @@ export default function Clinicas() {
 
         <div style={cardStyle}>
           <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>Ordens de serviço</h2>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
             Exclua apenas O.S. que ainda aguardam faturamento. As emitidas permanecem no histórico e no financeiro.
             Histórico detalhado e PDF por período em{' '}
             <Link to="/faturamento-clinicas" style={{ color: '#0d9488', fontWeight: 700 }}>
@@ -560,7 +560,7 @@ export default function Clinicas() {
             ))}
           </div>
           {ordensFiltradas.length === 0 ? (
-            <p style={{ marginTop: '12px', color: '#64748b' }}>
+            <p style={{ marginTop: '12px', color: "var(--text-secondary, #64748b)" }}>
               {ordens.length === 0
                 ? 'Nenhuma O.S. registada.'
                 : `Nenhuma O.S. com o filtro «${rotuloFiltroOs}».`}
@@ -600,7 +600,7 @@ export default function Clinicas() {
                               padding: '4px 10px',
                               borderRadius: '8px',
                               border: '1px solid #fecaca',
-                              background: '#fef2f2',
+                              background: "var(--status-error-bg, #fef2f2)",
                               color: '#b91c1c',
                               fontWeight: 700,
                               fontSize: '12px',
@@ -610,7 +610,7 @@ export default function Clinicas() {
                             {excluindoOsId === o.id ? '…' : 'Excluir'}
                           </button>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                          <span style={{ color: "var(--text-secondary, #94a3b8)", fontSize: '12px' }}>—</span>
                         )}
                       </td>
                     </tr>
@@ -623,11 +623,11 @@ export default function Clinicas() {
 
         <div style={cardStyle}>
           <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>Relatório consolidado (últimos 30 dias)</h2>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
             Várias O.S. da mesma unidade no período aparecem agregadas (quantidade e valores).
           </p>
           {relatorio.length === 0 ? (
-            <p style={{ marginTop: '12px', color: '#64748b' }}>Sem movimentação no período.</p>
+            <p style={{ marginTop: '12px', color: "var(--text-secondary, #64748b)" }}>Sem movimentação no período.</p>
           ) : (
             <div className="rg-mobile-table-scroll" style={{ marginTop: '14px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -649,7 +649,7 @@ export default function Clinicas() {
                         <td style={{ padding: '10px 8px' }}>{r.qtd_os}</td>
                         <td style={{ padding: '10px 8px' }}>{formatarMoedaClinica(r.valor_emitido_total)}</td>
                         <td style={{ padding: '10px 8px' }}>{formatarMoedaClinica(r.valor_pendente_total)}</td>
-                        <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>
+                        <td style={{ padding: '10px 8px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                           {r.primeira_data ?? '—'} → {r.ultima_data ?? '—'}
                         </td>
                       </tr>
@@ -680,7 +680,7 @@ export default function Clinicas() {
               onSubmit={(e) => void salvarForm(e)}
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: '#fff',
+                background: "var(--bg-card, #ffffff)",
                 borderRadius: '16px',
                 padding: '24px',
                 width: '100%',
@@ -692,7 +692,7 @@ export default function Clinicas() {
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
                 {editId ? 'Editar unidade' : 'Nova unidade'}
               </h3>
-              <p style={{ margin: '8px 0 16px', fontSize: '13px', color: '#64748b' }}>
+              <p style={{ margin: '8px 0 16px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                 Grupo mãe: <strong>{grupoNome}</strong>
               </p>
 
@@ -702,7 +702,7 @@ export default function Clinicas() {
                   required
                   value={form.razao_social}
                   onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))}
-                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </label>
               <label style={{ display: 'block', marginBottom: '12px', fontSize: '13px' }}>
@@ -716,7 +716,7 @@ export default function Clinicas() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, cnpj: formatarCNPJDigitacao(e.target.value) }))
                   }
-                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </label>
               <label style={{ display: 'block', marginBottom: '12px', fontSize: '13px' }}>
@@ -730,7 +730,7 @@ export default function Clinicas() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, cpf: formatarCPFDigitacao(e.target.value) }))
                   }
-                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </label>
               <label style={{ display: 'block', marginBottom: '12px', fontSize: '13px' }}>
@@ -739,7 +739,7 @@ export default function Clinicas() {
                   value={form.endereco_coleta}
                   onChange={(e) => setForm((f) => ({ ...f, endereco_coleta: e.target.value }))}
                   rows={2}
-                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ display: 'block', width: '100%', marginTop: '4px', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '13px' }}>
@@ -781,8 +781,8 @@ export default function Clinicas() {
                   style={{
                     padding: '8px 16px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#fff',
+                    border: "1px solid var(--input-border, #cbd5e1)",
+                    background: "var(--bg-card, #ffffff)",
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}

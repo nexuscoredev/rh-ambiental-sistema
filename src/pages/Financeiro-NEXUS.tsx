@@ -825,7 +825,7 @@ export default function Financeiro() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: '26px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>
             Financeiro — cobrança e documentos
           </h1>
           <p className="page-header__lead" style={{ margin: '6px 0 0', maxWidth: '920px' }}>
@@ -839,8 +839,8 @@ export default function Financeiro() {
             (variável <code style={{ fontSize: '11px' }}>VITE_FATURAMENTO_RESUMO_DESDE_DIAS</code>).
           </p>
           {usuarioCargo ? (
-            <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
-              Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
+            <p style={{ margin: '8px 0 0', color: "var(--text-secondary, #64748b)", fontSize: '12px', fontWeight: 600 }}>
+              Perfil: <span style={{ color: "var(--text-primary, #0f172a)" }}>{usuarioCargo}</span>
               {!podeMutarFinanceiro ? ' · cobrança: consulta' : ' · cobrança: editar e salvar'}
             </p>
           ) : null}
@@ -848,17 +848,17 @@ export default function Financeiro() {
 
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: "var(--bg-card, #ffffff)",
             padding: '16px 18px',
             borderRadius: '16px',
             minWidth: '260px',
             boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
           }}
         >
-          <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '6px' }}>
+          <div style={{ color: "var(--text-secondary, #64748b)", fontSize: '14px', marginBottom: '6px' }}>
             Valor total informado
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             {valorTotal.toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL',
@@ -872,14 +872,14 @@ export default function Financeiro() {
           marginBottom: '22px',
           padding: '14px 16px',
           borderRadius: '12px',
-          background: '#f0fdfa',
+          background: "var(--accent-teal-soft, #f0fdfa)",
           border: '1px solid #99f6e4',
           fontSize: '14px',
           color: '#0f766e',
           lineHeight: 1.55,
         }}
       >
-        <strong style={{ color: '#0f172a' }}>Faturamento</strong> (conferência do ticket, fila para faturar, emissão ao
+        <strong style={{ color: "var(--text-primary, #0f172a)" }}>Faturamento</strong> (conferência do ticket, fila para faturar, emissão ao
         Financeiro) →{' '}
         <Link to="/faturamento" style={{ color: '#0d9488', fontWeight: 800 }}>
           Abrir página de Faturamento
@@ -899,7 +899,7 @@ export default function Financeiro() {
           <div style={cardResumoValorStyle}>
             {valorRecebimentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </div>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
             Soma dos valores com pagamento «Pago»
           </div>
         </div>
@@ -908,7 +908,7 @@ export default function Financeiro() {
           <div style={{ ...cardResumoValorStyle }}>
             {valorSaidasEmAberto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </div>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
             Pendente, Parcial ou sem status (não recebido)
           </div>
         </div>
@@ -963,7 +963,7 @@ export default function Financeiro() {
               style: 'currency',
               currency: 'BRL',
             })}{' '}
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: "var(--text-secondary, #64748b)" }}>
               (soma dos valores)
             </span>
           </div>
@@ -976,7 +976,7 @@ export default function Financeiro() {
             marginBottom: '20px',
             padding: '12px 16px',
             borderRadius: '12px',
-            background: '#fffbeb',
+            background: "var(--status-warning-bg, #fffbeb)",
             border: '1px solid #fcd34d',
             color: '#92400e',
             fontSize: '14px',
@@ -1005,14 +1005,14 @@ export default function Financeiro() {
             fontSize: '14px',
             border: '1px solid',
             ...(itemContextoResolvido
-              ? { background: '#f0fdf4', borderColor: '#bbf7d0' }
-              : { background: '#fffbeb', borderColor: '#fcd34d' }),
+              ? { background: "var(--status-success-bg, #f0fdf4)", borderColor: '#bbf7d0' }
+              : { background: "var(--status-warning-bg, #fffbeb)", borderColor: '#fcd34d' }),
           }}
         >
           <div style={{ flex: '1', minWidth: '220px' }}>
-            <strong style={{ color: '#0f172a' }}>Veio de outra tela</strong>
+            <strong style={{ color: "var(--text-primary, #0f172a)" }}>Veio de outra tela</strong>
             {itemContextoResolvido ? (
-              <span style={{ color: '#475569' }}>
+              <span style={{ color: "var(--text-secondary, #475569)" }}>
                 {' '}
                 · Coleta {itemContextoResolvido.numero} · {itemContextoResolvido.cliente} ·{' '}
                 {itemContextoResolvido.faseFluxoOficial} ({itemContextoResolvido.etapaOperacional})
@@ -1063,10 +1063,10 @@ export default function Financeiro() {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: 800 }}>
+            <h2 style={{ margin: 0, fontSize: '18px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>
               Cobrança
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
               Valor, vencimento, NF, confirmação de recebimento e status. Filtros de relatório aplicam-se à tabela.
             </p>
           </div>
@@ -1087,7 +1087,7 @@ export default function Financeiro() {
                 gap: '8px',
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#334155',
+                color: "var(--text-primary, #334155)",
                 cursor: 'pointer',
                 userSelect: 'none',
                 whiteSpace: 'nowrap',
@@ -1123,7 +1123,7 @@ export default function Financeiro() {
           }}
         >
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Cliente</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Cliente</div>
             <select
               value={filtroClienteId}
               onChange={(e) => setFiltroClienteId(e.target.value)}
@@ -1138,7 +1138,7 @@ export default function Financeiro() {
             </select>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Período de</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Período de</div>
             <input
               type="date"
               value={dataInicioFiltro}
@@ -1147,7 +1147,7 @@ export default function Financeiro() {
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>até</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>até</div>
             <input
               type="date"
               value={dataFimFiltro}
@@ -1156,7 +1156,7 @@ export default function Financeiro() {
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Conferência
             </div>
             <select
@@ -1174,7 +1174,7 @@ export default function Financeiro() {
             </select>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Pagamento</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Pagamento</div>
             <select
               value={filtroStatusPagamentoLista}
               onChange={(e) =>
@@ -1201,7 +1201,7 @@ export default function Financeiro() {
             alignItems: 'center',
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569' }}>Vista:</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #475569)" }}>Vista:</span>
           {(
             [
               ['todos', 'Todos'],
@@ -1217,11 +1217,11 @@ export default function Financeiro() {
                 padding: '8px 14px',
                 borderRadius: '999px',
                 border: relatorioFiltro === val ? '2px solid #0f172a' : '1px solid #cbd5e1',
-                background: relatorioFiltro === val ? '#f1f5f9' : '#fff',
+                background: relatorioFiltro === val ? 'var(--bg-inset, #f1f5f9)' : 'var(--bg-card, #ffffff)',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                color: '#0f172a',
+                color: "var(--text-primary, #0f172a)",
               }}
             >
               {label}
@@ -1309,14 +1309,14 @@ export default function Financeiro() {
                         setDetalheAbertoId((prev) => (prev === item.id ? null : item.id))
                       }}
                       style={{
-                        borderBottom: '1px solid #e2e8f0',
+                        borderBottom: "1px solid var(--border-color, #e2e8f0)",
                         cursor: 'pointer',
                         ...(emDestaque
-                          ? { background: '#f0fdf4', outline: '2px solid #22c55e', outlineOffset: '-2px' }
+                          ? { background: "var(--status-success-bg, #f0fdf4)", outline: '2px solid #22c55e', outlineOffset: '-2px' }
                           : detalheAbertoId === item.id
-                            ? { background: '#eff6ff' }
+                            ? { background: "var(--status-info-bg, #eff6ff)" }
                             : item.statusConferencia === 'PRONTO_PARA_FATURAR'
-                              ? { background: '#f0fdf4' }
+                              ? { background: "var(--status-success-bg, #f0fdf4)" }
                               : { background: '#fff5f5' }),
                       }}
                     >
@@ -1325,7 +1325,7 @@ export default function Financeiro() {
                       <td style={tdStyle}>{formatDate(item.dataAgendada)}</td>
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600 }}>{item.cidade}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '2px' }}>
                           {item.tipoResiduo}
                         </div>
                         <div
@@ -1373,7 +1373,7 @@ export default function Financeiro() {
                           <div
                             style={{
                               fontSize: '11px',
-                              color: '#64748b',
+                              color: "var(--text-secondary, #64748b)",
                               marginTop: '4px',
                               lineHeight: 1.35,
                             }}
@@ -1454,7 +1454,7 @@ export default function Financeiro() {
                           <div
                             style={{
                               fontSize: '11px',
-                              color: '#64748b',
+                              color: "var(--text-secondary, #64748b)",
                               marginTop: '6px',
                               maxWidth: '160px',
                               lineHeight: 1.3,
@@ -1598,17 +1598,17 @@ export default function Financeiro() {
               gap: '12px',
               marginTop: '14px',
               paddingTop: '12px',
-              borderTop: '1px solid #e2e8f0',
+              borderTop: "1px solid var(--border-color, #e2e8f0)",
             }}
           >
-            <span style={{ fontSize: '13px', color: '#64748b' }}>
+            <span style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
               {itensRelatorio.length} coleta(s) nesta vista
               {somenteVencidos ? ' vencida(s)' : ''}
               {buscaDebounced.trim() ? ' · busca ativa' : ''} · mostrando{' '}
               {(pageTab - 1) * pageSizeTab + 1}–{Math.min(pageTab * pageSizeTab, itensRelatorio.length)}
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-              <label style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '13px', color: "var(--text-secondary, #475569)", display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Por página
                 <select
                   value={pageSizeTab}
@@ -1616,7 +1616,7 @@ export default function Financeiro() {
                   style={{
                     padding: '6px 10px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     fontSize: '13px',
                   }}
                 >
@@ -1634,8 +1634,8 @@ export default function Financeiro() {
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: pageTab <= 1 ? '#f1f5f9' : '#ffffff',
+                  border: "1px solid var(--input-border, #cbd5e1)",
+                  background: pageTab <= 1 ? 'var(--bg-inset, #f1f5f9)' : 'var(--bg-card, #ffffff)',
                   cursor: pageTab <= 1 ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                   fontSize: '13px',
@@ -1643,7 +1643,7 @@ export default function Financeiro() {
               >
                 Anterior
               </button>
-              <span style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+              <span style={{ fontSize: '13px', color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                 Página {pageTab} / {totalPaginasFin}
               </span>
               <button
@@ -1653,8 +1653,8 @@ export default function Financeiro() {
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: pageTab >= totalPaginasFin ? '#f1f5f9' : '#ffffff',
+                  border: "1px solid var(--input-border, #cbd5e1)",
+                  background: pageTab >= totalPaginasFin ? 'var(--bg-inset, #f1f5f9)' : 'var(--bg-card, #ffffff)',
                   cursor: pageTab >= totalPaginasFin ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                   fontSize: '13px',
@@ -1668,10 +1668,10 @@ export default function Financeiro() {
       </div>
 
       <div style={{ ...cardPrincipalStyle, marginBottom: 0 }}>
-        <h2 style={{ margin: '0 0 8px', fontSize: '18px', color: '#0f172a', fontWeight: 800 }}>
+        <h2 style={{ margin: '0 0 8px', fontSize: '18px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>
           Documentos (vencimentos)
         </h2>
-        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
           Controlo de documentos com <strong>nome</strong> e <strong>data de vencimento</strong>. Alerta visual até{' '}
           {DIAS_ALERTA_DOC} dias antes (e vencidos).
         </p>
@@ -1687,7 +1687,7 @@ export default function Financeiro() {
           }}
         >
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Nome do documento
             </div>
             <input
@@ -1699,7 +1699,7 @@ export default function Financeiro() {
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Data vencimento
             </div>
             <input
@@ -1711,7 +1711,7 @@ export default function Financeiro() {
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Coleta (opcional)
             </div>
             <select
@@ -1742,9 +1742,9 @@ export default function Financeiro() {
         </form>
 
         {loadingDocs ? (
-          <p style={{ color: '#64748b' }}>A carregar documentos…</p>
+          <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar documentos…</p>
         ) : documentos.length === 0 ? (
-          <p style={{ color: '#64748b', fontSize: '14px' }}>Nenhum documento registado.</p>
+          <p style={{ color: "var(--text-secondary, #64748b)", fontSize: '14px' }}>Nenhum documento registado.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ ...tableStyle, minWidth: '720px' }}>
@@ -1765,7 +1765,7 @@ export default function Financeiro() {
                     ? itens.find((x) => x.id === d.coleta_id)
                     : null
                   return (
-                    <tr key={d.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <tr key={d.id} style={{ borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>
                       <td style={tdStyle}>{d.nome_documento}</td>
                       <td style={tdStyle}>{formatDate(d.data_vencimento)}</td>
                       <td style={tdStyle}>
@@ -1817,26 +1817,26 @@ export default function Financeiro() {
 }
 
 const cardResumoStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   borderRadius: '16px',
   padding: '18px',
   boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
 }
 
 const cardResumoTituloStyle: CSSProperties = {
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: '14px',
   marginBottom: '8px',
 }
 
 const cardResumoValorStyle: CSSProperties = {
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontSize: '30px',
   fontWeight: 800,
 }
 
 const cardPrincipalStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   borderRadius: '16px',
   padding: '20px',
   boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
@@ -1871,22 +1871,22 @@ const thStyle: CSSProperties = {
   textAlign: 'left',
   padding: '14px 12px',
   fontSize: '14px',
-  color: '#475569',
-  borderBottom: '1px solid #e2e8f0',
-  backgroundColor: '#f8fafc',
+  color: "var(--text-secondary, #475569)",
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  backgroundColor: "var(--bg-subtle, #f8fafc)",
 }
 
 const tdStyle: CSSProperties = {
   padding: '14px 12px',
   fontSize: '14px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   verticalAlign: 'top',
 }
 
 const emptyTdStyle: CSSProperties = {
   padding: '24px',
   textAlign: 'center',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: '14px',
 }
 
@@ -1904,10 +1904,10 @@ const inputStyle: CSSProperties = {
   width: '100%',
   padding: '12px 14px',
   borderRadius: '10px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '14px',
   outline: 'none',
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   boxSizing: 'border-box',
 }
 
@@ -1915,17 +1915,17 @@ const inputTabelaStyle: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
   outline: 'none',
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   boxSizing: 'border-box',
 }
 
 const subInfoStyle: CSSProperties = {
   marginTop: '6px',
   fontSize: '12px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
 }
 
 const botaoSalvarStyle: CSSProperties = {
@@ -1941,7 +1941,7 @@ const botaoSalvarStyle: CSSProperties = {
 
 const botaoSecundarioStyle: CSSProperties = {
   backgroundColor: '#e5e7eb',
-  color: '#111827',
+  color: "var(--text-primary, #111827)",
   border: 'none',
   borderRadius: '10px',
   padding: '12px 18px',
@@ -1951,8 +1951,8 @@ const botaoSecundarioStyle: CSSProperties = {
 }
 
 const botaoContextoNavStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
-  color: '#0f172a',
+  backgroundColor: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
   border: '1px solid #86efac',
   borderRadius: '10px',
   padding: '8px 12px',
@@ -1962,9 +1962,9 @@ const botaoContextoNavStyle: CSSProperties = {
 }
 
 const botaoLimparContextoStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
-  color: '#64748b',
-  border: '1px solid #cbd5e1',
+  backgroundColor: "var(--bg-card, #ffffff)",
+  color: "var(--text-secondary, #64748b)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '10px',
   padding: '8px 14px',
   fontSize: '13px',

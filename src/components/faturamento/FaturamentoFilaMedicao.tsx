@@ -21,8 +21,8 @@ import { FaturamentoTabelaMedicao } from './FaturamentoTabelaMedicao'
 import { MedicaoGeradorDonoFaturamentoBloco } from './MedicaoGeradorDonoFaturamentoBloco'
 
 const card: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '18px 20px',
   marginBottom: '18px',
@@ -101,8 +101,8 @@ function GrupoMedicaoCard({
     <div style={{ ...card, borderLeft: '4px solid #6366f1' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>{tituloRelatorio}</div>
-          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+          <div style={{ fontWeight: 800, fontSize: '15px', color: "var(--text-primary, #0f172a)" }}>{tituloRelatorio}</div>
+          <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>
             {titulo} · {linhasColeta.length} ticket(s) · até 30 dias de lançamento
             {grupo.mtr_numero && grupo.mtr_numero !== '—' ? ` · ${grupo.mtr_numero}` : ''}
             {grupo.cliente_email_nf ? ` · ${grupo.cliente_email_nf}` : ''}
@@ -125,7 +125,7 @@ function GrupoMedicaoCard({
 
       <div className="rg-mobile-table-scroll" style={{ marginTop: '12px', overflowX: 'auto' }}>
         {carregandoMedicao ? (
-          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>A calcular valores do contrato…</p>
+          <p style={{ margin: 0, fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>A calcular valores do contrato…</p>
         ) : erroMedicao ? (
           <p style={{ margin: 0, fontSize: '12px', color: '#b45309' }}>{erroMedicao}</p>
         ) : (
@@ -185,7 +185,7 @@ export function FaturamentoFilaMedicao({
   if (carregando) {
     return (
       <div style={card}>
-        <p style={{ margin: 0, color: '#64748b' }}>A carregar esteira de medição…</p>
+        <p style={{ margin: 0, color: "var(--text-secondary, #64748b)" }}>A carregar esteira de medição…</p>
       </div>
     )
   }
@@ -206,13 +206,13 @@ export function FaturamentoFilaMedicao({
   }
 
   const btnVoltarAjusteStyle: CSSProperties = {
-    background: '#fef2f2',
+    background: "var(--status-error-bg, #fef2f2)",
     borderColor: '#fecaca',
     color: '#b91c1c',
   }
 
   const btnRelatorioGeradoStyle: CSSProperties = {
-    background: '#f0fdf4',
+    background: "var(--status-success-bg, #f0fdf4)",
     borderColor: '#bbf7d0',
     color: '#15803d',
   }

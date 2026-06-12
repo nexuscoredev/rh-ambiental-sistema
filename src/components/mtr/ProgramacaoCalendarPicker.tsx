@@ -356,7 +356,7 @@ function triggerButtonStyle(open: boolean, disabled: boolean): React.CSSProperti
     border: `1px solid ${open ? "#16a34a" : "#cbd5e1"}`,
     borderRadius: 10,
     fontSize: 14,
-    color: "#0f172a",
+    color: "var(--text-primary, #0f172a)",
     cursor: disabled ? "not-allowed" : "pointer",
     boxShadow: open ? "0 0 0 3px rgba(22, 163, 74, 0.18)" : "none",
     boxSizing: "border-box",
@@ -382,8 +382,8 @@ const popoverStyle: React.CSSProperties = {
   left: 0,
   zIndex: 1000,
   width: "min(380px, calc(100vw - 24px))",
-  background: "#ffffff",
-  border: "1px solid #e2e8f0",
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: 12,
   boxShadow: "0 12px 30px rgba(15, 23, 42, 0.16)",
   padding: 14,
@@ -398,20 +398,20 @@ const popoverHeaderStyle: React.CSSProperties = {
 };
 
 const navBtnStyle: React.CSSProperties = {
-  background: "#f1f5f9",
+  background: "var(--bg-inset, #f1f5f9)",
   border: "none",
   borderRadius: 8,
   width: 32,
   height: 32,
   fontSize: 18,
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   cursor: "pointer",
 };
 
 const monthLabelStyle: React.CSSProperties = {
   fontWeight: 800,
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   textTransform: "capitalize",
   fontSize: 14,
 };
@@ -426,7 +426,7 @@ const weekdayRowStyle: React.CSSProperties = {
 const weekdayCellStyle: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
-  color: "#64748b",
+  color: "var(--text-secondary, #64748b)",
   textAlign: "center",
   padding: "4px 0",
 };
@@ -510,13 +510,13 @@ const footerRowStyle: React.CSSProperties = {
 };
 
 const ghostBtnStyle: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #cbd5e1",
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: 8,
   padding: "6px 10px",
   fontSize: 12,
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   cursor: "pointer",
 };
 
@@ -593,7 +593,7 @@ function listItemStyle(isSelected: boolean): React.CSSProperties {
     border: `2px solid ${isSelected ? "#16a34a" : "#cbd5e1"}`,
     borderRadius: 10,
     background: isSelected ? "#ffffff" : "#ffffff",
-    color: "#0f172a",
+    color: "var(--text-primary, #0f172a)",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",

@@ -22,7 +22,7 @@ const styles: Record<Variant, CSSProperties> = {
     padding: '8px 14px',
     borderRadius: '10px',
     border: '1px solid #0d9488',
-    background: '#ecfdf5',
+    background: "var(--accent-teal-soft, #ecfdf5)",
     color: '#0f766e',
     fontWeight: 700,
     fontSize: '13px',

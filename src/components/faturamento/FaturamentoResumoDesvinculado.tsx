@@ -23,15 +23,15 @@ const card: CSSProperties = {
   marginBottom: '14px',
   padding: '14px 16px',
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const label: CSSProperties = {
   display: 'block',
   fontSize: '11px',
   fontWeight: 700,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginBottom: '4px',
 }
 
@@ -39,7 +39,7 @@ const input: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
   boxSizing: 'border-box',
 }
@@ -62,16 +62,16 @@ const thMini: CSSProperties = {
   fontWeight: 800,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   padding: '8px 10px',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f1f5f9',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-inset, #f1f5f9)",
 }
 
 const tdMini: CSSProperties = {
   padding: '8px 10px',
   fontSize: '12px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'top',
 }
@@ -229,7 +229,7 @@ function FaturamentoResumoDesvinculadoInner({
           marginBottom: '12px',
           padding: '10px 12px',
           borderRadius: '10px',
-          background: '#eff6ff',
+          background: "var(--status-info-bg, #eff6ff)",
           border: '1px solid #bfdbfe',
           fontSize: '12px',
           color: '#1e40af',
@@ -253,7 +253,7 @@ function FaturamentoResumoDesvinculadoInner({
             marginBottom: '12px',
             padding: '10px 12px',
             borderRadius: '10px',
-            background: '#ecfdf5',
+            background: "var(--accent-teal-soft, #ecfdf5)",
             border: '1px solid #6ee7b7',
             fontSize: '12px',
             color: '#047857',
@@ -279,10 +279,10 @@ function FaturamentoResumoDesvinculadoInner({
           }}
         >
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Resumo do ticket {podeEditar ? '(editável)' : ''}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginTop: '2px' }}>
               {ticketConsolidado
                 ? `${linhasTickets.length} tickets nesta MTR — cada linha abaixo é um ticket com o resíduo dele`
                 : 'Pesagem / comprovante operacional (todos os resíduos deste ticket)'}
@@ -295,8 +295,8 @@ function FaturamentoResumoDesvinculadoInner({
               style={{
                 padding: '6px 10px',
                 borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
+                border: "1px solid var(--input-border, #cbd5e1)",
+                background: "var(--bg-card, #ffffff)",
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -406,7 +406,7 @@ function FaturamentoResumoDesvinculadoInner({
             onChange={(e) => patchTicket({ tipo_residuo: e.target.value })}
             rows={ticketConsolidado ? 4 : 2}
           />
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>
             Lista completa para conferência e NF. Use «Recarregar do operacional» para atualizar a partir
             das coletas.
           </div>
@@ -426,7 +426,7 @@ function FaturamentoResumoDesvinculadoInner({
         </div>
       </div>
 
-      <div style={{ ...card, borderColor: '#a7f3d0', background: '#f0fdf4' }}>
+      <div style={{ ...card, borderColor: '#a7f3d0', background: "var(--status-success-bg, #f0fdf4)" }}>
         <div
           style={{
             display: 'flex',
@@ -438,10 +438,10 @@ function FaturamentoResumoDesvinculadoInner({
           }}
         >
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Resumo da MTR {podeEditar ? '(editável)' : ''}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginTop: '2px' }}>
               Caminhão + equipamento + mão de obra + resíduo
             </div>
           </div>
@@ -455,7 +455,7 @@ function FaturamentoResumoDesvinculadoInner({
                   padding: '6px 10px',
                   borderRadius: '8px',
                   border: '1px solid #0d9488',
-                  background: '#fff',
+                  background: "var(--bg-card, #ffffff)",
                   color: '#0f766e',
                   fontSize: '11px',
                   fontWeight: 700,
@@ -472,8 +472,8 @@ function FaturamentoResumoDesvinculadoInner({
                 style={{
                   padding: '6px 10px',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#fff',
+                  border: "1px solid var(--input-border, #cbd5e1)",
+                  background: "var(--bg-card, #ffffff)",
                   fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -514,7 +514,7 @@ function FaturamentoResumoDesvinculadoInner({
                   <option value={CHAVE_VEICULO_MANUAL}>Outro — editar manualmente</option>
                 </select>
                 {(tipoCaminhaoProgramacao?.trim() || veiculoSugeridoProgramacao) && (
-                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginBottom: '8px', lineHeight: 1.45 }}>
                     {tipoCaminhaoProgramacao?.trim() ? (
                       <>
                         <strong>Programação:</strong> {tipoCaminhaoProgramacao.trim()}
@@ -556,12 +556,12 @@ function FaturamentoResumoDesvinculadoInner({
                   <div
                     style={{
                       fontSize: '12px',
-                      color: '#334155',
+                      color: "var(--text-primary, #334155)",
                       marginBottom: '8px',
                       padding: '8px 10px',
                       borderRadius: '8px',
-                      background: '#fff',
-                      border: '1px solid #e2e8f0',
+                      background: "var(--bg-card, #ffffff)",
+                      border: "1px solid var(--border-color, #e2e8f0)",
                     }}
                   >
                     <strong>{resumo.mtr.caminhao_rotulo.trim() || '—'}</strong>
@@ -576,7 +576,7 @@ function FaturamentoResumoDesvinculadoInner({
             {modoVeiculoManual ? (
               <>
                 {veiculosContrato.length === 0 ? null : (
-                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
                     Sem linha no contrato ou valor personalizado — preencha abaixo.
                   </div>
                 )}
@@ -640,7 +640,7 @@ function FaturamentoResumoDesvinculadoInner({
           </div>
         </div>
 
-        <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 800, color: "var(--text-primary, #334155)", marginBottom: '8px' }}>
           Resíduo (MTR)
         </div>
         <div className="rg-mobile-stack-grid" style={{ ...grid3, marginBottom: '8px' }}>
@@ -731,8 +731,8 @@ function FaturamentoResumoDesvinculadoInner({
       </div>
 
       {(podeAjustar || acrescimoNum > 0 || descontoNum > 0) && (
-        <div style={{ ...card, borderColor: '#fde68a', background: '#fffbeb' }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>
+        <div style={{ ...card, borderColor: '#fde68a', background: "var(--status-warning-bg, #fffbeb)" }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '10px' }}>
             Ajustes financeiros (Operacional (Time T))
           </div>
           <div className="rg-mobile-stack-grid" style={grid2}>

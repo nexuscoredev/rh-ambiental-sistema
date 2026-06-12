@@ -33,17 +33,17 @@ const btnRemover: CSSProperties = {
 }
 
 const cardItem: CSSProperties = {
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '14px',
   padding: '14px',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const labelCampo: CSSProperties = {
   display: 'block',
   fontSize: '12px',
   fontWeight: 700,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   marginBottom: '6px',
 }
 
@@ -51,7 +51,7 @@ const input: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
   boxSizing: 'border-box',
 }
@@ -112,14 +112,14 @@ export function MtrVeiculosEquipamentosForm({
         style={{
           fontSize: '15px',
           fontWeight: 800,
-          color: '#0f172a',
+          color: "var(--text-primary, #0f172a)",
           paddingBottom: '4px',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: "1px solid var(--border-color, #e5e7eb)",
         }}
       >
         Veículos e Equipamentos
       </div>
-      <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+      <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
         {listaVeiculos.some((v) => v.tipo_veiculo.trim()) || listaEquip.some((e) => e.descricao.trim())
           ? 'Dados do cadastro do cliente — edite aqui só para esta MTR (não altera o cadastro). Valores de frete ficam no faturamento.'
           : 'Selecione a programação para carregar veículos e equipamentos do cadastro do cliente.'}
@@ -136,7 +136,7 @@ export function MtrVeiculosEquipamentosForm({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Veículos</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Veículos</div>
           <button
             type="button"
             style={{
@@ -162,7 +162,7 @@ export function MtrVeiculosEquipamentosForm({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Veículo {index + 1}
                 </span>
                 <button
@@ -206,7 +206,7 @@ export function MtrVeiculosEquipamentosForm({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Equipamentos</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Equipamentos</div>
           <button
             type="button"
             style={{
@@ -234,7 +234,7 @@ export function MtrVeiculosEquipamentosForm({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Equipamento {index + 1}
                 </span>
                 <button
@@ -278,7 +278,7 @@ export function MtrVeiculosEquipamentosForm({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Mão de obra</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Mão de obra</div>
           <button
             type="button"
             style={{
@@ -306,7 +306,7 @@ export function MtrVeiculosEquipamentosForm({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Mão de obra {index + 1}
                 </span>
                 <button

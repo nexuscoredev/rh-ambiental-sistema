@@ -19,7 +19,7 @@ type Props = {
 const thStyle: CSSProperties = {
   textAlign: 'left',
   padding: '12px 10px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   fontSize: '12px',
   borderBottom: '2px solid #e2e8f0',
@@ -29,7 +29,7 @@ const thStyle: CSSProperties = {
 const tdStyle: CSSProperties = {
   padding: '10px',
   verticalAlign: 'middle',
-  borderBottom: '1px solid #e2e8f0',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
   fontSize: '13px',
 }
 
@@ -38,14 +38,14 @@ const labelStyle: CSSProperties = {
   fontWeight: 700,
   fontSize: '13px',
   marginBottom: '6px',
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 
 const inputStyle: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '14px',
   boxSizing: 'border-box',
 }
@@ -194,16 +194,16 @@ export function ClienteGerenciadorHistoricoMtr({
       {erro ? <div className="alert-box alert-warning">{erro}</div> : null}
 
       {loading ? (
-        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Carregando histórico…</p>
+        <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", margin: 0 }}>Carregando histórico…</p>
       ) : rows.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+        <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", margin: 0 }}>
           Nenhuma MTR com status Baixada no sistema.
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '720px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc' }}>
+              <tr style={{ background: "var(--bg-subtle, #f8fafc)" }}>
                 <th style={thStyle}>MTR baixada</th>
                 <th style={thStyle}>Data</th>
                 <th style={thStyle}>Gerador</th>
@@ -217,7 +217,7 @@ export function ClienteGerenciadorHistoricoMtr({
                   key={r.id}
                   style={
                     baixarMtrId === r.id
-                      ? { background: '#f0fdf4' }
+                      ? { background: "var(--status-success-bg, #f0fdf4)" }
                       : undefined
                   }
                 >

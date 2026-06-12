@@ -11,8 +11,8 @@ const FILA_AJUSTE_VISIVEL_INICIAL = 5
 const FILA_AJUSTE_CARREGAR_MAIS = 20
 
 const card: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '18px 20px',
   marginBottom: '18px',
@@ -57,7 +57,7 @@ export function FaturamentoFilaAjusteValores({
       <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#0f766e' }}>
         Esteira 2 · Ajuste de valores (antes da medição)
       </h2>
-      <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+      <p style={{ margin: '0 0 14px', fontSize: '13px', color: "var(--text-secondary, #475569)", lineHeight: 1.55 }}>
         Revise os <strong>cálculos detalhados</strong> do ticket e MTR (valores, frete, taxas). Só depois
         disso gere o relatório de medição e envie ao cliente para aprovação.
       </p>
@@ -68,7 +68,7 @@ export function FaturamentoFilaAjusteValores({
         </p>
       ) : null}
 
-      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+      <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>
         {itensMtr.length} na fila
         {mostrarControlesLista
           ? ` · a mostrar ${Math.min(visiveis, itensMtr.length)}`
@@ -89,11 +89,11 @@ export function FaturamentoFilaAjusteValores({
                   gap: '10px 14px',
                   padding: '10px 12px',
                   borderRadius: 10,
-                  background: '#f0fdfa',
+                  background: "var(--accent-teal-soft, #f0fdfa)",
                   border: '1px solid #99f6e4',
                 }}
               >
-                <span style={{ flex: '1 1 200px', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                <span style={{ flex: '1 1 200px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #0f172a)" }}>
                   {lider.cliente_nome ?? '—'} · coleta {lider.numero_coleta ?? lider.numero} ·{' '}
                   {rotuloEsteiraLinha(lider)}
                 </span>
@@ -121,11 +121,11 @@ export function FaturamentoFilaAjusteValores({
                 gap: '10px 14px',
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: '#f0fdfa',
+                background: "var(--accent-teal-soft, #f0fdfa)",
                 border: '1px solid #99f6e4',
               }}
             >
-              <span style={{ flex: '1 1 240px', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+              <span style={{ flex: '1 1 240px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #0f172a)" }}>
                 {item.cliente_nome} · MTR {mtr_numero} · {coletas.length} tickets (
                 {coletas.map((c) => c.numero_coleta ?? c.numero).join(', ')}) ·{' '}
                 {rotuloEsteiraLinha(coleta_lider)}

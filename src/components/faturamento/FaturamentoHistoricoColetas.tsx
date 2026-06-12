@@ -13,8 +13,8 @@ import {
 import { FaturamentoColetaResumoModal } from './FaturamentoColetaResumoModal'
 
 const wrap: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   marginBottom: '20px',
@@ -27,23 +27,23 @@ const th: CSSProperties = {
   fontWeight: 800,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   padding: '8px 10px',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const td: CSSProperties = {
   padding: '10px',
   fontSize: '12px',
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   borderBottom: '1px solid #f1f5f9',
 }
 
 const btnResumo: CSSProperties = {
-  background: '#f1f5f9',
-  color: '#0f172a',
-  border: '1px solid #cbd5e1',
+  background: "var(--bg-inset, #f1f5f9)",
+  color: "var(--text-primary, #0f172a)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '8px',
   padding: '6px 10px',
   fontSize: '12px',
@@ -122,15 +122,15 @@ export function FaturamentoHistoricoColetas({
 
   return (
     <div id="faturamento-historico-coletas" style={wrap}>
-      <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#475569' }}>Coletas faturadas</h2>
-      <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94a3b8', maxWidth: '820px', lineHeight: 1.5 }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Coletas faturadas</h2>
+      <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #94a3b8)", maxWidth: '820px', lineHeight: 1.5 }}>
         {naoCarregado
           ? 'Coletas já faturadas (emitidas). O histórico carrega automaticamente quando existir registo emitido; também pode usar «Carregar histórico» nos relatórios abaixo.'
           : 'Coletas já enviadas ao Financeiro — filtre por período ou busque por cliente / número.'}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', alignItems: 'flex-end' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             Busca
           </label>
           <input
@@ -141,35 +141,35 @@ export function FaturamentoHistoricoColetas({
               width: '220px',
               padding: '8px 10px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
               fontSize: '13px',
             }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             De
           </label>
           <input
             type="date"
             value={de}
             onChange={(e) => setDe(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 10px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)", fontSize: '13px' }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             Até
           </label>
           <input
             type="date"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 10px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)", fontSize: '13px' }}
           />
         </div>
       </div>
-      <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', maxHeight: 'min(420px, 48vh)', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+      <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', maxHeight: 'min(420px, 48vh)', overflowY: 'auto', border: "1px solid var(--border-color, #e2e8f0)", borderRadius: '10px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '920px' }}>
           <thead>
             <tr>
@@ -188,13 +188,13 @@ export function FaturamentoHistoricoColetas({
           <tbody>
             {naoCarregado ? (
               <tr>
-                <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                <td colSpan={10} style={{ ...td, textAlign: 'center', color: "var(--text-secondary, #94a3b8)", padding: '24px' }}>
                   {carregando ? 'A carregar coletas faturadas…' : 'A preparar histórico…'}
                 </td>
               </tr>
             ) : filtradas.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                <td colSpan={10} style={{ ...td, textAlign: 'center', color: "var(--text-secondary, #94a3b8)", padding: '24px' }}>
                   {carregando ? 'A carregar…' : 'Nenhum registro neste filtro.'}
                 </td>
               </tr>
@@ -230,7 +230,7 @@ export function FaturamentoHistoricoColetas({
                         : '—'}
                     </td>
                     <td style={td}>{fmtData(lider.data_execucao || lider.data_agendada)}</td>
-                    <td style={{ ...td, fontSize: '11px', color: '#64748b' }}>{fmtDataHora(lider.conferencia_em)}</td>
+                    <td style={{ ...td, fontSize: '11px', color: "var(--text-secondary, #64748b)" }}>{fmtDataHora(lider.conferencia_em)}</td>
                     <td style={td}>
                       <span
                         style={{
@@ -259,7 +259,7 @@ export function FaturamentoHistoricoColetas({
           </tbody>
         </table>
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+      <p style={{ margin: '10px 0 0', fontSize: '12px', color: "var(--text-secondary, #94a3b8)" }}>
         {filtradas.length} registro(s) no filtro.
       </p>
       <FaturamentoColetaResumoModal

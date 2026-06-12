@@ -9,8 +9,8 @@ const wrap: CSSProperties = {
   marginTop: '12px',
   padding: '12px 14px',
   borderRadius: '10px',
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
 }
 
 const rowFlex: CSSProperties = {
@@ -25,10 +25,10 @@ const inputStyle: CSSProperties = {
   minWidth: '160px',
   padding: '8px 12px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
   fontWeight: 600,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 
 const btnStyle: CSSProperties = {
@@ -52,7 +52,7 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
           marginTop: '10px',
           padding: '10px 12px',
           borderRadius: '8px',
-          background: '#fef2f2',
+          background: "var(--status-error-bg, #fef2f2)",
           border: '1px solid #fecaca',
           color: '#991b1b',
           fontSize: '13px',
@@ -70,9 +70,9 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
           marginTop: '10px',
           padding: '10px 12px',
           borderRadius: '8px',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          color: '#475569',
+          background: "var(--bg-subtle, #f8fafc)",
+          border: "1px solid var(--border-color, #e2e8f0)",
+          color: "var(--text-secondary, #475569)",
           fontSize: '13px',
         }}
       >
@@ -88,7 +88,7 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
           marginTop: '10px',
           padding: '10px 12px',
           borderRadius: '8px',
-          background: '#fffbeb',
+          background: "var(--status-warning-bg, #fffbeb)",
           border: '1px solid #fde68a',
           color: '#92400e',
           fontSize: '13px',
@@ -134,7 +134,7 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
         background: passo_principal != null ? '#f0fdfa' : '#f8fafc',
         border: `1px solid ${passo_principal != null ? '#99f6e4' : '#e2e8f0'}`,
         fontSize: '13px',
-        color: '#0f172a',
+        color: "var(--text-primary, #0f172a)",
         lineHeight: 1.55,
       }}
     >
@@ -146,12 +146,12 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
           Etapa atual: <strong>{rotulo_passo_principal}</strong>
         </p>
       ) : (
-        <p style={{ margin: 0, color: '#475569' }}>
+        <p style={{ margin: 0, color: "var(--text-secondary, #475569)" }}>
           <strong>{rotulo_passo_principal}</strong>
         </p>
       )}
       {coletas.length > 0 ? (
-        <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b' }}>
+        <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
           {coletas.length === 1
             ? `1 coleta vinculada (n.º ${coletas[0]!.numero_exibicao}).`
             : `${coletas.length} coletas vinculadas.`}
@@ -159,7 +159,7 @@ function PainelResultado({ resultado }: { resultado: ResultadoConsultaEsteiraMtr
         </p>
       ) : null}
       {passos_distintos && coletas.length > 1 ? (
-        <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '12px', color: '#334155' }}>
+        <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '12px', color: "var(--text-primary, #334155)" }}>
           {coletas.map((c) => (
             <li key={c.coleta_id}>
               Coleta {c.numero_exibicao}: {c.rotulo_passo}
@@ -214,7 +214,7 @@ export function FaturamentoEsteiraBuscaMtr() {
     <div style={wrap}>
       <form onSubmit={onSubmit}>
         <div style={rowFlex}>
-          <label htmlFor="faturamento-busca-mtr" style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+          <label htmlFor="faturamento-busca-mtr" style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
             Consultar etapa por MTR
           </label>
         </div>
@@ -247,7 +247,7 @@ export function FaturamentoEsteiraBuscaMtr() {
           <PainelResultado resultado={resultado} />
         </div>
       ) : (
-        <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+        <p style={{ margin: '8px 0 0', fontSize: '11px', color: "var(--text-secondary, #94a3b8)" }}>
           Pesquisa parcial pelo número. Mostra o passo 1–8 da esteira de faturamento (somente leitura).
         </p>
       )}

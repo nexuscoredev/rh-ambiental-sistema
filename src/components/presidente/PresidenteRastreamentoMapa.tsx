@@ -68,7 +68,7 @@ export function PresidenteRastreamentoMapa({
         maxZoom={17}
         zoomControl
         scrollWheelZoom
-        style={{ height: '100%', width: '100%', background: '#f1f5f9' }}
+        style={{ height: '100%', width: '100%', background: "var(--bg-inset, #f1f5f9)" }}
         attributionControl
       >
         <TileLayer

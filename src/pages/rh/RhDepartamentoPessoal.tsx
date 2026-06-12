@@ -82,9 +82,9 @@ const btnPrimary: CSSProperties = {
 const btnGhost: CSSProperties = {
   padding: '10px 16px',
   borderRadius: '10px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  color: '#475569',
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-secondary, #475569)",
   fontWeight: 700,
   fontSize: '14px',
   cursor: 'pointer',

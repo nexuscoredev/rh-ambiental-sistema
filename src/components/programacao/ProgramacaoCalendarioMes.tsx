@@ -493,7 +493,7 @@ const fixaBadgeStyle: CSSProperties = {
 
 const overflowStyle: CSSProperties = {
   fontSize: '9px',
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   fontWeight: 700,
   textAlign: 'center',
   marginTop: 1,

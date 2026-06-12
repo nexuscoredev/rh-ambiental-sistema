@@ -12,8 +12,8 @@ const wrap: CSSProperties = {
   marginBottom: '14px',
   padding: '14px 16px',
   borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  background: '#f8fafc',
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const tituloGrupo: Record<string, string> = {
@@ -55,13 +55,13 @@ function LinhaValor({ linha }: { linha: LinhaDetalheConta }) {
         borderTop: ehTotal ? '2px solid #0f172a' : ehSub ? '1px dashed #cbd5e1' : 'none',
         fontWeight: ehTotal ? 800 : ehSub ? 700 : 500,
         fontSize: ehTotal ? '15px' : '13px',
-        color: '#0f172a',
+        color: "var(--text-primary, #0f172a)",
       }}
     >
       <div style={{ paddingLeft: linha.indent ? '12px' : 0 }}>
         <div>{linha.rotulo}</div>
         {linha.detalhe ? (
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginTop: '2px', lineHeight: 1.4 }}>
             {linha.detalhe}
           </div>
         ) : null}
@@ -122,11 +122,11 @@ export function FaturamentoDetalheConta({ resumo, referencia, diferenca }: Props
     <section style={wrap} aria-labelledby="detalhe-conta-titulo">
       <h3
         id="detalhe-conta-titulo"
-        style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 800, color: '#0f172a' }}
+        style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}
       >
         Detalhamento da conta
       </h3>
-      <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+      <p style={{ margin: '0 0 14px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
         Valores deste faturamento (editáveis nos blocos acima). A soma é{' '}
         <strong>ticket + MTR + acréscimo − desconto</strong>.
       </p>
@@ -148,7 +148,7 @@ export function FaturamentoDetalheConta({ resumo, referencia, diferenca }: Props
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                color: '#64748b',
+                color: "var(--text-secondary, #64748b)",
                 marginBottom: '6px',
               }}
             >
@@ -162,7 +162,7 @@ export function FaturamentoDetalheConta({ resumo, referencia, diferenca }: Props
                     fontWeight: 500,
                     textTransform: 'none',
                     letterSpacing: 0,
-                    color: '#94a3b8',
+                    color: "var(--text-secondary, #94a3b8)",
                   }}
                 >
                   Conferência automática (resíduos/mínimos pelo contrato). O caminhão segue o

@@ -23,8 +23,8 @@ const listStyle: CSSProperties = {
   maxHeight: '220px',
   overflowY: 'auto',
   borderRadius: '8px',
-  border: '1px solid #e2e8f0',
-  background: '#fff',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-card, #ffffff)",
   boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
 }
 
@@ -32,7 +32,7 @@ const itemStyle: CSSProperties = {
   padding: '8px 12px',
   fontSize: '14px',
   cursor: 'pointer',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 
 export function ClienteBuscaSelect({
@@ -129,8 +129,8 @@ export function ClienteBuscaSelect({
           border: `1px solid ${aberto ? '#0d9488' : '#cbd5e1'}`,
           fontSize: '14px',
           boxSizing: 'border-box',
-          background: '#fff',
-          color: '#0f172a',
+          background: "var(--bg-card, #ffffff)",
+          color: "var(--text-primary, #0f172a)",
           boxShadow: aberto ? '0 0 0 3px rgba(13, 148, 136, 0.12)' : 'none',
           ...style,
         }}
@@ -138,9 +138,9 @@ export function ClienteBuscaSelect({
       {aberto && !disabled ? (
         <ul role="listbox" style={listStyle}>
           {loading ? (
-            <li style={{ ...itemStyle, color: '#64748b', cursor: 'default' }}>A carregar…</li>
+            <li style={{ ...itemStyle, color: "var(--text-secondary, #64748b)", cursor: 'default' }}>A carregar…</li>
           ) : opcoes.length === 0 ? (
-            <li style={{ ...itemStyle, color: '#64748b', cursor: 'default' }}>
+            <li style={{ ...itemStyle, color: "var(--text-secondary, #64748b)", cursor: 'default' }}>
               {textoDeb.trim() ? 'Nenhum cliente encontrado' : 'Digite o nome do cliente'}
             </li>
           ) : (

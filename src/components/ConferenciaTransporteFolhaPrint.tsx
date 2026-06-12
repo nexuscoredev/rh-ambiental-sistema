@@ -219,7 +219,7 @@ export function ConferenciaTransporteFolhaPrintView({
         Eu, <strong>{motoristaTxt}</strong>, declaro que estou saindo com caminhão <strong>{veiculoTxt}</strong>, placa{' '}
         <strong>{placaTxt}</strong>, e o mesmo encontra-se com todos os itens abaixo:
       </p>
-      <div style={{ border: '1px solid #000', minHeight: 96, padding: 8, marginBottom: 10, background: '#fff' }}>
+      <div style={{ border: '1px solid #000', minHeight: 96, padding: 8, marginBottom: 10, background: "var(--bg-card, #ffffff)" }}>
         <div style={{ fontWeight: 700, fontSize: '9pt', marginBottom: 4 }}>Avarias</div>
         <div style={{ fontSize: '9pt', whiteSpace: 'pre-wrap', minHeight: 72 }}>
           {folha.avarias.trim() || '\u00a0'}

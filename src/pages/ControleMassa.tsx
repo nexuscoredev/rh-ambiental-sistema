@@ -283,8 +283,8 @@ const formInicial: FormRegistro = {
 };
 
 const massaAcaoFinalCardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  background: "#ffffff",
+  border: "1px solid var(--border-color, #e5e7eb)",
+  background: "var(--bg-card, #ffffff)",
   borderRadius: "16px",
   padding: "18px",
   boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -299,13 +299,13 @@ const massaAcaoFinalTituloStyle: CSSProperties = {
   margin: 0,
   fontSize: "15px",
   fontWeight: 800,
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
 };
 
 const massaAcaoFinalDescStyle: CSSProperties = {
   margin: "6px 0 0",
   fontSize: "13px",
-  color: "#64748b",
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.45,
   fontWeight: 500,
 };
@@ -342,9 +342,9 @@ const massaBtnSecundarioStyle: CSSProperties = {
   height: "40px",
   padding: "0 14px",
   borderRadius: "12px",
-  border: "1px solid #d1d5db",
-  background: "#ffffff",
-  color: "#0f172a",
+  border: "1px solid var(--input-border, #d1d5db)",
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 700,
   fontSize: "13px",
   cursor: "pointer",
@@ -364,7 +364,7 @@ const massaImpressaoLabelStyle: CSSProperties = {
   fontSize: "11px",
   fontWeight: 700,
   letterSpacing: "0.04em",
-  color: "#94a3b8",
+  color: "var(--text-secondary, #94a3b8)",
   marginRight: "auto",
 };
 
@@ -3105,7 +3105,7 @@ export default function ControleMassa() {
         {erroTela && (
           <div
             style={{
-              background: "#fef2f2",
+              background: "var(--status-error-bg, #fef2f2)",
               color: "#991b1b",
               padding: "14px 16px",
               borderRadius: "12px",
@@ -3130,14 +3130,14 @@ export default function ControleMassa() {
               fontSize: "13px",
               border: "1px solid",
               ...(itemContextoResolvido
-                ? { background: "#f8fafc", borderColor: "#e2e8f0" }
-                : { background: "#fffbeb", borderColor: "#fcd34d" }),
+                ? { background: "var(--bg-subtle, #f8fafc)", borderColor: "#e2e8f0" }
+                : { background: "var(--status-warning-bg, #fffbeb)", borderColor: "#fcd34d" }),
             }}
           >
-            <div style={{ flex: "1", minWidth: "200px", color: "#475569", lineHeight: 1.45 }}>
+            <div style={{ flex: "1", minWidth: "200px", color: "var(--text-secondary, #475569)", lineHeight: 1.45 }}>
               {itemContextoResolvido ? (
                 <>
-                  <strong style={{ color: "#0f172a" }}>Link na URL:</strong> coleta{" "}
+                  <strong style={{ color: "var(--text-primary, #0f172a)" }}>Link na URL:</strong> coleta{" "}
                   {itemContextoResolvido.numero} · {itemContextoResolvido.cliente}
                 </>
               ) : (
@@ -3187,7 +3187,7 @@ export default function ControleMassa() {
                 margin: 0,
                 fontSize: "26px",
                 fontWeight: 800,
-                color: "#0f172a",
+                color: "var(--text-primary, #0f172a)",
               }}
             >
               Pesagem, MTR e ticket no mesmo ecrã
@@ -3204,11 +3204,11 @@ export default function ControleMassa() {
                   marginTop: "8px",
                   marginBottom: 0,
                   fontSize: "12px",
-                  color: "#64748b",
+                  color: "var(--text-secondary, #64748b)",
                   fontWeight: 600,
                 }}
               >
-                Perfil: <span style={{ color: "#0f172a" }}>{usuarioCargo}</span>
+                Perfil: <span style={{ color: "var(--text-primary, #0f172a)" }}>{usuarioCargo}</span>
                 {!podeMutarMassa ? " · somente consulta" : " · pode lançar pesagem"}
               </p>
             ) : null}
@@ -3222,7 +3222,7 @@ export default function ControleMassa() {
                 lineHeight: 1.5,
               }}
             >
-              <p style={{ margin: 0, color: "#0f172a" }}>
+              <p style={{ margin: 0, color: "var(--text-primary, #0f172a)" }}>
                 Mês vigente ({statsMtrSemTicket?.rotuloMesVigente ?? "…"})
               </p>
               <p
@@ -3238,7 +3238,7 @@ export default function ControleMassa() {
                   {statsMtrSemTicket != null ? statsMtrSemTicket.ticketsSemMtr : "…"}
                 </strong>{" "}
                 coleta(s) sem MTR vinculada
-                <span style={{ fontWeight: 600, color: "#64748b" }}>
+                <span style={{ fontWeight: 600, color: "var(--text-secondary, #64748b)" }}>
                   {" "}
                   (tickets a lançar na esteira MTR)
                 </span>
@@ -3259,7 +3259,7 @@ export default function ControleMassa() {
                 {statsMtrSemTicket != null && statsMtrSemTicket.mtrsComPendencia > 0
                   ? ` · ${statsMtrSemTicket.mtrsComPendencia} MTR(s) com pendência`
                   : ""}
-                <span style={{ fontWeight: 600, color: "#64748b" }}>
+                <span style={{ fontWeight: 600, color: "var(--text-secondary, #64748b)" }}>
                   {" "}
                   (MTR emitida, falta ticket operacional)
                 </span>
@@ -3271,10 +3271,10 @@ export default function ControleMassa() {
             <div
               style={{
                 display: "flex",
-                border: "1px solid #cbd5e1",
+                border: "1px solid var(--input-border, #cbd5e1)",
                 borderRadius: "12px",
                 overflow: "hidden",
-                background: "#ffffff",
+                background: "var(--bg-card, #ffffff)",
                 boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
               }}
             >
@@ -3350,7 +3350,7 @@ export default function ControleMassa() {
             marginTop: "14px",
             padding: "10px 12px",
             borderRadius: "14px",
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border-color, #e2e8f0)",
             background: "rgba(255, 255, 255, 0.92)",
             backdropFilter: "blur(8px)",
             boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
@@ -3415,15 +3415,15 @@ export default function ControleMassa() {
               justifyContent: "flex-end",
             }}
           >
-            <div style={{ fontSize: "12px", color: "#475569", fontWeight: 700 }}>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary, #475569)", fontWeight: 700 }}>
               {coletaSelecionada ? (
                 <>
-                  Coleta <strong style={{ color: "#0f172a" }}>{coletaSelecionada.numero}</strong> ·{" "}
+                  Coleta <strong style={{ color: "var(--text-primary, #0f172a)" }}>{coletaSelecionada.numero}</strong> ·{" "}
                   {(coletaSelecionada.cliente || "—").slice(0, 36)}
                 </>
               ) : mtrSelecionada ? (
                 <>
-                  MTR <strong style={{ color: "#0f172a" }}>{mtrSelecionada.numero}</strong> ·{" "}
+                  MTR <strong style={{ color: "var(--text-primary, #0f172a)" }}>{mtrSelecionada.numero}</strong> ·{" "}
                   {(mtrSelecionada.cliente || "—").slice(0, 36)}
                 </>
               ) : (
@@ -3436,8 +3436,8 @@ export default function ControleMassa() {
         <div
           className="controle-massa-page__panel-lista"
           style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #e5e7eb)",
             borderRadius: "18px",
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -3456,29 +3456,29 @@ export default function ControleMassa() {
               padding: "14px 18px",
               border: "none",
               borderBottom: tabelaAberta ? "1px solid #e5e7eb" : "none",
-              background: "#ffffff",
+              background: "var(--bg-card, #ffffff)",
               cursor: "pointer",
               textAlign: "left",
             }}
           >
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "17px", fontWeight: 900, color: "#0f172a" }}>
+              <div style={{ fontSize: "17px", fontWeight: 900, color: "var(--text-primary, #0f172a)" }}>
                 {modoTela === "operacao" ? "Lista de coletas (apoio)" : "Todas as coletas — auditoria"}
               </div>
-              <div style={{ marginTop: 4, fontSize: "12px", color: "#64748b", fontWeight: 600, lineHeight: 1.45 }}>
+              <div style={{ marginTop: 4, fontSize: "12px", color: "var(--text-secondary, #64748b)", fontWeight: 600, lineHeight: 1.45 }}>
                 {modoTela === "operacao"
                   ? "Opcional: abra para escolher uma linha ou confirmar dados. O trabalho principal é o formulário acima."
                   : "Vista completa com colunas técnicas e ações de edição/exclusão."}
               </div>
             </div>
-            <span style={{ flexShrink: 0, fontSize: "12px", color: "#64748b" }} aria-hidden>
+            <span style={{ flexShrink: 0, fontSize: "12px", color: "var(--text-secondary, #64748b)" }} aria-hidden>
               {tabelaAberta ? "▲" : "▼"}
             </span>
           </button>
 
           {tabelaAberta ? (
             <>
-              <div style={{ padding: "12px 18px", borderBottom: "1px solid #e5e7eb", background: "#ffffff" }}>
+              <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border-color, #e5e7eb)", background: "var(--bg-card, #ffffff)" }}>
                 {modoTela === "operacao" ? (
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
                     {[
@@ -3507,7 +3507,7 @@ export default function ControleMassa() {
                       </button>
                     ))}
 
-                    <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 800 }}>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)", fontWeight: 800 }}>
                       {filtroOperacao === "pendentes"
                         ? `Pendentes: ${listaOperacao.length}`
                         : filtroOperacao === "hoje"
@@ -3532,7 +3532,7 @@ export default function ControleMassa() {
                       maxWidth: "440px",
                       height: "36px",
                       borderRadius: "10px",
-                      border: "1px solid #d1d5db",
+                      border: "1px solid var(--input-border, #d1d5db)",
                       padding: "0 12px",
                       fontSize: "13px",
                       outline: "none",
@@ -3546,20 +3546,20 @@ export default function ControleMassa() {
                         height: "36px",
                         padding: "0 12px",
                         borderRadius: "10px",
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
+                        border: "1px solid var(--input-border, #cbd5e1)",
+                        background: "var(--bg-card, #ffffff)",
                         fontWeight: 800,
                         fontSize: "12px",
                         cursor: "pointer",
-                        color: "#0f172a",
+                        color: "var(--text-primary, #0f172a)",
                       }}
                     >
                       Limpar filtros
                     </button>
                   ) : null}
-                  <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 700 }}>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>
                     Mostrando{" "}
-                    <strong style={{ color: "#0f172a" }}>
+                    <strong style={{ color: "var(--text-primary, #0f172a)" }}>
                       {coletasListaFiltradas.length}
                     </strong>{" "}
                     de {coletasListaBase.length}
@@ -3580,7 +3580,7 @@ export default function ControleMassa() {
                 style={{
                   padding: "28px",
                   textAlign: "center",
-                  color: "#64748b",
+                  color: "var(--text-secondary, #64748b)",
                   fontSize: "13px",
                 }}
               >
@@ -3593,7 +3593,7 @@ export default function ControleMassa() {
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: "11px",
-                  color: "#111827",
+                  color: "var(--text-primary, #111827)",
                 }}
               >
                 <thead
@@ -3601,10 +3601,10 @@ export default function ControleMassa() {
                     position: "sticky",
                     top: 0,
                     zIndex: 2,
-                    background: "#f8fafc",
+                    background: "var(--bg-subtle, #f8fafc)",
                   }}
                 >
-                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <tr style={{ borderBottom: "1px solid var(--border-color, #e5e7eb)" }}>
                     <th style={thListaColetaStyle}>Coleta</th>
                     <th style={thListaColetaStyle}>MTR</th>
                     <th style={thListaColetaStyle}>Data</th>
@@ -3632,7 +3632,7 @@ export default function ControleMassa() {
                     {modoTela === "auditoria" ? <th style={thListaColetaStyle}>Etapa</th> : null}
                     <th style={{ ...thListaColetaStyle, whiteSpace: "nowrap" }}>Ações</th>
                   </tr>
-                  <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f1f5f9" }}>
+                  <tr style={{ borderBottom: "1px solid var(--border-color, #e5e7eb)", background: "var(--bg-inset, #f1f5f9)" }}>
                     <th style={thFiltroColListaStyle}>
                       <input
                         type="text"
@@ -3884,7 +3884,7 @@ export default function ControleMassa() {
                               {formatarFaseFluxoOficialParaUI(c.etapaFluxo)}
                             </div>
                             <div
-                              style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}
+                              style={{ fontSize: "11px", color: "var(--text-secondary, #64748b)", marginTop: "2px" }}
                               title={formatarEtapaParaUI(c.etapaFluxo)}
                             >
                               {formatarEtapaParaUI(c.etapaFluxo)}
@@ -3950,7 +3950,7 @@ export default function ControleMassa() {
                                   }
                                   style={{
                                     ...botaoAcaoColetaListaStyle,
-                                    background: "#fef2f2",
+                                    background: "var(--status-error-bg, #fef2f2)",
                                     color: "#b91c1c",
                                     borderColor: "#fecaca",
                                     ...(!podeEditarOuExcluirColeta || excluindoColetaId === c.id
@@ -3975,7 +3975,7 @@ export default function ControleMassa() {
                 style={{
                   padding: "22px",
                   textAlign: "center",
-                  color: "#64748b",
+                  color: "var(--text-secondary, #64748b)",
                   fontSize: "13px",
                 }}
               >
@@ -3991,8 +3991,8 @@ export default function ControleMassa() {
           id="massa-form-anchor"
           className="controle-massa-page__panel-form"
           style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #e5e7eb)",
             borderRadius: "18px",
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -4011,7 +4011,7 @@ export default function ControleMassa() {
               padding: "16px 20px",
               border: "none",
               borderBottom: secaoPesagemAberta ? "1px solid #e5e7eb" : "none",
-              background: "#ffffff",
+              background: "var(--bg-card, #ffffff)",
               cursor: "pointer",
               textAlign: "left",
             }}
@@ -4021,7 +4021,7 @@ export default function ControleMassa() {
                 style={{
                   fontSize: "18px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Lançar pesagem
@@ -4039,13 +4039,13 @@ export default function ControleMassa() {
                   </span>
                 ) : null}
               </div>
-              <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#64748b", lineHeight: 1.45 }}>
+              <p style={{ margin: "6px 0 0", fontSize: "13px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                 {secaoPesagemAberta
                   ? "Preencha os passos 1–4 e use «Salvar pesagem e ticket» — a coleta segue para o Faturamento."
                   : "Abra para lançar pesagem e ticket. Pode fechar para ver mais da lista em Auditoria."}
               </p>
             </div>
-            <span style={{ flexShrink: 0, fontSize: "12px", color: "#64748b" }} aria-hidden>
+            <span style={{ flexShrink: 0, fontSize: "12px", color: "var(--text-secondary, #64748b)" }} aria-hidden>
               {secaoPesagemAberta ? "▲" : "▼"}
             </span>
           </button>
@@ -4067,7 +4067,7 @@ export default function ControleMassa() {
                     padding: "12px 14px",
                     borderRadius: "12px",
                     border: "1px solid #99f6e4",
-                    background: "#f0fdfa",
+                    background: "var(--accent-teal-soft, #f0fdfa)",
                     fontSize: "13px",
                     color: "#0f766e",
                     fontWeight: 600,
@@ -4084,7 +4084,7 @@ export default function ControleMassa() {
                   style={{
                     fontSize: "14px",
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                     marginBottom: "10px",
                   }}
                 >
@@ -4137,17 +4137,17 @@ export default function ControleMassa() {
               {/* CARD 2 — PESAGEM (principal) */}
               <div
                 style={{
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid var(--border-color, #e5e7eb)",
                   borderRadius: "16px",
                   padding: "16px",
-                  background: "#ffffff",
+                  background: "var(--bg-card, #ffffff)",
                   boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ fontWeight: 900, color: "#0f172a", fontSize: "14px" }}>2. Pesagem</div>
-                    <div style={{ marginTop: 4, fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
+                    <div style={{ fontWeight: 900, color: "var(--text-primary, #0f172a)", fontSize: "14px" }}>2. Pesagem</div>
+                    <div style={{ marginTop: 4, fontSize: "12px", color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
                       Preencha os campos essenciais. O peso líquido é calculado automaticamente.
                     </div>
                   </div>
@@ -4163,7 +4163,7 @@ export default function ControleMassa() {
                   }}
                 >
                   <div style={{ gridColumn: "span 3" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Data</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Data</label>
                     <input
                       ref={dataInputRef}
                       type="date"
@@ -4172,13 +4172,13 @@ export default function ControleMassa() {
                       onChange={handleInputChange}
                       style={{ ...inputStyle, height: "44px", fontSize: "14px" }}
                     />
-                    <div style={{ fontSize: 10, color: "#64748b", marginTop: 4, lineHeight: 1.35 }}>
+                    <div style={{ fontSize: 10, color: "var(--text-secondary, #64748b)", marginTop: 4, lineHeight: 1.35 }}>
                       Data da operação (aparece no ticket impresso).
                     </div>
                   </div>
 
                   <div style={{ gridColumn: "span 3" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                       Hora entrada
                     </label>
                     <input
@@ -4191,7 +4191,7 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 3" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                       Hora saída
                     </label>
                     <input
@@ -4204,7 +4204,7 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 3" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Placa</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Placa</label>
                     <input
                       ref={placaInputRef}
                       name="placa"
@@ -4216,7 +4216,7 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 6" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Tipo veículo</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Tipo veículo</label>
                     <input
                       value={
                         form.coleta_id.trim()
@@ -4229,13 +4229,13 @@ export default function ControleMassa() {
                             : "—"
                       }
                       readOnly
-                      style={{ ...inputStyle, height: "44px", fontSize: "14px", background: "#f8fafc" }}
+                      style={{ ...inputStyle, height: "44px", fontSize: "14px", background: "var(--bg-subtle, #f8fafc)" }}
                       placeholder="—"
                     />
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Motorista</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Motorista</label>
                     <input
                       name="motorista"
                       value={form.motorista}
@@ -4246,7 +4246,7 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Empresa</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Empresa</label>
                     <input
                       name="empresa"
                       value={form.empresa}
@@ -4272,17 +4272,17 @@ export default function ControleMassa() {
               {/* CARD 3 — GERAÇÃO DE TICKET */}
               <div
                 style={{
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid var(--border-color, #e5e7eb)",
                   borderRadius: "16px",
                   padding: "16px",
-                  background: "#ffffff",
+                  background: "var(--bg-card, #ffffff)",
                   boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ fontWeight: 900, color: "#0f172a", fontSize: "14px" }}>3. Dados do ticket</div>
-                    <div style={{ marginTop: 4, fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
+                    <div style={{ fontWeight: 900, color: "var(--text-primary, #0f172a)", fontSize: "14px" }}>3. Dados do ticket</div>
+                    <div style={{ marginTop: 4, fontSize: "12px", color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
                       Tipo (entrada / saída / frete), número do ticket e, se quiser, uma nota curta. Isto é o que vai para
                       o documento impresso.
                     </div>
@@ -4300,7 +4300,7 @@ export default function ControleMassa() {
                   }}
                 >
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Tipo de ticket</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Tipo de ticket</label>
                     <select
                       ref={tipoTicketRef}
                       name="tipo_ticket"
@@ -4316,7 +4316,7 @@ export default function ControleMassa() {
                         ...inputStyle,
                         height: "44px",
                         fontSize: "14px",
-                        ...(somenteTicketPadrao ? { background: "#f8fafc" } : {}),
+                        ...(somenteTicketPadrao ? { background: "var(--bg-subtle, #f8fafc)" } : {}),
                       }}
                     >
                       <option value="saida">Saída</option>
@@ -4326,10 +4326,10 @@ export default function ControleMassa() {
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                       Número
                       {numeroTicketAutoMtr ? (
-                        <span style={{ fontWeight: 600, color: "#64748b", marginLeft: 6 }}>
+                        <span style={{ fontWeight: 600, color: "var(--text-secondary, #64748b)", marginLeft: 6 }}>
                           (sufixo MTR)
                         </span>
                       ) : null}
@@ -4353,38 +4353,38 @@ export default function ControleMassa() {
                         ...inputStyle,
                         height: "44px",
                         fontSize: "14px",
-                        ...(numeroTicketAutoMtr ? { background: "#f8fafc" } : {}),
+                        ...(numeroTicketAutoMtr ? { background: "var(--bg-subtle, #f8fafc)" } : {}),
                       }}
                     />
                   </div>
 
                   <div style={{ gridColumn: "span 4" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Prévia</label>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Prévia</label>
                     <div
                       style={{
                         border: "1px dashed #cbd5e1",
                         borderRadius: "12px",
                         padding: "10px 12px",
-                        background: "#f8fafc",
+                        background: "var(--bg-subtle, #f8fafc)",
                         fontSize: "12px",
-                        color: "#0f172a",
+                        color: "var(--text-primary, #0f172a)",
                         lineHeight: 1.4,
                         fontWeight: 700,
                       }}
                     >
                       <div style={{ fontWeight: 900, marginBottom: 4 }}>Ticket {formatarTipoTicketLista(form.tipo_ticket)}</div>
-                      <div style={{ color: "#475569", fontWeight: 700 }}>
-                        Nº: <span style={{ color: "#0f172a" }}>{form.numero_ticket.trim() || "—"}</span>
+                      <div style={{ color: "var(--text-secondary, #475569)", fontWeight: 700 }}>
+                        Nº: <span style={{ color: "var(--text-primary, #0f172a)" }}>{form.numero_ticket.trim() || "—"}</span>
                       </div>
-                      <div style={{ color: "#475569", fontWeight: 700 }}>
-                        Líq.: <span style={{ color: "#0f172a" }}>{form.peso_liquido.trim() || "—"}</span>
+                      <div style={{ color: "var(--text-secondary, #475569)", fontWeight: 700 }}>
+                        Líq.: <span style={{ color: "var(--text-primary, #0f172a)" }}>{form.peso_liquido.trim() || "—"}</span>
                       </div>
                     </div>
                   </div>
 
                   {qtdSegmentosTicketNota >= 2 ? (
                     <div style={{ gridColumn: "span 12" }}>
-                      <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                         Qual ticket?
                       </label>
                       <div
@@ -4427,10 +4427,10 @@ export default function ControleMassa() {
                   ) : null}
 
                   <div style={{ gridColumn: "span 12" }} className="field">
-                    <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                       Nota no ticket (opcional)
                       {qtdSegmentosTicketNota >= 2 ? (
-                        <span style={{ fontWeight: 600, color: "#64748b", marginLeft: 6 }}>
+                        <span style={{ fontWeight: 600, color: "var(--text-secondary, #64748b)", marginLeft: 6 }}>
                           — ticket {indiceSegmentoTicketAtivo + 1}
                         </span>
                       ) : null}
@@ -4454,7 +4454,7 @@ export default function ControleMassa() {
                       style={{
                         width: "100%",
                         borderRadius: "12px",
-                        border: "1px solid #d1d5db",
+                        border: "1px solid var(--input-border, #d1d5db)",
                         padding: "10px 12px",
                         fontSize: "13px",
                         outline: "none",
@@ -4592,17 +4592,17 @@ export default function ControleMassa() {
               id="ticket-operacional-anchor"
               style={{
                 marginTop: "10px",
-                borderTop: "1px solid #e5e7eb",
+                borderTop: "1px solid var(--border-color, #e5e7eb)",
                 padding: "12px 16px 16px",
-                background: "#f8fafc",
+                background: "var(--bg-subtle, #f8fafc)",
                 borderRadius: "0 0 16px 16px",
               }}
             >
               <details
                 style={{
                   borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                  background: "#ffffff",
+                  border: "1px solid var(--border-color, #e2e8f0)",
+                  background: "var(--bg-card, #ffffff)",
                   padding: "10px 14px",
                 }}
               >
@@ -4610,15 +4610,15 @@ export default function ControleMassa() {
                   style={{
                     cursor: "pointer",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     fontSize: "13px",
                     listStyle: "none",
                   }}
                 >
                   Mais opções do ticket — corrigir dados, gravar de novo ou enviar para aprovação
-                  <span style={{ color: "#94a3b8", fontWeight: 700, marginLeft: "8px" }}>(clique para expandir)</span>
+                  <span style={{ color: "var(--text-secondary, #94a3b8)", fontWeight: 700, marginLeft: "8px" }}>(clique para expandir)</span>
                 </summary>
-                <p style={{ margin: "10px 0 12px", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                <p style={{ margin: "10px 0 12px", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Use apenas se precisar alterar o ticket depois de salvar, se o sistema avisar falha ao gerar o ticket, ou
                   para enviar a coleta à aprovação. O fluxo normal é: preencher o passo 3 acima, salvar e imprimir.
                 </p>
@@ -4682,20 +4682,20 @@ export default function ControleMassa() {
 }
 
 const botaoContextoSecundarioStyle: CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #cbd5e1",
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: "10px",
   padding: "8px 12px",
   fontWeight: 600,
   cursor: "pointer",
   fontSize: "13px",
-  color: "#334155",
+  color: "var(--text-primary, #334155)",
 };
 
 const botaoLimparUrlStyle: CSSProperties = {
-  background: "#ffffff",
-  color: "#64748b",
-  border: "1px solid #e2e8f0",
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-secondary, #64748b)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: "10px",
   padding: "8px 12px",
   fontWeight: 600,
@@ -4707,12 +4707,12 @@ const inputStyle: CSSProperties = {
   width: "100%",
   height: "40px",
   borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
   outline: "none",
   padding: "0 12px",
   fontSize: "14px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   boxSizing: "border-box",
 };
 
@@ -4720,7 +4720,7 @@ const thListaColetaStyle: CSSProperties = {
   textAlign: "left",
   padding: "5px 8px",
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   whiteSpace: "nowrap",
   fontSize: "11px",
 };
@@ -4728,7 +4728,7 @@ const thListaColetaStyle: CSSProperties = {
 const thFiltroColListaStyle: CSSProperties = {
   padding: "4px 6px 6px",
   verticalAlign: "top",
-  background: "#f1f5f9",
+  background: "var(--bg-inset, #f1f5f9)",
 };
 
 const inputFiltroColListaStyle: CSSProperties = {
@@ -4736,12 +4736,12 @@ const inputFiltroColListaStyle: CSSProperties = {
   minWidth: "52px",
   height: "26px",
   borderRadius: "6px",
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--input-border, #cbd5e1)",
   padding: "0 6px",
   fontSize: "10px",
   fontWeight: 600,
-  color: "#0f172a",
-  background: "#ffffff",
+  color: "var(--text-primary, #0f172a)",
+  background: "var(--bg-card, #ffffff)",
   boxSizing: "border-box",
   outline: "none",
 };
@@ -4750,7 +4750,7 @@ const tdListaColetaStyle: CSSProperties = {
   padding: "4px 8px",
   verticalAlign: "top",
   fontSize: "11px",
-  color: "#1f2937",
+  color: "var(--text-primary, #1f2937)",
 };
 
 const botaoAcaoColetaListaStyle: CSSProperties = {
@@ -4758,8 +4758,8 @@ const botaoAcaoColetaListaStyle: CSSProperties = {
   fontWeight: 700,
   padding: "3px 7px",
   borderRadius: "6px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
   color: "#1d4ed8",
   cursor: "pointer",
   lineHeight: 1.2,

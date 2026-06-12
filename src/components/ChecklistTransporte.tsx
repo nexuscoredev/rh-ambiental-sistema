@@ -32,9 +32,9 @@ function motoristaCorrespondePesquisa(m: MotoristaCadastroRow, raw: string): boo
 
 const cardInnerStyle: CSSProperties = {
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   overflow: 'hidden',
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
 }
 
 const rowStyle: CSSProperties = {
@@ -45,7 +45,7 @@ const rowStyle: CSSProperties = {
   padding: '12px 14px',
   borderBottom: '1px solid #f1f5f9',
   fontSize: '14px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 
 const btnSnStyle = (ativo: boolean, cor: string, dis: boolean): CSSProperties => ({
@@ -164,7 +164,7 @@ export default function ChecklistTransporte({
   }
 
   if (loading) {
-    return <p style={{ color: '#64748b' }}>A carregar checklist do motorista…</p>
+    return <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar checklist do motorista…</p>
   }
 
   return (
@@ -222,7 +222,7 @@ export default function ChecklistTransporte({
       {entreItensEAssinaturas}
 
       <div>
-        <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
           Assinatura — motorista (nome completo ou rubrica)
         </div>
         <input
@@ -237,7 +237,7 @@ export default function ChecklistTransporte({
             maxWidth: '100%',
             padding: '10px 12px',
             borderRadius: '10px',
-            border: '1px solid #cbd5e1',
+            border: "1px solid var(--input-border, #cbd5e1)",
             fontSize: '14px',
             opacity: disabled ? 0.85 : 1,
             boxSizing: 'border-box',
@@ -250,7 +250,7 @@ export default function ChecklistTransporte({
               style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                color: '#64748b',
+                color: "var(--text-secondary, #64748b)",
                 marginBottom: '6px',
               }}
             >
@@ -278,7 +278,7 @@ export default function ChecklistTransporte({
                 padding: '11px 14px',
                 borderRadius: '10px',
                 border: `1px solid ${dropdownMotoristaAberto ? ACCENT : '#cbd5e1'}`,
-                background: '#fff',
+                background: "var(--bg-card, #ffffff)",
                 fontSize: '14px',
                 textAlign: 'left',
                 cursor: 'pointer',
@@ -296,7 +296,7 @@ export default function ChecklistTransporte({
                 style={{
                   flexShrink: 0,
                   fontSize: '10px',
-                  color: '#64748b',
+                  color: "var(--text-secondary, #64748b)",
                   transform: dropdownMotoristaAberto ? 'rotate(180deg)' : 'none',
                   transition: 'transform 0.2s ease',
                 }}
@@ -318,14 +318,14 @@ export default function ChecklistTransporte({
                   zIndex: 40,
                   padding: '12px',
                   borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  background: '#fff',
+                  border: "1px solid var(--border-color, #e2e8f0)",
+                  background: "var(--bg-card, #ffffff)",
                   boxShadow: '0 18px 40px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.04)',
                 }}
               >
                 <label
                   htmlFor="ct-mot-busca"
-                  style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}
+                  style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block', marginBottom: '6px' }}
                 >
                   Pesquisar (nome, CPF, CNH, categoria)
                 </label>
@@ -343,28 +343,28 @@ export default function ChecklistTransporte({
                     boxSizing: 'border-box',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     fontSize: '14px',
                     marginBottom: '10px',
                     outline: 'none',
-                    background: '#fafafa',
+                    background: "var(--bg-inset, #fafafa)",
                   }}
                 />
                 <div
                   style={{
                     maxHeight: 'min(260px, 34vh)',
                     overflow: 'auto',
-                    border: '1px solid #e2e8f0',
+                    border: "1px solid var(--border-color, #e2e8f0)",
                     borderRadius: '10px',
-                    background: '#f8fafc',
+                    background: "var(--bg-subtle, #f8fafc)",
                   }}
                 >
                   {motoristasCadastro.length === 0 ? (
-                    <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <div style={{ padding: '16px', textAlign: 'center', color: "var(--text-secondary, #64748b)", fontSize: '13px' }}>
                       Nenhum motorista no cadastro ou não foi possível carregar.
                     </div>
                   ) : motoristasFiltrados.length === 0 ? (
-                    <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <div style={{ padding: '16px', textAlign: 'center', color: "var(--text-secondary, #64748b)", fontSize: '13px' }}>
                       Nenhum resultado. Ajuste a pesquisa.
                     </div>
                   ) : (
@@ -389,10 +389,10 @@ export default function ChecklistTransporte({
                             fontSize: '13px',
                             lineHeight: 1.45,
                             border: 'none',
-                            borderBottom: '1px solid #e2e8f0',
+                            borderBottom: "1px solid var(--border-color, #e2e8f0)",
                             background: ativo ? '#ccfbf1' : '#fff',
                             cursor: 'pointer',
-                            color: '#0f172a',
+                            color: "var(--text-primary, #0f172a)",
                           }}
                           onMouseEnter={(e) => {
                             if (!ativo) e.currentTarget.style.background = '#ecfdf5'
@@ -403,7 +403,7 @@ export default function ChecklistTransporte({
                         >
                           <div style={{ fontWeight: 800, color: '#0f766e' }}>{m.nome}</div>
                           {detalhe ? (
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", fontWeight: 600, marginTop: '2px' }}>
                               {detalhe}
                             </div>
                           ) : null}
@@ -416,7 +416,7 @@ export default function ChecklistTransporte({
                   style={{
                     margin: '8px 0 0',
                     fontSize: '11px',
-                    color: '#94a3b8',
+                    color: "var(--text-secondary, #94a3b8)",
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '8px',
@@ -435,10 +435,10 @@ export default function ChecklistTransporte({
                         fontSize: '11px',
                         fontWeight: 700,
                         borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#fff',
+                        border: "1px solid var(--input-border, #cbd5e1)",
+                        background: "var(--bg-card, #ffffff)",
                         cursor: 'pointer',
-                        color: '#475569',
+                        color: "var(--text-secondary, #475569)",
                       }}
                     >
                       Limpar pesquisa
@@ -452,7 +452,7 @@ export default function ChecklistTransporte({
       </div>
 
       <div>
-        <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
           Assinatura — responsável (nome completo ou rubrica)
         </div>
         <input
@@ -467,7 +467,7 @@ export default function ChecklistTransporte({
             maxWidth: '100%',
             padding: '10px 12px',
             borderRadius: '10px',
-            border: '1px solid #cbd5e1',
+            border: "1px solid var(--input-border, #cbd5e1)",
             fontSize: '14px',
             opacity: disabled ? 0.85 : 1,
             boxSizing: 'border-box',
@@ -477,7 +477,7 @@ export default function ChecklistTransporte({
 
       {mostrarObservacoes ? (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
             Observações (opcional)
           </div>
           <textarea
@@ -491,7 +491,7 @@ export default function ChecklistTransporte({
               maxWidth: '100%',
               padding: '10px 12px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
               fontSize: '14px',
               resize: 'vertical',
               opacity: disabled ? 0.85 : 1,

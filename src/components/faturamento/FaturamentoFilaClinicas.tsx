@@ -23,8 +23,8 @@ type Props = {
 }
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
@@ -159,10 +159,10 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
     <section id="fila-clinicas" style={cardStyle} aria-labelledby="fila-clinicas-titulo">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <h2 id="fila-clinicas-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 id="fila-clinicas-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             Fila de espera
           </h2>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748b', maxWidth: 720, lineHeight: 1.55 }}>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", maxWidth: 720, lineHeight: 1.55 }}>
             O.S. aguardando valor e emissão. Unidades com <strong>Emite Nota</strong> exigem NF; só <strong>PIX</strong>{' '}
             → sem NF.
           </p>
@@ -176,8 +176,8 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
             style={{
               padding: '8px 14px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#fff',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-card, #ffffff)",
               fontWeight: 700,
               fontSize: '13px',
               cursor: carregando ? 'wait' : 'pointer',
@@ -195,14 +195,14 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
           flexWrap: 'wrap',
           gap: '16px',
           fontSize: '13px',
-          color: '#475569',
+          color: "var(--text-secondary, #475569)",
         }}
       >
         <span>
-          Na fila: <strong style={{ color: '#0f172a' }}>{qtd}</strong>
+          Na fila: <strong style={{ color: "var(--text-primary, #0f172a)" }}>{qtd}</strong>
         </span>
         <span>
-          Soma valores informados: <strong style={{ color: '#0f172a' }}>{valorPendenteEstimado}</strong>
+          Soma valores informados: <strong style={{ color: "var(--text-primary, #0f172a)" }}>{valorPendenteEstimado}</strong>
         </span>
       </div>
 
@@ -211,9 +211,9 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
       ) : null}
 
       {carregando ? (
-        <p style={{ marginTop: '16px', color: '#64748b' }}>A carregar fila de clínicas…</p>
+        <p style={{ marginTop: '16px', color: "var(--text-secondary, #64748b)" }}>A carregar fila de clínicas…</p>
       ) : linhas.length === 0 && !erro ? (
-        <p style={{ marginTop: '16px', color: '#64748b' }}>
+        <p style={{ marginTop: '16px', color: "var(--text-secondary, #64748b)" }}>
           Nenhuma O.S. de clínica aguardando faturamento.{' '}
           <Link to={CLINICAS_GERAR_OS_PATH} style={{ color: '#0d9488', fontWeight: 700 }}>
             Gerar O.S. em Clínicas
@@ -241,10 +241,10 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
                 const exigeNf = exigeReferenciaNfNaEmissao(r)
                 return (
                   <tr key={id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 8px', fontWeight: 700, color: '#0f172a' }}>{r.numero_os}</td>
+                    <td style={{ padding: '10px 8px', fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>{r.numero_os}</td>
                     <td style={{ padding: '10px 8px' }}>
                       <div style={{ fontWeight: 600 }}>{r.razao_social}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                      <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                         {[r.cnpj && `CNPJ ${r.cnpj}`, r.cpf && `CPF ${r.cpf}`].filter(Boolean).join(' · ') || '—'}
                       </div>
                     </td>
@@ -280,7 +280,7 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
                           aria-label={`NF ${r.numero_os}`}
                         />
                       ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>PIX / sem NF</span>
+                        <span style={{ color: "var(--text-secondary, #94a3b8)", fontSize: '12px' }}>PIX / sem NF</span>
                       )}
                     </td>
                     <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
@@ -293,8 +293,8 @@ export function FaturamentoFilaClinicas({ podeEmitir, podeEditarValor, onOsEmiti
                             marginRight: '6px',
                             padding: '6px 10px',
                             borderRadius: '8px',
-                            border: '1px solid #cbd5e1',
-                            background: '#f8fafc',
+                            border: "1px solid var(--input-border, #cbd5e1)",
+                            background: "var(--bg-subtle, #f8fafc)",
                             fontWeight: 700,
                             fontSize: '12px',
                             cursor: busy ? 'wait' : 'pointer',

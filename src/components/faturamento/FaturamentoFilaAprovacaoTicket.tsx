@@ -16,7 +16,7 @@ import { abrirPdfTicketOperacional } from '../../lib/ticketOperacionalPdf'
 import { useRgDialog } from '../../lib/RgDialogProvider'
 
 const wrap: CSSProperties = {
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
   border: '1px solid #fde68a',
   borderRadius: '16px',
   padding: '20px 22px',
@@ -30,16 +30,16 @@ const th: CSSProperties = {
   fontWeight: 800,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   padding: '10px 12px',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#fffbeb',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--status-warning-bg, #fffbeb)",
 }
 
 const td: CSSProperties = {
   padding: '12px',
   fontSize: '13px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'middle',
 }
@@ -54,7 +54,7 @@ const filtrosWrap: CSSProperties = {
   marginBottom: '14px',
   padding: '12px 14px',
   borderRadius: '12px',
-  background: '#fffbeb',
+  background: "var(--status-warning-bg, #fffbeb)",
   border: '1px solid #fde68a',
 }
 
@@ -72,9 +72,9 @@ const filtroInput: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
 }
 
 function normalizarBuscaFila(s: string): string {
@@ -385,7 +385,7 @@ export function FaturamentoFilaAprovacaoTicket({
             margin: '0 0 12px',
             padding: '10px 12px',
             borderRadius: 8,
-            background: '#ecfdf5',
+            background: "var(--accent-teal-soft, #ecfdf5)",
             border: '1px solid #a7f3d0',
             color: '#047857',
             fontSize: 13,
@@ -403,7 +403,7 @@ export function FaturamentoFilaAprovacaoTicket({
             margin: '0 0 12px',
             padding: '10px 12px',
             borderRadius: 8,
-            background: '#fef2f2',
+            background: "var(--status-error-bg, #fef2f2)",
             border: '1px solid #fecaca',
             color: '#b91c1c',
             fontSize: 13,
@@ -415,9 +415,9 @@ export function FaturamentoFilaAprovacaoTicket({
       ) : null}
 
       {carregando ? (
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>A carregar…</p>
+        <p style={{ margin: 0, color: "var(--text-secondary, #64748b)", fontSize: '14px' }}>A carregar…</p>
       ) : linhas.length === 0 ? (
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+        <p style={{ margin: 0, color: "var(--text-secondary, #64748b)", fontSize: '14px' }}>
           Nenhum ticket aguardando conferência neste momento.
         </p>
       ) : (
@@ -498,7 +498,7 @@ export function FaturamentoFilaAprovacaoTicket({
             ) : null}
           </div>
 
-          <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+          <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
             {filtroAtivo
               ? `${linhasFiltradas.length} de ${linhas.length} na fila (filtrado)`
               : `${linhas.length} na fila`}
@@ -508,7 +508,7 @@ export function FaturamentoFilaAprovacaoTicket({
           </p>
 
           {linhasFiltradas.length === 0 ? (
-            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+            <p style={{ margin: 0, color: "var(--text-secondary, #64748b)", fontSize: '14px' }}>
               Nenhum resultado com os filtros actuais.
             </p>
           ) : (
@@ -567,7 +567,7 @@ export function FaturamentoFilaAprovacaoTicket({
                             }}
                           />
                           {(r.peso_tara != null || r.peso_bruto != null) && (
-                            <span style={{ fontSize: 11, color: '#64748b' }}>
+                            <span style={{ fontSize: 11, color: "var(--text-secondary, #64748b)" }}>
                               Bruto {formatarPesoKg(r.peso_bruto)} · Tara {formatarPesoKg(r.peso_tara)}
                             </span>
                           )}

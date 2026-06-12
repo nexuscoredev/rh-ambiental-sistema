@@ -1149,7 +1149,7 @@ export function ExecutiveDashboard() {
                 onChange={(e) => setCustomFrom(e.target.value)}
                 style={execInput}
               />
-              <span style={{ color: '#94a3b8' }}>a</span>
+              <span style={{ color: "var(--text-secondary, #94a3b8)" }}>a</span>
               <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} style={execInput} />
             </span>
           ) : null}
@@ -1622,7 +1622,7 @@ export function ExecutiveDashboard() {
                         verticalAlign="middle"
                         align="right"
                         layout="vertical"
-                        wrapperStyle={{ fontSize: 11, color: '#475569', maxHeight: 220, overflowY: 'auto', paddingLeft: 8 }}
+                        wrapperStyle={{ fontSize: 11, color: "var(--text-secondary, #475569)", maxHeight: 220, overflowY: 'auto', paddingLeft: 8 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1711,7 +1711,7 @@ export function ExecutiveDashboard() {
               >
                 ‹
               </button>
-              <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
+              <span style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary, #0f172a)" }}>
                 {new Date(calMonth.y, calMonth.m).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
               </span>
               <button
@@ -1805,7 +1805,7 @@ export function ExecutiveDashboard() {
                   ×
                 </button>
               </div>
-              <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: 14 }}>
+              <p style={{ margin: '0 0 16px', color: "var(--text-secondary, #64748b)", fontSize: 14 }}>
                 {diasNoModal.length} coleta(s) · Clique para abrir no fluxo.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'min(52vh, 420px)', overflowY: 'auto' }}>
@@ -1821,7 +1821,7 @@ export function ExecutiveDashboard() {
                     <div
                       key={c.id}
                       style={{
-                        border: '1px solid #e2e8f0',
+                        border: "1px solid var(--border-color, #e2e8f0)",
                         borderRadius: 12,
                         padding: '12px 14px',
                         display: 'flex',
@@ -1829,12 +1829,12 @@ export function ExecutiveDashboard() {
                         gap: 12,
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        background: '#fafbfc',
+                        background: "var(--bg-inset, #fafbfc)",
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 800, color: '#0f172a' }}>Coleta {c.numero}</div>
-                        <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{c.cliente}</div>
+                        <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>Coleta {c.numero}</div>
+                        <div style={{ fontSize: 13, color: "var(--text-secondary, #475569)", marginTop: 4 }}>{c.cliente}</div>
                         <div style={{ marginTop: 8 }}>
                           <span
                             style={{
@@ -1918,7 +1918,7 @@ const execSectionIntroKpiSecondary: CSSProperties = {
 const execSectionSubtitleMuted: CSSProperties = {
   margin: '8px 0 0',
   fontSize: 12,
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   lineHeight: 1.5,
   fontWeight: 500,
   maxWidth: 640,
@@ -1936,7 +1936,7 @@ const execRegionLabel: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
 }
 
 const execHeroOuter: CSSProperties = {
@@ -1979,7 +1979,7 @@ const execEyebrow: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.16em',
   textTransform: 'uppercase',
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   display: 'flex',
   alignItems: 'center',
 }
@@ -1997,7 +1997,7 @@ const execLead: CSSProperties = {
   margin: 0,
   maxWidth: 640,
   fontSize: 15,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   lineHeight: 1.65,
   fontWeight: 400,
 }
@@ -2070,7 +2070,7 @@ const execAlertPillCrit: CSSProperties = {
 const execSectionSubtitle: CSSProperties = {
   margin: '10px 0 0',
   fontSize: 13,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.55,
   fontWeight: 500,
   maxWidth: 720,
@@ -2105,7 +2105,7 @@ const execKpiHintSm: CSSProperties = {
   display: 'block',
   marginTop: 8,
   fontSize: 10,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 500,
   lineHeight: 1.4,
 }
@@ -2131,7 +2131,7 @@ const execDateBox: CSSProperties = {
 const execDateEyebrow: CSSProperties = {
   display: 'block',
   fontSize: 9,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 800,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
@@ -2142,7 +2142,7 @@ const execDateMain: CSSProperties = {
   display: 'block',
   fontSize: 16,
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   letterSpacing: '-0.02em',
   lineHeight: 1.3,
   textTransform: 'capitalize',
@@ -2188,7 +2188,7 @@ const execFiltersBar: CSSProperties = {
 const filterLabel: CSSProperties = {
   fontSize: 9,
   fontWeight: 800,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   textTransform: 'uppercase',
   letterSpacing: '0.14em',
 }
@@ -2196,11 +2196,11 @@ const filterLabel: CSSProperties = {
 const execChip: CSSProperties = {
   padding: '10px 18px',
   borderRadius: 999,
-  border: '1px solid #e2e8f0',
-  background: '#ffffff',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-card, #ffffff)",
   fontSize: 12,
   fontWeight: 600,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   cursor: 'pointer',
   transition: 'background 0.18s ease, border-color 0.18s ease, color 0.18s ease',
 }
@@ -2216,21 +2216,21 @@ const execChipActive: CSSProperties = {
 const execInput: CSSProperties = {
   padding: '10px 14px',
   borderRadius: 11,
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   fontSize: 13,
-  background: '#fff',
-  color: '#0f172a',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
   boxShadow: 'inset 0 1px 2px rgba(15, 23, 42, 0.04)',
 }
 
 const execSelect: CSSProperties = {
   padding: '10px 14px',
   borderRadius: 11,
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   fontSize: 13,
   maxWidth: 210,
-  background: '#fff',
-  color: '#334155',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #334155)",
   fontWeight: 500,
   boxShadow: 'inset 0 1px 2px rgba(15, 23, 42, 0.03)',
 }
@@ -2249,7 +2249,7 @@ const execKpiLab: CSSProperties = {
   display: 'block',
   fontSize: 10,
   fontWeight: 700,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   textTransform: 'uppercase',
   letterSpacing: '0.1em',
   marginBottom: 12,
@@ -2269,7 +2269,7 @@ const execKpiHint: CSSProperties = {
   display: 'block',
   marginTop: 12,
   fontSize: 11,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 500,
   lineHeight: 1.45,
 }
@@ -2304,7 +2304,7 @@ const execVizTitle: CSSProperties = {
 const execVizSub: CSSProperties = {
   display: 'block',
   fontSize: 12,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginTop: 6,
   fontWeight: 500,
 }
@@ -2314,7 +2314,7 @@ const execEmpty: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: 13,
   fontWeight: 500,
   border: '1px dashed #dce3ec',
@@ -2333,12 +2333,12 @@ const execCalArrow: CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: 12,
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   background: 'linear-gradient(180deg, #ffffff, #f8fafc)',
   fontSize: 18,
   cursor: 'pointer',
   fontWeight: 700,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   transition: 'background 0.18s ease, border-color 0.18s ease',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
 }
@@ -2353,7 +2353,7 @@ const execCalWeekdays: CSSProperties = {
 const execCalWd: CSSProperties = {
   fontSize: 9,
   fontWeight: 800,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   textAlign: 'center',
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
@@ -2442,23 +2442,23 @@ const execModalHead: CSSProperties = {
 }
 
 const execModalClose: CSSProperties = {
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
   width: 38,
   height: 38,
   borderRadius: 12,
   fontSize: 22,
   lineHeight: 1,
   cursor: 'pointer',
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   transition: 'background 0.15s ease',
 }
 
 const execModalLink: CSSProperties = {
   padding: '9px 14px',
   borderRadius: 10,
-  border: '1px solid #cbd5e1',
-  background: '#fff',
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
   fontSize: 12,
   fontWeight: 700,
   color: '#0d9488',

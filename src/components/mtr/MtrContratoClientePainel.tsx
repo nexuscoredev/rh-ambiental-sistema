@@ -9,7 +9,7 @@ const box: CSSProperties = {
   marginTop: '8px',
   padding: '10px 12px',
   borderRadius: '10px',
-  background: '#f0fdf4',
+  background: "var(--status-success-bg, #f0fdf4)",
   border: '1px solid #bbf7d0',
   fontSize: '12px',
   color: '#166534',

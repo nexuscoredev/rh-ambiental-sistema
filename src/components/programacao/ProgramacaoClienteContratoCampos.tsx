@@ -33,15 +33,15 @@ type Props = {
 const blocoStyle: CSSProperties = {
   padding: '12px 14px',
   borderRadius: '10px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const tituloSecaoStyle: CSSProperties = {
   margin: '0 0 8px',
   fontSize: '13px',
   fontWeight: 800,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 
 const inputQtdStyle: CSSProperties = {
@@ -51,9 +51,9 @@ const inputQtdStyle: CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
   borderRadius: '6px',
-  border: '1px solid #cbd5e1',
-  background: '#ffffff',
-  color: '#0f172a',
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
   textAlign: 'right',
 }
 
@@ -82,7 +82,7 @@ function ListaMultiplaContrato<T extends ResiduoContratoItem | EquipamentoContra
     <div style={blocoStyle}>
       {titulo ? <p style={tituloSecaoStyle}>{titulo}</p> : null}
       {itens.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{vazio}</p>
+        <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>{vazio}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {itens.map((item, i) => {
@@ -110,7 +110,7 @@ function ListaMultiplaContrato<T extends ResiduoContratoItem | EquipamentoContra
                     minWidth: 0,
                     fontSize: '13px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     cursor: 'pointer',
                     userSelect: 'none',
                   }}
@@ -122,13 +122,13 @@ function ListaMultiplaContrato<T extends ResiduoContratoItem | EquipamentoContra
                     style={{ marginTop: '3px', flexShrink: 0 }}
                   />
                   <span style={{ lineHeight: 1.45, minWidth: 0 }}>
-                    <span style={{ color: '#0f172a' }}>{rotuloItem(item)}</span>
+                    <span style={{ color: "var(--text-primary, #0f172a)" }}>{rotuloItem(item)}</span>
                     {detalhe ? (
                       <span
                         style={{
                           display: 'block',
                           fontWeight: 500,
-                          color: '#64748b',
+                          color: "var(--text-secondary, #64748b)",
                           fontSize: '12px',
                         }}
                       >
@@ -138,7 +138,7 @@ function ListaMultiplaContrato<T extends ResiduoContratoItem | EquipamentoContra
                   </span>
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Qtd.</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Qtd.</span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -202,21 +202,21 @@ export function ProgramacaoClienteContratoCampos({
 
   if (!clienteId.trim()) {
     return (
-      <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+      <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
         Selecione um cliente para escolher resíduos e equipamentos do contrato.
       </p>
     )
   }
 
   if (carregando) {
-    return <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Carregando contrato do cliente…</p>
+    return <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>Carregando contrato do cliente…</p>
   }
 
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
       <div>
         <span style={{ ...labelStyle, display: 'block', marginBottom: '6px' }}>
-          Resíduos <span style={{ fontWeight: 500, color: '#64748b' }}>(pode marcar mais de um)</span>
+          Resíduos <span style={{ fontWeight: 500, color: "var(--text-secondary, #64748b)" }}>(pode marcar mais de um)</span>
         </span>
         <ListaMultiplaContrato
           titulo=""
@@ -240,7 +240,7 @@ export function ProgramacaoClienteContratoCampos({
 
       <div>
         <span style={{ ...labelStyle, display: 'block', marginBottom: '6px' }}>
-          Equipamentos <span style={{ fontWeight: 500, color: '#64748b' }}>(pode marcar mais de um)</span>
+          Equipamentos <span style={{ fontWeight: 500, color: "var(--text-secondary, #64748b)" }}>(pode marcar mais de um)</span>
         </span>
         <ListaMultiplaContrato
           titulo=""

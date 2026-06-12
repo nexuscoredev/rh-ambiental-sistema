@@ -8,8 +8,8 @@ const grid: CSSProperties = {
 }
 
 const card: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '14px',
   padding: '16px 18px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -20,21 +20,21 @@ const label: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginBottom: '6px',
 }
 
 const value: CSSProperties = {
   fontSize: '22px',
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   letterSpacing: '-0.02em',
 }
 
 const hint: CSSProperties = {
   marginTop: '8px',
   fontSize: '12px',
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   lineHeight: 1.45,
 }
 
@@ -70,15 +70,15 @@ export function FinanceiroFaturamentoCards({
           marginBottom: '14px',
           padding: '12px 14px',
           borderRadius: '12px',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
+          background: "var(--bg-subtle, #f8fafc)",
+          border: "1px solid var(--border-color, #e2e8f0)",
         }}
       >
-        <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginRight: '4px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #475569)", marginRight: '4px' }}>
           Período do total faturado
         </span>
         <div>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             De
           </label>
           <input
@@ -88,13 +88,13 @@ export function FinanceiroFaturamentoCards({
             style={{
               padding: '8px 10px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
               fontSize: '13px',
             }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             Até
           </label>
           <input
@@ -104,12 +104,12 @@ export function FinanceiroFaturamentoCards({
             style={{
               padding: '8px 10px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
               fontSize: '13px',
             }}
           />
         </div>
-        <span style={{ fontSize: '11px', color: '#94a3b8', maxWidth: '280px', lineHeight: 1.4 }}>
+        <span style={{ fontSize: '11px', color: "var(--text-secondary, #94a3b8)", maxWidth: '280px', lineHeight: 1.4 }}>
           Soma das coletas já faturadas, pela data da coleta no intervalo.
         </span>
       </div>

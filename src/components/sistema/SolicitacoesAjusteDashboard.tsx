@@ -169,7 +169,7 @@ export function SolicitacoesAjusteDashboard({ usuarios }: Props) {
                       <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={32} />
                       <Tooltip
                         formatter={(value) => [String(value), 'Atendidas']}
-                        contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0' }}
+                        contentStyle={{ borderRadius: 10, border: "1px solid var(--border-color, #e2e8f0)" }}
                       />
                       <Bar dataKey="quantidade" fill="#0d9488" radius={[6, 6, 0, 0]} maxBarSize={48} />
                     </BarChart>

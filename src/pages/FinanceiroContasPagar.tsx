@@ -460,7 +460,7 @@ export default function FinanceiroContasPagar() {
   const inputStyle: React.CSSProperties = {
     padding: '10px 12px',
     borderRadius: '10px',
-    border: '1px solid #cbd5e1',
+    border: "1px solid var(--input-border, #cbd5e1)",
     width: '100%',
     boxSizing: 'border-box',
   }
@@ -468,7 +468,7 @@ export default function FinanceiroContasPagar() {
   const labelStyle: React.CSSProperties = {
     fontSize: '12px',
     fontWeight: 700,
-    color: '#64748b',
+    color: "var(--text-secondary, #64748b)",
     marginBottom: '4px',
     display: 'block',
   }
@@ -478,7 +478,7 @@ export default function FinanceiroContasPagar() {
       <div className="page-shell financeiro-cp-page">
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>Contas a pagar</h1>
+            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>Contas a pagar</h1>
             <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
               Lançamentos de despesas e fornecedores. Títulos pendentes com vencimento ultrapassado aparecem como{' '}
               <strong>Atrasado</strong> e destacados em vermelho. Integrado ao{' '}
@@ -517,8 +517,8 @@ export default function FinanceiroContasPagar() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
+                border: "1px solid var(--input-border, #cbd5e1)",
+                background: "var(--bg-card, #ffffff)",
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -549,7 +549,7 @@ export default function FinanceiroContasPagar() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
             }}
@@ -570,11 +570,11 @@ export default function FinanceiroContasPagar() {
             style={{
               padding: '16px 18px',
               borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              background: '#fff',
+              border: "1px solid var(--border-color, #e2e8f0)",
+              background: "var(--bg-card, #ffffff)",
             }}
           >
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Lançamentos</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Lançamentos</div>
             <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px' }}>{resumoGlobal.qtd}</div>
           </div>
           <div
@@ -582,14 +582,14 @@ export default function FinanceiroContasPagar() {
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #bae6fd',
-              background: '#f0f9ff',
+              background: "var(--status-info-bg, #f0f9ff)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>A pagar no mês (pendentes)</div>
             <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: '#0c4a6e' }}>
               {formatCurrency(resumoGlobal.aPagarMes)}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+            <div style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)", marginTop: '6px' }}>
               Soma dos pendentes com vencimento no mês corrente (calendário UTC).
             </div>
           </div>
@@ -598,7 +598,7 @@ export default function FinanceiroContasPagar() {
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #fecaca',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b' }}>Total em atraso (pendentes)</div>
@@ -614,12 +614,12 @@ export default function FinanceiroContasPagar() {
               marginTop: '24px',
               padding: '20px',
               borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              background: '#f8fafc',
+              border: "1px solid var(--border-color, #e2e8f0)",
+              background: "var(--bg-subtle, #f8fafc)",
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                 {editingId ? 'Editar lançamento' : 'Novo lançamento'}
               </h2>
               <button
@@ -629,8 +629,8 @@ export default function FinanceiroContasPagar() {
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#fff',
+                  border: "1px solid var(--input-border, #cbd5e1)",
+                  background: "var(--bg-card, #ffffff)",
                   fontWeight: 600,
                   cursor: salvando ? 'wait' : 'pointer',
                 }}
@@ -731,7 +731,7 @@ export default function FinanceiroContasPagar() {
                     style={{ fontSize: '14px' }}
                   />
                   {pendingFiles.length > 0 ? (
-                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                       {pendingFiles.length} ficheiro(s) serão enviados ao guardar.
                     </p>
                   ) : null}
@@ -740,7 +740,7 @@ export default function FinanceiroContasPagar() {
               {editingId && podeMutar ? (
                 <div style={{ marginTop: '12px' }}>
                   <div style={{ ...labelStyle, marginBottom: '8px' }}>Anexos atuais</div>
-                  <ul style={{ margin: 0, paddingLeft: '18px', color: '#334155' }}>
+                  <ul style={{ margin: 0, paddingLeft: '18px', color: "var(--text-primary, #334155)" }}>
                     {(linhas.find((l) => l.id === editingId)?.contas_pagar_anexos || []).map((a) => (
                       <li key={a.id} style={{ marginBottom: '6px' }}>
                         <button
@@ -855,7 +855,7 @@ export default function FinanceiroContasPagar() {
 
         <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginTop: '18px' }}>
           {loading ? (
-            <p style={{ color: '#64748b' }}>A carregar…</p>
+            <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
           ) : (
             <table
               style={{
@@ -880,7 +880,7 @@ export default function FinanceiroContasPagar() {
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '24px', color: '#64748b' }}>
+                    <td colSpan={8} style={{ padding: '24px', color: "var(--text-secondary, #64748b)" }}>
                       Nenhum lançamento com estes filtros.
                     </td>
                   </tr>
@@ -973,7 +973,7 @@ export default function FinanceiroContasPagar() {
                                     fontSize: '12px',
                                     fontWeight: 700,
                                     border: '1px solid #fecaca',
-                                    background: '#fff',
+                                    background: "var(--bg-card, #ffffff)",
                                     color: '#b91c1c',
                                     borderRadius: '6px',
                                     cursor: 'pointer',

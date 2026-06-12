@@ -79,13 +79,13 @@ export function ClienteCadastroFormulario({
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "6px",
                   }}
                 >
                   Dados básicos
                 </div>
-                <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+                <p style={{ margin: '0 0 12px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Preencha pelo menos um destes três para identificar o cliente: <strong>Nome fantasia</strong>,{' '}
                   <strong>Razão social</strong> ou <strong>CNPJ/CPF</strong>. Os restantes campos do cadastro são
                   opcionais e podem ser completados depois.
@@ -194,7 +194,7 @@ export function ClienteCadastroFormulario({
                       readOnly
                       placeholder="Matriz / Filial / Pessoa física"
                       title="Calculado automaticamente pelo CNPJ/CPF"
-                      style={{ ...inputStyle, background: "#f8fafc" }}
+                      style={{ ...inputStyle, background: "var(--bg-subtle, #f8fafc)" }}
                     />
                     <span style={clienteFieldLabelHelpStyle}>
                       Calculado a partir do CNPJ/CPF.
@@ -209,7 +209,7 @@ export function ClienteCadastroFormulario({
                       readOnly
                       placeholder="Raiz do CNPJ"
                       title="Raiz usada para agrupar matriz e filiais"
-                      style={{ ...inputStyle, background: "#f8fafc" }}
+                      style={{ ...inputStyle, background: "var(--bg-subtle, #f8fafc)" }}
                     />
                     <span style={clienteFieldLabelHelpStyle}>
                       Agrupa matriz e filiais do mesmo grupo.
@@ -223,7 +223,7 @@ export function ClienteCadastroFormulario({
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -334,8 +334,8 @@ export function ClienteCadastroFormulario({
                       gap: 8,
                       padding: "10px 12px",
                       borderRadius: "10px",
-                      border: "1px solid #cbd5e1",
-                      background: "#fff",
+                      border: "1px solid var(--input-border, #cbd5e1)",
+                      background: "var(--bg-card, #ffffff)",
                     }}
                     title="SIGOR: Cliente, RG ou Não tem"
                   >
@@ -343,7 +343,7 @@ export function ClienteCadastroFormulario({
                       style={{
                         fontSize: "12px",
                         fontWeight: 800,
-                        color: "#334155",
+                        color: "var(--text-primary, #334155)",
                       }}
                     >
                       SIGOR:
@@ -431,7 +431,7 @@ export function ClienteCadastroFormulario({
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -610,7 +610,7 @@ export function ClienteCadastroFormulario({
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -651,7 +651,7 @@ export function ClienteCadastroFormulario({
                     placeholder="E-mail(s) para envio de NF — separar vários com ;"
                     style={inputStyle}
                   />
-                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                     Um ou mais endereços, separados por ponto e vírgula (ex.: financeiro@empresa.com;
                     contato@empresa.com).
                   </p>
@@ -667,7 +667,7 @@ export function ClienteCadastroFormulario({
                     inputMode="decimal"
                     aria-label="Margem de lucro percentual do cliente"
                   />
-                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                     Opcional. Usada no faturamento; deixe em branco se não aplicável.
                   </p>
                 </div>
@@ -678,7 +678,7 @@ export function ClienteCadastroFormulario({
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -701,7 +701,7 @@ export function ClienteCadastroFormulario({
                   ))}
                 </select>
 
-                <p style={{ margin: "10px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                <p style={{ margin: "10px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Cadastro em <strong>Cadastros → Representantes RG</strong>. Independente do{' '}
                   <strong>Representante do Faturamento</strong> acima (contato / NF).
                 </p>
@@ -762,7 +762,7 @@ export function ClienteCadastroFormulario({
                   }}
                   style={{
                     background: "#e5e7eb",
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     border: "none",
                     borderRadius: "10px",
                     height: "42px",
@@ -780,7 +780,7 @@ export function ClienteCadastroFormulario({
                   style={{
                     marginTop: '20px',
                     paddingTop: '16px',
-                    borderTop: '1px solid #e2e8f0',
+                    borderTop: "1px solid var(--border-color, #e2e8f0)",
                   }}
                 >
                   {depoisDosBotoes}

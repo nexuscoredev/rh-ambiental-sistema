@@ -215,7 +215,7 @@ export function ControleMassaMtrPicker({
           ) : resumoSelecao && resumoSelecao.tipo !== "vazio" ? (
             <ResumoTrigger resumo={resumoSelecao} />
           ) : (
-            <span style={{ fontSize: "14px", color: "#94a3b8", alignSelf: "center" }}>
+            <span style={{ fontSize: "14px", color: "var(--text-secondary, #94a3b8)", alignSelf: "center" }}>
               Escolher MTR ou ticket…
             </span>
           )}
@@ -312,7 +312,7 @@ export function ControleMassaMtrPicker({
               ))}
 
               {semResultados ? (
-                <div style={{ padding: "16px", fontSize: "13px", color: "#64748b" }}>
+                <div style={{ padding: "16px", fontSize: "13px", color: "var(--text-secondary, #64748b)" }}>
                   Nenhum resultado para «{filtroAtivo.trim()}».
                 </div>
               ) : null}
@@ -566,10 +566,10 @@ function ColetaOpcaoRow({
         {indice}
       </span>
       <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-        <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>
+        <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text-primary, #0f172a)" }}>
           {coleta.tipo_residuo || "Resíduo"}
         </div>
-        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+        <div style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)", marginTop: "2px" }}>
           Coleta {coleta.numero}
         </div>
       </div>

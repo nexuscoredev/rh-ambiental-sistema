@@ -168,10 +168,10 @@ export function SaoPauloMapaZonas({
                     opacity={0.95}
                     className="posvenda-sp-tooltip"
                   >
-                    <div style={{ fontWeight: 700, fontSize: 12, color: '#0f172a' }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-primary, #0f172a)" }}>
                       {ZONA_SP_LABEL[z]}
                     </div>
-                    <div style={{ fontSize: 11, color: '#475569' }}>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary, #475569)" }}>
                       {n} cliente{n === 1 ? '' : 's'}
                       {n === 0 ? ' · posição de referência' : ''}
                     </div>
@@ -233,7 +233,7 @@ export function SaoPauloMapaZonas({
             padding: '7px 14px',
             fontSize: 12,
             fontWeight: 700,
-            color: '#0f172a',
+            color: "var(--text-primary, #0f172a)",
             cursor: 'pointer',
             boxShadow: filtroZona === 'todas' ? '0 1px 3px rgba(4,120,87,0.15)' : undefined,
           }}
@@ -258,7 +258,7 @@ export function SaoPauloMapaZonas({
                 padding: '7px 13px',
                 fontSize: 12,
                 fontWeight: 600,
-                color: '#334155',
+                color: "var(--text-primary, #334155)",
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -288,19 +288,19 @@ export function SaoPauloMapaZonas({
         <div
           style={{
             fontSize: 13,
-            color: '#475569',
+            color: "var(--text-secondary, #475569)",
             background: 'linear-gradient(180deg, #f8fafc, #f1f5f9)',
             borderRadius: 12,
             padding: '12px 14px',
-            border: '1px solid #e2e8f0',
+            border: "1px solid var(--border-color, #e2e8f0)",
           }}
         >
-          <strong style={{ color: '#0f172a' }}>Destaques — {ZONA_SP_LABEL[filtroZona]}:</strong>{' '}
+          <strong style={{ color: "var(--text-primary, #0f172a)" }}>Destaques — {ZONA_SP_LABEL[filtroZona]}:</strong>{' '}
           {(destaques[filtroZona] ?? []).length ? (destaques[filtroZona] ?? []).join(' · ') : '—'}
         </div>
       ) : null}
 
-      <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: '12px', color: "var(--text-secondary, #94a3b8)", lineHeight: 1.5 }}>
         Mapa real (OpenStreetMap / CARTO Voyager). Cada zona é um marcador na posição de referência
         usada pela equipe; o tamanho do círculo segue o número de clientes naquela categoria. Não é
         geocodificação endereço a endereço. “Fora de SP” só na legenda.

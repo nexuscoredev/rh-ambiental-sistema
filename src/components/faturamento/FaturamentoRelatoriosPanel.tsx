@@ -8,8 +8,8 @@ import {
 import { coletaNaFilaFaturamento } from '../../lib/faturamentoOperacionalFila'
 
 const wrap: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   marginTop: '20px',
@@ -22,16 +22,16 @@ const th: CSSProperties = {
   fontWeight: 800,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   padding: '8px 10px',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const td: CSSProperties = {
   padding: '10px',
   fontSize: '12px',
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   borderBottom: '1px solid #f1f5f9',
 }
 
@@ -139,10 +139,10 @@ export function FaturamentoRelatoriosPanel({
 
   return (
     <div style={wrap}>
-      <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
         Relatórios e indicadores
       </h2>
-      <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94a3b8', maxWidth: '880px', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #94a3b8)", maxWidth: '880px', lineHeight: 1.5 }}>
         Fila «a faturar» usa dados operacionais já carregados; totais de emitidas exigem carregar o histórico.
       </p>
 
@@ -155,9 +155,9 @@ export function FaturamentoRelatoriosPanel({
             style={{
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#f8fafc',
-              color: '#0f172a',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-subtle, #f8fafc)",
+              color: "var(--text-primary, #0f172a)",
               fontWeight: 800,
               fontSize: '13px',
               cursor: carregandoHistorico ? 'wait' : 'pointer',
@@ -170,25 +170,25 @@ export function FaturamentoRelatoriosPanel({
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px', alignItems: 'flex-end' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             De
           </label>
           <input
             type="date"
             value={de}
             onChange={(e) => setDe(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 10px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)", fontSize: '13px' }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
             Até
           </label>
           <input
             type="date"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 10px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)", fontSize: '13px' }}
           />
         </div>
       </div>
@@ -214,22 +214,22 @@ export function FaturamentoRelatoriosPanel({
           <div
             key={k}
             style={{
-              border: '1px solid #e2e8f0',
+              border: "1px solid var(--border-color, #e2e8f0)",
               borderRadius: '12px',
               padding: '12px 14px',
-              background: '#fafafa',
+              background: "var(--bg-inset, #fafafa)",
             }}
           >
-            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', letterSpacing: '0.06em' }}>{k}</div>
-            <div style={{ marginTop: '6px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>{v}</div>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: "var(--text-secondary, #64748b)", letterSpacing: '0.06em' }}>{k}</div>
+            <div style={{ marginTop: '6px', fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>{v}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
         <div>
-          <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: '#475569' }}>Ranking por cliente</h3>
-          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Ranking por cliente</h3>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: "1px solid var(--border-color, #e2e8f0)", borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '260px' }}>
               <thead>
                 <tr>
@@ -241,7 +241,7 @@ export function FaturamentoRelatoriosPanel({
               <tbody>
                 {rankingClientes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ ...td, textAlign: 'center', color: '#94a3b8' }}>
+                    <td colSpan={3} style={{ ...td, textAlign: 'center', color: "var(--text-secondary, #94a3b8)" }}>
                       Sem dados no período.
                     </td>
                   </tr>
@@ -260,10 +260,10 @@ export function FaturamentoRelatoriosPanel({
         </div>
 
         <div>
-          <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: '#475569' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
             Faturamento por dia (últimos 14 no período)
           </h3>
-          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+          <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', border: "1px solid var(--border-color, #e2e8f0)", borderRadius: '10px', maxHeight: '240px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '200px' }}>
               <thead>
                 <tr>
@@ -274,7 +274,7 @@ export function FaturamentoRelatoriosPanel({
               <tbody>
                 {porDia.length === 0 ? (
                   <tr>
-                    <td colSpan={2} style={{ ...td, textAlign: 'center', color: '#94a3b8' }}>
+                    <td colSpan={2} style={{ ...td, textAlign: 'center', color: "var(--text-secondary, #94a3b8)" }}>
                       Sem dados.
                     </td>
                   </tr>
@@ -293,10 +293,10 @@ export function FaturamentoRelatoriosPanel({
       </div>
 
       <div style={{ marginTop: '18px' }}>
-        <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: '#475569' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
           Pendências — coletas realizadas, ainda não faturadas (fila)
         </h3>
-        <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#94a3b8' }}>{fila.length} coleta(s) na fila atual.</p>
+        <p style={{ margin: '0 0 8px', fontSize: '12px', color: "var(--text-secondary, #94a3b8)" }}>{fila.length} coleta(s) na fila atual.</p>
       </div>
     </div>
   )

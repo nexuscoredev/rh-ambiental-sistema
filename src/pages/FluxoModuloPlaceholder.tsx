@@ -30,8 +30,8 @@ export default function FluxoModuloPlaceholder({ titulo, descricao }: FluxoModul
   return (
     <MainLayout>
       <div className="page-shell" style={{ maxWidth: 720 }}>
-        <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>{titulo}</h1>
-        <p className="page-header__lead" style={{ margin: '10px 0 0', color: '#64748b', lineHeight: 1.5 }}>
+        <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>{titulo}</h1>
+        <p className="page-header__lead" style={{ margin: '10px 0 0', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
           {descricao}
         </p>
         <div
@@ -39,14 +39,14 @@ export default function FluxoModuloPlaceholder({ titulo, descricao }: FluxoModul
             marginTop: '20px',
             padding: '16px 18px',
             borderRadius: '14px',
-            border: '1px solid #e2e8f0',
-            background: '#f8fafc',
+            border: "1px solid var(--border-color, #e2e8f0)",
+            background: "var(--bg-subtle, #f8fafc)",
             fontSize: '14px',
-            color: '#475569',
+            color: "var(--text-secondary, #475569)",
             lineHeight: 1.55,
           }}
         >
-          <strong style={{ color: '#0f172a' }}>Integração com o hub</strong>
+          <strong style={{ color: "var(--text-primary, #0f172a)" }}>Integração com o hub</strong>
           <p style={{ margin: '8px 0 0' }}>
             O fluxo oficial passa pelo <strong>Controle de Massa</strong>. Use os parâmetros na URL
             (<code style={{ fontSize: '12px' }}>?coleta=</code>, <code style={{ fontSize: '12px' }}>?mtr=</code>,{' '}
@@ -58,7 +58,7 @@ export default function FluxoModuloPlaceholder({ titulo, descricao }: FluxoModul
             {temContexto ? (
               <span style={{ color: '#15803d', fontWeight: 700 }}>contexto carregado</span>
             ) : (
-              <span style={{ color: '#64748b' }}>sem parâmetros — escolha uma coleta no Controle de Massa e volte por aqui.</span>
+              <span style={{ color: "var(--text-secondary, #64748b)" }}>sem parâmetros — escolha uma coleta no Controle de Massa e volte por aqui.</span>
             )}
           </p>
           <div style={{ marginTop: '14px' }}>
@@ -79,7 +79,7 @@ export default function FluxoModuloPlaceholder({ titulo, descricao }: FluxoModul
             </Link>
           </div>
         </div>
-        <p style={{ marginTop: '18px', fontSize: '13px', color: '#94a3b8' }}>
+        <p style={{ marginTop: '18px', fontSize: '13px', color: "var(--text-secondary, #94a3b8)" }}>
           Módulo em evolução: formulários e regras de etapa serão ligados às tabelas Supabase na mesma ordem do processo
           real (sem saltos).
         </p>

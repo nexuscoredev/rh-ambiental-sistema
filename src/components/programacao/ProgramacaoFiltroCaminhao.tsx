@@ -43,7 +43,7 @@ export default function ProgramacaoFiltroCaminhao({
       aria-label="Filtrar caminhões por tipo"
     >
       <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-        <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Tipo (lista)</span>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Tipo (lista)</span>
         <select
           value={filtroTipo}
           onChange={(e) => onFiltroTipoChange(e.target.value)}

@@ -51,18 +51,18 @@ const th: CSSProperties = {
   fontSize: 11,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 const td: CSSProperties = {
   padding: '7px 10px',
-  borderBottom: '1px solid #e2e8f0',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
   fontSize: 12,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 const sectionTitle: CSSProperties = {
   fontSize: 13,
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   margin: '20px 0 10px',
   paddingBottom: 6,
   borderBottom: '1px solid #cbd5e1',
@@ -75,8 +75,8 @@ const kvRow: CSSProperties = {
   borderBottom: '1px solid #f1f5f9',
   fontSize: 12,
 }
-const kvLab: CSSProperties = { color: '#64748b', fontWeight: 600 }
-const kvVal: CSSProperties = { color: '#0f172a', fontWeight: 700, textAlign: 'right' }
+const kvLab: CSSProperties = { color: "var(--text-secondary, #64748b)", fontWeight: 600 }
+const kvVal: CSSProperties = { color: "var(--text-primary, #0f172a)", fontWeight: 700, textAlign: 'right' }
 
 export function ExecutivePrintReportRoot(p: ExecutivePrintReportProps) {
   return (
@@ -94,7 +94,7 @@ export function ExecutivePrintReportRoot(p: ExecutivePrintReportProps) {
       </p>
 
       <h2 style={sectionTitle}>Período e filtros</h2>
-      <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 12, color: "var(--text-secondary, #475569)", lineHeight: 1.6 }}>
         <p style={{ margin: '0 0 8px' }}>
           <strong>Período:</strong> {p.periodoPresetLabel}
           <br />

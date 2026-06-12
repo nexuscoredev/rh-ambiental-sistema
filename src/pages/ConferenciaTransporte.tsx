@@ -102,8 +102,8 @@ function montarParamsColeta(c: ColetaResumo) {
 const ACCENT = '#0d9488'
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   borderTop: `4px solid ${ACCENT}`,
   padding: '24px 28px',
@@ -117,7 +117,7 @@ const inpFolha: CSSProperties = {
   boxSizing: 'border-box',
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
 }
 
@@ -770,13 +770,13 @@ export default function ConferenciaTransporte() {
               margin: 0,
               fontSize: 'clamp(24px, 2.5vw, 30px)',
               fontWeight: 800,
-              color: '#0f172a',
+              color: "var(--text-primary, #0f172a)",
               letterSpacing: '-0.02em',
             }}
           >
             Conferência de transportes
           </h1>
-          <p style={{ margin: '14px auto 0', maxWidth: 620, fontSize: '15px', color: '#64748b', lineHeight: 1.6 }}>
+          <p style={{ margin: '14px auto 0', maxWidth: 620, fontSize: '15px', color: "var(--text-secondary, #64748b)", lineHeight: 1.6 }}>
             Fluxo em <strong>2 passos</strong>: escolha a coleta e preencha a <strong>folha modelo RG Ambiental Transportes</strong>{' '}
             (dados de viagem, tabela de clientes, <strong>conferência do caminhão</strong> com SIM/NÃO, termo e assinaturas).
             O PDF segue o mesmo layout do papel.
@@ -810,7 +810,7 @@ export default function ConferenciaTransporte() {
               marginBottom: '16px',
               padding: '12px 16px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
               fontSize: '14px',
@@ -825,7 +825,7 @@ export default function ConferenciaTransporte() {
                 padding: '6px 12px',
                 borderRadius: '8px',
                 border: '1px solid #991b1b',
-                background: '#fff',
+                background: "var(--bg-card, #ffffff)",
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -866,7 +866,7 @@ export default function ConferenciaTransporte() {
               >
                 1
               </span>
-              <span className="conf-trans-acc-title" style={{ fontWeight: 800, color: '#0f172a', fontSize: 17 }}>
+              <span className="conf-trans-acc-title" style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", fontSize: 17 }}>
                 Coleta
               </span>
               <span
@@ -884,8 +884,8 @@ export default function ConferenciaTransporte() {
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#f8fafc',
+                border: "1px solid var(--input-border, #cbd5e1)",
+                background: "var(--bg-subtle, #f8fafc)",
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: carregandoColetas ? 'wait' : 'pointer',
@@ -897,7 +897,7 @@ export default function ConferenciaTransporte() {
           </div>
 
           {!secaoColetaExpandida ? (
-            <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 10px', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
               {coletaAtiva ? (
                 <>
                   <strong>Selecionada:</strong> {coletaAtiva.numero} — {coletaAtiva.cliente || 'Cliente'} ·{' '}
@@ -914,7 +914,7 @@ export default function ConferenciaTransporte() {
           <div ref={pickerColetaRef} className="conf-trans-coleta-picker">
             <label
               htmlFor="conf-trans-coleta-search"
-              style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block' }}
+              style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block' }}
             >
               Pesquisar coleta (nº, cliente, MTR, placa, motorista, etapa)
             </label>
@@ -936,11 +936,11 @@ export default function ConferenciaTransporte() {
               aria-busy={carregandoColetas}
             >
               {carregandoColetas ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                <div style={{ padding: '20px', textAlign: 'center', color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
                   A carregar…
                 </div>
               ) : opcoesColetaFiltradas.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                <div style={{ padding: '20px', textAlign: 'center', color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
                   Nenhuma coleta corresponde à pesquisa. Limpe o filtro ou tente outro termo.
                 </div>
               ) : (
@@ -959,7 +959,7 @@ export default function ConferenciaTransporte() {
                       <span style={{ color: '#0f766e', fontWeight: 800 }}>{c.numero}</span>
                       {' — '}
                       {c.cliente || 'Cliente'}
-                      <span style={{ color: '#64748b', fontWeight: 600 }}>
+                      <span style={{ color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
                         {' · '}
                         {mtrRot}
                         {' · '}
@@ -979,7 +979,7 @@ export default function ConferenciaTransporte() {
               )}
             </div>
             {!carregandoColetas ? (
-              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary, #94a3b8)" }}>
                 {opcoesColetaFiltradas.length} de {opcoesSelect.length} coleta(s) na lista.
                 {pesquisaColeta.trim() ? (
                   <button
@@ -991,10 +991,10 @@ export default function ConferenciaTransporte() {
                       fontSize: 11,
                       fontWeight: 700,
                       borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      background: '#fff',
+                      border: "1px solid var(--input-border, #cbd5e1)",
+                      background: "var(--bg-card, #ffffff)",
                       cursor: 'pointer',
-                      color: '#475569',
+                      color: "var(--text-secondary, #475569)",
                     }}
                   >
                     Limpar pesquisa
@@ -1004,9 +1004,9 @@ export default function ConferenciaTransporte() {
             ) : null}
           </div>
           {coletaAtiva ? (
-            <p style={{ margin: '12px 0 0', fontSize: '13px', color: '#64748b' }}>
+            <p style={{ margin: '12px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
               <strong>Fase:</strong> {formatarFaseFluxoOficialParaUI(coletaAtiva.etapaFluxo)}{' '}
-              <span style={{ color: '#94a3b8' }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span> ·{' '}
+              <span style={{ color: "var(--text-secondary, #94a3b8)" }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span> ·{' '}
               <strong>Placa:</strong>{' '}
               {coletaAtiva.placa || '—'} · <strong>Motorista:</strong> {coletaAtiva.motorista || '—'} ·{' '}
               <Link to={`/controle-massa?${montarParamsColeta(coletaAtiva).toString()}`} style={{ fontWeight: 700 }}>
@@ -1035,11 +1035,11 @@ export default function ConferenciaTransporte() {
               >
                 2
               </span>
-              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 17 }}>
+              <span style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", fontSize: 17 }}>
                 Folha de conferência (modelo papel)
               </span>
             </div>
-            <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
               Abra a folha em tela cheia para preencher dados de viagem, rotas, checklist SIM/NÃO, avarias e
               assinaturas. Use o <strong style={{ color: '#dc2626' }}>× vermelho</strong> no canto superior para
               fechar — a tecla <strong>Enter</strong> não fecha o painel.
@@ -1093,10 +1093,10 @@ export default function ConferenciaTransporte() {
                     maxHeight: 'min(92vh, 900px)',
                     display: 'flex',
                     flexDirection: 'column',
-                    background: '#fff',
+                    background: "var(--bg-card, #ffffff)",
                     borderRadius: '16px',
                     boxShadow: '0 24px 60px rgba(15, 23, 42, 0.2)',
-                    border: '1px solid #e2e8f0',
+                    border: "1px solid var(--border-color, #e2e8f0)",
                     overflow: 'hidden',
                   }}
                   onClick={(e) => e.stopPropagation()}
@@ -1115,11 +1115,11 @@ export default function ConferenciaTransporte() {
                     <div style={{ minWidth: 0 }}>
                       <h2
                         id="conf-trans-painel-titulo"
-                        style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}
+                        style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}
                       >
                         Folha de conferência
                       </h2>
-                      <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                      <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                         Coleta <strong>{coletaAtiva.numero}</strong> — {coletaAtiva.cliente || 'Cliente'}
                       </p>
                     </div>
@@ -1143,7 +1143,7 @@ export default function ConferenciaTransporte() {
                       borderTop: `4px solid ${ACCENT}`,
                     }}
                   >
-            <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#334155', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 16px', fontSize: '14px', color: "var(--text-primary, #334155)", lineHeight: 1.5 }}>
               Preencha os campos como no impresso. A placa e o motorista no PDF usam os dados da coleta. Grave ao finalizar.
             </p>
 
@@ -1152,14 +1152,14 @@ export default function ConferenciaTransporte() {
                 marginBottom: 20,
                 padding: '16px 18px',
                 borderRadius: 12,
-                border: '1px solid #e2e8f0',
-                background: '#fafafa',
+                border: "1px solid var(--border-color, #e2e8f0)",
+                background: "var(--bg-inset, #fafafa)",
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: 10 }}>
                 Cabeçalho e veículo
               </div>
-              <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
+              <p style={{ margin: '0 0 12px', fontSize: 12, color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                 <strong>Placa</strong> e <strong>motorista</strong> na impressão:{' '}
                 <span style={{ color: '#0f766e' }}>{coletaAtiva.placa || '—'}</span> ·{' '}
                 <span style={{ color: '#0f766e' }}>{coletaAtiva.motorista || '—'}</span>. O{' '}
@@ -1174,7 +1174,7 @@ export default function ConferenciaTransporte() {
                   marginBottom: 12,
                 }}
               >
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Data
                   <input
                     style={inpFolha}
@@ -1184,7 +1184,7 @@ export default function ConferenciaTransporte() {
                     placeholder={hojeBr()}
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Ticket nº
                   <input
                     style={inpFolha}
@@ -1194,7 +1194,7 @@ export default function ConferenciaTransporte() {
                     placeholder="ex.: 1340"
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Horário saída RG
                   <input
                     style={inpFolha}
@@ -1204,7 +1204,7 @@ export default function ConferenciaTransporte() {
                     placeholder="__:__"
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Horário chegada
                   <input
                     style={inpFolha}
@@ -1214,7 +1214,7 @@ export default function ConferenciaTransporte() {
                     placeholder="__:__"
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Pedágio (1)
                   <input
                     style={inpFolha}
@@ -1223,7 +1223,7 @@ export default function ConferenciaTransporte() {
                     disabled={!podeEditarMotorista}
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
                   Pedágio (2)
                   <input
                     style={inpFolha}
@@ -1239,7 +1239,7 @@ export default function ConferenciaTransporte() {
                     gap: 4,
                     fontSize: 12,
                     fontWeight: 700,
-                    color: '#475569',
+                    color: "var(--text-secondary, #475569)",
                     gridColumn: '1 / -1',
                   }}
                 >
@@ -1256,16 +1256,16 @@ export default function ConferenciaTransporte() {
               <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginBottom: 14 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 480 }}>
                   <thead>
-                    <tr style={{ background: '#f1f5f9' }}>
+                    <tr style={{ background: "var(--bg-inset, #f1f5f9)" }}>
                       {['Veículo', 'Qtd. combustível', 'Km inicial', 'Km final', 'Km total'].map((h) => (
                         <th
                           key={h}
                           style={{
-                            border: '1px solid #cbd5e1',
+                            border: "1px solid var(--input-border, #cbd5e1)",
                             padding: '8px',
                             textAlign: 'center',
                             fontWeight: 800,
-                            color: '#475569',
+                            color: "var(--text-secondary, #475569)",
                           }}
                         >
                           {h}
@@ -1275,7 +1275,7 @@ export default function ConferenciaTransporte() {
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                      <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                         <input
                           style={{ ...inpFolha, border: 'none' }}
                           value={folha.veiculo}
@@ -1284,7 +1284,7 @@ export default function ConferenciaTransporte() {
                           placeholder="Tipo / modelo"
                         />
                       </td>
-                      <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                      <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                         <input
                           style={{ ...inpFolha, border: 'none' }}
                           value={folha.qtdCombustivel}
@@ -1292,7 +1292,7 @@ export default function ConferenciaTransporte() {
                           disabled={!podeEditarMotorista}
                         />
                       </td>
-                      <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                      <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                         <input
                           style={{ ...inpFolha, border: 'none' }}
                           value={folha.kmInicial}
@@ -1300,7 +1300,7 @@ export default function ConferenciaTransporte() {
                           disabled={!podeEditarMotorista}
                         />
                       </td>
-                      <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                      <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                         <input
                           style={{ ...inpFolha, border: 'none' }}
                           value={folha.kmFinal}
@@ -1308,7 +1308,7 @@ export default function ConferenciaTransporte() {
                           disabled={!podeEditarMotorista}
                         />
                       </td>
-                      <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                      <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                         <input
                           style={{ ...inpFolha, border: 'none' }}
                           value={folha.kmTotal}
@@ -1321,25 +1321,25 @@ export default function ConferenciaTransporte() {
                 </table>
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: 8 }}>
                 Clientes / rota (5 linhas)
               </div>
               <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 520 }}>
                   <thead>
-                    <tr style={{ background: '#f1f5f9' }}>
-                      <th style={{ border: '1px solid #cbd5e1', padding: 8, width: 36 }}>#</th>
-                      <th style={{ border: '1px solid #cbd5e1', padding: 8 }}>Cliente</th>
-                      <th style={{ border: '1px solid #cbd5e1', padding: 8 }}>Km chegada</th>
-                      <th style={{ border: '1px solid #cbd5e1', padding: 8 }}>Hora entrada</th>
-                      <th style={{ border: '1px solid #cbd5e1', padding: 8 }}>Hora saída</th>
+                    <tr style={{ background: "var(--bg-inset, #f1f5f9)" }}>
+                      <th style={{ border: "1px solid var(--input-border, #cbd5e1)", padding: 8, width: 36 }}>#</th>
+                      <th style={{ border: "1px solid var(--input-border, #cbd5e1)", padding: 8 }}>Cliente</th>
+                      <th style={{ border: "1px solid var(--input-border, #cbd5e1)", padding: 8 }}>Km chegada</th>
+                      <th style={{ border: "1px solid var(--input-border, #cbd5e1)", padding: 8 }}>Hora entrada</th>
+                      <th style={{ border: "1px solid var(--input-border, #cbd5e1)", padding: 8 }}>Hora saída</th>
                     </tr>
                   </thead>
                   <tbody>
                     {folha.rotas.slice(0, ROTAS_CONFERENCIA_LINHAS).map((row, i) => (
                       <tr key={i}>
-                        <td style={{ border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 800 }}>{i + 1}</td>
-                        <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                        <td style={{ border: "1px solid var(--border-color, #e2e8f0)", textAlign: 'center', fontWeight: 800 }}>{i + 1}</td>
+                        <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                           <input
                             style={{ ...inpFolha, border: 'none' }}
                             value={row.cliente}
@@ -1354,7 +1354,7 @@ export default function ConferenciaTransporte() {
                             placeholder={i === 2 ? 'ex.: ALMOÇO' : ''}
                           />
                         </td>
-                        <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                        <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                           <input
                             style={{ ...inpFolha, border: 'none' }}
                             value={row.kmChegada}
@@ -1368,7 +1368,7 @@ export default function ConferenciaTransporte() {
                             disabled={!podeEditarMotorista}
                           />
                         </td>
-                        <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                        <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                           <input
                             style={{ ...inpFolha, border: 'none' }}
                             value={row.horaEntrada}
@@ -1382,7 +1382,7 @@ export default function ConferenciaTransporte() {
                             disabled={!podeEditarMotorista}
                           />
                         </td>
-                        <td style={{ border: '1px solid #e2e8f0', padding: 4 }}>
+                        <td style={{ border: "1px solid var(--border-color, #e2e8f0)", padding: 4 }}>
                           <input
                             style={{ ...inpFolha, border: 'none' }}
                             value={row.horaSaida}
@@ -1403,7 +1403,7 @@ export default function ConferenciaTransporte() {
               </div>
             </div>
 
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginBottom: 8, textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: 8, textAlign: 'center' }}>
               Conferência do caminhão
             </div>
             <div className="conf-trans-checklist-unico">
@@ -1424,7 +1424,7 @@ export default function ConferenciaTransporte() {
                 mostrarObservacoes={false}
                 entreItensEAssinaturas={
                   <div style={{ marginTop: 4, marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: 6 }}>
                       Avarias (termo de responsabilidade)
                     </div>
                     <textarea
@@ -1438,7 +1438,7 @@ export default function ConferenciaTransporte() {
                         maxWidth: '100%',
                         padding: '10px 12px',
                         borderRadius: '10px',
-                        border: '1px solid #cbd5e1',
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: '14px',
                         resize: 'vertical',
                         boxSizing: 'border-box',
@@ -1502,7 +1502,7 @@ export default function ConferenciaTransporte() {
           <div
             style={{
               ...cardStyle,
-              color: '#64748b',
+              color: "var(--text-secondary, #64748b)",
               textAlign: 'center',
               maxWidth: 480,
               margin: '0 auto',

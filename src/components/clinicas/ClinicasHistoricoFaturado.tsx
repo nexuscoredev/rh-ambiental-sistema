@@ -17,8 +17,8 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { sugerirDataVencimentoIso } from '../../services/financeiroReceber'
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
@@ -195,7 +195,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
       >
         <div>
           <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>Histórico — O.S. faturadas</h2>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748b', maxWidth: 640 }}>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", maxWidth: 640 }}>
             Ordens emitidas no faturamento. Envie ao financeiro ou exclua antes do pagamento.
           </p>
         </div>
@@ -208,8 +208,8 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
             style={{
               padding: '8px 14px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#f8fafc',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-subtle, #f8fafc)",
               fontWeight: 700,
               fontSize: '13px',
               cursor: carregando ? 'wait' : 'pointer',
@@ -227,7 +227,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
               padding: '8px 14px',
               borderRadius: '10px',
               border: '1px solid #0d9488',
-              background: '#fff',
+              background: "var(--bg-card, #ffffff)",
               color: '#0f766e',
               fontWeight: 700,
               fontSize: '13px',
@@ -267,7 +267,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
               marginTop: '4px',
               padding: '8px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
             }}
           />
         </label>
@@ -282,7 +282,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
               marginTop: '4px',
               padding: '8px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
             }}
           />
         </label>
@@ -298,13 +298,13 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
               marginTop: '4px',
               padding: '8px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
             }}
           />
         </label>
       </div>
 
-      <p style={{ margin: '14px 0 0', fontSize: '13px', color: '#475569' }}>
+      <p style={{ margin: '14px 0 0', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
         <strong>{filtradas.length}</strong> O.S. emitida(s)
         {filtradas.length > 0 ? (
           <>
@@ -315,9 +315,9 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
       </p>
 
       {carregando ? (
-        <p style={{ marginTop: '12px', color: '#64748b' }}>A carregar histórico…</p>
+        <p style={{ marginTop: '12px', color: "var(--text-secondary, #64748b)" }}>A carregar histórico…</p>
       ) : filtradas.length === 0 ? (
-        <p style={{ marginTop: '12px', color: '#64748b' }}>Nenhuma O.S. emitida no período.</p>
+        <p style={{ marginTop: '12px', color: "var(--text-secondary, #64748b)" }}>Nenhuma O.S. emitida no período.</p>
       ) : (
         <div style={{ marginTop: '12px', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -351,7 +351,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
                         ? formatarMoedaClinica(o.faturamento_valor)
                         : '—'}
                     </td>
-                    <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>
+                    <td style={{ padding: '10px 8px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                       {noFin ? (
                         <>
                           Na fila
@@ -387,8 +387,8 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
                             style={{
                               padding: '4px 10px',
                               borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
-                              background: '#f8fafc',
+                              border: "1px solid var(--input-border, #cbd5e1)",
+                              background: "var(--bg-subtle, #f8fafc)",
                               fontWeight: 700,
                               fontSize: '12px',
                               color: '#0d9488',
@@ -411,7 +411,7 @@ export function ClinicasHistoricoFaturado({ refreshVersao = 0 }: Props) {
                             padding: '4px 10px',
                             borderRadius: '8px',
                             border: '1px solid #fecaca',
-                            background: '#fef2f2',
+                            background: "var(--status-error-bg, #fef2f2)",
                             color: '#b91c1c',
                             fontWeight: 700,
                             fontSize: '12px',

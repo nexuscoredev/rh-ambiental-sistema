@@ -618,7 +618,7 @@ const labelSigorCheckboxStyle: React.CSSProperties = {
   gap: 8,
   fontSize: "13px",
   fontWeight: 600,
-  color: "#334155",
+  color: "var(--text-primary, #334155)",
   cursor: "pointer",
 };
 
@@ -2674,8 +2674,8 @@ export default function Clientes() {
         <div
           className="clientes-page__cadastro"
           style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #e5e7eb)",
             borderRadius: "18px",
             overflow: "hidden",
             boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -2685,14 +2685,14 @@ export default function Clientes() {
             className="clientes-page__cadastro-head"
             style={{
               padding: "18px 20px",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border-color, #e5e7eb)",
             }}
           >
             <div
               style={{
                 fontSize: "18px",
                 fontWeight: 800,
-                color: "#0f172a",
+                color: "var(--text-primary, #0f172a)",
               }}
             >
               {editingId ? "Editar cliente" : "Novo cliente"}
@@ -2713,13 +2713,13 @@ export default function Clientes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "6px",
                   }}
                 >
                   Dados básicos
                 </div>
-                <p style={{ margin: "0 0 12px", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Preencha pelo menos um destes três para identificar o cliente: <strong>Nome fantasia</strong>, <strong>Razão social</strong> ou <strong>CNPJ/CPF</strong>. Os restantes campos do cadastro são opcionais e podem ser completados depois.
                 </p>
 
@@ -2826,7 +2826,7 @@ export default function Clientes() {
                       readOnly
                       placeholder="Matriz / Filial / Pessoa física"
                       title="Calculado automaticamente pelo CNPJ/CPF"
-                      style={{ ...inputStyle, background: "#f8fafc" }}
+                      style={{ ...inputStyle, background: "var(--bg-subtle, #f8fafc)" }}
                     />
                     <span style={fieldLabelHelpStyle}>
                       Calculado a partir do CNPJ/CPF.
@@ -2841,7 +2841,7 @@ export default function Clientes() {
                       readOnly
                       placeholder="Raiz do CNPJ"
                       title="Raiz usada para agrupar matriz e filiais"
-                      style={{ ...inputStyle, background: "#f8fafc" }}
+                      style={{ ...inputStyle, background: "var(--bg-subtle, #f8fafc)" }}
                     />
                     <span style={fieldLabelHelpStyle}>
                       Agrupa matriz e filiais do mesmo grupo.
@@ -2855,7 +2855,7 @@ export default function Clientes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -2966,8 +2966,8 @@ export default function Clientes() {
                       gap: 8,
                       padding: "10px 12px",
                       borderRadius: "10px",
-                      border: "1px solid #cbd5e1",
-                      background: "#fff",
+                      border: "1px solid var(--input-border, #cbd5e1)",
+                      background: "var(--bg-card, #ffffff)",
                     }}
                     title="SIGOR: Cliente, RG ou Não tem"
                   >
@@ -2975,7 +2975,7 @@ export default function Clientes() {
                       style={{
                         fontSize: "12px",
                         fontWeight: 800,
-                        color: "#334155",
+                        color: "var(--text-primary, #334155)",
                       }}
                     >
                       SIGOR:
@@ -3063,7 +3063,7 @@ export default function Clientes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -3242,7 +3242,7 @@ export default function Clientes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -3283,7 +3283,7 @@ export default function Clientes() {
                     placeholder="E-mail(s) para envio de NF — separar vários com ;"
                     style={inputStyle}
                   />
-                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                     Um ou mais endereços, separados por ponto e vírgula (ex.: financeiro@empresa.com;
                     contato@empresa.com).
                   </p>
@@ -3299,7 +3299,7 @@ export default function Clientes() {
                     inputMode="decimal"
                     aria-label="Margem de lucro percentual do cliente"
                   />
-                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                     Opcional. Usada no faturamento; deixe em branco se não aplicável.
                   </p>
                 </div>
@@ -3310,7 +3310,7 @@ export default function Clientes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#334155",
+                    color: "var(--text-primary, #334155)",
                     marginBottom: "12px",
                   }}
                 >
@@ -3333,7 +3333,7 @@ export default function Clientes() {
                   ))}
                 </select>
 
-                <p style={{ margin: "10px 0 0", fontSize: "12px", color: "#64748b", lineHeight: 1.45 }}>
+                <p style={{ margin: "10px 0 0", fontSize: "12px", color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Cadastro em <strong>Cadastros → Representantes RG</strong>. Independente do{' '}
                   <strong>Representante do Faturamento</strong> acima (contacto / NF).
                 </p>
@@ -3398,7 +3398,7 @@ export default function Clientes() {
                   }}
                   style={{
                     background: "#e5e7eb",
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     border: "none",
                     borderRadius: "10px",
                     height: "42px",
@@ -3417,8 +3417,8 @@ export default function Clientes() {
         <div
           className="clientes-page__lista"
           style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #e5e7eb)",
             borderRadius: "18px",
             padding: "16px 18px 10px 18px",
             boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -3441,7 +3441,7 @@ export default function Clientes() {
                   margin: 0,
                   fontSize: "18px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Lista de clientes
@@ -3461,12 +3461,12 @@ export default function Clientes() {
                 minWidth: "240px",
                 height: "40px",
                 borderRadius: "10px",
-                border: "1px solid #d1d5db",
-                background: "#ffffff",
+                border: "1px solid var(--input-border, #d1d5db)",
+                background: "var(--bg-card, #ffffff)",
                 outline: "none",
                 padding: "0 14px",
                 fontSize: "14px",
-                color: "#111827",
+                color: "var(--text-primary, #111827)",
               }}
             />
           </div>
@@ -3488,8 +3488,8 @@ export default function Clientes() {
               aria-label="Modo de exibição da lista"
               style={{
                 display: "inline-flex",
-                background: "#f1f5f9",
-                border: "1px solid #e2e8f0",
+                background: "var(--bg-inset, #f1f5f9)",
+                border: "1px solid var(--border-color, #e2e8f0)",
                 borderRadius: "10px",
                 padding: "3px",
                 gap: "2px",
@@ -3543,7 +3543,7 @@ export default function Clientes() {
                 alignItems: "center",
                 gap: "8px",
                 fontSize: "13px",
-                color: "#475569",
+                color: "var(--text-secondary, #475569)",
                 fontWeight: 600,
               }}
               title="Filtra a página atual por situação do CADRI"
@@ -3556,10 +3556,10 @@ export default function Clientes() {
                   height: "36px",
                   padding: "0 10px",
                   borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
+                  border: "1px solid var(--input-border, #cbd5e1)",
+                  background: "var(--bg-card, #ffffff)",
                   fontSize: "13px",
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                   fontWeight: 600,
                 }}
               >
@@ -3573,7 +3573,7 @@ export default function Clientes() {
                 <span
                   style={{
                     fontSize: "12px",
-                    color: "#64748b",
+                    color: "var(--text-secondary, #64748b)",
                     fontWeight: 500,
                   }}
                 >
@@ -3588,7 +3588,7 @@ export default function Clientes() {
               style={{
                 padding: "30px 0",
                 textAlign: "center",
-                color: "#64748b",
+                color: "var(--text-secondary, #64748b)",
                 fontSize: "14px",
               }}
             >
@@ -3618,8 +3618,8 @@ export default function Clientes() {
                 <thead>
                   <tr
                     style={{
-                      background: "#f8fafc",
-                      borderBottom: "1px solid #e5e7eb",
+                      background: "var(--bg-subtle, #f8fafc)",
+                      borderBottom: "1px solid var(--border-color, #e5e7eb)",
                     }}
                   >
                     <th
@@ -3780,7 +3780,7 @@ export default function Clientes() {
                               style={{
                                 background: expandida ? "#0f172a" : "#ffffff",
                                 color: expandida ? "#ffffff" : "#475569",
-                                border: "1px solid #cbd5e1",
+                                border: "1px solid var(--input-border, #cbd5e1)",
                                 borderRadius: "6px",
                                 width: 26,
                                 height: 26,
@@ -3822,7 +3822,7 @@ export default function Clientes() {
                                       <div
                                         style={{
                                           fontWeight: 700,
-                                          color: "#0f172a",
+                                          color: "var(--text-primary, #0f172a)",
                                           lineHeight: 1.4,
                                           wordBreak: "break-word",
                                         }}
@@ -3839,7 +3839,7 @@ export default function Clientes() {
                                               {parteNome}
                                             </button>
                                             {parteSufixo ? (
-                                              <span style={{ fontWeight: 700, color: "#0f172a" }}>{parteSufixo}</span>
+                                              <span style={{ fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>{parteSufixo}</span>
                                             ) : null}
                                           </>
                                         ) : cliente.razao_social?.trim() ? (
@@ -3853,10 +3853,10 @@ export default function Clientes() {
                                             {cliente.razao_social.trim()}
                                           </button>
                                         ) : (
-                                          <span style={{ color: "#64748b" }}>—</span>
+                                          <span style={{ color: "var(--text-secondary, #64748b)" }}>—</span>
                                         )}
                                       </div>
-                                      <div style={{ fontSize: "12px", color: "#64748b", marginTop: "3px" }}>
+                                      <div style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)", marginTop: "3px" }}>
                                         {[cliente.cidade, cliente.estado].filter(Boolean).join(" · ") || "—"}
                                       </div>
                                     </>
@@ -3866,7 +3866,7 @@ export default function Clientes() {
                               <td style={tdStyle}>{cliente.razao_social || "—"}</td>
                               <td style={{ ...tdStyle, ...tdNowrap }}>
                                 <div>{cliente.cnpj || "—"}</div>
-                                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                                <div style={{ fontSize: "11px", color: "var(--text-secondary, #64748b)", marginTop: "3px" }}>
                                   {cliente.tipo_unidade_cliente || "-"}
                                 </div>
                               </td>
@@ -3927,7 +3927,7 @@ export default function Clientes() {
                                     {formatarData(cliente.validade)}
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#94a3b8" }}>-</span>
+                                  <span style={{ color: "var(--text-secondary, #94a3b8)" }}>-</span>
                                 )}
                               </td>
                               <td style={{ ...tdStyle, ...tdNowrap }}>{cliente.status || "Ativo"}</td>
@@ -3938,7 +3938,7 @@ export default function Clientes() {
                                 <div
                                   style={{
                                     fontWeight: 700,
-                                    color: "#0f172a",
+                                    color: "var(--text-primary, #0f172a)",
                                     wordBreak: "break-word",
                                   }}
                                 >
@@ -3955,14 +3955,14 @@ export default function Clientes() {
                                   </button>
                                 </div>
                                 {cliente.nome && cliente.razao_social && cliente.nome !== cliente.razao_social ? (
-                                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                                  <div style={{ fontSize: "11px", color: "var(--text-secondary, #64748b)", marginTop: "3px" }}>
                                     {cliente.nome}
                                   </div>
                                 ) : null}
                               </td>
                               <td style={{ ...tdStyle, ...tdNowrap }}>
                                 <div>{cliente.cnpj || "—"}</div>
-                                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                                <div style={{ fontSize: "11px", color: "var(--text-secondary, #64748b)", marginTop: "3px" }}>
                                   {cliente.tipo_unidade_cliente || "-"}
                                 </div>
                               </td>
@@ -3994,7 +3994,7 @@ export default function Clientes() {
                                     {formatarData(cliente.validade)}
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#94a3b8" }}>-</span>
+                                  <span style={{ color: "var(--text-secondary, #94a3b8)" }}>-</span>
                                 )}
                               </td>
                               <td style={tdStyle}>{cliente.codigo_ibama || "-"}</td>
@@ -4053,7 +4053,7 @@ export default function Clientes() {
                                 disabled={!podeExcluirCliente}
                                 style={{
                                   flex: "0 0 auto",
-                                  background: "#ffffff",
+                                  background: "var(--bg-card, #ffffff)",
                                   color: "#b91c1c",
                                   border: "1px solid #fecaca",
                                   borderRadius: "6px",
@@ -4086,7 +4086,7 @@ export default function Clientes() {
                                   gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
                                   gap: "12px 18px",
                                   fontSize: "13px",
-                                  color: "#0f172a",
+                                  color: "var(--text-primary, #0f172a)",
                                 }}
                               >
                                 {[
@@ -4117,7 +4117,7 @@ export default function Clientes() {
                                     <div
                                       style={{
                                         fontSize: "11px",
-                                        color: "#64748b",
+                                        color: "var(--text-secondary, #64748b)",
                                         fontWeight: 700,
                                         textTransform: "uppercase",
                                         letterSpacing: "0.04em",
@@ -4150,7 +4150,7 @@ export default function Clientes() {
                                           item.valor
                                         )
                                       ) : (
-                                        <span style={{ color: "#94a3b8" }}>—</span>
+                                        <span style={{ color: "var(--text-secondary, #94a3b8)" }}>—</span>
                                       )}
                                     </div>
                                   </div>
@@ -4162,7 +4162,7 @@ export default function Clientes() {
                                   <div
                                     style={{
                                       fontSize: "11px",
-                                      color: "#64748b",
+                                      color: "var(--text-secondary, #64748b)",
                                       fontWeight: 700,
                                       textTransform: "uppercase",
                                       letterSpacing: "0.04em",
@@ -4175,7 +4175,7 @@ export default function Clientes() {
                                     style={{
                                       whiteSpace: "pre-wrap",
                                       wordBreak: "break-word",
-                                      color: "#334155",
+                                      color: "var(--text-primary, #334155)",
                                     }}
                                   >
                                     {cliente.observacoes_operacionais}
@@ -4187,7 +4187,7 @@ export default function Clientes() {
                                   <div
                                     style={{
                                       fontSize: "11px",
-                                      color: "#64748b",
+                                      color: "var(--text-secondary, #64748b)",
                                       fontWeight: 700,
                                       textTransform: "uppercase",
                                       letterSpacing: "0.04em",
@@ -4200,7 +4200,7 @@ export default function Clientes() {
                                     style={{
                                       whiteSpace: "pre-wrap",
                                       wordBreak: "break-word",
-                                      color: "#334155",
+                                      color: "var(--text-primary, #334155)",
                                     }}
                                   >
                                     {cliente.observacoes_gerais}
@@ -4235,7 +4235,7 @@ export default function Clientes() {
                         style={{
                           textAlign: "center",
                           padding: "28px 12px",
-                          color: "#64748b",
+                          color: "var(--text-secondary, #64748b)",
                         }}
                       >
                         {clientes.length === 0
@@ -4259,16 +4259,16 @@ export default function Clientes() {
                 gap: "12px",
                 marginTop: "16px",
                 paddingTop: "14px",
-                borderTop: "1px solid #e5e7eb",
+                borderTop: "1px solid var(--border-color, #e5e7eb)",
               }}
             >
-              <span style={{ fontSize: "13px", color: "#64748b" }}>
+              <span style={{ fontSize: "13px", color: "var(--text-secondary, #64748b)" }}>
                 {totalCount === 0
                   ? "Nenhum registo"
                   : `Mostrando ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} de ${totalCount}`}
               </span>
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
-                <label style={{ fontSize: "13px", color: "#475569", display: "flex", alignItems: "center", gap: "8px" }}>
+                <label style={{ fontSize: "13px", color: "var(--text-secondary, #475569)", display: "flex", alignItems: "center", gap: "8px" }}>
                   Por página
                   <select
                     value={pageSize}
@@ -4276,7 +4276,7 @@ export default function Clientes() {
                     style={{
                       padding: "6px 10px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       fontSize: "13px",
                     }}
                   >
@@ -4294,7 +4294,7 @@ export default function Clientes() {
                   style={{
                     padding: "8px 14px",
                     borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     background: page <= 1 ? "#f1f5f9" : "#ffffff",
                     cursor: page <= 1 ? "not-allowed" : "pointer",
                     fontWeight: 700,
@@ -4303,7 +4303,7 @@ export default function Clientes() {
                 >
                   Anterior
                 </button>
-                <span style={{ fontSize: "13px", color: "#334155", fontWeight: 600 }}>
+                <span style={{ fontSize: "13px", color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                   Página {page} / {totalPaginas}
                 </span>
                 <button
@@ -4313,7 +4313,7 @@ export default function Clientes() {
                   style={{
                     padding: "8px 14px",
                     borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     background: page >= totalPaginas ? "#f1f5f9" : "#ffffff",
                     cursor: page >= totalPaginas ? "not-allowed" : "pointer",
                     fontWeight: 700,
@@ -4396,7 +4396,7 @@ const thStyle: React.CSSProperties = {
 /** Células de texto longo — quebram dentro da coluna (evita scroll horizontal). */
 const tdStyle: React.CSSProperties = {
   padding: "12px 10px",
-  color: "#1f2937",
+  color: "var(--text-primary, #1f2937)",
   verticalAlign: "middle",
   whiteSpace: "normal",
   wordBreak: "break-word",
@@ -4517,7 +4517,7 @@ function ClienteDetalheModal({
         style={{
           width: "100%",
           maxWidth: 1080,
-          background: "#ffffff",
+          background: "var(--bg-card, #ffffff)",
           borderRadius: 18,
           boxShadow: "0 20px 60px rgba(15, 23, 42, 0.35)",
           overflow: "hidden",
@@ -4694,7 +4694,7 @@ function ClienteDetalheModal({
               <div style={{ gridColumn: "1 / -1" }}>
                 <div
                   style={{
-                    color: "#1f2937",
+                    color: "var(--text-primary, #1f2937)",
                     fontSize: 14,
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
@@ -4777,23 +4777,23 @@ function ClienteDetalheModal({
               <div style={{ gridColumn: "1 / -1" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                    <tr style={{ background: "var(--bg-subtle, #f8fafc)", borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Tipo
                       </th>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Classe
                       </th>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Unidade
                       </th>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Valor
                       </th>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Frequência
                       </th>
-                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                      <th style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                         Mín. (kg)
                       </th>
                     </tr>
@@ -4801,12 +4801,12 @@ function ClienteDetalheModal({
                   <tbody>
                     {residuos.map((r, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.tipo_residuo || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.classificacao || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.unidade_medida || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.valor ? `R$ ${r.valor}` : "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>{r.frequencia_coleta || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#1f2937" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>{r.tipo_residuo || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>{r.classificacao || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>{r.unidade_medida || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>{r.valor ? `R$ ${r.valor}` : "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>{r.frequencia_coleta || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--text-primary, #1f2937)" }}>
                           {r.faturamento_minimo ? `${r.faturamento_minimo} kg` : "—"}
                         </td>
                       </tr>
@@ -4832,9 +4832,9 @@ function DetalheSecao({ titulo, children }: { titulo: string; children: React.Re
           fontWeight: 800,
           letterSpacing: "0.05em",
           textTransform: "uppercase",
-          color: "#0f172a",
+          color: "var(--text-primary, #0f172a)",
           paddingBottom: 8,
-          borderBottom: "1px solid #e2e8f0",
+          borderBottom: "1px solid var(--border-color, #e2e8f0)",
         }}
       >
         {titulo}
@@ -4859,7 +4859,7 @@ function DetalheRotulo({ children }: { children: React.ReactNode }) {
       style={{
         fontSize: 11,
         fontWeight: 700,
-        color: "#64748b",
+        color: "var(--text-secondary, #64748b)",
         textTransform: "uppercase",
         letterSpacing: "0.04em",
         marginBottom: 4,
@@ -4871,7 +4871,7 @@ function DetalheRotulo({ children }: { children: React.ReactNode }) {
 }
 
 function DetalheVazio() {
-  return <span style={{ color: "#94a3b8" }}>—</span>;
+  return <span style={{ color: "var(--text-secondary, #94a3b8)" }}>—</span>;
 }
 
 function DetalheCampo({
@@ -4896,7 +4896,7 @@ function DetalheCampo({
       {texto ? (
         <div
           style={{
-            color: "#1f2937",
+            color: "var(--text-primary, #1f2937)",
             fontSize: 14,
             wordBreak: "break-word",
             whiteSpace: quebrarLinha ? "pre-wrap" : "normal",

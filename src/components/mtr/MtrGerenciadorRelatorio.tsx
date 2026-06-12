@@ -35,7 +35,7 @@ type DraftLinha = {
 const thStyle: CSSProperties = {
   textAlign: 'left',
   padding: '10px 8px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   fontSize: '11px',
   borderBottom: '2px solid #e2e8f0',
@@ -46,7 +46,7 @@ const thStyle: CSSProperties = {
 const tdStyle: CSSProperties = {
   padding: '8px',
   verticalAlign: 'top',
-  borderBottom: '1px solid #e2e8f0',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
   fontSize: '12px',
   lineHeight: 1.4,
   maxWidth: '200px',
@@ -58,11 +58,11 @@ const inputCell: CSSProperties = {
   maxWidth: '180px',
   padding: '5px 7px',
   borderRadius: '6px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '12px',
   fontFamily: 'inherit',
   boxSizing: 'border-box',
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
 }
 
 const btnLink: CSSProperties = {
@@ -71,8 +71,8 @@ const btnLink: CSSProperties = {
   fontWeight: 700,
   padding: '4px 8px',
   borderRadius: '6px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
   color: '#1d4ed8',
   textDecoration: 'none',
   marginRight: '4px',
@@ -88,7 +88,7 @@ const btnAcao: CSSProperties = {
 const btnAcaoPrimario: CSSProperties = {
   ...btnAcao,
   borderColor: '#0d9488',
-  background: '#f0fdfa',
+  background: "var(--accent-teal-soft, #f0fdfa)",
   color: '#0f766e',
   fontWeight: 800,
 }
@@ -97,8 +97,8 @@ const btnAcaoDisabled: CSSProperties = {
   ...btnAcao,
   opacity: 0.55,
   cursor: 'not-allowed',
-  color: '#64748b',
-  background: '#f8fafc',
+  color: "var(--text-secondary, #64748b)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const btnSalvar: CSSProperties = {
@@ -228,9 +228,9 @@ function LinhaRelatorio({
       data-mtr-relatorio-id={linha.mtrId || linha.chave}
       style={
         destacar
-          ? { background: '#eff6ff', boxShadow: 'inset 0 0 0 2px #6366f1' }
+          ? { background: "var(--status-info-bg, #eff6ff)", boxShadow: 'inset 0 0 0 2px #6366f1' }
           : linha.naFilaFaturar
-            ? { background: '#f0fdf4' }
+            ? { background: "var(--status-success-bg, #f0fdf4)" }
             : undefined
       }
     >
@@ -321,7 +321,7 @@ function LinhaRelatorio({
       <td style={{ ...tdStyle, minWidth: '160px', maxWidth: '280px' }}>
         <div style={{ marginBottom: '4px' }}>{linha.pendencias}</div>
         {linha.origem === 'cadastro_manual' ? (
-          <span style={{ fontSize: '11px', color: '#64748b' }}>—</span>
+          <span style={{ fontSize: '11px', color: "var(--text-secondary, #64748b)" }}>—</span>
         ) : (
           <input
             type="text"
@@ -411,7 +411,7 @@ function LinhaRelatorio({
                 marginTop: '4px',
                 display: 'block',
                 borderColor: '#0d9488',
-                background: '#f0fdfa',
+                background: "var(--accent-teal-soft, #f0fdfa)",
                 color: '#0f766e',
               }}
               disabled={enviandoMtrId === linha.mtrId}
@@ -766,7 +766,7 @@ export function MtrGerenciadorRelatorio({
           marginBottom: '12px',
         }}
       >
-        <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.45, flex: '1 1 280px' }}>
+        <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45, flex: '1 1 280px' }}>
           MTRs <strong>Baixada</strong> no sistema e linhas salvas no{' '}
           <strong>Cadastro Gerenciador</strong> (rótulo «Cadastro gerenciador»). Edite na tabela;
           com coleta vinculada, ajuste o peso da coleta; nas linhas só do cadastro, o peso grava no
@@ -819,7 +819,7 @@ export function MtrGerenciadorRelatorio({
             minWidth: '200px',
             padding: '8px 12px',
             borderRadius: '8px',
-            border: '1px solid #cbd5e1',
+            border: "1px solid var(--input-border, #cbd5e1)",
             fontSize: '13px',
           }}
         />
@@ -828,17 +828,17 @@ export function MtrGerenciadorRelatorio({
       {erro ? <div className="alert-box alert-warning">{erro}</div> : null}
 
       {loading ? (
-        <p style={{ fontSize: '13px', color: '#64748b' }}>Carregando relatório…</p>
+        <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>Carregando relatório…</p>
       ) : visiveis.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#64748b' }}>
+        <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
           Nenhuma linha para o filtro atual. Confirme baixas na MTR, salve linhas no Cadastro
           Gerenciador ou vincule coletas.
         </p>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+        <div style={{ overflowX: 'auto', border: "1px solid var(--border-color, #e2e8f0)", borderRadius: '12px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1500px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc' }}>
+              <tr style={{ background: "var(--bg-subtle, #f8fafc)" }}>
                 <th style={thStyle}>MTR</th>
                 <th style={thStyle}>Baixada em</th>
                 <th style={thStyle}>Gerador</th>

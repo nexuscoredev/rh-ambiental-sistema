@@ -396,7 +396,7 @@ export default function DashboardLegacy() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: '26px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>
             Indicadores e resumo operacional
           </h1>
           <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
@@ -474,7 +474,7 @@ export default function DashboardLegacy() {
           style={{
             margin: '0 0 2px',
             fontSize: '15px',
-            color: '#334155',
+            color: "var(--text-primary, #334155)",
             fontWeight: 700,
             letterSpacing: '0.02em',
             textTransform: 'uppercase',
@@ -482,7 +482,7 @@ export default function DashboardLegacy() {
         >
           Pendências por setor
         </h2>
-        <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+        <p style={{ margin: '0 0 12px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
           Filas operacionais orientadas por ação · baseadas na etapa canónica do fluxo.
         </p>
 
@@ -505,8 +505,8 @@ export default function DashboardLegacy() {
                 onClick={() => setTabPendencias(k)}
                 style={{
                   textAlign: 'left',
-                  background: ativo ? '#0f172a' : '#ffffff',
-                  color: ativo ? '#ffffff' : '#0f172a',
+                  background: ativo ? 'var(--text-primary, #0f172a)' : 'var(--bg-card, #ffffff)',
+                  color: ativo ? '#ffffff' : 'var(--text-primary, #0f172a)',
                   border: ativo ? '1px solid #0f172a' : '1px solid #e5e7eb',
                   borderRadius: 14,
                   padding: '12px 12px',
@@ -545,7 +545,7 @@ export default function DashboardLegacy() {
                   <div
                     key={`${p.setor}-${p.id}`}
                     style={{
-                      border: '1px solid #e5e7eb',
+                      border: "1px solid var(--border-color, #e5e7eb)",
                       borderRadius: 14,
                       padding: '12px 12px',
                       display: 'flex',
@@ -553,12 +553,12 @@ export default function DashboardLegacy() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       flexWrap: 'wrap',
-                      background: '#ffffff',
+                      background: "var(--bg-card, #ffffff)",
                     }}
                   >
                     <div style={{ minWidth: 220 }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div style={{ fontWeight: 900, color: '#0f172a' }}>Coleta {p.numero}</div>
+                        <div style={{ fontWeight: 900, color: "var(--text-primary, #0f172a)" }}>Coleta {p.numero}</div>
                         <span
                           style={{
                             display: 'inline-flex',
@@ -575,13 +575,13 @@ export default function DashboardLegacy() {
                           {p.titulo}
                         </span>
                       </div>
-                      <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>{p.cliente}</div>
+                      <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: "var(--text-primary, #334155)" }}>{p.cliente}</div>
                       {p.detalhe ? (
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#64748b', lineHeight: 1.35 }}>{p.detalhe}</div>
+                        <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-secondary, #64748b)", lineHeight: 1.35 }}>{p.detalhe}</div>
                       ) : null}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>
                         {p.etapaCodigo ? formatarEtapaParaUI(p.etapaCodigo) : '—'}
                       </div>
                       <button
@@ -590,7 +590,7 @@ export default function DashboardLegacy() {
                         style={{
                           padding: '8px 12px',
                           borderRadius: 10,
-                          border: '1px solid #cbd5e1',
+                          border: "1px solid var(--input-border, #cbd5e1)",
                           background: '#0f172a',
                           color: '#fff',
                           fontWeight: 800,
@@ -614,7 +614,7 @@ export default function DashboardLegacy() {
           style={{
             margin: '0 0 2px',
             fontSize: '15px',
-            color: '#334155',
+            color: "var(--text-primary, #334155)",
             fontWeight: 700,
             letterSpacing: '0.02em',
             textTransform: 'uppercase',
@@ -622,7 +622,7 @@ export default function DashboardLegacy() {
         >
           Indicadores
         </h2>
-        <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+        <p style={{ margin: '0 0 12px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
           Layout compacto (estilo BI): série de 30 dias, distribuição por etapa e visão financeira.
         </p>
 
@@ -877,7 +877,7 @@ export default function DashboardLegacy() {
       >
         <div style={cardPrincipalStyle}>
           <h2 style={tituloCardStyle}>Últimas coletas</h2>
-          <p style={{ margin: '-8px 0 14px', fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: '-8px 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
             Entradas recentes no sistema.
           </p>
 
@@ -901,11 +901,11 @@ export default function DashboardLegacy() {
                   </tr>
                 ) : (
                   ultimasColetas.map((item) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <tr key={item.id} style={{ borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>
                       <td style={tdStyle}>{item.numero}</td>
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600 }}>{item.cliente}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '2px' }}>
                           {item.cidade}
                         </div>
                       </td>
@@ -931,7 +931,7 @@ export default function DashboardLegacy() {
 
         <div style={cardPrincipalStyle}>
           <h2 style={tituloCardStyle}>Pendências financeiras</h2>
-          <p style={{ margin: '-8px 0 14px', fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: '-8px 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
             Coletas já liberadas que ainda precisam de valor, vencimento ou estão atrasadas.
           </p>
 
@@ -955,11 +955,11 @@ export default function DashboardLegacy() {
                         marginBottom: '8px',
                       }}
                     >
-                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.numero}</div>
-                      <div style={{ color: '#475569', fontSize: '13px' }}>{item.cliente}</div>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>{item.numero}</div>
+                      <div style={{ color: "var(--text-secondary, #475569)", fontSize: '13px' }}>{item.cliente}</div>
                     </div>
 
-                    <div style={{ color: '#475569', fontSize: '13px', marginBottom: '10px' }}>
+                    <div style={{ color: "var(--text-secondary, #475569)", fontSize: '13px', marginBottom: '10px' }}>
                       {item.cidade} • {item.tipoResiduo} • {formatDate(item.dataAgendada)}
                     </div>
 
@@ -985,12 +985,12 @@ export default function DashboardLegacy() {
                           marginLeft: 'auto',
                           padding: '6px 12px',
                           borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: '#fff',
+                          border: "1px solid var(--input-border, #cbd5e1)",
+                          background: "var(--bg-card, #ffffff)",
                           fontWeight: 700,
                           fontSize: '12px',
                           cursor: 'pointer',
-                          color: '#0f172a',
+                          color: "var(--text-primary, #0f172a)",
                         }}
                       >
                         Abrir no financeiro
@@ -1009,7 +1009,7 @@ export default function DashboardLegacy() {
 }
 
 const vizCardShellStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   borderRadius: 4,
   padding: '10px 12px 8px',
   border: '1px solid #e0e4e8',
@@ -1035,7 +1035,7 @@ const vizCardTitleStyle: CSSProperties = {
 
 const vizCardHintStyle: CSSProperties = {
   fontSize: 11,
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   fontWeight: 500,
 }
 
@@ -1045,7 +1045,7 @@ const vizEmptyStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   fontSize: 11,
   fontWeight: 500,
   padding: '12px 10px',
@@ -1053,30 +1053,30 @@ const vizEmptyStyle: CSSProperties = {
   lineHeight: 1.45,
   border: '1px dashed #e5e7eb',
   borderRadius: 4,
-  background: '#fafbfc',
+  background: "var(--bg-inset, #fafbfc)",
 }
 
 const cardResumoStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   borderRadius: '14px',
   padding: '14px 16px',
   boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
 }
 
 const cardResumoTituloStyle: CSSProperties = {
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: '14px',
   marginBottom: '8px',
 }
 
 const cardResumoValorStyle: CSSProperties = {
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontSize: '26px',
   fontWeight: 800,
 }
 
 const cardPrincipalStyle: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: "var(--bg-card, #ffffff)",
   borderRadius: '16px',
   padding: '20px',
   boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
@@ -1086,7 +1086,7 @@ const cardPrincipalStyle: CSSProperties = {
 const tituloCardStyle: CSSProperties = {
   margin: '0 0 4px',
   fontSize: '18px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
 }
 
@@ -1118,22 +1118,22 @@ const thStyle: CSSProperties = {
   textAlign: 'left',
   padding: '14px 12px',
   fontSize: '14px',
-  color: '#475569',
-  borderBottom: '1px solid #e2e8f0',
-  backgroundColor: '#f8fafc',
+  color: "var(--text-secondary, #475569)",
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  backgroundColor: "var(--bg-subtle, #f8fafc)",
 }
 
 const tdStyle: CSSProperties = {
   padding: '14px 12px',
   fontSize: '14px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   verticalAlign: 'middle',
 }
 
 const emptyTdStyle: CSSProperties = {
   padding: '24px',
   textAlign: 'center',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: '14px',
 }
 
@@ -1149,7 +1149,7 @@ const badgeBaseStyle: CSSProperties = {
 
 const botaoSecundarioStyle: CSSProperties = {
   backgroundColor: '#e5e7eb',
-  color: '#111827',
+  color: "var(--text-primary, #111827)",
   border: 'none',
   borderRadius: '10px',
   padding: '12px 18px',
@@ -1159,10 +1159,10 @@ const botaoSecundarioStyle: CSSProperties = {
 }
 
 const pendenciaBoxStyle: CSSProperties = {
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '12px',
   padding: '14px',
-  backgroundColor: '#f8fafc',
+  backgroundColor: "var(--bg-subtle, #f8fafc)",
 }
 
 const alertaPendenteStyle: CSSProperties = {

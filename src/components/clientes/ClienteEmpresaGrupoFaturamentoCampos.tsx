@@ -13,7 +13,7 @@ const labelCheckStyle: CSSProperties = {
   gap: '8px',
   fontSize: '14px',
   fontWeight: 600,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   cursor: 'pointer',
   userSelect: 'none',
 }
@@ -23,8 +23,8 @@ const subWrapStyle: CSSProperties = {
   marginLeft: '28px',
   padding: '10px 12px',
   borderRadius: '8px',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
@@ -53,13 +53,13 @@ export function ClienteEmpresaGrupoFaturamentoCampos({ form, setForm }: Props) {
         padding: '12px 14px',
         marginBottom: '12px',
         borderRadius: '10px',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
+        background: "var(--bg-subtle, #f8fafc)",
+        border: "1px solid var(--border-color, #e2e8f0)",
       }}
     >
-      <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#475569' }}>
+      <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
         Empresa do grupo responsável pelo faturamento
-        <span style={{ fontWeight: 500, color: '#94a3b8' }}> (opcional)</span>
+        <span style={{ fontWeight: 500, color: "var(--text-secondary, #94a3b8)" }}> (opcional)</span>
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div>

@@ -48,7 +48,7 @@ export function SelectTipoResiduoCatalogo({
         width: '100%',
         boxSizing: 'border-box',
         borderRadius: '10px',
-        border: '1px solid #cbd5e1',
+        border: "1px solid var(--input-border, #cbd5e1)",
         padding: '0 12px',
         fontSize: '14px',
         height: '42px',

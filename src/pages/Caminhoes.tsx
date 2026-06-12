@@ -1174,7 +1174,7 @@ export default function Caminhoes() {
                   margin: 0,
                   fontSize: "26px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Veículos
@@ -1189,8 +1189,8 @@ export default function Caminhoes() {
               <div
                 style={{
                   minWidth: "225px",
-                  background: "#ffffff",
-                  border: "1px solid #e5e7eb",
+                  background: "var(--bg-card, #ffffff)",
+                  border: "1px solid var(--border-color, #e5e7eb)",
                   borderRadius: "16px",
                   padding: "16px 18px",
                   boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -1199,7 +1199,7 @@ export default function Caminhoes() {
                 <div
                   style={{
                     fontSize: "14px",
-                    color: "#64748b",
+                    color: "var(--text-secondary, #64748b)",
                     marginBottom: "6px",
                   }}
                 >
@@ -1209,7 +1209,7 @@ export default function Caminhoes() {
                   style={{
                     fontSize: "20px",
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                   }}
                 >
                   {totalExibidoKpi}
@@ -1258,7 +1258,7 @@ export default function Caminhoes() {
                     style={{
                       fontSize: "15px",
                       fontWeight: 800,
-                      color: "#334155",
+                      color: "var(--text-primary, #334155)",
                       marginBottom: "12px",
                     }}
                   >
@@ -1325,7 +1325,7 @@ export default function Caminhoes() {
                       style={{
                         fontSize: "15px",
                         fontWeight: 800,
-                        color: "#334155",
+                        color: "var(--text-primary, #334155)",
                         marginBottom: "12px",
                       }}
                     >
@@ -1404,7 +1404,7 @@ export default function Caminhoes() {
                       style={{
                         fontSize: "15px",
                         fontWeight: 800,
-                        color: "#334155",
+                        color: "var(--text-primary, #334155)",
                         marginBottom: "12px",
                       }}
                     >
@@ -1424,7 +1424,7 @@ export default function Caminhoes() {
                             display: "block",
                             fontSize: "12px",
                             fontWeight: 700,
-                            color: "#64748b",
+                            color: "var(--text-secondary, #64748b)",
                             marginBottom: "6px",
                           }}
                         >
@@ -1440,7 +1440,7 @@ export default function Caminhoes() {
                           maxLength={10}
                           style={inputStyle}
                         />
-                        <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#94a3b8" }}>
+                        <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-secondary, #94a3b8)" }}>
                           Digite a data de validade do documento CRLV (máscara automática).
                         </p>
                       </div>
@@ -1450,7 +1450,7 @@ export default function Caminhoes() {
                           style={{
                             fontSize: "13px",
                             fontWeight: 800,
-                            color: "#0f172a",
+                            color: "var(--text-primary, #0f172a)",
                             marginBottom: "8px",
                           }}
                         >
@@ -1507,7 +1507,7 @@ export default function Caminhoes() {
                             </a>
                           ) : null}
                           {cadastroCivPendente && !editingId ? (
-                            <span style={{ fontSize: "12px", color: "#64748b" }}>
+                            <span style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)" }}>
                               Pendente: {cadastroCivPendente.name}
                             </span>
                           ) : null}
@@ -1521,7 +1521,7 @@ export default function Caminhoes() {
                                 padding: "0 12px",
                                 borderRadius: "8px",
                                 border: "1px solid #fecaca",
-                                background: "#ffffff",
+                                background: "var(--bg-card, #ffffff)",
                                 color: "#b91c1c",
                                 fontWeight: 700,
                                 fontSize: "12px",
@@ -1540,7 +1540,7 @@ export default function Caminhoes() {
                           style={{
                             fontSize: "13px",
                             fontWeight: 800,
-                            color: "#0f172a",
+                            color: "var(--text-primary, #0f172a)",
                             marginBottom: "8px",
                           }}
                         >
@@ -1597,7 +1597,7 @@ export default function Caminhoes() {
                             </a>
                           ) : null}
                           {cadastroCippPendente && !editingId ? (
-                            <span style={{ fontSize: "12px", color: "#64748b" }}>
+                            <span style={{ fontSize: "12px", color: "var(--text-secondary, #64748b)" }}>
                               Pendente: {cadastroCippPendente.name}
                             </span>
                           ) : null}
@@ -1611,7 +1611,7 @@ export default function Caminhoes() {
                                 padding: "0 12px",
                                 borderRadius: "8px",
                                 border: "1px solid #fecaca",
-                                background: "#ffffff",
+                                background: "var(--bg-card, #ffffff)",
                                 color: "#b91c1c",
                                 fontWeight: 700,
                                 fontSize: "12px",
@@ -1639,7 +1639,7 @@ export default function Caminhoes() {
                     style={{
                       fontSize: "15px",
                       fontWeight: 800,
-                      color: "#0f172a",
+                      color: "var(--text-primary, #0f172a)",
                       marginBottom: "8px",
                     }}
                   >
@@ -1649,7 +1649,7 @@ export default function Caminhoes() {
                     style={{
                       margin: "0 0 14px",
                       fontSize: "13px",
-                      color: "#64748b",
+                      color: "var(--text-secondary, #64748b)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -1673,8 +1673,8 @@ export default function Caminhoes() {
                           maxHeight: "240px",
                           objectFit: "contain",
                           borderRadius: "12px",
-                          border: "1px solid #e2e8f0",
-                          background: "#f8fafc",
+                          border: "1px solid var(--border-color, #e2e8f0)",
+                          background: "var(--bg-subtle, #f8fafc)",
                         }}
                       />
                     </a>
@@ -1683,11 +1683,11 @@ export default function Caminhoes() {
                       style={{
                         padding: "24px 16px",
                         textAlign: "center",
-                        color: "#94a3b8",
+                        color: "var(--text-secondary, #94a3b8)",
                         fontSize: "13px",
                         borderRadius: "12px",
                         border: "1px dashed #cbd5e1",
-                        background: "#f8fafc",
+                        background: "var(--bg-subtle, #f8fafc)",
                         marginBottom: "12px",
                       }}
                     >
@@ -1736,7 +1736,7 @@ export default function Caminhoes() {
                           padding: "0 14px",
                           borderRadius: "10px",
                           border: "1px solid #fecaca",
-                          background: "#ffffff",
+                          background: "var(--bg-card, #ffffff)",
                           color: "#b91c1c",
                           fontWeight: 700,
                           fontSize: "13px",
@@ -1791,7 +1791,7 @@ export default function Caminhoes() {
                     }}
                     style={{
                       background: "#e5e7eb",
-                      color: "#111827",
+                      color: "var(--text-primary, #111827)",
                       border: "none",
                       borderRadius: "10px",
                       height: "42px",
@@ -1829,7 +1829,7 @@ export default function Caminhoes() {
                     margin: 0,
                     fontSize: "18px",
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                   }}
                 >
                   Lista de veículos
@@ -1845,12 +1845,12 @@ export default function Caminhoes() {
                   maxWidth: "100%",
                   height: "40px",
                   borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
+                  border: "1px solid var(--input-border, #d1d5db)",
+                  background: "var(--bg-card, #ffffff)",
                   outline: "none",
                   padding: "0 14px",
                   fontSize: "14px",
-                  color: "#111827",
+                  color: "var(--text-primary, #111827)",
                 }}
               />
             </div>
@@ -1860,7 +1860,7 @@ export default function Caminhoes() {
                 style={{
                   padding: "30px 0",
                   textAlign: "center",
-                  color: "#64748b",
+                  color: "var(--text-secondary, #64748b)",
                   fontSize: "14px",
                 }}
               >
@@ -1878,8 +1878,8 @@ export default function Caminhoes() {
                   <thead>
                     <tr
                       style={{
-                        background: "#f8fafc",
-                        borderBottom: "1px solid #e5e7eb",
+                        background: "var(--bg-subtle, #f8fafc)",
+                        borderBottom: "1px solid var(--border-color, #e5e7eb)",
                       }}
                     >
                       <th style={thStyle}>Placa</th>
@@ -1980,7 +1980,7 @@ export default function Caminhoes() {
                               onClick={() => handleDelete(c.id)}
                               style={{
                                 flex: "0 0 auto",
-                                background: "#ffffff",
+                                background: "var(--bg-card, #ffffff)",
                                 color: "#b91c1c",
                                 border: "1px solid #fecaca",
                                 borderRadius: "6px",
@@ -2006,7 +2006,7 @@ export default function Caminhoes() {
                           style={{
                             textAlign: "center",
                             padding: "28px 12px",
-                            color: "#64748b",
+                            color: "var(--text-secondary, #64748b)",
                           }}
                         >
                           Nenhum veículo encontrado.
@@ -2028,10 +2028,10 @@ export default function Caminhoes() {
                   gap: "12px",
                   marginTop: "16px",
                   paddingTop: "14px",
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                 }}
               >
-                <span style={{ fontSize: "13px", color: "#64748b" }}>
+                <span style={{ fontSize: "13px", color: "var(--text-secondary, #64748b)" }}>
                   {totalCount === 0
                     ? "Nenhum registo"
                     : `Mostrando ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} de ${totalCount}`}
@@ -2042,7 +2042,7 @@ export default function Caminhoes() {
                   <label
                     style={{
                       fontSize: "13px",
-                      color: "#475569",
+                      color: "var(--text-secondary, #475569)",
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
@@ -2055,7 +2055,7 @@ export default function Caminhoes() {
                       style={{
                         padding: "6px 10px",
                         borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: "13px",
                       }}
                     >
@@ -2073,7 +2073,7 @@ export default function Caminhoes() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page <= 1 ? "#f1f5f9" : "#ffffff",
                       cursor: page <= 1 ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -2082,7 +2082,7 @@ export default function Caminhoes() {
                   >
                     Anterior
                   </button>
-                  <span style={{ fontSize: "13px", color: "#334155", fontWeight: 600 }}>
+                  <span style={{ fontSize: "13px", color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                     Página {page} / {totalPaginas}
                   </span>
                   <button
@@ -2092,7 +2092,7 @@ export default function Caminhoes() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page >= totalPaginas ? "#f1f5f9" : "#ffffff",
                       cursor: page >= totalPaginas ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -2133,7 +2133,7 @@ export default function Caminhoes() {
               maxWidth: "520px",
               maxHeight: "min(92vh, 900px)",
               overflowY: "auto",
-              background: "#ffffff",
+              background: "var(--bg-card, #ffffff)",
               borderRadius: "16px",
               boxShadow: "0 25px 50px rgba(15, 23, 42, 0.2)",
               border: statusEhIndisponivel(fichaCaminhao.status_disponibilidade)
@@ -2149,7 +2149,7 @@ export default function Caminhoes() {
                 alignItems: "flex-start",
                 gap: "12px",
                 padding: "18px 20px",
-                borderBottom: "1px solid #e5e7eb",
+                borderBottom: "1px solid var(--border-color, #e5e7eb)",
               }}
             >
               <h2
@@ -2158,7 +2158,7 @@ export default function Caminhoes() {
                   margin: 0,
                   fontSize: "18px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Ficha do veículo
@@ -2173,8 +2173,8 @@ export default function Caminhoes() {
                   height: "36px",
                   border: "none",
                   borderRadius: "10px",
-                  background: "#f1f5f9",
-                  color: "#475569",
+                  background: "var(--bg-inset, #f1f5f9)",
+                  color: "var(--text-secondary, #475569)",
                   fontSize: "20px",
                   lineHeight: 1,
                   cursor: "pointer",
@@ -2196,36 +2196,36 @@ export default function Caminhoes() {
                   fontSize: "14px",
                 }}
               >
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Placa</dt>
-                <dd style={{ margin: 0, color: "#0f172a", fontWeight: 600 }}>{fichaCaminhao.placa}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Motorista habitual</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Placa</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #0f172a)", fontWeight: 600 }}>{fichaCaminhao.placa}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Motorista habitual</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>
                   {fichaCaminhao.motorista_id
                     ? motoristaNomePorId.get(fichaCaminhao.motorista_id) ?? "—"
                     : "—"}
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>RENAVAM</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.renavam || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Peso tara</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.peso_tara || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Peso bruto</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.peso_bruto || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>CMT</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.cmt || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Quant. IBCs</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.quant_ibcs || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Tipo de caixa</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.tipo_caixa || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Modelo</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.modelo || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Tipo</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.tipo || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Rodízio</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaCaminhao.rodizio || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Validade CRLV</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{formatarData(fichaCaminhao.crlv_validade)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>CIV (nº / arquivo)</dt>
-                <dd style={{ margin: 0, color: "#1f2937", wordBreak: "break-word" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>RENAVAM</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.renavam || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Peso tara</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.peso_tara || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Peso bruto</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.peso_bruto || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>CMT</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.cmt || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Quant. IBCs</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.quant_ibcs || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Tipo de caixa</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.tipo_caixa || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Modelo</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.modelo || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Tipo</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.tipo || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Rodízio</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaCaminhao.rodizio || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Validade CRLV</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{formatarData(fichaCaminhao.crlv_validade)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>CIV (nº / arquivo)</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)", wordBreak: "break-word" }}>
                   {fichaCaminhao.civ_numero || "—"}
                   {fichaCaminhao.civ_arquivo_url ? (
                     <>
@@ -2241,8 +2241,8 @@ export default function Caminhoes() {
                     </>
                   ) : null}
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>CIPP (nº / arquivo)</dt>
-                <dd style={{ margin: 0, color: "#1f2937", wordBreak: "break-word" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>CIPP (nº / arquivo)</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)", wordBreak: "break-word" }}>
                   {fichaCaminhao.cipp_numero || "—"}
                   {fichaCaminhao.cipp_arquivo_url ? (
                     <>
@@ -2258,17 +2258,17 @@ export default function Caminhoes() {
                     </>
                   ) : null}
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Disponibilidade</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Disponibilidade</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>
                   <CelulaStatusDisponibilidade status={fichaCaminhao.status_disponibilidade} />
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Cadastrado em</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{formatarDataHora(fichaCaminhao.created_at)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>ID</dt>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Cadastrado em</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{formatarDataHora(fichaCaminhao.created_at)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>ID</dt>
                 <dd
                   style={{
                     margin: 0,
-                    color: "#64748b",
+                    color: "var(--text-secondary, #64748b)",
                     fontSize: "12px",
                     wordBreak: "break-all",
                   }}
@@ -2279,7 +2279,7 @@ export default function Caminhoes() {
 
               <div
                 style={{
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                   paddingTop: "18px",
                 }}
               >
@@ -2287,13 +2287,13 @@ export default function Caminhoes() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                     marginBottom: "10px",
                   }}
                 >
                   Fotografia do veículo
                 </div>
-                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#64748b", lineHeight: 1.5 }}>
+                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
                   Envie uma imagem do veículo (lateral ou 3/4, por exemplo). Formatos: JPEG, PNG, WebP ou
                   GIF; máx. 8 MB.
                 </p>
@@ -2313,8 +2313,8 @@ export default function Caminhoes() {
                         maxHeight: "280px",
                         objectFit: "contain",
                         borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        background: "#f8fafc",
+                        border: "1px solid var(--border-color, #e2e8f0)",
+                        background: "var(--bg-subtle, #f8fafc)",
                       }}
                     />
                   </a>
@@ -2323,11 +2323,11 @@ export default function Caminhoes() {
                     style={{
                       padding: "28px 16px",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--text-secondary, #94a3b8)",
                       fontSize: "13px",
                       borderRadius: "12px",
                       border: "1px dashed #cbd5e1",
-                      background: "#f8fafc",
+                      background: "var(--bg-subtle, #f8fafc)",
                       marginBottom: "12px",
                     }}
                   >
@@ -2377,9 +2377,9 @@ export default function Caminhoes() {
                           minHeight: "40px",
                           padding: "0 14px",
                           borderRadius: "10px",
-                          border: "1px solid #cbd5e1",
-                          background: "#ffffff",
-                          color: "#334155",
+                          border: "1px solid var(--input-border, #cbd5e1)",
+                          background: "var(--bg-card, #ffffff)",
+                          color: "var(--text-primary, #334155)",
                           fontWeight: 700,
                           fontSize: "13px",
                           cursor: enviandoFotoCaminhao ? "not-allowed" : "pointer",
@@ -2396,7 +2396,7 @@ export default function Caminhoes() {
                           padding: "0 14px",
                           borderRadius: "10px",
                           border: "1px solid #fecaca",
-                          background: "#ffffff",
+                          background: "var(--bg-card, #ffffff)",
                           color: "#b91c1c",
                           fontWeight: 700,
                           fontSize: "13px",
@@ -2443,7 +2443,7 @@ export default function Caminhoes() {
                   onClick={() => setFichaCaminhao(null)}
                   style={{
                     background: "#e5e7eb",
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     border: "none",
                     borderRadius: "10px",
                     height: "40px",
@@ -2487,7 +2487,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  color: "#1f2937",
+  color: "var(--text-primary, #1f2937)",
   verticalAlign: "middle",
   whiteSpace: "nowrap",
 };

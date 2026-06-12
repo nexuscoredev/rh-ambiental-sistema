@@ -526,7 +526,7 @@ export default function FinanceiroContasReceber() {
       <div className="page-shell financeiro-cr-page">
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Títulos, vencimentos e saldos
             </h1>
             <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
@@ -558,8 +558,8 @@ export default function FinanceiroContasReceber() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
+                border: "1px solid var(--input-border, #cbd5e1)",
+                background: "var(--bg-card, #ffffff)",
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -579,7 +579,7 @@ export default function FinanceiroContasReceber() {
                 padding: '10px 16px',
                 borderRadius: '10px',
                 border: '1px solid #0d9488',
-                background: '#fff',
+                background: "var(--bg-card, #ffffff)",
                 color: '#0f766e',
                 fontWeight: 700,
                 cursor: loadingAtivo ? 'wait' : 'pointer',
@@ -623,8 +623,8 @@ export default function FinanceiroContasReceber() {
             flexWrap: 'wrap',
             padding: '6px',
             borderRadius: '14px',
-            background: '#f1f5f9',
-            border: '1px solid #e2e8f0',
+            background: "var(--bg-inset, #f1f5f9)",
+            border: "1px solid var(--border-color, #e2e8f0)",
           }}
           role="tablist"
           aria-label="Visão de contas a receber"
@@ -673,7 +673,7 @@ export default function FinanceiroContasReceber() {
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
                   <span>{tab.label}</span>
                   {ativo ? (
-                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>{tab.hint}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 500, color: "var(--text-secondary, #64748b)" }}>{tab.hint}</span>
                   ) : null}
                 </span>
                 <span
@@ -697,7 +697,7 @@ export default function FinanceiroContasReceber() {
           })}
         </div>
 
-        <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#64748b' }}>
+        <p style={{ margin: '10px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
           {aba === 'clinicas'
             ? 'Visão dedicada às clínicas — títulos enviados após faturamento (sem pesagem/ticket).'
             : 'Visão geral de todos os títulos a receber do sistema.'}
@@ -729,7 +729,7 @@ export default function FinanceiroContasReceber() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
             }}
@@ -752,11 +752,11 @@ export default function FinanceiroContasReceber() {
             style={{
               padding: '16px 18px',
               borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              background: '#fff',
+              border: "1px solid var(--border-color, #e2e8f0)",
+              background: "var(--bg-card, #ffffff)",
             }}
           >
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Títulos carregados</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Títulos carregados</div>
             <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px' }}>{resumo.qtd}</div>
           </div>
           <div
@@ -764,7 +764,7 @@ export default function FinanceiroContasReceber() {
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #fde68a',
-              background: '#fffbeb',
+              background: "var(--status-warning-bg, #fffbeb)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e' }}>Saldo em aberto</div>
@@ -777,7 +777,7 @@ export default function FinanceiroContasReceber() {
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #fecaca',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b' }}>Saldo vencido (aberto)</div>
@@ -797,7 +797,7 @@ export default function FinanceiroContasReceber() {
           }}
         >
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Busca</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Busca</div>
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
@@ -805,17 +805,17 @@ export default function FinanceiroContasReceber() {
               style={{
                 padding: '10px 12px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
+                border: "1px solid var(--input-border, #cbd5e1)",
                 minWidth: '220px',
               }}
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Status</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Status</div>
             <select
               value={filtroStatus}
               onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-              style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}
+              style={{ padding: '10px 12px', borderRadius: '10px', border: "1px solid var(--input-border, #cbd5e1)" }}
             >
               <option value="">Todos</option>
               <option value="Pendente">Pendente</option>
@@ -824,13 +824,13 @@ export default function FinanceiroContasReceber() {
             </select>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Envelhecimento
             </div>
             <select
               value={filtroFaixa}
               onChange={(e) => setFiltroFaixa(e.target.value as typeof filtroFaixa)}
-              style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}
+              style={{ padding: '10px 12px', borderRadius: '10px', border: "1px solid var(--input-border, #cbd5e1)" }}
             >
               <option value="todos">Todos (com saldo)</option>
               <option value="vencido">Vencidos</option>
@@ -842,7 +842,7 @@ export default function FinanceiroContasReceber() {
 
         <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', marginTop: '18px' }}>
           {loading ? (
-            <p style={{ color: '#64748b' }}>A carregar…</p>
+            <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
           ) : (
             <table
               style={{
@@ -868,7 +868,7 @@ export default function FinanceiroContasReceber() {
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ padding: '24px', color: '#64748b' }}>
+                    <td colSpan={9} style={{ padding: '24px', color: "var(--text-secondary, #64748b)" }}>
                       Nenhuma linha com estes filtros.
                     </td>
                   </tr>
@@ -913,7 +913,7 @@ export default function FinanceiroContasReceber() {
                                 gap: '6px',
                                 fontSize: '13px',
                                 fontWeight: 600,
-                                color: '#334155',
+                                color: "var(--text-primary, #334155)",
                                 cursor:
                                   podeMutar && saldo > 0 && marcandoPagoId !== r.id
                                     ? 'pointer'

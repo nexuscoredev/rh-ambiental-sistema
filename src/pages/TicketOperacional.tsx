@@ -150,7 +150,7 @@ export default function TicketOperacional() {
         <div style={{ marginBottom: 14, maxWidth: 480 }}>
           <label
             htmlFor="filtro-ticket-coleta"
-            style={{ display: 'block', fontWeight: 800, color: '#0f172a', marginBottom: 6, fontSize: 13 }}
+            style={{ display: 'block', fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: 6, fontSize: 13 }}
           >
             Filtrar lista (n.º ticket, coleta ou cliente)
           </label>
@@ -164,7 +164,7 @@ export default function TicketOperacional() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 10,
-              border: '1px solid #cbd5e1',
+              border: "1px solid var(--input-border, #cbd5e1)",
               fontSize: 14,
             }}
           />

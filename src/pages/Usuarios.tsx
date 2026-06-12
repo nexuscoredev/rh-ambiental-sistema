@@ -181,9 +181,9 @@ function PaginasPermitidasFields({
             maxHeight: 'min(52vh, 420px)',
             overflowY: 'auto',
             padding: '12px',
-            background: '#f8fafc',
+            background: "var(--bg-subtle, #f8fafc)",
             borderRadius: '10px',
-            border: '1px solid #e2e8f0',
+            border: "1px solid var(--border-color, #e2e8f0)",
           }}
         >
           {ROTAS_SISTEMA.map((r) => (
@@ -203,8 +203,8 @@ function PaginasPermitidasFields({
                 disabled={disabled}
                 onChange={() => toggleRotaMarcada(r.path)}
               />
-              <span style={{ fontWeight: 600, color: '#0f172a' }}>{r.label}</span>
-              <span style={{ color: '#94a3b8', fontSize: '12px' }}>{r.path}</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary, #0f172a)" }}>{r.label}</span>
+              <span style={{ color: "var(--text-secondary, #94a3b8)", fontSize: '12px' }}>{r.path}</span>
             </label>
           ))}
         </div>
@@ -832,7 +832,7 @@ export default function Usuarios() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
+          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             Acessos, perfis e permissões
           </h1>
           <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
@@ -870,7 +870,7 @@ export default function Usuarios() {
 
           <div
             style={{
-              background: '#fff',
+              background: "var(--bg-card, #ffffff)",
               padding: '16px 20px',
               borderRadius: '12px',
               boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -885,7 +885,7 @@ export default function Usuarios() {
 
           <div
             style={{
-              background: '#fff',
+              background: "var(--bg-card, #ffffff)",
               padding: '16px 20px',
               borderRadius: '12px',
               boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -934,7 +934,7 @@ export default function Usuarios() {
       {formularioAberto && podeCriarOuExcluir ? (
         <div
           style={{
-            background: '#fff',
+            background: "var(--bg-card, #ffffff)",
             padding: '20px',
             borderRadius: '12px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -942,10 +942,10 @@ export default function Usuarios() {
             border: '1px solid #bbf7d0',
           }}
         >
-          <h2 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             Novo usuário
           </h2>
-          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
+          <p style={{ margin: '0 0 16px', fontSize: '14px', color: "var(--text-secondary, #64748b)" }}>
             Preencha nome, e-mail, senha e cargo. O acesso é criado no Supabase Auth e na tabela de usuários.
           </p>
 
@@ -1029,7 +1029,7 @@ export default function Usuarios() {
 
       <div
         style={{
-          background: '#fff',
+          background: "var(--bg-card, #ffffff)",
           padding: '20px',
           borderRadius: '12px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -1046,7 +1046,7 @@ export default function Usuarios() {
             flexWrap: 'wrap',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             Lista de usuários
           </h2>
 
@@ -1110,7 +1110,7 @@ export default function Usuarios() {
               }}
             >
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc' }}>
+                <tr style={{ backgroundColor: "var(--bg-subtle, #f8fafc)" }}>
                   <th style={thStyle}>Nome</th>
                   <th style={thStyle}>E-mail</th>
                   <th style={thStyle}>Cargo</th>
@@ -1135,7 +1135,7 @@ export default function Usuarios() {
                           const ref = senhasCadastradas.get(usuario.id)
                           if (!ref?.senha_cadastrada) {
                             return (
-                              <span style={{ color: '#94a3b8' }} title="Utilizador alterou a senha ou cadastro anterior à referência">
+                              <span style={{ color: "var(--text-secondary, #94a3b8)" }} title="Utilizador alterou a senha ou cadastro anterior à referência">
                                 —
                               </span>
                             )
@@ -1145,12 +1145,12 @@ export default function Usuarios() {
                               {ref.senha_cadastrada}
                             </span>
                           ) : (
-                            <span style={{ letterSpacing: '0.12em', color: '#64748b' }}>••••••</span>
+                            <span style={{ letterSpacing: '0.12em', color: "var(--text-secondary, #64748b)" }}>••••••</span>
                           )
                         })()}
                       </td>
                     ) : null}
-                    <td style={{ ...tdStyle, fontSize: '13px', color: '#475569' }}>
+                    <td style={{ ...tdStyle, fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
                       {usuario.paginas_permitidas && usuario.paginas_permitidas.length > 0 ? (
                         <span title={usuario.paginas_permitidas.join(', ')}>
                           {usuario.paginas_permitidas.length} rota
@@ -1212,7 +1212,7 @@ export default function Usuarios() {
                 borderTop: '1px solid #e8ecf1',
               }}
             >
-              <span style={{ fontSize: '13px', color: '#64748b' }}>
+              <span style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                 {totalFiltrados === 0
                   ? '0 registos'
                   : `${paginaSegura * itensPorPagina + 1}–${Math.min(
@@ -1221,7 +1221,7 @@ export default function Usuarios() {
                     )} de ${totalFiltrados}`}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", display: 'flex', alignItems: 'center', gap: '6px' }}>
                   Por página
                   <select
                     value={itensPorPagina}
@@ -1243,7 +1243,7 @@ export default function Usuarios() {
                 >
                   Anterior
                 </button>
-                <span style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <span style={{ fontSize: '13px', color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                   Página {paginaSegura + 1} / {totalPaginas}
                 </span>
                 <button
@@ -1263,7 +1263,7 @@ export default function Usuarios() {
       {usuarioEmEdicao && podeGerenciar ? (
         <div
           style={{
-            background: '#fff',
+            background: "var(--bg-card, #ffffff)",
             padding: '20px',
             borderRadius: '12px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -1271,10 +1271,10 @@ export default function Usuarios() {
             border: '1px solid #bfdbfe',
           }}
         >
-          <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             Editar usuário
           </h2>
-          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
+          <p style={{ margin: '0 0 16px', fontSize: '14px', color: "var(--text-secondary, #64748b)" }}>
             Altere nome, e-mail, cargo ou status.
             {podeRedefinirSenhaOutro
               ? ' Informe uma nova senha apenas se precisar redefinir o acesso (suporte / esquecimento).'
@@ -1371,11 +1371,11 @@ export default function Usuarios() {
                 style={{
                   marginTop: '24px',
                   paddingTop: '20px',
-                  borderTop: '1px solid #e2e8f0',
+                  borderTop: "1px solid var(--border-color, #e2e8f0)",
                 }}
               >
                 <div style={sectionTitleStyle}>Acesso por páginas</div>
-                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', maxWidth: '720px' }}>
+                <p style={{ margin: '0 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)", maxWidth: '720px' }}>
                   «Apenas cargo» segue as regras normais do perfil. «Lista de páginas» restringe o menu às rotas
                   marcadas (o utilizador continua a precisar de cargo permitido em cada rota).
                 </p>
@@ -1426,7 +1426,7 @@ export default function Usuarios() {
             <h2 id="modal-paginas-titulo" style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800 }}>
               Páginas permitidas
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
+            <p style={{ margin: '0 0 16px', fontSize: '14px', color: "var(--text-secondary, #64748b)" }}>
               <strong>{modalPaginasUsuario.nome}</strong> ({modalPaginasUsuario.email})
             </p>
 
@@ -1465,7 +1465,7 @@ const sectionTitleStyle = {
   marginBottom: '12px',
   fontSize: '16px',
   fontWeight: 700,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 
 const grid4Style = {
@@ -1482,12 +1482,12 @@ const inputStyle = {
   fontSize: '14px',
   outline: 'none',
   boxSizing: 'border-box' as const,
-  backgroundColor: '#fff',
+  backgroundColor: 'var(--bg-card, #ffffff)',
 }
 
 const secondaryButtonStyle = {
   backgroundColor: '#e5e7eb',
-  color: '#111827',
+  color: "var(--text-primary, #111827)",
   border: 'none',
   padding: '10px 14px',
   borderRadius: '8px',
@@ -1536,7 +1536,7 @@ const labelMiniStyle: CSSProperties = {
   display: 'block',
   fontSize: '12px',
   fontWeight: 700,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   marginBottom: '6px',
 }
 
@@ -1585,11 +1585,11 @@ const modalPaginasBackdropStyle: CSSProperties = {
 }
 
 const modalPaginasPanelStyle: CSSProperties = {
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
   borderRadius: '14px',
   padding: '22px',
   maxWidth: '720px',
   width: '100%',
   boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
 }

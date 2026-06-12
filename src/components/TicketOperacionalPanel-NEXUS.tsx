@@ -52,8 +52,8 @@ function mensagemErroSupabase(err: unknown): string {
 }
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '18px',
   padding: '22px 24px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -546,9 +546,9 @@ export function TicketOperacionalPanel({
               >
                 Ticket gerado
               </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
+              <div style={{ fontSize: '17px', fontWeight: 800, color: "var(--text-primary, #0f172a)", lineHeight: 1.3 }}>
                 {numero.trim() ? `N.º ${numero.trim()}` : `Coleta ${coletaAtiva.numero}`}
-                <span style={{ color: '#64748b', fontWeight: 600 }}> · </span>
+                <span style={{ color: "var(--text-secondary, #64748b)", fontWeight: 600 }}> · </span>
                 {coletaAtiva.cliente || '—'}
               </div>
               <div style={{ fontSize: '12px', color: '#047857', marginTop: '6px', fontWeight: 600 }}>
@@ -570,7 +570,7 @@ export function TicketOperacionalPanel({
             }}
           >
             <div>
-              <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
+              <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                 Registo e impressão do ticket interno
               </h1>
               <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
@@ -586,12 +586,12 @@ export function TicketOperacionalPanel({
                 margin: 0,
                 fontSize: '18px',
                 fontWeight: 800,
-                color: '#0f172a',
+                color: "var(--text-primary, #0f172a)",
               }}
             >
               {ocultarSeletorColeta ? 'Ticket desta pesagem' : 'Ticket operacional'}
             </h2>
-            <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
               {ocultarSeletorColeta ? (
                 <>
                   Após salvar a pesagem, o ticket é gerado automaticamente. Ajuste <strong>tipo</strong> ou{' '}
@@ -610,7 +610,7 @@ export function TicketOperacionalPanel({
 
         {variant === 'page' ? (
           <div style={cardStyle}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>Coleta</div>
+            <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '12px' }}>Coleta</div>
             <select
               value={coletaAtiva?.id ?? ''}
               onChange={(e) => onTrocarColeta?.(e.target.value)}
@@ -620,7 +620,7 @@ export function TicketOperacionalPanel({
                 maxWidth: 480,
                 padding: '10px 12px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
+                border: "1px solid var(--input-border, #cbd5e1)",
                 fontSize: '14px',
               }}
             >
@@ -636,14 +636,14 @@ export function TicketOperacionalPanel({
             </select>
 
             {coletaAtiva ? (
-              <div style={{ marginTop: '16px', fontSize: '14px', color: '#475569', lineHeight: 1.6 }}>
+              <div style={{ marginTop: '16px', fontSize: '14px', color: "var(--text-secondary, #475569)", lineHeight: 1.6 }}>
                 <div>
                   <strong>Fase:</strong> {formatarFaseFluxoOficialParaUI(coletaAtiva.etapaFluxo)}{' '}
-                  <span style={{ color: '#94a3b8' }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
+                  <span style={{ color: "var(--text-secondary, #94a3b8)" }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
                 </div>
-                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
-                  <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>Referência rápida</div>
-                  <div style={{ fontSize: '13px', color: '#334155' }}>
+                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', border: "1px solid var(--border-color, #e5e7eb)", background: "var(--bg-subtle, #f8fafc)" }}>
+                  <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '6px' }}>Referência rápida</div>
+                  <div style={{ fontSize: '13px', color: "var(--text-primary, #334155)" }}>
                     <strong>Pesagem:</strong>{' '}
                     {carregandoPreReq ? '…' : preReqPesagem ? 'há registo' : 'sem registo'} ·{' '}
                     <Link to={`/controle-massa?${montarParamsColeta(coletaAtiva).toString()}`} style={{ fontWeight: 700 }}>
@@ -667,19 +667,19 @@ export function TicketOperacionalPanel({
             style={{
               ...cardStyle,
               padding: '14px 18px',
-              background: '#f8fafc',
+              background: "var(--bg-subtle, #f8fafc)",
               borderStyle: 'dashed',
             }}
           >
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
               Coleta ativa
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               {coletaAtiva.numero} · {coletaAtiva.cliente || '—'}
             </div>
-            <div style={{ marginTop: '8px', fontSize: '13px', color: '#475569' }}>
+            <div style={{ marginTop: '8px', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
               <strong>Fase:</strong> {formatarFaseFluxoOficialParaUI(coletaAtiva.etapaFluxo)}{' '}
-              <span style={{ color: '#94a3b8' }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
+              <span style={{ color: "var(--text-secondary, #94a3b8)" }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
               {' · '}
               <strong>Pesagem:</strong>{' '}
               {carregandoPreReq ? '…' : preReqPesagem ? 'registrada' : 'sem registo'}
@@ -687,7 +687,7 @@ export function TicketOperacionalPanel({
           </div>
         ) : (
           <div style={{ ...cardStyle, padding: '16px 18px' }}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>Coleta para o ticket</div>
+            <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '10px' }}>Coleta para o ticket</div>
             <select
               value={coletaAtiva?.id ?? ''}
               onChange={(e) => onTrocarColeta?.(e.target.value)}
@@ -697,7 +697,7 @@ export function TicketOperacionalPanel({
                 maxWidth: '100%',
                 padding: '10px 12px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
+                border: "1px solid var(--input-border, #cbd5e1)",
                 fontSize: '14px',
               }}
             >
@@ -714,18 +714,18 @@ export function TicketOperacionalPanel({
               ))}
             </select>
             {coletaAtiva ? (
-              <div style={{ marginTop: '12px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+              <div style={{ marginTop: '12px', fontSize: '13px', color: "var(--text-secondary, #475569)", lineHeight: 1.5 }}>
                 <div>
                   <strong>Fase:</strong> {formatarFaseFluxoOficialParaUI(coletaAtiva.etapaFluxo)}{' '}
-                  <span style={{ color: '#94a3b8' }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
+                  <span style={{ color: "var(--text-secondary, #94a3b8)" }}>({formatarEtapaParaUI(coletaAtiva.etapaFluxo)})</span>
                 </div>
-                <div style={{ marginTop: '6px', color: '#64748b' }}>
+                <div style={{ marginTop: '6px', color: "var(--text-secondary, #64748b)" }}>
                   <strong>Pesagem no sistema:</strong>{' '}
                   {carregandoPreReq ? '…' : preReqPesagem ? 'há registo — pode gravar o ticket' : 'sem registo — pode gravar o ticket na mesma ou lançar pesagem acima'}
                 </div>
               </div>
             ) : (
-              <p style={{ margin: '12px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+              <p style={{ margin: '12px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                 Depois de escolher a coleta, defina <strong>tipo</strong> (saída / frete), o{' '}
                 <strong>número</strong> e use <strong>Gravar ticket</strong>.
               </p>
@@ -736,23 +736,23 @@ export function TicketOperacionalPanel({
         {coletaAtiva ? (
           <>
             {mostrarResumoTicket ? (
-              <div style={{ ...cardStyle, background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-                <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>Ticket</div>
-                <p style={{ margin: 0, fontSize: '14px', color: '#334155' }}>
+              <div style={{ ...cardStyle, background: "var(--status-success-bg, #f0fdf4)", borderColor: '#bbf7d0' }}>
+                <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '10px' }}>Ticket</div>
+                <p style={{ margin: 0, fontSize: '14px', color: "var(--text-primary, #334155)" }}>
                   <strong>Tipo:</strong> {labelTipoTicket[tipoTicket]}
                 </p>
                 {numero ? (
-                  <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#334155' }}>
+                  <p style={{ margin: '8px 0 0', fontSize: '14px', color: "var(--text-primary, #334155)" }}>
                     <strong>Número:</strong> {numero}
                   </p>
                 ) : null}
                 {criadoEm ? (
-                  <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#64748b' }}>
+                  <p style={{ margin: '10px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                     Registo: {new Date(criadoEm).toLocaleString('pt-BR')}
                   </p>
                 ) : null}
                 {fluxoAlemDoTicket && coletaAtiva.etapaFluxo !== 'TICKET_GERADO' ? (
-                  <p style={{ margin: '12px 0 0', fontSize: '13px', color: '#64748b' }}>
+                  <p style={{ margin: '12px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                     O fluxo já avançou (aprovação / faturamento).
                   </p>
                 ) : null}
@@ -771,9 +771,9 @@ export function TicketOperacionalPanel({
                           style={{
                             padding: '10px 20px',
                             borderRadius: '10px',
-                            border: '1px solid #cbd5e1',
-                            background: '#ffffff',
-                            color: '#0f172a',
+                            border: "1px solid var(--input-border, #cbd5e1)",
+                            background: "var(--bg-card, #ffffff)",
+                            color: "var(--text-primary, #0f172a)",
                             fontWeight: 700,
                             fontSize: '14px',
                             cursor: 'pointer',
@@ -804,7 +804,7 @@ export function TicketOperacionalPanel({
             ) : null}
 
             <form onSubmit={handleSubmit} style={cardStyle}>
-              <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>Dados do ticket</div>
+              <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '12px' }}>Dados do ticket</div>
 
               {reeditarNaEtapaTicketGerado ? (
                 <button
@@ -814,8 +814,8 @@ export function TicketOperacionalPanel({
                     marginBottom: '12px',
                     padding: '8px 14px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
+                    border: "1px solid var(--input-border, #cbd5e1)",
+                    background: "var(--bg-subtle, #f8fafc)",
                     fontWeight: 600,
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -826,7 +826,7 @@ export function TicketOperacionalPanel({
               ) : null}
 
               {carregandoTicket ? (
-                <p style={{ color: '#64748b' }}>A carregar…</p>
+                <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
               ) : (
                 <>
                   {!podeMutar ? (
@@ -836,7 +836,7 @@ export function TicketOperacionalPanel({
                   ) : null}
 
                   <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
                       Tipo de ticket
                     </div>
                     <select
@@ -852,7 +852,7 @@ export function TicketOperacionalPanel({
                         maxWidth: 320,
                         padding: '10px 12px',
                         borderRadius: '10px',
-                        border: '1px solid #cbd5e1',
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: '14px',
                         opacity: podeEditarFormulario ? 1 : 0.85,
                       }}
@@ -864,7 +864,7 @@ export function TicketOperacionalPanel({
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>
                       Número
                     </div>
                     <input
@@ -878,7 +878,7 @@ export function TicketOperacionalPanel({
                         maxWidth: 400,
                         padding: '10px 12px',
                         borderRadius: '10px',
-                        border: '1px solid #cbd5e1',
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: '14px',
                         opacity: podeEditarFormulario ? 1 : 0.85,
                       }}
@@ -922,7 +922,7 @@ export function TicketOperacionalPanel({
             </form>
           </>
         ) : variant === 'page' ? (
-          <div style={{ ...cardStyle, color: '#64748b' }}>
+          <div style={{ ...cardStyle, color: "var(--text-secondary, #64748b)" }}>
             Escolha uma coleta ou abra a página a partir do Controle de Massa com os parâmetros na URL.
           </div>
         ) : null}

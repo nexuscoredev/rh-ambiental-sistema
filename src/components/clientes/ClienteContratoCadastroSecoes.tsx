@@ -33,17 +33,17 @@ const btnRemover: CSSProperties = {
 }
 
 const cardItem: CSSProperties = {
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '14px',
   padding: '14px',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const labelCampo: CSSProperties = {
   display: 'block',
   fontSize: '12px',
   fontWeight: 700,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   marginBottom: '6px',
 }
 
@@ -93,9 +93,9 @@ export function ClienteContratoCadastroSecoes({
           marginTop: '22px',
           fontSize: '15px',
           fontWeight: 800,
-          color: '#0f172a',
+          color: "var(--text-primary, #0f172a)",
           paddingBottom: '4px',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: "1px solid var(--border-color, #e5e7eb)",
         }}
       >
         Veículos e Equipamentos
@@ -112,7 +112,7 @@ export function ClienteContratoCadastroSecoes({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Veículos</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Veículos</div>
           <button type="button" onClick={onAdicionarVeiculo} style={btnAdicionar}>
             + Adicionar veículo
           </button>
@@ -129,7 +129,7 @@ export function ClienteContratoCadastroSecoes({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Veículo {index + 1}
                 </span>
                 <button type="button" onClick={() => onRemoverVeiculo(index)} style={btnRemover}>
@@ -171,7 +171,7 @@ export function ClienteContratoCadastroSecoes({
                     gap: '8px',
                     fontSize: '13px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     paddingBottom: '10px',
                     whiteSpace: 'nowrap',
                   }}
@@ -200,7 +200,7 @@ export function ClienteContratoCadastroSecoes({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Equipamentos</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Equipamentos</div>
           <button type="button" onClick={onAdicionarEquipamento} style={btnAdicionar}>
             + Adicionar equipamento
           </button>
@@ -217,7 +217,7 @@ export function ClienteContratoCadastroSecoes({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Equipamento {index + 1}
                 </span>
                 <button type="button" onClick={() => onRemoverEquipamento(index)} style={btnRemover}>
@@ -259,7 +259,7 @@ export function ClienteContratoCadastroSecoes({
                     gap: '8px',
                     fontSize: '13px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     paddingBottom: '10px',
                     whiteSpace: 'nowrap',
                   }}
@@ -288,7 +288,7 @@ export function ClienteContratoCadastroSecoes({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Mão de obra</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>Mão de obra</div>
           <button type="button" onClick={onAdicionarMaoObra} style={btnAdicionar}>
             + Adicionar mão de obra
           </button>
@@ -305,7 +305,7 @@ export function ClienteContratoCadastroSecoes({
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Mão de obra {index + 1}
                 </span>
                 <button type="button" onClick={() => onRemoverMaoObra(index)} style={btnRemover}>
@@ -347,7 +347,7 @@ export function ClienteContratoCadastroSecoes({
                     gap: '8px',
                     fontSize: '13px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     paddingBottom: '10px',
                     whiteSpace: 'nowrap',
                   }}
@@ -377,10 +377,10 @@ export function ClienteContratoCadastroSecoes({
           }}
         >
           <div style={{ flex: '1 1 240px', minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155' }}>
-              Resíduos <span style={{ color: '#64748b', fontWeight: 500 }}>(opcional)</span>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: "var(--text-primary, #334155)" }}>
+              Resíduos <span style={{ color: "var(--text-secondary, #64748b)", fontWeight: 500 }}>(opcional)</span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
               Tipo de resíduo (texto livre), classe, valor por kg, frequência e faturamento mínimo em kg por linha.
             </p>
           </div>
@@ -400,7 +400,7 @@ export function ClienteContratoCadastroSecoes({
                   gap: '12px',
                 }}
               >
-                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>Resíduo {index + 1}</div>
+                <div style={{ fontSize: '14px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>Resíduo {index + 1}</div>
                 <button type="button" onClick={() => onRemoverResiduo(index)} style={btnRemover}>
                   Remover
                 </button>

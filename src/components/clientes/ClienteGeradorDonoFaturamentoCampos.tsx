@@ -24,7 +24,7 @@ const labelCheckStyle: CSSProperties = {
   gap: '8px',
   fontSize: '14px',
   fontWeight: 600,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   cursor: 'pointer',
   userSelect: 'none',
 }
@@ -54,7 +54,7 @@ export function ClienteGeradorDonoFaturamentoCampos({
         style={{
           fontSize: '15px',
           fontWeight: 800,
-          color: '#334155',
+          color: "var(--text-primary, #334155)",
           marginBottom: '12px',
         }}
       >
@@ -68,11 +68,11 @@ export function ClienteGeradorDonoFaturamentoCampos({
           padding: '12px 14px',
           marginBottom: opcao === 'nao' ? '12px' : 0,
           borderRadius: '10px',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
+          background: "var(--bg-subtle, #f8fafc)",
+          border: "1px solid var(--border-color, #e2e8f0)",
         }}
       >
-        <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#475569' }}>
+        <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #475569)" }}>
           Gerador é dono do Faturamento?
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px' }}>

@@ -791,7 +791,7 @@ export default function EnvioNF() {
                   margin: 0,
                   fontSize: '26px',
                   fontWeight: 800,
-                  color: '#0f172a',
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 {modoMedicao ? 'Mala Direta — Medição' : 'Mala Direta'}
@@ -836,7 +836,7 @@ export default function EnvioNF() {
                     margin: '10px 0 0',
                     padding: '10px 14px',
                     borderRadius: '10px',
-                    background: '#ecfdf5',
+                    background: "var(--accent-teal-soft, #ecfdf5)",
                     border: '1px solid #a7f3d0',
                     fontSize: '13px',
                     color: '#065f46',
@@ -853,7 +853,7 @@ export default function EnvioNF() {
                     margin: '10px 0 0',
                     padding: '10px 14px',
                     borderRadius: '10px',
-                    background: '#f0fdfa',
+                    background: "var(--accent-teal-soft, #f0fdfa)",
                     border: '1px solid #99f6e4',
                     fontSize: '13px',
                     color: '#0f766e',
@@ -881,8 +881,8 @@ export default function EnvioNF() {
                 </p>
               ) : null}
               {usuarioCargo ? (
-                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                  Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
+                  Perfil: <span style={{ color: "var(--text-primary, #0f172a)" }}>{usuarioCargo}</span>
                   {!podeDisparar
                     ? ' · apenas consulta / histórico'
                     : ' · pode enviar e-mails ou guardar rascunho'}
@@ -892,15 +892,15 @@ export default function EnvioNF() {
             <div
               style={{
                 minWidth: '200px',
-                background: '#ffffff',
-                border: '1px solid #e5e7eb',
+                background: "var(--bg-card, #ffffff)",
+                border: "1px solid var(--border-color, #e5e7eb)",
                 borderRadius: '16px',
                 padding: '16px 18px',
                 boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
               }}
             >
-              <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '6px' }}>Selecionados com e-mail</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>
+              <div style={{ fontSize: '14px', color: "var(--text-secondary, #64748b)", marginBottom: '6px' }}>Selecionados com e-mail</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                 {selecionadosComEmail.length}
               </div>
             </div>
@@ -911,7 +911,7 @@ export default function EnvioNF() {
               style={{
                 padding: '14px 16px',
                 borderRadius: '12px',
-                background: '#fef2f2',
+                background: "var(--status-error-bg, #fef2f2)",
                 border: '1px solid #fecaca',
                 color: '#991b1b',
                 fontWeight: 600,
@@ -925,7 +925,7 @@ export default function EnvioNF() {
               style={{
                 padding: '14px 16px',
                 borderRadius: '12px',
-                background: '#ecfdf5',
+                background: "var(--accent-teal-soft, #ecfdf5)",
                 border: '1px solid #bbf7d0',
                 color: '#15803d',
                 fontWeight: 600,
@@ -937,8 +937,8 @@ export default function EnvioNF() {
 
           <div
             style={{
-              background: '#ffffff',
-              border: '1px solid #e5e7eb',
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-color, #e5e7eb)",
               borderRadius: '18px',
               padding: '20px',
               boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -963,7 +963,7 @@ export default function EnvioNF() {
                   minWidth: '220px',
                   height: '42px',
                   borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
+                  border: "1px solid var(--input-border, #cbd5e1)",
                   padding: '0 14px',
                   fontSize: '14px',
                 }}
@@ -975,7 +975,7 @@ export default function EnvioNF() {
                   gap: '8px',
                   fontSize: '14px',
                   fontWeight: 600,
-                  color: '#334155',
+                  color: "var(--text-primary, #334155)",
                   cursor: 'pointer',
                 }}
               >
@@ -1008,7 +1008,7 @@ export default function EnvioNF() {
                 onClick={limparSelecao}
                 style={{
                   background: '#e5e7eb',
-                  color: '#111827',
+                  color: "var(--text-primary, #111827)",
                   border: 'none',
                   borderRadius: '10px',
                   padding: '10px 16px',
@@ -1024,9 +1024,9 @@ export default function EnvioNF() {
                 onClick={() => void carregarClientes()}
                 disabled={loading}
                 style={{
-                  background: '#f1f5f9',
-                  color: '#334155',
-                  border: '1px solid #cbd5e1',
+                  background: "var(--bg-inset, #f1f5f9)",
+                  color: "var(--text-primary, #334155)",
+                  border: "1px solid var(--input-border, #cbd5e1)",
                   borderRadius: '10px',
                   padding: '10px 16px',
                   fontWeight: 700,
@@ -1048,24 +1048,24 @@ export default function EnvioNF() {
             <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '640px' }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                  <tr style={{ background: "var(--bg-subtle, #f8fafc)", borderBottom: "1px solid var(--border-color, #e5e7eb)" }}>
                     <th style={{ textAlign: 'left', padding: '12px', width: '44px' }} />
-                    <th style={{ textAlign: 'left', padding: '12px', color: '#0f172a', fontWeight: 800 }}>Cliente</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: '#0f172a', fontWeight: 800 }}>Razão social</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: '#0f172a', fontWeight: 800 }}>E-mail NF</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: '#0f172a', fontWeight: 800 }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '12px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>Cliente</th>
+                    <th style={{ textAlign: 'left', padding: '12px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>Razão social</th>
+                    <th style={{ textAlign: 'left', padding: '12px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>E-mail NF</th>
+                    <th style={{ textAlign: 'left', padding: '12px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: "var(--text-secondary, #64748b)" }}>
                         A carregar clientes…
                       </td>
                     </tr>
                   ) : clientesFiltrados.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: "var(--text-secondary, #64748b)" }}>
                         Nenhum cliente neste filtro. Ajuste a busca ou cadastre e-mail NF em Clientes.
                       </td>
                     </tr>
@@ -1089,8 +1089,8 @@ export default function EnvioNF() {
                               title={!temEmail ? 'Preencha o e-mail NF no cadastro do cliente' : undefined}
                             />
                           </td>
-                          <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>{c.nome}</td>
-                          <td style={{ padding: '12px', color: '#334155' }}>{c.razao_social}</td>
+                          <td style={{ padding: '12px', fontWeight: 600, color: "var(--text-primary, #0f172a)" }}>{c.nome}</td>
+                          <td style={{ padding: '12px', color: "var(--text-primary, #334155)" }}>{c.razao_social}</td>
                           <td style={{ padding: '12px', color: temEmail ? '#0f172a' : '#94a3b8' }}>
                             {temEmail ? c.email_nf : '—'}
                           </td>
@@ -1110,13 +1110,13 @@ export default function EnvioNF() {
                   padding: '14px 16px',
                   borderRadius: '12px',
                   border: '1px solid #bae6fd',
-                  background: '#f0f9ff',
+                  background: "var(--status-info-bg, #f0f9ff)",
                 }}
               >
                 <div style={{ fontSize: '13px', fontWeight: 800, color: '#0369a1', marginBottom: '8px' }}>
                   Contas em aberto (Fase 9) — marque as coletas para registar o envio em contas a receber
                 </div>
-                <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#475569' }}>
+                <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #475569)" }}>
                   Se não marcar nada, usa só o contexto <code>coleta=</code> na URL (se existir). Com marcas, todas
                   recebem o mesmo id de log do disparo.
                 </p>
@@ -1153,7 +1153,7 @@ export default function EnvioNF() {
                   marginTop: '16px',
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  background: '#f0fdfa',
+                  background: "var(--accent-teal-soft, #f0fdfa)",
                   border: '1px solid #99f6e4',
                   fontSize: '13px',
                   color: '#0f766e',
@@ -1166,7 +1166,7 @@ export default function EnvioNF() {
             ) : null}
 
             <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '8px' }}>
                 Assunto do e-mail
               </div>
               <input
@@ -1179,7 +1179,7 @@ export default function EnvioNF() {
                   maxWidth: '560px',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
+                  border: "1px solid var(--input-border, #cbd5e1)",
                   fontSize: '14px',
                   boxSizing: 'border-box',
                 }}
@@ -1190,7 +1190,7 @@ export default function EnvioNF() {
               <>
                 <div style={{ marginTop: '20px' }}>
                   <div
-                    style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}
+                    style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '8px' }}
                   >
                     Mês de referência no corpo do e-mail
                   </div>
@@ -1205,12 +1205,12 @@ export default function EnvioNF() {
                       maxWidth: '220px',
                       padding: '10px 12px',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       fontSize: '14px',
                       boxSizing: 'border-box',
                     }}
                   />
-                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", maxWidth: '720px' }}>
                     Padrão: mês anterior ({formatarMesReferenciaMedicao()}). Aparece na frase «…serviços prestados no
                     mês de …».
                   </p>
@@ -1226,7 +1226,7 @@ export default function EnvioNF() {
                       marginBottom: '8px',
                     }}
                   >
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>
                       Corpo do e-mail (conferência de medição)
                     </div>
                     <button
@@ -1242,8 +1242,8 @@ export default function EnvioNF() {
                       style={{
                         padding: '6px 10px',
                         borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#fff',
+                        border: "1px solid var(--input-border, #cbd5e1)",
+                        background: "var(--bg-card, #ffffff)",
                         fontSize: '12px',
                         fontWeight: 700,
                         cursor: podeDisparar ? 'pointer' : 'not-allowed',
@@ -1262,17 +1262,17 @@ export default function EnvioNF() {
                       maxWidth: '720px',
                       padding: '12px 14px',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      background: '#fff',
+                      border: "1px solid var(--input-border, #cbd5e1)",
+                      background: "var(--bg-card, #ffffff)",
                       fontSize: '13px',
                       lineHeight: 1.5,
-                      color: '#334155',
+                      color: "var(--text-primary, #334155)",
                       fontFamily: 'inherit',
                       resize: 'vertical',
                       boxSizing: 'border-box',
                     }}
                   />
-                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", maxWidth: '720px' }}>
                     Este texto é o que será enviado no e-mail (não confundir com a observação interna abaixo).
                   </p>
                 </div>
@@ -1280,7 +1280,7 @@ export default function EnvioNF() {
             ) : null}
 
             <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '8px' }}>
                 Observação interna (opcional, gravada no log)
               </div>
               <textarea
@@ -1298,7 +1298,7 @@ export default function EnvioNF() {
                   maxWidth: '560px',
                   padding: '12px',
                   borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
+                  border: "1px solid var(--input-border, #cbd5e1)",
                   fontSize: '14px',
                   resize: 'vertical',
                   boxSizing: 'border-box',
@@ -1307,10 +1307,10 @@ export default function EnvioNF() {
             </div>
 
             <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '8px' }}>
                 {modoMedicao ? 'Anexar relatório de medição' : 'Anexar Nota Fiscal'}
               </div>
-              <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)", maxWidth: '720px' }}>
                 {modoMedicao ? (
                   <>
                     PDF do relatório de medição (gere na esteira de faturamento). Até {MAX_ANEXOS} ficheiros,{' '}
@@ -1333,11 +1333,11 @@ export default function EnvioNF() {
                     gap: '8px',
                     padding: '10px 16px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     background: podeDisparar ? '#f8fafc' : '#e2e8f0',
                     fontSize: '14px',
                     fontWeight: 700,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     cursor: podeDisparar ? 'pointer' : 'not-allowed',
                   }}
                 >
@@ -1364,9 +1364,9 @@ export default function EnvioNF() {
                     onClick={limparAnexos}
                     disabled={!podeDisparar}
                     style={{
-                      background: '#ffffff',
-                      color: '#64748b',
-                      border: '1px solid #cbd5e1',
+                      background: "var(--bg-card, #ffffff)",
+                      color: "var(--text-secondary, #64748b)",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       borderRadius: '10px',
                       padding: '10px 14px',
                       fontWeight: 700,
@@ -1384,14 +1384,14 @@ export default function EnvioNF() {
                     margin: '12px 0 0',
                     padding: '0 0 0 18px',
                     fontSize: '13px',
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     maxWidth: '560px',
                   }}
                 >
                   {anexoFiles.map((f, i) => (
                     <li key={`${f.name}-${f.size}-${i}`} style={{ marginBottom: '4px' }}>
                       <span style={{ fontWeight: 600 }}>{f.name}</span>
-                      <span style={{ color: '#94a3b8' }}> · {formatarTamanho(f.size)}</span>
+                      <span style={{ color: "var(--text-secondary, #94a3b8)" }}> · {formatarTamanho(f.size)}</span>
                       {podeDisparar ? (
                         <>
                           {' '}
@@ -1421,10 +1421,10 @@ export default function EnvioNF() {
 
             {!modoMedicao ? (
             <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '8px' }}>
                 Anexar boleto (PDF)
               </div>
-              <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', maxWidth: '720px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)", maxWidth: '720px' }}>
                 Um ficheiro <strong>PDF</strong> por envio, até {formatarTamanho(MAX_BYTES_ANEXO)}. É enviado junto com
                 as notas fiscais no e-mail real.
               </p>
@@ -1436,11 +1436,11 @@ export default function EnvioNF() {
                     gap: '8px',
                     padding: '10px 16px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    border: "1px solid var(--input-border, #cbd5e1)",
                     background: podeDisparar ? '#f8fafc' : '#e2e8f0',
                     fontSize: '14px',
                     fontWeight: 700,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     cursor: podeDisparar ? 'pointer' : 'not-allowed',
                   }}
                 >
@@ -1461,9 +1461,9 @@ export default function EnvioNF() {
                 </label>
                 {boletoFile ? (
                   <>
-                    <span style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                    <span style={{ fontSize: '13px', color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                       {boletoFile.name}
-                      <span style={{ color: '#94a3b8', fontWeight: 500 }}>
+                      <span style={{ color: "var(--text-secondary, #94a3b8)", fontWeight: 500 }}>
                         {' '}
                         · {formatarTamanho(boletoFile.size)}
                       </span>
@@ -1473,7 +1473,7 @@ export default function EnvioNF() {
                       onClick={limparBoleto}
                       disabled={!podeDisparar}
                       style={{
-                        background: '#ffffff',
+                        background: "var(--bg-card, #ffffff)",
                         color: '#b91c1c',
                         border: '1px solid #fecaca',
                         borderRadius: '10px',
@@ -1526,8 +1526,8 @@ export default function EnvioNF() {
                     : 'Guarda destinatários e observações para envio posterior, sem disparar e-mail.'
                 }
                 style={{
-                  background: '#ffffff',
-                  color: '#334155',
+                  background: "var(--bg-card, #ffffff)",
+                  color: "var(--text-primary, #334155)",
                   border: '2px solid #cbd5e1',
                   borderRadius: '12px',
                   padding: '12px 24px',
@@ -1542,7 +1542,7 @@ export default function EnvioNF() {
                 {enviando && envioModo === 'rascunho' ? 'A guardar rascunho…' : 'Rascunho'}
               </button>
             </div>
-            <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#64748b', maxWidth: '820px' }}>
+            <p style={{ margin: '12px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", maxWidth: '820px' }}>
               <strong>Outlook/Hotmail (SMTP):</strong> ative 2FA e uma <strong>senha de app</strong>. Nos Secrets:
               <code style={{ fontSize: '11px' }}> OUTLOOK_USER </code> e{' '}
               <code style={{ fontSize: '11px' }}> OUTLOOK_APP_PASSWORD </code>. Use SMTP na porta <strong>465</strong>{' '}
@@ -1562,43 +1562,43 @@ export default function EnvioNF() {
 
           <div
             style={{
-              background: '#ffffff',
-              border: '1px solid #e5e7eb',
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-color, #e5e7eb)",
               borderRadius: '18px',
               padding: '20px',
               boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
             }}
           >
-            <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Histórico recente
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
               Últimos registos em <code style={{ fontSize: '12px' }}>nf_envios_log</code> (rascunho, e-mail, Resend ou
               parcial).
             </p>
             {loadingLogs ? (
-              <p style={{ color: '#64748b' }}>A carregar…</p>
+              <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
             ) : logs.length === 0 ? (
-              <p style={{ color: '#64748b' }}>Ainda não há envios registados.</p>
+              <p style={{ color: "var(--text-secondary, #64748b)" }}>Ainda não há envios registados.</p>
             ) : (
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {logs.map((log) => (
                   <li
                     key={log.id}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: "1px solid var(--border-color, #e2e8f0)",
                       borderRadius: '12px',
                       padding: '14px 16px',
-                      background: '#fafbfc',
+                      background: "var(--bg-inset, #fafbfc)",
                     }}
                   >
-                    <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '6px' }}>
                       {formatarDataHora(log.created_at)} · {log.total_destinatarios} destinatário(s) · {log.modo}
                     </div>
                     {log.observacao ? (
-                      <div style={{ fontSize: '13px', color: '#475569', marginBottom: '8px' }}>{log.observacao}</div>
+                      <div style={{ fontSize: '13px', color: "var(--text-secondary, #475569)", marginBottom: '8px' }}>{log.observacao}</div>
                     ) : null}
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                       {(Array.isArray(log.destinatarios) ? log.destinatarios : []).map(
                         (
                           d: { email?: string; nome?: string; ok?: boolean; detalhe?: string },

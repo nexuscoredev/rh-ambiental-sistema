@@ -418,7 +418,7 @@ export default function RepresentantesRG() {
                   margin: 0,
                   fontSize: "26px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Representante RG
@@ -455,15 +455,15 @@ export default function RepresentantesRG() {
           {mostrarCadastro && (
             <div
               style={{
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
+                background: "var(--bg-card, #ffffff)",
+                border: "1px solid var(--border-color, #e5e7eb)",
                 borderRadius: "18px",
                 overflow: "hidden",
                 boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
               }}
             >
-              <div style={{ padding: "18px 20px", borderBottom: "1px solid #e5e7eb" }}>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+              <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-color, #e5e7eb)" }}>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   {editingId ? "Editar representante" : "Novo representante"}
                 </div>
               </div>
@@ -482,7 +482,7 @@ export default function RepresentantesRG() {
                     style={{
                       fontSize: "15px",
                       fontWeight: 800,
-                      color: "#334155",
+                      color: "var(--text-primary, #334155)",
                       marginBottom: "12px",
                     }}
                   >
@@ -571,7 +571,7 @@ export default function RepresentantesRG() {
                     }}
                     style={{
                       background: "#e5e7eb",
-                      color: "#111827",
+                      color: "var(--text-primary, #111827)",
                       border: "none",
                       borderRadius: "10px",
                       height: "42px",
@@ -589,8 +589,8 @@ export default function RepresentantesRG() {
 
           <div
             style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-color, #e5e7eb)",
               borderRadius: "18px",
               padding: "16px 18px 10px 18px",
               boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
@@ -607,7 +607,7 @@ export default function RepresentantesRG() {
               }}
             >
               <div>
-                <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   Lista de representantes
                 </h2>
               </div>
@@ -621,25 +621,25 @@ export default function RepresentantesRG() {
                   maxWidth: "100%",
                   height: "40px",
                   borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
+                  border: "1px solid var(--input-border, #d1d5db)",
+                  background: "var(--bg-card, #ffffff)",
                   outline: "none",
                   padding: "0 14px",
                   fontSize: "14px",
-                  color: "#111827",
+                  color: "var(--text-primary, #111827)",
                 }}
               />
             </div>
 
             {loading ? (
-              <div style={{ padding: "30px 0", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
+              <div style={{ padding: "30px 0", textAlign: "center", color: "var(--text-secondary, #64748b)", fontSize: "14px" }}>
                 A carregar…
               </div>
             ) : (
               <div className="rg-mobile-table-scroll" style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
+                    <tr style={{ background: "var(--bg-subtle, #f8fafc)", borderBottom: "1px solid var(--border-color, #e5e7eb)" }}>
                       <th style={thStyle}>Nome</th>
                       <th style={thStyle}>E-mail</th>
                       <th style={thStyle}>Telefone</th>
@@ -702,7 +702,7 @@ export default function RepresentantesRG() {
                               onClick={() => handleDelete(r.id)}
                               style={{
                                 flex: "0 0 auto",
-                                background: "#ffffff",
+                                background: "var(--bg-card, #ffffff)",
                                 color: "#b91c1c",
                                 border: "1px solid #fecaca",
                                 borderRadius: "6px",
@@ -724,7 +724,7 @@ export default function RepresentantesRG() {
                       <tr>
                         <td
                           colSpan={5}
-                          style={{ textAlign: "center", padding: "28px 12px", color: "#64748b" }}
+                          style={{ textAlign: "center", padding: "28px 12px", color: "var(--text-secondary, #64748b)" }}
                         >
                           Nenhum representante encontrado.
                         </td>
@@ -745,10 +745,10 @@ export default function RepresentantesRG() {
                   gap: "12px",
                   marginTop: "16px",
                   paddingTop: "14px",
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                 }}
               >
-                <span style={{ fontSize: "13px", color: "#64748b" }}>
+                <span style={{ fontSize: "13px", color: "var(--text-secondary, #64748b)" }}>
                   {totalCount === 0
                     ? "Nenhum registo"
                     : `Mostrando ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} de ${totalCount}`}
@@ -757,7 +757,7 @@ export default function RepresentantesRG() {
                   <label
                     style={{
                       fontSize: "13px",
-                      color: "#475569",
+                      color: "var(--text-secondary, #475569)",
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
@@ -770,7 +770,7 @@ export default function RepresentantesRG() {
                       style={{
                         padding: "6px 10px",
                         borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: "13px",
                       }}
                     >
@@ -788,7 +788,7 @@ export default function RepresentantesRG() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page <= 1 ? "#f1f5f9" : "#ffffff",
                       cursor: page <= 1 ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -797,7 +797,7 @@ export default function RepresentantesRG() {
                   >
                     Anterior
                   </button>
-                  <span style={{ fontSize: "13px", color: "#334155", fontWeight: 600 }}>
+                  <span style={{ fontSize: "13px", color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                     Página {page} / {totalPaginas}
                   </span>
                   <button
@@ -807,7 +807,7 @@ export default function RepresentantesRG() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page >= totalPaginas ? "#f1f5f9" : "#ffffff",
                       cursor: page >= totalPaginas ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -848,10 +848,10 @@ export default function RepresentantesRG() {
               maxWidth: "520px",
               maxHeight: "min(92vh, 900px)",
               overflowY: "auto",
-              background: "#ffffff",
+              background: "var(--bg-card, #ffffff)",
               borderRadius: "16px",
               boxShadow: "0 25px 50px rgba(15, 23, 42, 0.2)",
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--border-color, #e2e8f0)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -862,10 +862,10 @@ export default function RepresentantesRG() {
                 alignItems: "flex-start",
                 gap: "12px",
                 padding: "18px 20px",
-                borderBottom: "1px solid #e5e7eb",
+                borderBottom: "1px solid var(--border-color, #e5e7eb)",
               }}
             >
-              <h2 id={fichaTituloId} style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+              <h2 id={fichaTituloId} style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                 Ficha do representante
               </h2>
               <button
@@ -878,8 +878,8 @@ export default function RepresentantesRG() {
                   height: "36px",
                   border: "none",
                   borderRadius: "10px",
-                  background: "#f1f5f9",
-                  color: "#475569",
+                  background: "var(--bg-inset, #f1f5f9)",
+                  color: "var(--text-secondary, #475569)",
                   fontSize: "20px",
                   lineHeight: 1,
                   cursor: "pointer",
@@ -901,22 +901,22 @@ export default function RepresentantesRG() {
                   fontSize: "14px",
                 }}
               >
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Nome</dt>
-                <dd style={{ margin: 0, color: "#0f172a", fontWeight: 600 }}>{ficha.nome}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>E-mail</dt>
-                <dd style={{ margin: 0, color: "#1f2937", wordBreak: "break-all" }}>{ficha.email || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Telefone</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{ficha.telefone || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>CPF</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{ficha.cpf || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Observações</dt>
-                <dd style={{ margin: 0, color: "#1f2937", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Nome</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #0f172a)", fontWeight: 600 }}>{ficha.nome}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>E-mail</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)", wordBreak: "break-all" }}>{ficha.email || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Telefone</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{ficha.telefone || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>CPF</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{ficha.cpf || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Observações</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
                   {ficha.observacoes?.trim() || "—"}
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Cadastrado em</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{formatarDataHora(ficha.created_at)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>ID</dt>
-                <dd style={{ margin: 0, color: "#64748b", fontSize: "12px", wordBreak: "break-all" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Cadastrado em</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{formatarDataHora(ficha.created_at)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>ID</dt>
+                <dd style={{ margin: 0, color: "var(--text-secondary, #64748b)", fontSize: "12px", wordBreak: "break-all" }}>
                   {ficha.id}
                 </dd>
               </dl>
@@ -948,7 +948,7 @@ export default function RepresentantesRG() {
                   onClick={() => setFicha(null)}
                   style={{
                     background: "#e5e7eb",
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     border: "none",
                     borderRadius: "10px",
                     height: "40px",
@@ -973,12 +973,12 @@ const inputStyle: CSSProperties = {
   width: "100%",
   height: "40px",
   borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  border: "1px solid var(--input-border, #cbd5e1)",
+  background: "var(--bg-card, #ffffff)",
   outline: "none",
   padding: "0 12px",
   fontSize: "14px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   boxSizing: "border-box",
 };
 
@@ -995,14 +995,14 @@ const textareaStyle: CSSProperties = {
 const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "14px 12px",
-  color: "#0f172a",
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   whiteSpace: "nowrap",
 };
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  color: "#1f2937",
+  color: "var(--text-primary, #1f2937)",
   verticalAlign: "middle",
   whiteSpace: "nowrap",
 };

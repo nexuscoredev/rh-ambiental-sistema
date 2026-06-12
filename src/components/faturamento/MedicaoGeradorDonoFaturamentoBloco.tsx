@@ -15,20 +15,20 @@ const metaLinha: CSSProperties = {
   margin: '4px 0 0',
   fontSize: '12px',
   lineHeight: 1.5,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
 }
 
-const metaSep: CSSProperties = { color: '#94a3b8' }
+const metaSep: CSSProperties = { color: "var(--text-secondary, #94a3b8)" }
 
 const metaTitulo: CSSProperties = {
   fontSize: '13px',
   fontWeight: 800,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 
 const metaValor: CSSProperties = {
   fontWeight: 600,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
 }
 
 function MetaSeparador() {

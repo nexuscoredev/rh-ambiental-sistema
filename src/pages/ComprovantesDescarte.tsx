@@ -339,13 +339,13 @@ export default function ComprovantesDescarte() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: "var(--text-secondary, #64748b)" }}>
                     A carregar…
                   </td>
                 </tr>
               ) : linhas.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: "var(--text-secondary, #64748b)" }}>
                     Nenhum comprovante encontrado.
                   </td>
                 </tr>

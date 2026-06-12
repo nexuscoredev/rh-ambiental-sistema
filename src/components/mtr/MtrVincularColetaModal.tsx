@@ -28,7 +28,7 @@ const overlay: CSSProperties = {
 }
 
 const panel: CSSProperties = {
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
   borderRadius: '14px',
   maxWidth: '520px',
   width: '100%',
@@ -147,11 +147,11 @@ export function MtrVincularColetaModal({
         aria-labelledby="mtr-vincular-titulo"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: '16px 18px', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ padding: '16px 18px', borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>
           <h2 id="mtr-vincular-titulo" style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>
             Vincular coleta — MTR {mtrNumero}
           </h2>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
             Escolha a coleta operacional para liberar o envio à fila do faturamento.
             {contexto?.programacaoId
               ? ' Esta MTR tem programação: pode vincular todas as coletas livres de uma vez.'
@@ -162,9 +162,9 @@ export function MtrVincularColetaModal({
         <div style={{ padding: '12px 18px', overflowY: 'auto', flex: 1 }}>
           {erro ? <div className="alert-box alert-warning">{erro}</div> : null}
           {loading ? (
-            <p style={{ fontSize: '13px', color: '#64748b' }}>Carregando coletas…</p>
+            <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>Carregando coletas…</p>
           ) : elegiveis.length === 0 && !contexto?.programacaoId ? (
-            <p style={{ fontSize: '13px', color: '#64748b' }}>
+            <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
               Nenhuma coleta sem MTR encontrada
               {contexto?.cliente ? ` para o cliente «${contexto.cliente}»` : ''}. Crie o ticket na
               programação ou na página MTR.
@@ -214,7 +214,7 @@ export function MtrVincularColetaModal({
         <div
           style={{
             padding: '14px 18px',
-            borderTop: '1px solid #e2e8f0',
+            borderTop: "1px solid var(--border-color, #e2e8f0)",
             display: 'flex',
             flexWrap: 'wrap',
             gap: '8px',

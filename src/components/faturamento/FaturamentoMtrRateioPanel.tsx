@@ -15,8 +15,8 @@ const boxStyle: CSSProperties = {
   marginTop: '12px',
   padding: '12px',
   borderRadius: '10px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCargo }: Props) {
@@ -81,8 +81,8 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
 
   return (
     <div style={boxStyle}>
-      <strong style={{ fontSize: '14px', color: '#0f172a' }}>Cobrança rateada (MTR baixada — cenário complexo)</strong>
-      <p style={{ margin: '6px 0 10px', fontSize: '12px', color: '#64748b' }}>
+      <strong style={{ fontSize: '14px', color: "var(--text-primary, #0f172a)" }}>Cobrança rateada (MTR baixada — cenário complexo)</strong>
+      <p style={{ margin: '6px 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
         Coletado de um cliente e cobrado de outro: defina percentual ou valor por cliente de cobrança.
       </p>
 
@@ -115,7 +115,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
               }}
             >
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Cobrar de</label>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Cobrar de</label>
                 <select
                   value={linha.cliente_cobranca_id}
                   onChange={(e) => {
@@ -123,7 +123,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
                     next[idx] = { ...next[idx], cliente_cobranca_id: e.target.value }
                     setLinhas(next)
                   }}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 >
                   <option value="">—</option>
                   {clientes.map((c) => (
@@ -134,7 +134,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>%</label>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>%</label>
                 <input
                   type="text"
                   value={linha.percentual ?? ''}
@@ -146,11 +146,11 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
                     }
                     setLinhas(next)
                   }}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>R$</label>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>R$</label>
                 <input
                   type="text"
                   value={linha.valor ?? ''}
@@ -162,7 +162,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
                     }
                     setLinhas(next)
                   }}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: "1px solid var(--input-border, #cbd5e1)" }}
                 />
               </div>
               {linhas.length > 1 ? (
@@ -188,7 +188,7 @@ export function FaturamentoMtrRateioPanel({ mtrId, mtrBaixaComplexa, usuarioCarg
           </div>
         </>
       ) : (
-        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Sem permissão para editar rateio.</p>
+        <p style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", margin: 0 }}>Sem permissão para editar rateio.</p>
       )}
       {msg ? <p style={{ fontSize: '12px', marginTop: '8px', color: msg.startsWith('Rateio') ? '#15803d' : '#b91c1c' }}>{msg}</p> : null}
     </div>

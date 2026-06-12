@@ -53,8 +53,8 @@ const COLETAS_PAGE = 1000
 const COLETAS_MAX_ROWS = 80_000
 
 const cardBase: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '16px',
   padding: '16px 18px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -65,14 +65,14 @@ const thStyle: CSSProperties = {
   padding: '10px 12px',
   fontSize: '13px',
   fontWeight: 800,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   whiteSpace: 'nowrap',
 }
 
 const tdStyle: CSSProperties = {
   padding: '10px 12px',
   fontSize: '13px',
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'middle',
 }
@@ -724,7 +724,7 @@ export default function PosVenda() {
           {erro ? (
             <div
               style={{
-                background: '#fef2f2',
+                background: "var(--status-error-bg, #fef2f2)",
                 border: '1px solid #fecaca',
                 color: '#991b1b',
                 padding: '14px 16px',
@@ -751,7 +751,7 @@ export default function PosVenda() {
                   margin: 0,
                   fontSize: '26px',
                   fontWeight: 800,
-                  color: '#0f172a',
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Carteira e acompanhamento pós-venda
@@ -792,7 +792,7 @@ export default function PosVenda() {
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
               A carregar indicadores…
             </div>
           ) : (
@@ -822,8 +822,8 @@ export default function PosVenda() {
                   { lab: 'Licença ≤ 30 dias', val: kpis.lic30 },
                 ].map((k) => (
                   <div key={k.lab} style={cardBase} title={'hint' in k ? k.hint : undefined}>
-                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{k.lab}</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>
+                    <div style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>{k.lab}</div>
+                    <div style={{ fontSize: '22px', fontWeight: 800, color: "var(--text-primary, #0f172a)", marginTop: '6px' }}>
                       {k.val}
                     </div>
                   </div>
@@ -845,12 +845,12 @@ export default function PosVenda() {
                       margin: '0 0 4px',
                       fontSize: '18px',
                       fontWeight: 800,
-                      color: '#0f172a',
+                      color: "var(--text-primary, #0f172a)",
                     }}
                   >
                     Visão geral da carteira
                   </h2>
-                  <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+                  <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                     Proporção de clientes ativos e inativos no cadastro.
                   </p>
                   <div style={{ position: 'relative', width: '100%', height: 200 }}>
@@ -891,7 +891,7 @@ export default function PosVenda() {
                           }}
                           contentStyle={{
                             borderRadius: '10px',
-                            border: '1px solid #e2e8f0',
+                            border: "1px solid var(--border-color, #e2e8f0)",
                             boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
                           }}
                         />
@@ -920,7 +920,7 @@ export default function PosVenda() {
                             fontSize: 'clamp(26px, 7vw, 34px)',
                             fontWeight: 800,
                             letterSpacing: '-0.04em',
-                            color: '#0f172a',
+                            color: "var(--text-primary, #0f172a)",
                             textShadow:
                               '0 0 20px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.95), 0 1px 0 rgba(255,255,255,1)',
                           }}
@@ -932,7 +932,7 @@ export default function PosVenda() {
                             marginTop: '6px',
                             fontSize: '12px',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: "var(--text-secondary, #64748b)",
                             letterSpacing: '0.06em',
                             textTransform: 'uppercase',
                             textShadow: '0 0 12px rgba(255,255,255,1), 0 1px 0 rgba(255,255,255,1)',
@@ -981,14 +981,14 @@ export default function PosVenda() {
                         padding: '8px 14px',
                         borderRadius: '999px',
                         background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-                        border: '1px solid #e2e8f0',
+                        border: "1px solid var(--border-color, #e2e8f0)",
                         fontSize: '13px',
                         fontWeight: 700,
-                        color: '#475569',
+                        color: "var(--text-secondary, #475569)",
                         boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
                       }}
                     >
-                      <span style={{ color: '#64748b' }}>{pctInativos}%</span>
+                      <span style={{ color: "var(--text-secondary, #64748b)" }}>{pctInativos}%</span>
                       <span style={{ width: 1, height: 14, background: '#cbd5e1', borderRadius: 1 }} />
                       <span>
                         {kpis.inativos} inativo{kpis.inativos === 1 ? '' : 's'}
@@ -1040,14 +1040,14 @@ export default function PosVenda() {
                     style={{
                       marginTop: '12px',
                       padding: '12px 14px',
-                      background: '#f8fafc',
+                      background: "var(--bg-subtle, #f8fafc)",
                       borderRadius: '12px',
                       fontSize: '13px',
-                      color: '#475569',
+                      color: "var(--text-secondary, #475569)",
                       lineHeight: 1.5,
                     }}
                   >
-                    <strong style={{ color: '#0f172a' }}>Como ler:</strong> inativos podem ser
+                    <strong style={{ color: "var(--text-primary, #0f172a)" }}>Como ler:</strong> inativos podem ser
                     arquivo comercial; ativos sem coleta são foco de desenvolvimento de negócio ou
                     reativação com a operação RG.
                   </div>
@@ -1059,12 +1059,12 @@ export default function PosVenda() {
                       margin: '0 0 4px',
                       fontSize: '18px',
                       fontWeight: 800,
-                      color: '#0f172a',
+                      color: "var(--text-primary, #0f172a)",
                     }}
                   >
                     São Paulo — zonas da carteira
                   </h2>
-                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b' }}>
+                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                     Mapa interativo do estado (OpenStreetMap): bolhas por zona da carteira, com tamanho
                     proporcional ao número de clientes. Referências geográficas fixas por categoria —
                     não é geocodificação de cada endereço. Fora de SP só na legenda. Clique na bolha ou
@@ -1086,12 +1086,12 @@ export default function PosVenda() {
                       margin: 0,
                       fontSize: '18px',
                       fontWeight: 800,
-                      color: '#0f172a',
+                      color: "var(--text-primary, #0f172a)",
                     }}
                   >
                     Fila de prioridades (pós-venda)
                   </h2>
-                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                     Clientes que requerem atenção: inativos, sem operação registada, licença ou
                     contacto. Até 60 linhas, ordenadas por urgência.
                     {filtroZonaSp !== 'todas' ? (
@@ -1104,7 +1104,7 @@ export default function PosVenda() {
                   </p>
                 </div>
                 {prioridadesFiltradas.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                  <div style={{ padding: '24px', textAlign: 'center', color: "var(--text-secondary, #64748b)" }}>
                     {prioridades.length === 0
                       ? 'Nenhum alerta neste momento — carteira consistente com os critérios acima.'
                       : 'Nenhum alerta nesta zona com o filtro atual — altere ou limpe o filtro no mapa.'}
@@ -1113,7 +1113,7 @@ export default function PosVenda() {
                   <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                       <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                        <tr style={{ background: "var(--bg-subtle, #f8fafc)", borderBottom: "1px solid var(--border-color, #e5e7eb)" }}>
                           <th style={thStyle}>Cliente</th>
                           <th style={thStyle}>Cidade / UF</th>
                           <th style={thStyle}>Situação</th>
@@ -1125,11 +1125,11 @@ export default function PosVenda() {
                         {prioridadesFiltradas.map(({ cliente: c, motivos }) => (
                           <tr key={c.id}>
                             <td style={tdStyle}>
-                              <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                              <div style={{ fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
                                 {c.nome || c.razao_social}
                               </div>
                               {c.razao_social && c.nome ? (
-                                <div style={{ fontSize: '12px', color: '#64748b' }}>{c.razao_social}</div>
+                                <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>{c.razao_social}</div>
                               ) : null}
                             </td>
                             <td style={tdStyle}>

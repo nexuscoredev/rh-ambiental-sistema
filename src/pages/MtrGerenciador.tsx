@@ -65,7 +65,7 @@ export default function MtrGerenciador() {
           }}
         >
           <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               MTR Gerenciador
             </h1>
             <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
@@ -87,8 +87,8 @@ export default function MtrGerenciador() {
             style={{
               margin: 0,
               width: '100%',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-color, #e2e8f0)",
               borderRadius: '14px',
               overflow: 'hidden',
             }}
@@ -114,8 +114,8 @@ export default function MtrGerenciador() {
           style={{
             margin: 0,
             width: '100%',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #e2e8f0)",
             borderRadius: '14px',
             overflow: 'hidden',
           }}

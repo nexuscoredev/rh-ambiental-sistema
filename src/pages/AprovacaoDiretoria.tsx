@@ -55,8 +55,8 @@ function formatarPesoDisplay(s: string) {
 }
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '18px',
   padding: '22px 24px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -352,7 +352,7 @@ export default function AprovacaoDiretoria() {
     <MainLayout>
       <div className="page-shell">
         <header style={{ marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, color: "var(--text-primary, #0f172a)", letterSpacing: '-0.02em' }}>
             Decisão sobre o pacote da coleta
           </h1>
           <p className="page-header__lead" style={{ margin: '8px 0 0', maxWidth: 720 }}>
@@ -385,7 +385,7 @@ export default function AprovacaoDiretoria() {
 
         {!coletaAtiva ? (
           <div style={emptyStateStyle}>
-            <p style={{ margin: 0, fontSize: 15, color: '#64748b' }}>
+            <p style={{ margin: 0, fontSize: 15, color: "var(--text-secondary, #64748b)" }}>
               Seleccione uma coleta ou abra esta página a partir do Controle de Massa com os parâmetros na URL.
             </p>
           </div>
@@ -416,10 +416,10 @@ export default function AprovacaoDiretoria() {
                   </span>
                 </div>
                 <div style={ticketPillStyle}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary, #64748b)", textTransform: 'uppercase' }}>
                     Ticket operacional
                   </span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                     {carregandoPreReq ? '…' : preReq.ticket ? 'Registado' : 'Sem registo'}
                   </span>
                   <Link
@@ -482,24 +482,24 @@ export default function AprovacaoDiretoria() {
                       : ultimaDecisaoNeutraStyle),
                 }}
               >
-                <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>Última decisão</div>
+                <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: 10 }}>Última decisão</div>
                 {decisaoGravada ? (
-                  <p style={{ margin: 0, fontSize: 14, color: '#334155' }}>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--text-primary, #334155)" }}>
                     <strong>{decisaoGravada === 'aprovado' ? 'Aprovado' : 'Ajuste solicitado'}</strong>
                   </p>
                 ) : null}
                 {observacoesGravadas ? (
-                  <p style={{ margin: '10px 0 0', fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>
+                  <p style={{ margin: '10px 0 0', fontSize: 14, color: "var(--text-primary, #334155)", whiteSpace: 'pre-wrap' }}>
                     {observacoesGravadas}
                   </p>
                 ) : null}
                 {decididoEm ? (
-                  <p style={{ margin: '10px 0 0', fontSize: 12, color: '#64748b' }}>
+                  <p style={{ margin: '10px 0 0', fontSize: 12, color: "var(--text-secondary, #64748b)" }}>
                     {new Date(decididoEm).toLocaleString('pt-BR')}
                   </p>
                 ) : null}
                 {!podeEditarFormulario ? (
-                  <p style={{ margin: '12px 0 0', fontSize: 13, color: '#64748b' }}>
+                  <p style={{ margin: '12px 0 0', fontSize: 13, color: "var(--text-secondary, #64748b)" }}>
                     {fluxoJaAvancou
                       ? 'O fluxo já seguiu (faturamento / financeiro).'
                       : 'Sem permissão para decidir nesta vista.'}
@@ -513,7 +513,7 @@ export default function AprovacaoDiretoria() {
                 <h3 style={decisaoTituloStyle}>Decisão</h3>
 
                 {carregandoRegisto ? (
-                  <p style={{ color: '#64748b', margin: 0 }}>A carregar registo…</p>
+                  <p style={{ color: "var(--text-secondary, #64748b)", margin: 0 }}>A carregar registo…</p>
                 ) : (
                   <>
                     <div style={duasColunasStyle}>
@@ -570,7 +570,7 @@ export default function AprovacaoDiretoria() {
                       <p style={{ color: '#15803d', fontSize: 14, margin: '16px 0 0', fontWeight: 600 }}>{mensagem}</p>
                     ) : null}
                     {salvando ? (
-                      <p style={{ color: '#64748b', fontSize: 13, margin: '12px 0 0' }}>A gravar decisão…</p>
+                      <p style={{ color: "var(--text-secondary, #64748b)", fontSize: 13, margin: '12px 0 0' }}>A gravar decisão…</p>
                     ) : null}
                   </>
                 )}
@@ -578,7 +578,7 @@ export default function AprovacaoDiretoria() {
             ) : null}
 
             {!podeEditarFormulario && !ultimaDecisaoId && !carregandoRegisto ? (
-              <div style={{ ...cardStyle, color: '#64748b', marginTop: 16 }}>
+              <div style={{ ...cardStyle, color: "var(--text-secondary, #64748b)", marginTop: 16 }}>
                 Sem decisão registada para esta coleta nesta etapa.
               </div>
             ) : null}
@@ -596,16 +596,16 @@ const seletorBarStyle: CSSProperties = {
   gap: 12,
   marginBottom: 20,
   padding: '14px 18px',
-  background: '#ffffff',
+  background: "var(--bg-card, #ffffff)",
   borderRadius: 14,
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
 }
 
 const seletorLabelStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
 }
@@ -616,9 +616,9 @@ const seletorSelectStyle: CSSProperties = {
   maxWidth: 560,
   padding: '11px 14px',
   borderRadius: 10,
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: 14,
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
 }
 
 const emptyStateStyle: CSSProperties = {
@@ -629,7 +629,7 @@ const emptyStateStyle: CSSProperties = {
 
 const heroStyle: CSSProperties = {
   background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: 18,
   padding: '24px 26px',
   marginBottom: 20,
@@ -650,7 +650,7 @@ const heroTopRowStyle: CSSProperties = {
 const heroNumeroStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
 }
@@ -659,7 +659,7 @@ const heroClienteStyle: CSSProperties = {
   margin: '6px 0 0',
   fontSize: 24,
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   letterSpacing: '-0.02em',
   lineHeight: 1.2,
 }
@@ -667,8 +667,8 @@ const heroClienteStyle: CSSProperties = {
 const ticketPillStyle: CSSProperties = {
   padding: '14px 18px',
   borderRadius: 14,
-  background: '#f1f5f9',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-inset, #f1f5f9)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   minWidth: 160,
   display: 'flex',
   flexDirection: 'column',
@@ -684,7 +684,7 @@ const gridResumoStyle: CSSProperties = {
 const cellResumoStyle: CSSProperties = {
   padding: '12px 14px',
   borderRadius: 12,
-  background: '#ffffff',
+  background: "var(--bg-card, #ffffff)",
   border: '1px solid #f1f5f9',
 }
 
@@ -692,7 +692,7 @@ const cellLab: CSSProperties = {
   display: 'block',
   fontSize: 11,
   fontWeight: 700,
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
   marginBottom: 6,
@@ -718,7 +718,7 @@ const linkMassaStyle: CSSProperties = {
   borderRadius: 10,
   fontSize: 13,
   fontWeight: 700,
-  background: '#ecfdf5',
+  background: "var(--accent-teal-soft, #ecfdf5)",
   color: '#047857',
   border: '1px solid #a7f3d0',
 }
@@ -728,7 +728,7 @@ const linkFatStyle: CSSProperties = {
   borderRadius: 10,
   fontSize: 13,
   fontWeight: 700,
-  background: '#eff6ff',
+  background: "var(--status-info-bg, #eff6ff)",
   color: '#1d4ed8',
   border: '1px solid #bfdbfe',
 }
@@ -738,9 +738,9 @@ const linkMtrStyle: CSSProperties = {
   borderRadius: 10,
   fontSize: 13,
   fontWeight: 700,
-  background: '#f8fafc',
-  color: '#334155',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-subtle, #f8fafc)",
+  color: "var(--text-primary, #334155)",
+  border: "1px solid var(--border-color, #e2e8f0)",
 }
 
 const ultimaDecisaoBaseStyle: CSSProperties = {
@@ -749,23 +749,23 @@ const ultimaDecisaoBaseStyle: CSSProperties = {
 }
 
 const ultimaDecisaoAprovacaoStyle: CSSProperties = {
-  background: '#f0fdf4',
+  background: "var(--status-success-bg, #f0fdf4)",
   borderColor: '#bbf7d0',
 }
 
 const ultimaDecisaoReprovacaoStyle: CSSProperties = {
-  background: '#fef2f2',
+  background: "var(--status-error-bg, #fef2f2)",
   borderColor: '#fecaca',
 }
 
 const ultimaDecisaoNeutraStyle: CSSProperties = {
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
   borderColor: '#e2e8f0',
 }
 
 const decisaoSectionStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: 18,
   padding: '26px 24px',
   boxShadow: '0 2px 16px rgba(15, 23, 42, 0.05)',
@@ -775,7 +775,7 @@ const decisaoTituloStyle: CSSProperties = {
   margin: '0 0 20px',
   fontSize: 17,
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 
 const duasColunasStyle: CSSProperties = {
@@ -819,14 +819,14 @@ const btnReprovarStyle: CSSProperties = {
 const acaoHintStyle: CSSProperties = {
   margin: '10px 0 14px',
   fontSize: 12,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.45,
 }
 
 const recadoLabelStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   marginBottom: 8,
 }
 
@@ -834,10 +834,10 @@ const textareaAcaoStyle: CSSProperties = {
   width: '100%',
   padding: '12px 14px',
   borderRadius: 12,
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
   fontSize: 14,
   resize: 'vertical',
   minHeight: 100,
   lineHeight: 1.45,
-  background: '#fafbfc',
+  background: "var(--bg-inset, #fafbfc)",
 }

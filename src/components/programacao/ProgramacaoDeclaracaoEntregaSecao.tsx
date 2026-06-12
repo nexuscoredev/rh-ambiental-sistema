@@ -48,9 +48,9 @@ export function ProgramacaoDeclaracaoEntregaSecao({
         <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 700, color: '#0f766e' }}>
           Declaração de entrega de equipamento
         </h3>
-        <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+        <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
           Preencha os dados do documento (Anexo 2). Este fluxo não gera MTR, ticket nem faturamento — ao
-          confirmar a impressão, a programação passa a <strong style={{ color: '#334155' }}>Finalizado</strong>.
+          confirmar a impressão, a programação passa a <strong style={{ color: "var(--text-primary, #334155)" }}>Finalizado</strong>.
         </p>
         <span
           style={{
@@ -69,7 +69,7 @@ export function ProgramacaoDeclaracaoEntregaSecao({
       </div>
 
       {carregando ? (
-        <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>A carregar dados do cliente…</p>
+        <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>A carregar dados do cliente…</p>
       ) : (
         <form
           onSubmit={(ev) => {
@@ -132,9 +132,9 @@ export function ProgramacaoDeclaracaoEntregaSecao({
               />
             </label>
           </div>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
             No documento impresso, a linha de assinatura identifica a{' '}
-            <strong style={{ color: '#334155' }}>empresa responsável pelo recebimento</strong> (
+            <strong style={{ color: "var(--text-primary, #334155)" }}>empresa responsável pelo recebimento</strong> (
             {draft.razaoSocial.trim() || 'razão social do cliente'}).
           </p>
           {avisoSemId ? (

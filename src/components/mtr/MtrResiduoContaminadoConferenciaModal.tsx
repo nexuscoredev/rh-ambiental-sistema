@@ -74,7 +74,7 @@ export function MtrResiduoContaminadoConferenciaModal({
         <div className="modal-head">
           <div>
             <h3 id="mtr-rc-modal-title">Conferência — Resíduo contaminado (Anexo 2)</h3>
-            <p style={{ margin: '6px 0 0', fontSize: 14, color: '#64748b' }}>
+            <p style={{ margin: '6px 0 0', fontSize: 14, color: "var(--text-secondary, #64748b)" }}>
               Revise os campos do gerador e da quantidade. Destino e transporte seguem o modelo RG Ambiental.
             </p>
           </div>

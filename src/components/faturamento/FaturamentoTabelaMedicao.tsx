@@ -21,7 +21,7 @@ const thBase: CSSProperties = {
   padding: '8px 6px',
   fontSize: '11px',
   fontWeight: 700,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   borderBottom: '2px solid #e2e8f0',
   whiteSpace: 'nowrap',
 }
@@ -29,7 +29,7 @@ const thBase: CSSProperties = {
 const tdBase: CSSProperties = {
   padding: '8px 6px',
   fontSize: '11px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'middle',
 }
@@ -39,11 +39,11 @@ const inputCelula: CSSProperties = {
   minWidth: '56px',
   padding: '5px 6px',
   borderRadius: '6px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '11px',
   fontFamily: 'inherit',
   boxSizing: 'border-box',
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
 }
 
 type Props = {
@@ -165,7 +165,7 @@ export function FaturamentoTabelaMedicao({
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: compacto ? 920 : 980 }}>
       <thead>
-        <tr style={{ background: '#f8fafc', textAlign: 'left' }}>
+        <tr style={{ background: "var(--bg-subtle, #f8fafc)", textAlign: 'left' }}>
           {mostrarColeta ? (
             <th style={{ ...thBase, fontSize, textAlign: 'left' }}>Coleta</th>
           ) : null}
@@ -189,7 +189,7 @@ export function FaturamentoTabelaMedicao({
           return (
             <tr
               key={r.coleta_id}
-              style={modoEdicao ? { background: '#f8fafc' } : undefined}
+              style={modoEdicao ? { background: "var(--bg-subtle, #f8fafc)" } : undefined}
             >
               {mostrarColeta ? (
                 <td style={{ ...tdBase, fontSize, fontWeight: 600 }}>{r.numeroColeta ?? '—'}</td>
@@ -230,7 +230,7 @@ export function FaturamentoTabelaMedicao({
       </tbody>
       {mostrarTotais && linhas.length > 0 ? (
         <tfoot>
-          <tr style={{ background: '#fffbeb' }}>
+          <tr style={{ background: "var(--status-warning-bg, #fffbeb)" }}>
             {mostrarColeta ? (
               <td style={{ ...tdBase, fontSize, fontWeight: 700, textAlign: 'right' }} colSpan={1}>
                 Totais

@@ -2973,8 +2973,8 @@ ${MTR_LISTA_CARD_UI_CSS}
               Manifesto ligado à programação; a coleta segue no fluxo a partir daqui.
             </p>
             {usuarioCargo ? (
-              <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
+              <p style={{ margin: '8px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
+                Perfil: <span style={{ color: "var(--text-primary, #0f172a)" }}>{usuarioCargo}</span>
                 {!podeMutarMtr ? ' · somente consulta' : ' · pode criar e editar'}
               </p>
             ) : null}
@@ -3049,14 +3049,14 @@ ${MTR_LISTA_CARD_UI_CSS}
               fontSize: '14px',
               border: '1px solid',
               ...(itemContextoResolvido
-                ? { background: '#f0fdf4', borderColor: '#bbf7d0' }
-                : { background: '#fffbeb', borderColor: '#fcd34d' }),
+                ? { background: "var(--status-success-bg, #f0fdf4)", borderColor: '#bbf7d0' }
+                : { background: "var(--status-warning-bg, #fffbeb)", borderColor: '#fcd34d' }),
             }}
           >
             <div style={{ flex: '1', minWidth: '220px' }}>
-              <strong style={{ color: '#0f172a' }}>Veio de outra tela</strong>
+              <strong style={{ color: "var(--text-primary, #0f172a)" }}>Veio de outra tela</strong>
               {itemContextoResolvido ? (
-                <span style={{ color: '#475569' }}>
+                <span style={{ color: "var(--text-secondary, #475569)" }}>
                   {' '}
                   · {itemContextoResolvido.numero} · {itemContextoResolvido.cliente}
                   {itemContextoResolvido.data_emissao
@@ -3073,7 +3073,7 @@ ${MTR_LISTA_CARD_UI_CSS}
             <button
               type="button"
               className="btn btn-light"
-              style={{ fontSize: '13px', padding: '8px 14px', color: '#64748b' }}
+              style={{ fontSize: '13px', padding: '8px 14px', color: "var(--text-secondary, #64748b)" }}
               onClick={limparContextoUrl}
             >
               Limpar contexto
@@ -3593,7 +3593,7 @@ ${MTR_LISTA_CARD_UI_CSS}
                         style={{
                           marginTop: 8,
                           border: '1px solid #f59e0b',
-                          background: '#fffbeb',
+                          background: "var(--status-warning-bg, #fffbeb)",
                           color: '#92400e',
                           fontWeight: 800,
                         }}
@@ -3605,17 +3605,17 @@ ${MTR_LISTA_CARD_UI_CSS}
                         open
                         style={{
                           marginTop: 10,
-                          border: '1px solid #e2e8f0',
+                          border: "1px solid var(--border-color, #e2e8f0)",
                           borderRadius: 12,
                           padding: '10px 12px',
-                          background: '#ffffff',
+                          background: "var(--bg-card, #ffffff)",
                         }}
                       >
                         <summary
                           style={{
                             cursor: 'pointer',
                             fontWeight: 900,
-                            color: '#0f172a',
+                            color: "var(--text-primary, #0f172a)",
                             listStyle: 'none',
                           }}
                         >

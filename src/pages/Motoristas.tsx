@@ -719,7 +719,7 @@ export default function Motoristas() {
                   margin: 0,
                   fontSize: "26px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Motoristas e documentação (CNH)
@@ -775,7 +775,7 @@ export default function Motoristas() {
                     style={{
                       fontSize: "15px",
                       fontWeight: 800,
-                      color: "#334155",
+                      color: "var(--text-primary, #334155)",
                       marginBottom: "12px",
                     }}
                   >
@@ -838,7 +838,7 @@ export default function Motoristas() {
                       style={{
                         fontSize: "14px",
                         fontWeight: 800,
-                        color: "#334155",
+                        color: "var(--text-primary, #334155)",
                         marginBottom: "10px",
                       }}
                     >
@@ -860,7 +860,7 @@ export default function Motoristas() {
                           cursor: "pointer",
                           fontSize: "14px",
                           fontWeight: 600,
-                          color: "#334155",
+                          color: "var(--text-primary, #334155)",
                           userSelect: "none",
                         }}
                       >
@@ -887,7 +887,7 @@ export default function Motoristas() {
                           flex: "1 1 200px",
                         }}
                       >
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748b" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>
                           Data de validade do MOPP
                         </span>
                         <input
@@ -951,7 +951,7 @@ export default function Motoristas() {
                     }}
                     style={{
                       background: "#e5e7eb",
-                      color: "#111827",
+                      color: "var(--text-primary, #111827)",
                       border: "none",
                       borderRadius: "10px",
                       height: "42px",
@@ -989,7 +989,7 @@ export default function Motoristas() {
                     margin: 0,
                     fontSize: "18px",
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                   }}
                 >
                   Lista de motoristas
@@ -1005,12 +1005,12 @@ export default function Motoristas() {
                   maxWidth: "100%",
                   height: "40px",
                   borderRadius: "10px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
+                  border: "1px solid var(--input-border, #d1d5db)",
+                  background: "var(--bg-card, #ffffff)",
                   outline: "none",
                   padding: "0 14px",
                   fontSize: "14px",
-                  color: "#111827",
+                  color: "var(--text-primary, #111827)",
                 }}
               />
             </div>
@@ -1020,7 +1020,7 @@ export default function Motoristas() {
                 style={{
                   padding: "30px 0",
                   textAlign: "center",
-                  color: "#64748b",
+                  color: "var(--text-secondary, #64748b)",
                   fontSize: "14px",
                 }}
               >
@@ -1038,8 +1038,8 @@ export default function Motoristas() {
                   <thead>
                     <tr
                       style={{
-                        background: "#f8fafc",
-                        borderBottom: "1px solid #e5e7eb",
+                        background: "var(--bg-subtle, #f8fafc)",
+                        borderBottom: "1px solid var(--border-color, #e5e7eb)",
                       }}
                     >
                       <th style={thStyle}>Nome</th>
@@ -1116,7 +1116,7 @@ export default function Motoristas() {
                               onClick={() => handleDelete(m.id)}
                               style={{
                                 flex: "0 0 auto",
-                                background: "#ffffff",
+                                background: "var(--bg-card, #ffffff)",
                                 color: "#b91c1c",
                                 border: "1px solid #fecaca",
                                 borderRadius: "6px",
@@ -1141,7 +1141,7 @@ export default function Motoristas() {
                           style={{
                             textAlign: "center",
                             padding: "28px 12px",
-                            color: "#64748b",
+                            color: "var(--text-secondary, #64748b)",
                           }}
                         >
                           Nenhum motorista encontrado.
@@ -1163,10 +1163,10 @@ export default function Motoristas() {
                   gap: "12px",
                   marginTop: "16px",
                   paddingTop: "14px",
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                 }}
               >
-                <span style={{ fontSize: "13px", color: "#64748b" }}>
+                <span style={{ fontSize: "13px", color: "var(--text-secondary, #64748b)" }}>
                   {totalCount === 0
                     ? "Nenhum registo"
                     : `Mostrando ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} de ${totalCount}`}
@@ -1177,7 +1177,7 @@ export default function Motoristas() {
                   <label
                     style={{
                       fontSize: "13px",
-                      color: "#475569",
+                      color: "var(--text-secondary, #475569)",
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
@@ -1190,7 +1190,7 @@ export default function Motoristas() {
                       style={{
                         padding: "6px 10px",
                         borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
+                        border: "1px solid var(--input-border, #cbd5e1)",
                         fontSize: "13px",
                       }}
                     >
@@ -1208,7 +1208,7 @@ export default function Motoristas() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page <= 1 ? "#f1f5f9" : "#ffffff",
                       cursor: page <= 1 ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -1217,7 +1217,7 @@ export default function Motoristas() {
                   >
                     Anterior
                   </button>
-                  <span style={{ fontSize: "13px", color: "#334155", fontWeight: 600 }}>
+                  <span style={{ fontSize: "13px", color: "var(--text-primary, #334155)", fontWeight: 600 }}>
                     Página {page} / {totalPaginas}
                   </span>
                   <button
@@ -1227,7 +1227,7 @@ export default function Motoristas() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       background: page >= totalPaginas ? "#f1f5f9" : "#ffffff",
                       cursor: page >= totalPaginas ? "not-allowed" : "pointer",
                       fontWeight: 700,
@@ -1269,10 +1269,10 @@ export default function Motoristas() {
               maxWidth: "520px",
               maxHeight: "min(92vh, 900px)",
               overflowY: "auto",
-              background: "#ffffff",
+              background: "var(--bg-card, #ffffff)",
               borderRadius: "16px",
               boxShadow: "0 25px 50px rgba(15, 23, 42, 0.2)",
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--border-color, #e2e8f0)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1283,7 +1283,7 @@ export default function Motoristas() {
                 alignItems: "flex-start",
                 gap: "12px",
                 padding: "18px 20px",
-                borderBottom: "1px solid #e5e7eb",
+                borderBottom: "1px solid var(--border-color, #e5e7eb)",
               }}
             >
               <h2
@@ -1292,7 +1292,7 @@ export default function Motoristas() {
                   margin: 0,
                   fontSize: "18px",
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "var(--text-primary, #0f172a)",
                 }}
               >
                 Ficha do motorista
@@ -1307,8 +1307,8 @@ export default function Motoristas() {
                   height: "36px",
                   border: "none",
                   borderRadius: "10px",
-                  background: "#f1f5f9",
-                  color: "#475569",
+                  background: "var(--bg-inset, #f1f5f9)",
+                  color: "var(--text-secondary, #475569)",
                   fontSize: "20px",
                   lineHeight: 1,
                   cursor: "pointer",
@@ -1330,29 +1330,29 @@ export default function Motoristas() {
                   fontSize: "14px",
                 }}
               >
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Nome</dt>
-                <dd style={{ margin: 0, color: "#0f172a", fontWeight: 600 }}>{fichaMotorista.nome}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>CPF</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaMotorista.cpf || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Nº CNH</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaMotorista.cnh_numero || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Categoria</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{fichaMotorista.cnh_categoria || "—"}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Validade CNH</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{formatarData(fichaMotorista.cnh_validade)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Possui MOPP?</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{simOuNao(!!fichaMotorista.possui_nopp)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Validade MOPP</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Nome</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #0f172a)", fontWeight: 600 }}>{fichaMotorista.nome}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>CPF</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaMotorista.cpf || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Nº CNH</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaMotorista.cnh_numero || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Categoria</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{fichaMotorista.cnh_categoria || "—"}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Validade CNH</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{formatarData(fichaMotorista.cnh_validade)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Possui MOPP?</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{simOuNao(!!fichaMotorista.possui_nopp)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Validade MOPP</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>
                   {fichaMotorista.possui_nopp ? formatarData(fichaMotorista.nopp_validade) : "—"}
                 </dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>Cadastrado em</dt>
-                <dd style={{ margin: 0, color: "#1f2937" }}>{formatarDataHora(fichaMotorista.created_at)}</dd>
-                <dt style={{ color: "#64748b", fontWeight: 700 }}>ID</dt>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>Cadastrado em</dt>
+                <dd style={{ margin: 0, color: "var(--text-primary, #1f2937)" }}>{formatarDataHora(fichaMotorista.created_at)}</dd>
+                <dt style={{ color: "var(--text-secondary, #64748b)", fontWeight: 700 }}>ID</dt>
                 <dd
                   style={{
                     margin: 0,
-                    color: "#64748b",
+                    color: "var(--text-secondary, #64748b)",
                     fontSize: "12px",
                     wordBreak: "break-all",
                   }}
@@ -1363,7 +1363,7 @@ export default function Motoristas() {
 
               <div
                 style={{
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                   paddingTop: "18px",
                 }}
               >
@@ -1371,13 +1371,13 @@ export default function Motoristas() {
                   style={{
                     fontSize: "15px",
                     fontWeight: 800,
-                    color: "#0f172a",
+                    color: "var(--text-primary, #0f172a)",
                     marginBottom: "10px",
                   }}
                 >
                   Foto da CNH
                 </div>
-                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#64748b", lineHeight: 1.5 }}>
+                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
                   Envie uma imagem legível da carteira (frente ou frente e verso num só ficheiro). Formatos:
                   JPEG, PNG, WebP ou GIF; máx. 8 MB.
                 </p>
@@ -1397,8 +1397,8 @@ export default function Motoristas() {
                         maxHeight: "280px",
                         objectFit: "contain",
                         borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        background: "#f8fafc",
+                        border: "1px solid var(--border-color, #e2e8f0)",
+                        background: "var(--bg-subtle, #f8fafc)",
                       }}
                     />
                   </a>
@@ -1407,11 +1407,11 @@ export default function Motoristas() {
                     style={{
                       padding: "28px 16px",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--text-secondary, #94a3b8)",
                       fontSize: "13px",
                       borderRadius: "12px",
                       border: "1px dashed #cbd5e1",
-                      background: "#f8fafc",
+                      background: "var(--bg-subtle, #f8fafc)",
                       marginBottom: "12px",
                     }}
                   >
@@ -1457,9 +1457,9 @@ export default function Motoristas() {
                           minHeight: "40px",
                           padding: "0 14px",
                           borderRadius: "10px",
-                          border: "1px solid #cbd5e1",
-                          background: "#ffffff",
-                          color: "#334155",
+                          border: "1px solid var(--input-border, #cbd5e1)",
+                          background: "var(--bg-card, #ffffff)",
+                          color: "var(--text-primary, #334155)",
                           fontWeight: 700,
                           fontSize: "13px",
                           cursor: enviandoFotoCnh ? "not-allowed" : "pointer",
@@ -1476,7 +1476,7 @@ export default function Motoristas() {
                           padding: "0 14px",
                           borderRadius: "10px",
                           border: "1px solid #fecaca",
-                          background: "#ffffff",
+                          background: "var(--bg-card, #ffffff)",
                           color: "#b91c1c",
                           fontWeight: 700,
                           fontSize: "13px",
@@ -1523,7 +1523,7 @@ export default function Motoristas() {
                   onClick={() => setFichaMotorista(null)}
                   style={{
                     background: "#e5e7eb",
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     border: "none",
                     borderRadius: "10px",
                     height: "40px",

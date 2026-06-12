@@ -106,7 +106,7 @@ export function BrasilMapaEstados({ contagensPorUf, contagensRegiao, destaques }
         style={{
           position: 'relative',
           borderRadius: '14px',
-          background: '#ffffff',
+          background: "var(--bg-card, #ffffff)",
           padding: '12px 10px 10px',
           boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(45, 90, 60, 0.1)',
         }}
@@ -185,10 +185,10 @@ export function BrasilMapaEstados({ contagensPorUf, contagensRegiao, destaques }
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.02em' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: "var(--text-secondary, #64748b)", letterSpacing: '0.02em' }}>
             Intensidade = volume de clientes com UF no cadastro
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: '#64748b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: "var(--text-secondary, #64748b)" }}>
             <span
               style={{
                 width: '72px',
@@ -209,7 +209,7 @@ export function BrasilMapaEstados({ contagensPorUf, contagensRegiao, destaques }
           display: 'grid',
           gap: '10px',
           fontSize: '13px',
-          color: '#475569',
+          color: "var(--text-secondary, #475569)",
         }}
       >
         {REGIOES_ORDEM.filter((r) => r !== 'Sem região').map((r) => {
@@ -224,9 +224,9 @@ export function BrasilMapaEstados({ contagensPorUf, contagensRegiao, destaques }
                 borderRadius: '0 8px 8px 0',
               }}
             >
-              <div style={{ fontWeight: 800, color: '#0f172a' }}>
+              <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                 {r}{' '}
-                <span style={{ fontWeight: 600, color: '#64748b' }}>({contagensRegiao[r] ?? 0})</span>
+                <span style={{ fontWeight: 600, color: "var(--text-secondary, #64748b)" }}>({contagensRegiao[r] ?? 0})</span>
               </div>
               {tops.length > 0 ? (
                 <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
@@ -237,7 +237,7 @@ export function BrasilMapaEstados({ contagensPorUf, contagensRegiao, destaques }
                   ))}
                 </ul>
               ) : (
-                <div style={{ marginTop: '4px', fontSize: '12px', color: '#94a3b8' }}>
+                <div style={{ marginTop: '4px', fontSize: '12px', color: "var(--text-secondary, #94a3b8)" }}>
                   Nenhum cliente com UF nesta região.
                 </div>
               )}

@@ -68,8 +68,8 @@ const routeSuspenseFallback = (
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#f1f5f9',
-      color: '#334155',
+      background: "var(--bg-inset, #f1f5f9)",
+      color: "var(--text-primary, #334155)",
       fontSize: '18px',
       fontWeight: 600,
     }}
@@ -97,18 +97,18 @@ function TelaErroAcesso({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f1f5f9',
+        background: "var(--bg-inset, #f1f5f9)",
         padding: 24,
       }}
     >
       <div
         style={{
           maxWidth: 520,
-          background: '#fff',
+          background: "var(--bg-card, #ffffff)",
           border: '1px solid #fecaca',
           borderRadius: 12,
           padding: 20,
-          color: '#334155',
+          color: "var(--text-primary, #334155)",
         }}
       >
         <p style={{ margin: '0 0 12px', fontWeight: 700, color: '#991b1b' }}>{titulo}</p>
@@ -135,9 +135,9 @@ function TelaErroAcesso({
             style={{
               padding: '10px 16px',
               borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              background: '#fff',
-              color: '#334155',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-card, #ffffff)",
+              color: "var(--text-primary, #334155)",
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -184,8 +184,8 @@ function ProtectedRoute({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#f1f5f9',
-          color: '#334155',
+          background: "var(--bg-inset, #f1f5f9)",
+          color: "var(--text-primary, #334155)",
           fontSize: '18px',
           fontWeight: 600,
         }}
@@ -402,8 +402,8 @@ function App() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#f1f5f9',
-          color: '#334155',
+          background: "var(--bg-inset, #f1f5f9)",
+          color: "var(--text-primary, #334155)",
           fontSize: '18px',
           fontWeight: 600,
         }}

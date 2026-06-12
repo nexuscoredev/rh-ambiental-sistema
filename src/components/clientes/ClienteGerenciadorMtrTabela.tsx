@@ -40,7 +40,7 @@ export type LinhaMtrGerenciador = {
 const thStyle: CSSProperties = {
   textAlign: 'left',
   padding: '12px 10px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   fontSize: '12px',
   borderBottom: '2px solid #e2e8f0',
@@ -50,7 +50,7 @@ const thStyle: CSSProperties = {
 const tdStyle: CSSProperties = {
   padding: '8px 10px',
   verticalAlign: 'middle',
-  borderBottom: '1px solid #e2e8f0',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
 }
 
 function novaLinha(): LinhaMtrGerenciador {
@@ -258,9 +258,9 @@ export function ClienteGerenciadorMtrTabela({
 
   const valorTotalCell: CSSProperties = {
     ...inputCell,
-    background: '#f8fafc',
+    background: "var(--bg-subtle, #f8fafc)",
     fontWeight: 700,
-    color: '#0f172a',
+    color: "var(--text-primary, #0f172a)",
   }
 
   return (
@@ -269,24 +269,24 @@ export function ClienteGerenciadorMtrTabela({
         style={{
           fontSize: '15px',
           fontWeight: 800,
-          color: '#334155',
+          color: "var(--text-primary, #334155)",
           marginBottom: '12px',
         }}
       >
         MTRs baixadas
       </div>
-      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+      <p style={{ margin: '0 0 10px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
         <strong>Valor total</strong> = Peso (kg) × Valor unit. (R$/kg). O valor unitário é preenchido
         pelo contrato de resíduos do cadastro quando o nome do resíduo coincide; pode ser ajustado
         manualmente na linha.
       </p>
       <div
         className="rg-mobile-table-scroll"
-        style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}
+        style={{ overflowX: 'auto', border: "1px solid var(--border-color, #e2e8f0)", borderRadius: '12px' }}
       >
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '960px' }}>
           <thead>
-            <tr style={{ background: '#f8fafc' }}>
+            <tr style={{ background: "var(--bg-subtle, #f8fafc)" }}>
               <th style={thStyle}>MTR baixada</th>
               <th style={thStyle}>Data</th>
               <th style={thStyle}>Gerador</th>
@@ -412,7 +412,7 @@ export function ClienteGerenciadorMtrTabela({
           </tbody>
           {totalGeral ? (
             <tfoot>
-              <tr style={{ background: '#f1f5f9' }}>
+              <tr style={{ background: "var(--bg-inset, #f1f5f9)" }}>
                 <td
                   colSpan={readOnly ? 7 : 7}
                   style={{
@@ -420,12 +420,12 @@ export function ClienteGerenciadorMtrTabela({
                     textAlign: 'right',
                     fontWeight: 800,
                     fontSize: '12px',
-                    color: '#475569',
+                    color: "var(--text-secondary, #475569)",
                   }}
                 >
                   Total geral
                 </td>
-                <td style={{ ...tdStyle, fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
+                <td style={{ ...tdStyle, fontWeight: 800, fontSize: '14px', color: "var(--text-primary, #0f172a)" }}>
                   {totalGeral}
                 </td>
                 {!readOnly ? <td style={tdStyle} /> : null}

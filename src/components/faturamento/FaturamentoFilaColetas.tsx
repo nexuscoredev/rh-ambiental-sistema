@@ -19,8 +19,8 @@ import { FaturamentoEmpresaGrupoMeta } from './FaturamentoEmpresaGrupoMeta'
 const R = { sm: '4px', md: '6px', lg: '8px' } as const
 
 const wrap: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: R.lg,
   padding: '20px 22px',
   marginBottom: '20px',
@@ -33,16 +33,16 @@ const th: CSSProperties = {
   fontWeight: 800,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   padding: '10px 12px',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  borderBottom: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const td: CSSProperties = {
   padding: '12px',
   fontSize: '13px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'middle',
 }
@@ -183,13 +183,13 @@ function ChipFaturamento({
 }) {
   const styles: Record<typeof variant, CSSProperties> = {
     consolidado: {
-      background: '#ecfdf5',
+      background: "var(--accent-teal-soft, #ecfdf5)",
       color: '#047857',
       border: '1px solid #6ee7b7',
     },
-    pendente: { background: '#fffbeb', color: '#b45309', border: '1px solid #fcd34d' },
-    faturado: { background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' },
-    sla: { background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' },
+    pendente: { background: "var(--status-warning-bg, #fffbeb)", color: '#b45309', border: '1px solid #fcd34d' },
+    faturado: { background: "var(--status-success-bg, #f0fdf4)", color: '#15803d', border: '1px solid #86efac' },
+    sla: { background: "var(--status-error-bg, #fef2f2)", color: '#b91c1c', border: '1px solid #fecaca' },
   }
   return (
     <span
@@ -356,31 +356,31 @@ export function FaturamentoFilaColetas({
     <div style={{ ...wrap, borderTop: '4px solid #0d9488' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>{titulo}</h2>
-          <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b', maxWidth: '900px', lineHeight: 1.55 }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>{titulo}</h2>
+          <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)", maxWidth: '900px', lineHeight: 1.55 }}>
             {subtitulo}
           </p>
         </div>
       </div>
 
       {carregando ? (
-        <p style={{ color: '#64748b', fontSize: '14px' }}>Carregando dados…</p>
+        <p style={{ color: "var(--text-secondary, #64748b)", fontSize: '14px' }}>Carregando dados…</p>
       ) : itensFila.length === 0 ? (
         <div
           style={{
             padding: '28px 20px',
             textAlign: 'center',
             borderRadius: R.lg,
-            background: '#f8fafc',
+            background: "var(--bg-subtle, #f8fafc)",
             border: '1px dashed #cbd5e1',
-            color: '#64748b',
+            color: "var(--text-secondary, #64748b)",
             fontSize: '14px',
           }}
         >
           {mensagemVazia}
         </div>
       ) : (
-        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', borderRadius: R.lg, border: '1px solid #e2e8f0' }}>
+        <div className="rg-mobile-table-scroll" style={{ overflowX: 'auto', borderRadius: R.lg, border: "1px solid var(--border-color, #e2e8f0)" }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1020px' }}>
             <thead>
               <tr>
@@ -505,7 +505,7 @@ function LinhaFilaFaturamento({
         <td style={td}>
           <ChipFaturamento variant="consolidado">1 faturamento</ChipFaturamento>
         </td>
-        <td style={{ ...td, maxWidth: '200px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+        <td style={{ ...td, maxWidth: '200px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
           Caminhão/equip. uma vez
           <br />
           Resíduos somados no valor
@@ -529,7 +529,7 @@ function LinhaFilaFaturamento({
       </tr>
       {onDevolvidoConferencia && podeDevolverConferencia
         ? coletas.map((c) => (
-            <tr key={`det-${c.coleta_id}`} style={{ background: '#f8fafc' }}>
+            <tr key={`det-${c.coleta_id}`} style={{ background: "var(--bg-subtle, #f8fafc)" }}>
               <td colSpan={11} style={{ ...td, padding: '8px 14px 8px 28px', borderBottom: '1px solid #eef2f7' }}>
                 <div
                   style={{
@@ -638,7 +638,7 @@ function LinhaColetaFaturamento({
         </span>
       </td>
       <td
-        style={{ ...td, maxWidth: '240px', fontSize: '12px', color: '#64748b' }}
+        style={{ ...td, maxWidth: '240px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}
         title={r.pendencias_resumo ?? ''}
       >
         {textoPendencias(r.pendencias_resumo)}

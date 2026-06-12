@@ -245,7 +245,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
             }}
@@ -266,11 +266,11 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
             style={{
               padding: '16px 18px',
               borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              background: '#fff',
+              border: "1px solid var(--border-color, #e2e8f0)",
+              background: "var(--bg-card, #ffffff)",
             }}
           >
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Títulos carregados</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)" }}>Títulos carregados</div>
             <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px' }}>{resumo.qtd}</div>
           </div>
           <div
@@ -278,7 +278,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #fde68a',
-              background: '#fffbeb',
+              background: "var(--status-warning-bg, #fffbeb)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e' }}>Saldo em aberto</div>
@@ -291,7 +291,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               padding: '16px 18px',
               borderRadius: '14px',
               border: '1px solid #fecaca',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
             }}
           >
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b' }}>Saldo vencido (aberto)</div>
@@ -311,7 +311,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
           }}
         >
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Busca</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Busca</div>
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
@@ -319,17 +319,17 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               style={{
                 padding: '10px 12px',
                 borderRadius: '10px',
-                border: '1px solid #cbd5e1',
+                border: "1px solid var(--input-border, #cbd5e1)",
                 minWidth: '220px',
               }}
             />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Status</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>Status</div>
             <select
               value={filtroStatus}
               onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-              style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}
+              style={{ padding: '10px 12px', borderRadius: '10px', border: "1px solid var(--input-border, #cbd5e1)" }}
             >
               <option value="">Todos</option>
               <option value="Pendente">Pendente</option>
@@ -338,13 +338,13 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
             </select>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", marginBottom: '4px' }}>
               Envelhecimento
             </div>
             <select
               value={filtroFaixa}
               onChange={(e) => setFiltroFaixa(e.target.value as typeof filtroFaixa)}
-              style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}
+              style={{ padding: '10px 12px', borderRadius: '10px', border: "1px solid var(--input-border, #cbd5e1)" }}
             >
               <option value="todos">Todos (com saldo)</option>
               <option value="vencido">Vencidos</option>
@@ -358,7 +358,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               padding: '10px 14px',
               borderRadius: '10px',
               border: '1px solid #0d9488',
-              background: '#ecfdf5',
+              background: "var(--accent-teal-soft, #ecfdf5)",
               fontWeight: 700,
               fontSize: '13px',
               color: '#0f766e',
@@ -371,7 +371,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
 
         <div style={{ overflowX: 'auto', marginTop: '18px' }}>
           {carregando ? (
-            <p style={{ color: '#64748b' }}>A carregar…</p>
+            <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
           ) : (
             <table
               style={{
@@ -396,7 +396,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '24px', color: '#64748b' }}>
+                    <td colSpan={8} style={{ padding: '24px', color: "var(--text-secondary, #64748b)" }}>
                       Nenhum título de clínica na fila. Envie O.S. emitidas em{' '}
                       <Link to="/faturamento-clinicas" style={{ color: '#0d9488', fontWeight: 700 }}>
                         Faturar clínicas
@@ -439,7 +439,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
                               gap: '10px 14px',
                             }}
                           >
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: "var(--text-secondary, #64748b)" }}>
                               Data pag.
                               <input
                                 type="date"
@@ -456,7 +456,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
                                   marginTop: '4px',
                                   padding: '6px 8px',
                                   borderRadius: '8px',
-                                  border: '1px solid #cbd5e1',
+                                  border: "1px solid var(--input-border, #cbd5e1)",
                                   fontSize: '12px',
                                 }}
                               />
@@ -468,7 +468,7 @@ export const FinanceiroFilaClinicas = forwardRef<FinanceiroFilaClinicasHandle, P
                                 gap: '6px',
                                 fontSize: '13px',
                                 fontWeight: 600,
-                                color: '#334155',
+                                color: "var(--text-primary, #334155)",
                                 cursor: podeMutar && !busy ? 'pointer' : 'default',
                                 userSelect: 'none',
                               }}

@@ -482,7 +482,7 @@ function resumoVeiculoPainelDia(item: ProgramacaoItem): {
   if (placa) {
     return {
       texto: `Veículo ${placa}`,
-      backgroundColor: '#e0f2fe',
+      backgroundColor: "var(--accent-teal-soft, #e0f2fe)",
       color: '#0369a1',
     }
   }
@@ -497,8 +497,8 @@ function resumoVeiculoPainelDia(item: ProgramacaoItem): {
   }
   return {
     texto: 'Sem tipo / veículo',
-    backgroundColor: '#f1f5f9',
-    color: '#64748b',
+    backgroundColor: "var(--bg-inset, #f1f5f9)",
+    color: "var(--text-secondary, #64748b)",
   }
 }
 
@@ -2213,7 +2213,7 @@ export default function Programacao() {
             ))}
           </select>
           {f.tipoCaminhao && !TIPOS_CAMINHAO_CATALOGO.has(f.tipoCaminhao) ? (
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.4 }}>
               Valor anterior (texto livre). Escolha uma opção abaixo para padronizar; se não alterar, o
               valor atual permanece ao salvar.
             </p>
@@ -2234,7 +2234,7 @@ export default function Programacao() {
               </option>
             ))}
           </select>
-          <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+          <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.4 }}>
             Placa do veículo da frota escolhido para o serviço (cadastro em Veículos). É independente do
             «tipo de caminhão» (equipamento).
           </p>
@@ -2273,7 +2273,7 @@ export default function Programacao() {
             ))}
           </select>
           {f.tipoServico.trim() && !tipoServicoProgramacaoEhCatalogo(f.tipoServico) ? (
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.4 }}>
               Valor anterior (texto livre). Escolha uma opção na lista para padronizar; se não alterar, o
               valor atual permanece ao salvar.
             </p>
@@ -2308,7 +2308,7 @@ export default function Programacao() {
               </option>
             ))}
           </select>
-          <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+          <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.4 }}>
             Informe se esta visita inclui mão de obra contratada (C/) ou não (S/). Ajuda o operacional, a MTR e
             o faturamento.
           </p>
@@ -2331,7 +2331,7 @@ export default function Programacao() {
             labelStyle={labelStyle}
           />
         ) : programacaoEhInstalacaoEntrega(f.tipoServico) && declaracaoInlineCarregando ? (
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
             A preparar declaração de entrega…
           </p>
         ) : null}
@@ -2367,7 +2367,7 @@ export default function Programacao() {
         {f.coletaFixa && (
           <div>
             <label style={labelStyle}>Dias da semana</label>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+            <p style={{ margin: '0 0 8px', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
               Marque os dias da semana em que esta coleta deve repetir. O sistema gera as programações
               futuras nesses dias (até cerca de um ano à frente, após guardar).
             </p>
@@ -2377,9 +2377,9 @@ export default function Programacao() {
                 flexDirection: 'column',
                 gap: 8,
                 padding: '12px 14px',
-                border: '1px solid #e2e8f0',
+                border: "1px solid var(--border-color, #e2e8f0)",
                 borderRadius: 10,
-                background: '#f8fafc',
+                background: "var(--bg-subtle, #f8fafc)",
               }}
               role="group"
               aria-label="Dias da semana para coleta fixa"
@@ -2393,7 +2393,7 @@ export default function Programacao() {
                     gap: 10,
                     fontSize: 14,
                     fontWeight: 600,
-                    color: '#334155',
+                    color: "var(--text-primary, #334155)",
                     cursor: 'pointer',
                   }}
                 >
@@ -2516,9 +2516,9 @@ export default function Programacao() {
           }}
         >
           <div style={{ flex: '1', minWidth: '220px' }}>
-            <strong style={{ color: '#0f172a' }}>Veio de outra tela</strong>
+            <strong style={{ color: "var(--text-primary, #0f172a)" }}>Veio de outra tela</strong>
             {itemContextoResolvido ? (
-              <span style={{ color: '#475569' }}>
+              <span style={{ color: "var(--text-secondary, #475569)" }}>
                 {' '}
                 · Prog. {itemContextoResolvido.numero || '—'} · {itemContextoResolvido.clienteNome}
                 {itemContextoResolvido.dataProgramada
@@ -2789,7 +2789,7 @@ export default function Programacao() {
                                 style={{
                                   ...itemAgendaObsStyle,
                                   fontSize: '12px',
-                                  color: '#64748b',
+                                  color: "var(--text-secondary, #64748b)",
                                   fontStyle: 'normal',
                                 }}
                               >
@@ -2968,14 +2968,14 @@ export default function Programacao() {
                   style={{
                     fontSize: '18px',
                     fontWeight: 800,
-                    color: '#0f172a',
+                    color: "var(--text-primary, #0f172a)",
                     textTransform: 'capitalize',
                     lineHeight: 1.3,
                   }}
                 >
                   {formatDiaPainelTitulo(diaPainelCalendario)}
                 </div>
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
+                <div style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", marginTop: '6px' }}>
                   {itensDiaPainelCalendarioFiltrados.length}
                   {(buscaClientePainelDia.trim() || filtroTipoCaminhao) &&
                   itensDiaPainelCalendarioFiltrados.length !== itensDiaPainelCalendario.length
@@ -3014,7 +3014,7 @@ export default function Programacao() {
                       display: 'block',
                       fontSize: '12px',
                       fontWeight: 700,
-                      color: '#64748b',
+                      color: "var(--text-secondary, #64748b)",
                       marginBottom: '6px',
                     }}
                   >
@@ -3031,7 +3031,7 @@ export default function Programacao() {
                       boxSizing: 'border-box',
                       padding: '10px 12px',
                       borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
+                      border: "1px solid var(--border-color, #e2e8f0)",
                       fontSize: '14px',
                     }}
                   />
@@ -3193,7 +3193,7 @@ export default function Programacao() {
                           <div
                             style={{
                               fontSize: '12px',
-                              color: '#64748b',
+                              color: "var(--text-secondary, #64748b)",
                               fontWeight: 700,
                               minWidth: 0,
                             }}
@@ -3240,16 +3240,16 @@ export default function Programacao() {
                           wordBreak: 'break-word',
                         }}
                       >
-                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', lineHeight: 1.35 }}>
+                        <div style={{ fontSize: '16px', fontWeight: 800, color: "var(--text-primary, #0f172a)", lineHeight: 1.35 }}>
                           {item.clienteNome}
                         </div>
                         {secPainel ? (
-                          <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
+                          <div style={{ fontSize: '13px', color: "var(--text-secondary, #475569)", marginTop: '4px' }}>
                             {secPainel}
                           </div>
                         ) : null}
                         {formatarLancadoPorResumo(item.criadoPorNome, item.createdAt) ? (
-                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px', lineHeight: 1.35 }}>
+                          <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '8px', lineHeight: 1.35 }}>
                             {formatarLancadoPorResumo(item.criadoPorNome, item.createdAt)}
                           </div>
                         ) : null}
@@ -3633,10 +3633,10 @@ export default function Programacao() {
               )}
 
               <div style={relatorioResumoBarStyle}>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   {agendaRelatorioAgrupada.reduce((n, [, it]) => n + it.length, 0)} programação(ões)
                 </span>
-                <span style={{ color: '#64748b', fontWeight: 600, fontSize: '13px' }}>
+                <span style={{ color: "var(--text-secondary, #64748b)", fontWeight: 600, fontSize: '13px' }}>
                   Período: {formatDate(relatorioRange.ini)} — {formatDate(relatorioRange.fim)}
                 </span>
               </div>
@@ -3646,7 +3646,7 @@ export default function Programacao() {
               <div style={{ ...estadoVazioStyle, padding: '20px' }}>
                 Nenhuma programação neste período.
                 {relatorioRange.ini.slice(0, 4) !== mesSelecionado.slice(0, 4) ? (
-                  <div style={{ marginTop: '10px', fontSize: '13px', color: '#94a3b8' }}>
+                  <div style={{ marginTop: '10px', fontSize: '13px', color: "var(--text-secondary, #94a3b8)" }}>
                     Dica: os dados desta tela são carregados para o ano do seletor &quot;Calendário do
                     mês&quot; acima. Ajuste esse mês (ou clique em Atualizar) se estiver consultando outro
                     ano.
@@ -3880,14 +3880,14 @@ export default function Programacao() {
                 const linha = formatarLancadoPorResumo(nomePreview, refItem?.createdAt)
                 if (!linha) return null
                 return (
-                  <div style={{ ...cardDescricaoStyle, color: '#475569', fontSize: '13px', lineHeight: 1.4 }}>
-                    <strong style={{ color: '#334155' }}>Auditoria:</strong> {linha}
+                  <div style={{ ...cardDescricaoStyle, color: "var(--text-secondary, #475569)", fontSize: '13px', lineHeight: 1.4 }}>
+                    <strong style={{ color: "var(--text-primary, #334155)" }}>Auditoria:</strong> {linha}
                   </div>
                 )
               })()}
               {cargoEhDesenvolvedor(usuarioCargo) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor="prog-criado-por-nome-dev" style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
+                  <label htmlFor="prog-criado-por-nome-dev" style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-primary, #334155)" }}>
                     Corrigir nome do autor do lançamento (apenas Desenvolvedor)
                   </label>
                   <input
@@ -3900,12 +3900,12 @@ export default function Programacao() {
                       width: '100%',
                       boxSizing: 'border-box',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       padding: '10px 12px',
                       fontSize: '14px',
                     }}
                   />
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  <span style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                     A data/hora do lançamento não é alterada. O ID do utilizador só pode ser ajustado via base de dados.
                   </span>
                 </div>
@@ -3916,7 +3916,7 @@ export default function Programacao() {
                   gap: '12px',
                   flexWrap: 'wrap',
                   paddingTop: '14px',
-                  borderTop: '1px solid #e5e7eb',
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                   marginTop: '4px',
                 }}
               >
@@ -3959,10 +3959,10 @@ export default function Programacao() {
             style={declaracaoModalBoxStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="prog-decl-entrega-titulo" style={{ margin: '0 0 8px', fontSize: '18px', color: '#0f172a' }}>
+            <h2 id="prog-decl-entrega-titulo" style={{ margin: '0 0 8px', fontSize: '18px', color: "var(--text-primary, #0f172a)" }}>
               Declaração de entrega
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
               Revise os dados antes de imprimir. Este fluxo não gera MTR, ticket nem faturamento — apenas a
               declaração de entrega. Ao confirmar, a programação passa a <strong>Finalizado</strong>.
             </p>
@@ -3973,7 +3973,7 @@ export default function Programacao() {
               }}
               style={{ display: 'grid', gap: '12px' }}
             >
-              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                 Razão social
                 <input
                   value={declaracaoDraft.razaoSocial}
@@ -3981,7 +3981,7 @@ export default function Programacao() {
                   style={declaracaoModalInputStyle}
                 />
               </label>
-              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                 Endereço
                 <textarea
                   value={declaracaoDraft.endereco}
@@ -3990,7 +3990,7 @@ export default function Programacao() {
                   style={declaracaoModalInputStyle}
                 />
               </label>
-              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                 Telefone
                 <input
                   value={declaracaoDraft.telefone}
@@ -3998,7 +3998,7 @@ export default function Programacao() {
                   style={declaracaoModalInputStyle}
                 />
               </label>
-              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                 Equipamento(s)
                 <textarea
                   value={declaracaoDraft.equipamento}
@@ -4008,7 +4008,7 @@ export default function Programacao() {
                 />
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                   Data da entrega
                   <input
                     type="date"
@@ -4017,7 +4017,7 @@ export default function Programacao() {
                     style={declaracaoModalInputStyle}
                   />
                 </label>
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 600, color: "var(--text-primary, #334155)" }}>
                   Data do documento
                   <input
                     type="date"
@@ -4027,9 +4027,9 @@ export default function Programacao() {
                   />
                 </label>
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
                 No documento impresso, a linha de assinatura identifica a{' '}
-                <strong style={{ color: '#334155' }}>empresa responsável pelo recebimento</strong> (
+                <strong style={{ color: "var(--text-primary, #334155)" }}>empresa responsável pelo recebimento</strong> (
                 {declaracaoDraft.razaoSocial.trim() || 'razão social do cliente'}).
               </p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '8px' }}>
@@ -4292,9 +4292,9 @@ const agendaAvatarStyle: CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: 999,
-  background: '#f1f5f9',
-  border: '1px solid #e2e8f0',
-  color: '#475569',
+  background: "var(--bg-inset, #f1f5f9)",
+  border: "1px solid var(--border-color, #e2e8f0)",
+  color: "var(--text-secondary, #475569)",
   fontSize: 13,
   fontWeight: 800,
   display: 'flex',
@@ -4326,7 +4326,7 @@ const statusBadgeCompactStyle: CSSProperties = {
 
 const itemAgendaMetaStripStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.5,
   display: 'flex',
   flexWrap: 'wrap',
@@ -4334,7 +4334,7 @@ const itemAgendaMetaStripStyle: CSSProperties = {
 }
 
 const itemMetaKeyStyle: CSSProperties = {
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   fontWeight: 600,
   fontSize: '11px',
   textTransform: 'uppercase',
@@ -4349,24 +4349,24 @@ const itemMetaSepStyle: CSSProperties = {
 
 const itemAgendaObsStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   lineHeight: 1.45,
   padding: '8px 10px',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
   borderRadius: '8px',
   border: '1px solid #eef2f7',
 }
 
 const itemNumeroStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 600,
   marginBottom: '2px',
 }
 
 const itemClienteStyle: CSSProperties = {
   fontSize: '16px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 700,
   letterSpacing: '-0.02em',
   lineHeight: 1.25,
@@ -4436,19 +4436,19 @@ const bannerContextoBaseStyle: CSSProperties = {
 }
 
 const bannerContextoOkStyle: CSSProperties = {
-  background: '#f0fdf4',
+  background: "var(--status-success-bg, #f0fdf4)",
   border: '1px solid #bbf7d0',
 }
 
 const bannerContextoAlertaStyle: CSSProperties = {
-  background: '#fffbeb',
+  background: "var(--status-warning-bg, #fffbeb)",
   border: '1px solid #fcd34d',
 }
 
 const botaoLimparContextoStyle: CSSProperties = {
-  background: '#ffffff',
-  color: '#64748b',
-  border: '1px solid #cbd5e1',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-secondary, #64748b)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '10px',
   padding: '8px 14px',
   fontWeight: 700,
@@ -4463,7 +4463,7 @@ const relatorioModalAcoesStyle: CSSProperties = {
   justifyContent: 'flex-end',
   marginTop: '18px',
   paddingTop: '16px',
-  borderTop: '1px solid #e5e7eb',
+  borderTop: "1px solid var(--border-color, #e5e7eb)",
   flexShrink: 0,
 }
 
@@ -4482,7 +4482,7 @@ const declaracaoModalInputStyle: CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
   borderRadius: '10px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   padding: '10px 12px',
   fontSize: '14px',
   fontWeight: 400,
@@ -4509,9 +4509,9 @@ const relatorioSegmentBtnStyle: CSSProperties = {
   minWidth: '88px',
   height: '40px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
-  background: '#f8fafc',
-  color: '#475569',
+  border: "1px solid var(--input-border, #d1d5db)",
+  background: "var(--bg-subtle, #f8fafc)",
+  color: "var(--text-secondary, #475569)",
   fontWeight: 700,
   fontSize: '13px',
   cursor: 'pointer',
@@ -4531,6 +4531,6 @@ const relatorioResumoBarStyle: CSSProperties = {
   justifyContent: 'space-between',
   padding: '12px 14px',
   borderRadius: '14px',
-  background: '#f1f5f9',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-inset, #f1f5f9)",
+  border: "1px solid var(--border-color, #e2e8f0)",
 }

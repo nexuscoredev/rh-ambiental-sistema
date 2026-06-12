@@ -51,7 +51,7 @@ export default function FaturamentoClinicas() {
           }}
         >
           <div>
-            <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Faturamento — Clínicas
             </h1>
             <p className="page-header__lead" style={{ margin: '10px 0 0', maxWidth: 760, lineHeight: 1.65 }}>

@@ -8,8 +8,8 @@ const grid: CSSProperties = {
 }
 
 const card: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '14px',
   padding: '16px 18px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -20,21 +20,21 @@ const label: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginBottom: '6px',
 }
 
 const value: CSSProperties = {
   fontSize: '22px',
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   letterSpacing: '-0.02em',
 }
 
 const hint: CSSProperties = {
   marginTop: '6px',
   fontSize: '12px',
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   lineHeight: 1.4,
 }
 
@@ -71,7 +71,7 @@ export function FaturamentoResumoCards({
       <div style={{ ...card, borderTop: '3px solid #0d9488' }}>
         <div style={label}>Pronto para faturar (vista)</div>
         <div style={value}>{qtdProntoConferencia}</div>
-        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorSomaProntoConferencia}</div>
+        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>{valorSomaProntoConferencia}</div>
         <div style={hint}>
           Requisitos de MTR/peso/ticket ok na vista; exclui conferência do ticket e quem já foi ao Financeiro.
         </div>
@@ -79,7 +79,7 @@ export function FaturamentoResumoCards({
       <div style={{ ...card, borderTop: '3px solid #14b8a6' }}>
         <div style={label}>Pode faturar agora</div>
         <div style={value}>{qtdPodeEmitir}</div>
-        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorEstimadoEmitir}</div>
+        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>{valorEstimadoEmitir}</div>
         <div style={hint}>
           Ticket aprovado pelo Faturamento; ainda sem emissão ao Financeiro.
         </div>
@@ -87,7 +87,7 @@ export function FaturamentoResumoCards({
       <div style={{ ...card, borderTop: '3px solid #0ea5e9' }}>
         <div style={label}>Já no Financeiro</div>
         <div style={value}>{qtdEmitidasFinanceiro}</div>
-        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: '#0f172a' }}>{valorEmitidas}</div>
+        <div style={{ ...hint, marginTop: '8px', fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>{valorEmitidas}</div>
         <div style={hint}>Coletas com registro emitido ou etapa já enviada ao Financeiro.</div>
       </div>
       <div style={{ ...card, borderTop: '3px solid #94a3b8' }}>

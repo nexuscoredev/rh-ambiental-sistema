@@ -44,15 +44,15 @@ const boxStyle: CSSProperties = {
   marginTop: '16px',
   padding: '16px',
   borderRadius: '14px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const titStyle: CSSProperties = {
   margin: '0 0 10px',
   fontSize: '15px',
   fontWeight: 800,
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
 }
 
 const gridStyle: CSSProperties = {
@@ -60,10 +60,10 @@ const gridStyle: CSSProperties = {
   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
   gap: '12px',
   fontSize: '13px',
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
 }
 
-const labelStyle: CSSProperties = { fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }
+const labelStyle: CSSProperties = { fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block', marginBottom: '4px' }
 
 type Props = {
   item: FinanceiroListaItem
@@ -177,7 +177,7 @@ export function FinanceiroConferenciaDetalhe({
           <span style={labelStyle}>Cliente / razão social</span>
           {item.cliente}
           {item.clienteRazaoSocial ? (
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{item.clienteRazaoSocial}</div>
+            <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>{item.clienteRazaoSocial}</div>
           ) : null}
         </div>
         <div>
@@ -210,7 +210,7 @@ export function FinanceiroConferenciaDetalhe({
         <div>
           <span style={labelStyle}>Fase do fluxo (oficial)</span>
           <div style={{ fontWeight: 800, color: '#0f766e' }}>{item.faseFluxoOficial}</div>
-          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>
             <span style={labelStyle}>Detalhe técnico</span> {item.etapaOperacional}
           </div>
         </div>
@@ -218,14 +218,14 @@ export function FinanceiroConferenciaDetalhe({
           <span style={labelStyle}>Última aprovação diretoria</span>
           {item.ultimaAprovacaoDecisao || '—'}
           {item.ultimaAprovacaoObs ? (
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{item.ultimaAprovacaoObs}</div>
+            <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>{item.ultimaAprovacaoObs}</div>
           ) : null}
         </div>
         <div>
           <span style={labelStyle}>Conferência operacional (docs)</span>
           {item.conferenciaDocsOk === true ? 'OK' : item.conferenciaDocsOk === false ? 'Pendente' : '—'}
           {item.conferenciaObs ? (
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{item.conferenciaObs}</div>
+            <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>{item.conferenciaObs}</div>
           ) : null}
         </div>
         <div>
@@ -236,7 +236,7 @@ export function FinanceiroConferenciaDetalhe({
           <span style={labelStyle}>Envio de NF (conta a receber)</span>
           {item.nfEnviadaEm ? formatDateTime(item.nfEnviadaEm) : '—'}
           {item.nfEnvioObs ? (
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{item.nfEnvioObs}</div>
+            <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>{item.nfEnvioObs}</div>
           ) : null}
         </div>
         {vTot > 0 ? (
@@ -250,7 +250,7 @@ export function FinanceiroConferenciaDetalhe({
               </span>
             </div>
             {item.valorTravado ? (
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+              <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '6px' }}>
                 Valor faturado travado.
                 {podeAlterarValorTravado ? ' Como administrador, pode alterar o total na grelha.' : ''}
               </div>
@@ -277,7 +277,7 @@ export function FinanceiroConferenciaDetalhe({
                     style={{
                       padding: '8px 10px',
                       borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       width: '120px',
                       fontSize: '14px',
                     }}
@@ -295,7 +295,7 @@ export function FinanceiroConferenciaDetalhe({
                       width: '100%',
                       padding: '8px 10px',
                       borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       fontSize: '14px',
                       boxSizing: 'border-box',
                     }}
@@ -321,9 +321,9 @@ export function FinanceiroConferenciaDetalhe({
               <div style={{ marginTop: '14px' }}>
                 <span style={{ ...labelStyle, marginBottom: '8px' }}>Histórico de baixas</span>
                 {carregandoHistoricoBaixas ? (
-                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>A carregar…</p>
+                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>A carregar…</p>
                 ) : baixasHistorico.length === 0 ? (
-                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                     Nenhuma baixa registada nesta conta.
                   </p>
                 ) : (
@@ -337,11 +337,11 @@ export function FinanceiroConferenciaDetalhe({
                       }}
                     >
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                          <th style={{ padding: '8px 6px', color: '#64748b' }}>Data baixa</th>
-                          <th style={{ padding: '8px 6px', color: '#64748b' }}>Valor</th>
-                          <th style={{ padding: '8px 6px', color: '#64748b' }}>Observação</th>
-                          <th style={{ padding: '8px 6px', color: '#64748b' }}>Registado em</th>
+                        <tr style={{ borderBottom: "1px solid var(--border-color, #e2e8f0)", textAlign: 'left' }}>
+                          <th style={{ padding: '8px 6px', color: "var(--text-secondary, #64748b)" }}>Data baixa</th>
+                          <th style={{ padding: '8px 6px', color: "var(--text-secondary, #64748b)" }}>Valor</th>
+                          <th style={{ padding: '8px 6px', color: "var(--text-secondary, #64748b)" }}>Observação</th>
+                          <th style={{ padding: '8px 6px', color: "var(--text-secondary, #64748b)" }}>Registado em</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -354,10 +354,10 @@ export function FinanceiroConferenciaDetalhe({
                                 currency: 'BRL',
                               })}
                             </td>
-                            <td style={{ padding: '8px 6px', color: '#475569' }}>
+                            <td style={{ padding: '8px 6px', color: "var(--text-secondary, #475569)" }}>
                               {(b.observacao || '').trim() || '—'}
                             </td>
-                            <td style={{ padding: '8px 6px', fontSize: '12px', color: '#64748b' }}>
+                            <td style={{ padding: '8px 6px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                               {formatDateTime(b.created_at)}
                               {b.created_by ? (
                                 <span title={b.created_by}>
@@ -379,7 +379,7 @@ export function FinanceiroConferenciaDetalhe({
       </div>
 
       {item.programacaoObs || item.mtrObs ? (
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#475569' }}>
+        <div style={{ marginTop: '12px', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
           {item.programacaoObs ? (
             <div style={{ marginBottom: '8px' }}>
               <strong>Obs. programação:</strong> {item.programacaoObs}
@@ -418,7 +418,7 @@ export function FinanceiroConferenciaDetalhe({
             maxWidth: '640px',
             padding: '10px 12px',
             borderRadius: '10px',
-            border: '1px solid #cbd5e1',
+            border: "1px solid var(--input-border, #cbd5e1)",
             fontSize: '14px',
             resize: 'vertical',
             boxSizing: 'border-box',
@@ -449,7 +449,7 @@ export function FinanceiroConferenciaDetalhe({
       </div>
 
       <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569' }}>Pagamento:</span>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: "var(--text-secondary, #475569)" }}>Pagamento:</span>
         <button
           type="button"
           disabled={!podeMutar}
@@ -479,9 +479,9 @@ const badgeStyle: CSSProperties = {
 }
 
 const btnNavStyle: CSSProperties = {
-  background: '#ffffff',
-  color: '#0f172a',
-  border: '1px solid #cbd5e1',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '10px',
   padding: '8px 12px',
   fontSize: '13px',

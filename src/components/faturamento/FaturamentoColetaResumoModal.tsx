@@ -47,7 +47,7 @@ function fmtPeso(n: number | null | undefined) {
 
 const labelStyle: CSSProperties = {
   fontWeight: 700,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   display: 'block',
   marginBottom: '4px',
   fontSize: '11px',
@@ -55,7 +55,7 @@ const labelStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-const valorStyle: CSSProperties = { fontSize: '14px', color: '#0f172a', lineHeight: 1.45 }
+const valorStyle: CSSProperties = { fontSize: '14px', color: "var(--text-primary, #0f172a)", lineHeight: 1.45 }
 
 const gridStyle: CSSProperties = {
   display: 'grid',
@@ -67,15 +67,15 @@ const secaoTitStyle: CSSProperties = {
   margin: '0 0 12px',
   fontSize: '13px',
   fontWeight: 800,
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
 }
 
 const btnNavStyle: CSSProperties = {
-  background: '#ffffff',
-  color: '#0f172a',
-  border: '1px solid #cbd5e1',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-primary, #0f172a)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '10px',
   padding: '8px 12px',
   fontSize: '13px',
@@ -186,10 +186,10 @@ export function FaturamentoColetaResumoModal({
           maxWidth: '760px',
           maxHeight: 'min(92vh, 820px)',
           overflow: 'auto',
-          background: '#fff',
+          background: "var(--bg-card, #ffffff)",
           borderRadius: '16px',
           boxShadow: '0 24px 60px rgba(15, 23, 42, 0.2)',
-          border: '1px solid #e2e8f0',
+          border: "1px solid var(--border-color, #e2e8f0)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -205,10 +205,10 @@ export function FaturamentoColetaResumoModal({
           }}
         >
           <div>
-            <h2 id="fat-resumo-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+            <h2 id="fat-resumo-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Resumo do caso
             </h2>
-            <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b' }}>
+            <p style={{ margin: '8px 0 0', fontSize: '14px', color: "var(--text-secondary, #64748b)" }}>
               {coletasConsolidadas && coletasConsolidadas.length > 1 ? (
                 <>
                   Faturamento consolidado ({coletasConsolidadas.length} tickets) —{' '}
@@ -226,14 +226,14 @@ export function FaturamentoColetaResumoModal({
             onClick={onClose}
             aria-label="Fechar"
             style={{
-              background: '#f1f5f9',
+              background: "var(--bg-inset, #f1f5f9)",
               border: 'none',
               borderRadius: '10px',
               width: '36px',
               height: '36px',
               fontSize: '18px',
               cursor: 'pointer',
-              color: '#475569',
+              color: "var(--text-secondary, #475569)",
               lineHeight: 1,
             }}
           >
@@ -247,10 +247,10 @@ export function FaturamentoColetaResumoModal({
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Coleta</th>
-                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Resíduo</th>
-                      <th style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>Peso líq.</th>
+                    <tr style={{ background: "var(--bg-subtle, #f8fafc)", textAlign: 'left' }}>
+                      <th style={{ padding: '8px 10px', borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>Coleta</th>
+                      <th style={{ padding: '8px 10px', borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>Resíduo</th>
+                      <th style={{ padding: '8px 10px', borderBottom: "1px solid var(--border-color, #e2e8f0)" }}>Peso líq.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -307,7 +307,7 @@ export function FaturamentoColetaResumoModal({
               <Campo label="Programação">
                 {row.programacao_numero || '—'}
                 {row.data_programacao ? (
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>
                     {fmtData(row.data_programacao)}
                   </div>
                 ) : null}
@@ -324,11 +324,11 @@ export function FaturamentoColetaResumoModal({
               <Campo label="Data execução (coleta)">{fmtData(row.data_execucao)}</Campo>
               <Campo label="Fase do fluxo">
                 <span style={{ fontWeight: 700, color: '#0f766e' }}>{etapaUi.fase}</span>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{etapaUi.etapa}</div>
+                <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>{etapaUi.etapa}</div>
               </Campo>
             </div>
             {row.programacao_observacoes || row.mtr_observacoes ? (
-              <div style={{ marginTop: '12px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+              <div style={{ marginTop: '12px', fontSize: '13px', color: "var(--text-secondary, #475569)", lineHeight: 1.5 }}>
                 {row.programacao_observacoes ? (
                   <div style={{ marginBottom: '6px' }}>
                     <strong>Obs. programação:</strong> {row.programacao_observacoes}
@@ -361,7 +361,7 @@ export function FaturamentoColetaResumoModal({
               <Campo label="Última aprovação diretoria">
                 {row.ultima_aprovacao_decisao?.trim() || '—'}
                 {row.ultima_aprovacao_em ? (
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)", marginTop: '4px' }}>
                     {fmtDataHora(row.ultima_aprovacao_em)}
                   </div>
                 ) : null}
@@ -373,17 +373,17 @@ export function FaturamentoColetaResumoModal({
               </p>
             ) : null}
             {row.conferencia_operacional_obs?.trim() ? (
-              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#475569' }}>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
                 <strong>Obs. conferência:</strong> {row.conferencia_operacional_obs.trim()}
               </p>
             ) : null}
             {row.faturamento_ticket_aprovacao_obs?.trim() ? (
-              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#475569' }}>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
                 <strong>Obs. aprovação ticket:</strong> {row.faturamento_ticket_aprovacao_obs.trim()}
               </p>
             ) : null}
             {row.ultima_aprovacao_obs?.trim() ? (
-              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#475569' }}>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
                 <strong>Obs. aprovação:</strong> {row.ultima_aprovacao_obs.trim()}
               </p>
             ) : null}
@@ -409,7 +409,7 @@ export function FaturamentoColetaResumoModal({
               ) : null}
             </div>
             {row.conta_receber_nf_envio_obs?.trim() ? (
-              <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#475569' }}>
+              <p style={{ margin: '10px 0 0', fontSize: '13px', color: "var(--text-secondary, #475569)" }}>
                 <strong>Obs. envio NF:</strong> {row.conta_receber_nf_envio_obs.trim()}
               </p>
             ) : null}
@@ -417,7 +417,7 @@ export function FaturamentoColetaResumoModal({
 
           {row.coleta_observacoes?.trim() ? (
             <Secao titulo="Observações da coleta">
-              <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: "var(--text-primary, #334155)", lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
                 {row.coleta_observacoes.trim()}
               </p>
             </Secao>
@@ -443,7 +443,7 @@ export function FaturamentoColetaResumoModal({
             </button>
             <button
               type="button"
-              style={{ ...btnNavStyle, background: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }}
+              style={{ ...btnNavStyle, background: "var(--status-info-bg, #eff6ff)", borderColor: '#93c5fd', color: '#1d4ed8' }}
               disabled={abrindoPdf}
               onClick={() => void handleVisualizarTicket()}
             >

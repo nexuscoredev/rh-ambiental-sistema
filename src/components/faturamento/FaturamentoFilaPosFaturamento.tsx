@@ -14,8 +14,8 @@ import { registarNumeroNfBoletoEsteiraFaturamentoLote } from '../../services/fin
 import { useRgDialog } from '../../lib/RgDialogProvider'
 
 const card: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '18px 20px',
   marginBottom: '18px',
@@ -26,7 +26,7 @@ const inputStyle: CSSProperties = {
   minWidth: 120,
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
 }
 
@@ -138,10 +138,10 @@ export function FaturamentoFilaPosFaturamento({
     if (!historicoCarregado || carregando) {
       return (
         <section id="fila-nf-boleto" style={card} aria-busy="true">
-          <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             7. Mala Direta — Registo de NF / boleto
           </h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>A carregar coletas faturadas…</p>
+          <p style={{ margin: 0, fontSize: '14px', color: "var(--text-secondary, #64748b)" }}>A carregar coletas faturadas…</p>
         </section>
       )
     }
@@ -228,10 +228,10 @@ export function FaturamentoFilaPosFaturamento({
 
   return (
     <div id="fila-nf-boleto" style={card}>
-      <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
         7. Mala Direta — Registo de NF / boleto
       </h2>
-      <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 14px', fontSize: '13px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
         Após <strong>confirmar o faturamento</strong>, informe o <strong>número da NF</strong> (e, se quiser, a
         referência do boleto). Vários tickets da <strong>mesma MTR</strong> partilham <strong>uma única NF/boleto</strong>.
         Ao <strong>finalizar o processo</strong>, o caso sai desta esteira e passa para a fila{' '}
@@ -275,8 +275,8 @@ export function FaturamentoFilaPosFaturamento({
               style={{
                 padding: '14px 14px',
                 borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                background: '#f8fafc',
+                border: "1px solid var(--border-color, #e2e8f0)",
+                background: "var(--bg-subtle, #f8fafc)",
               }}
             >
               <div
@@ -287,7 +287,7 @@ export function FaturamentoFilaPosFaturamento({
                   alignItems: 'center',
                   marginBottom: '12px',
                   fontSize: '12px',
-                  color: '#334155',
+                  color: "var(--text-primary, #334155)",
                 }}
               >
                 <span style={{ fontWeight: 700 }}>
@@ -301,7 +301,7 @@ export function FaturamentoFilaPosFaturamento({
                     </>
                   )}
                 </span>
-                <span style={{ color: '#64748b' }}>{rotuloEsteiraLinha(primeira)}</span>
+                <span style={{ color: "var(--text-secondary, #64748b)" }}>{rotuloEsteiraLinha(primeira)}</span>
                 <span style={{ color: '#047857', fontWeight: 700 }}>
                   {multiplos ? `Total ${valorTotalGrupo(grupo)}` : valorExibicao(primeira)}
                 </span>
@@ -320,7 +320,7 @@ export function FaturamentoFilaPosFaturamento({
                     margin: '0 0 12px',
                     padding: '0 0 0 18px',
                     fontSize: '12px',
-                    color: '#64748b',
+                    color: "var(--text-secondary, #64748b)",
                     lineHeight: 1.6,
                   }}
                 >
@@ -381,7 +381,7 @@ export function FaturamentoFilaPosFaturamento({
           )
         })}
         {grupos.length > 30 ? (
-          <li style={{ fontSize: '12px', color: '#94a3b8' }}>+ {grupos.length - 30} faturamento(s)…</li>
+          <li style={{ fontSize: '12px', color: "var(--text-secondary, #94a3b8)" }}>+ {grupos.length - 30} faturamento(s)…</li>
         ) : null}
       </ul>
 

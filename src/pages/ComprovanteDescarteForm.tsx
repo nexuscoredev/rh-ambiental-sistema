@@ -656,7 +656,7 @@ export default function ComprovanteDescarteForm() {
     return (
       <MainLayout>
         <div className="cd-page">
-          <p style={{ color: '#64748b' }}>A carregar comprovante…</p>
+          <p style={{ color: "var(--text-secondary, #64748b)" }}>A carregar comprovante…</p>
         </div>
       </MainLayout>
     )
@@ -1022,7 +1022,7 @@ export default function ComprovanteDescarteForm() {
 
             <div className="cd-secao">
               <h2 className="cd-secao__titulo">3. Transportador</h2>
-              <p className="cd-secao__hint" style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>
+              <p className="cd-secao__hint" style={{ margin: '0 0 12px', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                 Dados corporativos da RG Ambiental — preenchidos automaticamente pelo sistema.
               </p>
               <div className="cd-grid2">
@@ -1037,7 +1037,7 @@ export default function ComprovanteDescarteForm() {
                     disabled
                     value={form.transportador_razao_social}
                     title="Dado corporativo RG Ambiental"
-                    style={{ background: '#f8fafc', cursor: 'not-allowed' }}
+                    style={{ background: "var(--bg-subtle, #f8fafc)", cursor: 'not-allowed' }}
                   />
                   {errosVal.transportador_razao_social ? (
                     <div className="cd-erro-msg">{errosVal.transportador_razao_social}</div>
@@ -1054,7 +1054,7 @@ export default function ComprovanteDescarteForm() {
                     disabled
                     value={form.transportador_telefone}
                     title="Dado corporativo RG Ambiental"
-                    style={{ background: '#f8fafc', cursor: 'not-allowed' }}
+                    style={{ background: "var(--bg-subtle, #f8fafc)", cursor: 'not-allowed' }}
                   />
                 </div>
                 <div>

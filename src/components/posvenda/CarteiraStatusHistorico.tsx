@@ -194,7 +194,7 @@ export function CarteiraStatusHistorico({ clientes, hoje }: Props) {
           marginBottom: '8px',
         }}
       >
-        <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>Evolução ativos × inativos</div>
+        <div style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>Evolução ativos × inativos</div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {(['semanas', 'meses', 'anos'] as const).map((g) => (
             <button
@@ -212,7 +212,7 @@ export function CarteiraStatusHistorico({ clientes, hoje }: Props) {
           ))}
         </div>
       </div>
-      <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#64748b', lineHeight: 1.45 }}>
+      <p style={{ margin: '0 0 6px', fontSize: '11px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
         {tituloAba[gran]} — <strong>Ilustração</strong>: no passado há mais inativos que ativos; a linha de
         ativos acelera (pós-venda / reativação); inativos recuam até o total atual. O{' '}
         <strong>último ponto</strong> é o real da carteira hoje.
@@ -238,7 +238,7 @@ export function CarteiraStatusHistorico({ clientes, hoje }: Props) {
             <Tooltip
               contentStyle={{
                 borderRadius: '10px',
-                border: '1px solid #e2e8f0',
+                border: "1px solid var(--border-color, #e2e8f0)",
                 boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
               }}
             />

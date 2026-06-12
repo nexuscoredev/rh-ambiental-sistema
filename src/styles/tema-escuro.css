@@ -63,6 +63,10 @@
   --link-color: #5eead4;
   --accent-teal: #2dd4bf;
   --accent-teal-soft: rgba(45, 212, 191, 0.12);
+  --status-success-bg: rgba(34, 197, 94, 0.14);
+  --status-warning-bg: rgba(251, 191, 36, 0.14);
+  --status-error-bg: rgba(248, 113, 113, 0.14);
+  --status-info-bg: rgba(96, 165, 250, 0.14);
 
   color: var(--text-primary);
   background: var(--layout-canvas);
@@ -1080,6 +1084,112 @@
 [data-theme='dark'] .clinicas-page table td {
   color: var(--text-primary);
   border-color: var(--border-color);
+}
+
+/* Demais módulos e sub-páginas */
+[data-theme='dark'] .controle-massa-page,
+[data-theme='dark'] .financeiro-page,
+[data-theme='dark'] .financeiro-cp-page,
+[data-theme='dark'] .financeiro-cr-page,
+[data-theme='dark'] .dashboard-legacy-page,
+[data-theme='dark'] .frota-page,
+[data-theme='dark'] .ticket-operacional-page,
+[data-theme='dark'] .solicitacoes-admin,
+[data-theme='dark'] .presidente-page,
+[data-theme='dark'] .presidente-hub,
+[data-theme='dark'] .rh-modulo,
+[data-theme='dark'] .rh-dp,
+[data-theme='dark'] .treinamento-kb,
+[data-theme='dark'] .comprovantes-page,
+[data-theme='dark'] .aprovacao-diretoria-page {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .page-shell table th {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .page-shell table td {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .page-shell table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+[data-theme='dark'] .page-shell .rg-surface-panel,
+[data-theme='dark'] .page-shell [class$='__panel'],
+[data-theme='dark'] .page-shell [class$='__box'],
+[data-theme='dark'] .page-shell [class$='__wrap'] {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .rg-prompt-dialog,
+[data-theme='dark'] .rg-prompt-dialog__panel {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .rg-prompt-dialog input,
+[data-theme='dark'] .rg-prompt-dialog textarea {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .chat-interno-panel,
+[data-theme='dark'] .chat-interno-mensagem--outro,
+[data-theme='dark'] .chat-thread-panel {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .chat-interno-mensagem--proprio {
+  background: var(--accent-teal-soft);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .executive-dashboard,
+[data-theme='dark'] .executive-dashboard__card,
+[data-theme='dark'] .executive-dashboard__panel {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .faturamento-resumo-card,
+[data-theme='dark'] .faturamento-fila-card,
+[data-theme='dark'] .faturamento-esteira-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .mtr-page-shell,
+[data-theme='dark'] .mtr-gerenciador-page,
+[data-theme='dark'] .mtr-form-section {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .page-header__lead,
+[data-theme='dark'] .page-shell p {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .page-shell strong {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .page-shell h1,
+[data-theme='dark'] .page-shell h2,
+[data-theme='dark'] .page-shell h3 {
+  color: var(--text-primary);
 }
 
 html.theme-transition,

@@ -13,9 +13,9 @@ const wrap: CSSProperties = {
   gap: '8px',
   marginBottom: '20px',
   padding: '12px 14px',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
 }
 
 function stepStyle(n: number, passoAtivo?: PassoUiEsteiraFaturamento): CSSProperties {
@@ -39,7 +39,7 @@ function stepStyle(n: number, passoAtivo?: PassoUiEsteiraFaturamento): CSSProper
       fontWeight: 700,
       padding: '6px 10px',
       borderRadius: '8px',
-      background: '#ecfdf5',
+      background: "var(--accent-teal-soft, #ecfdf5)",
       color: '#0f766e',
       border: '1px solid #99f6e4',
     }
@@ -49,9 +49,9 @@ function stepStyle(n: number, passoAtivo?: PassoUiEsteiraFaturamento): CSSProper
     fontWeight: 700,
     padding: '6px 10px',
     borderRadius: '8px',
-    background: '#fff',
-    color: '#64748b',
-    border: '1px solid #cbd5e1',
+    background: "var(--bg-card, #ffffff)",
+    color: "var(--text-secondary, #64748b)",
+    border: "1px solid var(--input-border, #cbd5e1)",
   }
 }
 
@@ -82,7 +82,7 @@ export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: PassoUiEs
             marginTop: '6px',
             padding: '8px 10px',
             borderRadius: '8px',
-            background: '#f0fdfa',
+            background: "var(--accent-teal-soft, #f0fdfa)",
             border: '1px solid #99f6e4',
             fontSize: '12px',
             fontWeight: 700,
@@ -92,7 +92,7 @@ export function FaturamentoEsteiraFluxo({ passoAtivo }: { passoAtivo?: PassoUiEs
           Você está na etapa <strong>{passoAtivo}. {ROTULO_PASSO_UI_ESTEIRA[passoAtivo]}</strong>
         </span>
       ) : null}
-      <span style={{ width: '100%', fontSize: '10px', color: '#94a3b8', marginTop: passoAtivo ? '4px' : '4px' }}>
+      <span style={{ width: '100%', fontSize: '10px', color: "var(--text-secondary, #94a3b8)", marginTop: passoAtivo ? '4px' : '4px' }}>
         Status internos: {ORDEM_ESTEIRA_UI.map((s) => ROTULO_ESTEIRA[s]).join(' → ')}
       </span>
       <div style={{ width: '100%' }}>

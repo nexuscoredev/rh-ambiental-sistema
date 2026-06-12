@@ -934,10 +934,10 @@ export function FaturamentoModalRegisto({
           maxWidth: '680px',
           maxHeight: 'min(92vh, 720px)',
           overflow: 'auto',
-          background: '#fff',
+          background: "var(--bg-card, #ffffff)",
           borderRadius: '16px',
           boxShadow: '0 24px 60px rgba(15, 23, 42, 0.2)',
-          border: '1px solid #e2e8f0',
+          border: "1px solid var(--border-color, #e2e8f0)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -953,7 +953,7 @@ export function FaturamentoModalRegisto({
           }}
         >
           <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-          <h2 id="fat-modal-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+          <h2 id="fat-modal-titulo" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
             {modoPreparacaoMedicao
               ? grupoConsolidado && grupoConsolidado.length > 1
                 ? 'Ajuste de valores — MTR consolidada'
@@ -962,7 +962,7 @@ export function FaturamentoModalRegisto({
                 ? 'Faturamento consolidado (1 por MTR)'
                 : 'Faturamento da coleta'}
           </h2>
-          <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
+          <p style={{ margin: '8px 0 0', fontSize: '14px', color: "var(--text-secondary, #64748b)", lineHeight: 1.5 }}>
             {grupoConsolidado && grupoConsolidado.length > 1 ? (
               <>
                 <strong>{grupoConsolidado.length} tickets</strong> na MTR{' '}
@@ -984,14 +984,14 @@ export function FaturamentoModalRegisto({
             onClick={onClose}
             aria-label="Fechar"
             style={{
-              background: '#f1f5f9',
+              background: "var(--bg-inset, #f1f5f9)",
               border: 'none',
               borderRadius: '10px',
               width: '36px',
               height: '36px',
               fontSize: '20px',
               cursor: 'pointer',
-              color: '#475569',
+              color: "var(--text-secondary, #475569)",
               lineHeight: 1,
               flexShrink: 0,
             }}
@@ -1006,7 +1006,7 @@ export function FaturamentoModalRegisto({
           ) : null}
 
           {carregando ? (
-            <p style={{ color: '#64748b', marginBottom: '14px' }}>Carregando resumos…</p>
+            <p style={{ color: "var(--text-secondary, #64748b)", marginBottom: '14px' }}>Carregando resumos…</p>
           ) : !resumoFinanceiro ? (
             <div style={{ marginBottom: '14px' }}>
               <p style={{ color: '#b45309', fontSize: '14px', margin: '0 0 10px' }}>
@@ -1043,7 +1043,7 @@ export function FaturamentoModalRegisto({
                   >
                     Recalcular do operacional
                   </button>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  <span style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
                     Atualiza pesos, resíduos, veículos e valores do contrato nas linhas do resumo.
                   </span>
                 </div>
@@ -1112,7 +1112,7 @@ export function FaturamentoModalRegisto({
               ) : null}
 
               {carregandoContrato || carregandoContextoMtr ? (
-                <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
+                <p style={{ fontSize: '12px', color: "var(--text-secondary, #94a3b8)", margin: '0 0 12px' }}>
                   A carregar contrato e seleção da MTR…
                 </p>
               ) : sugestaoContrato && sugestaoContrato.total <= 0 && row.cliente_id ? (
@@ -1131,7 +1131,7 @@ export function FaturamentoModalRegisto({
                     margin: '0 0 14px',
                     padding: '10px 12px',
                     borderRadius: 10,
-                    background: '#ecfdf5',
+                    background: "var(--accent-teal-soft, #ecfdf5)",
                     border: '1px solid #a7f3d0',
                     fontSize: 13,
                     color: '#065f46',
@@ -1146,7 +1146,7 @@ export function FaturamentoModalRegisto({
               {!modoPreparacaoMedicao && status === 'emitido' ? (
                 <>
                   <label
-                    style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}
+                    style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block', marginBottom: '6px' }}
                   >
                     Data de vencimento (conta a receber)
                   </label>
@@ -1160,12 +1160,12 @@ export function FaturamentoModalRegisto({
                       marginBottom: '6px',
                       padding: '10px 12px',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       fontSize: '14px',
                       boxSizing: 'border-box',
                     }}
                   />
-                  <p style={{ margin: '0 0 12px', fontSize: '11px', color: '#94a3b8' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '11px', color: "var(--text-secondary, #94a3b8)" }}>
                     Sugestão inicial +7 dias (editável). Usada ao confirmar o faturamento.
                   </p>
                 </>
@@ -1182,7 +1182,7 @@ export function FaturamentoModalRegisto({
                       padding: '10px 14px',
                       borderRadius: '10px',
                       border: '1px solid #b45309',
-                      background: '#fffbeb',
+                      background: "var(--status-warning-bg, #fffbeb)",
                       color: '#92400e',
                       fontWeight: 800,
                       fontSize: '13px',
@@ -1193,14 +1193,14 @@ export function FaturamentoModalRegisto({
                       ? 'A encerrar ticket…'
                       : 'Encerrar ticket definitivamente (Operacional (Time T))'}
                   </button>
-                  <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                  <p style={{ margin: '6px 0 0', fontSize: '11px', color: "var(--text-secondary, #94a3b8)" }}>
                     Grava o resumo financeiro e aprova o ticket na conferência, sem alterar a pesagem
                     operacional.
                   </p>
                 </div>
               ) : null}
 
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block', marginBottom: '6px' }}>
                 Observações (opcional)
               </label>
               <textarea
@@ -1213,7 +1213,7 @@ export function FaturamentoModalRegisto({
                   marginBottom: '12px',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
+                  border: "1px solid var(--input-border, #cbd5e1)",
                   fontSize: '14px',
                   resize: 'vertical',
                   boxSizing: 'border-box',
@@ -1223,7 +1223,7 @@ export function FaturamentoModalRegisto({
               {!modoPreparacaoMedicao ? (
                 <>
                   <label
-                    style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}
+                    style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", display: 'block', marginBottom: '6px' }}
                   >
                     Estado do registro
                   </label>
@@ -1236,7 +1236,7 @@ export function FaturamentoModalRegisto({
                       marginBottom: '14px',
                       padding: '10px 12px',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
+                      border: "1px solid var(--input-border, #cbd5e1)",
                       fontSize: '14px',
                     }}
                   >
@@ -1257,8 +1257,8 @@ export function FaturamentoModalRegisto({
                   style={{
                     padding: '10px 18px',
                     borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
+                    border: "1px solid var(--input-border, #cbd5e1)",
+                    background: "var(--bg-subtle, #f8fafc)",
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}

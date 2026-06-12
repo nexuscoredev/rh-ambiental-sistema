@@ -1266,7 +1266,7 @@ export default function Programacao() {
             ))}
           </select>
           {f.tipoCaminhao && !TIPOS_CAMINHAO_CATALOGO.has(f.tipoCaminhao) ? (
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.4 }}>
               Valor anterior (texto livre). Escolha uma opção abaixo para padronizar; se não alterar, o
               valor atual permanece ao salvar.
             </p>
@@ -1344,7 +1344,7 @@ export default function Programacao() {
         }}
       >
         <div style={{ flex: '1', minWidth: 'min(100%, 260px)' }}>
-          <h1 style={{ margin: 0, fontSize: '26px', color: '#0f172a', fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: '26px', color: "var(--text-primary, #0f172a)", fontWeight: 800 }}>
             Calendário das programações de Coleta
           </h1>
           <p className="page-header__lead" style={{ margin: '6px 0 0' }}>
@@ -1353,8 +1353,8 @@ export default function Programacao() {
             aqui).
           </p>
           {usuarioCargo ? (
-            <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
-              Perfil: <span style={{ color: '#0f172a' }}>{usuarioCargo}</span>
+            <p style={{ margin: '8px 0 0', color: "var(--text-secondary, #64748b)", fontSize: '12px', fontWeight: 600 }}>
+              Perfil: <span style={{ color: "var(--text-primary, #0f172a)" }}>{usuarioCargo}</span>
               {!podeMutarProgramacao ? ' · somente consulta' : ' · pode criar e editar'}
             </p>
           ) : null}
@@ -1407,9 +1407,9 @@ export default function Programacao() {
           }}
         >
           <div style={{ flex: '1', minWidth: '220px' }}>
-            <strong style={{ color: '#0f172a' }}>Veio de outra tela</strong>
+            <strong style={{ color: "var(--text-primary, #0f172a)" }}>Veio de outra tela</strong>
             {itemContextoResolvido ? (
-              <span style={{ color: '#475569' }}>
+              <span style={{ color: "var(--text-secondary, #475569)" }}>
                 {' '}
                 · Prog. {itemContextoResolvido.numero || '—'} · {itemContextoResolvido.clienteNome}
                 {itemContextoResolvido.dataProgramada
@@ -1785,14 +1785,14 @@ export default function Programacao() {
                   style={{
                     fontSize: '18px',
                     fontWeight: 800,
-                    color: '#0f172a',
+                    color: "var(--text-primary, #0f172a)",
                     textTransform: 'capitalize',
                     lineHeight: 1.3,
                   }}
                 >
                   {formatDiaPainelTitulo(diaPainelCalendario)}
                 </div>
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
+                <div style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", marginTop: '6px' }}>
                   {itensDiaPainelCalendario.length}{' '}
                   {itensDiaPainelCalendario.length === 1 ? 'programação' : 'programações'}
                 </div>
@@ -1833,10 +1833,10 @@ export default function Programacao() {
                     <div
                       key={item.id}
                       style={{
-                        border: '1px solid #e5e7eb',
+                        border: "1px solid var(--border-color, #e5e7eb)",
                         borderRadius: '14px',
                         padding: '14px 16px',
-                        background: '#ffffff',
+                        background: "var(--bg-card, #ffffff)",
                         borderLeft: `4px solid ${statusStyle.stripeColor}`,
                       }}
                     >
@@ -1853,18 +1853,18 @@ export default function Programacao() {
                           <div
                             style={{
                               fontSize: '12px',
-                              color: '#64748b',
+                              color: "var(--text-secondary, #64748b)",
                               fontWeight: 700,
                               marginBottom: '4px',
                             }}
                           >
                             Programação {item.numero || '—'}
                           </div>
-                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                             {item.clienteNome}
                           </div>
                           {secPainel ? (
-                            <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
+                            <div style={{ fontSize: '13px', color: "var(--text-secondary, #475569)", marginTop: '4px' }}>
                               {secPainel}
                             </div>
                           ) : null}
@@ -2085,10 +2085,10 @@ export default function Programacao() {
               )}
 
               <div style={relatorioResumoBarStyle}>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
                   {agendaRelatorioAgrupada.reduce((n, [, it]) => n + it.length, 0)} programação(ões)
                 </span>
-                <span style={{ color: '#64748b', fontWeight: 600, fontSize: '13px' }}>
+                <span style={{ color: "var(--text-secondary, #64748b)", fontWeight: 600, fontSize: '13px' }}>
                   Período: {formatDate(relatorioRange.ini)} — {formatDate(relatorioRange.fim)}
                 </span>
               </div>
@@ -2098,7 +2098,7 @@ export default function Programacao() {
               <div style={{ ...estadoVazioStyle, padding: '20px' }}>
                 Nenhuma programação neste período.
                 {relatorioRange.ini.slice(0, 4) !== mesSelecionado.slice(0, 4) ? (
-                  <div style={{ marginTop: '10px', fontSize: '13px', color: '#94a3b8' }}>
+                  <div style={{ marginTop: '10px', fontSize: '13px', color: "var(--text-secondary, #94a3b8)" }}>
                     Dica: os dados desta tela são carregados para o ano do seletor &quot;Calendário do
                     mês&quot; acima. Ajuste esse mês (ou clique em Atualizar) se estiver consultando outro
                     ano.
@@ -2307,7 +2307,7 @@ export default function Programacao() {
                   gap: '12px',
                   flexWrap: 'wrap',
                   paddingTop: '14px',
-                  borderTop: '1px solid #e5e7eb',
+                  borderTop: "1px solid var(--border-color, #e5e7eb)",
                   marginTop: '4px',
                 }}
               >
@@ -2348,8 +2348,8 @@ const cardsGridStyle: CSSProperties = {
 }
 
 const cardResumoStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '18px',
   padding: '18px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -2357,14 +2357,14 @@ const cardResumoStyle: CSSProperties = {
 
 const cardResumoTituloStyle: CSSProperties = {
   fontSize: '13px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginBottom: '8px',
   fontWeight: 700,
 }
 
 const cardResumoValorStyle: CSSProperties = {
   fontSize: '24px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
   textTransform: 'capitalize',
 }
@@ -2377,8 +2377,8 @@ const layoutPrincipalStyle: CSSProperties = {
 }
 
 const cardPrincipalStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '20px',
   padding: '20px',
   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
@@ -2387,13 +2387,13 @@ const cardPrincipalStyle: CSSProperties = {
 const cardTituloStyle: CSSProperties = {
   margin: 0,
   fontSize: '20px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
 }
 
 const cardDescricaoStyle: CSSProperties = {
   margin: '8px 0 18px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontSize: '14px',
 }
 
@@ -2401,7 +2401,7 @@ const labelStyle: CSSProperties = {
   display: 'block',
   fontSize: '13px',
   fontWeight: 700,
-  color: '#334155',
+  color: "var(--text-primary, #334155)",
   marginBottom: '6px',
 }
 
@@ -2409,11 +2409,11 @@ const inputStyle: CSSProperties = {
   width: '100%',
   height: '42px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
+  border: "1px solid var(--input-border, #d1d5db)",
   padding: '0 12px',
   fontSize: '14px',
-  color: '#0f172a',
-  background: '#ffffff',
+  color: "var(--text-primary, #0f172a)",
+  background: "var(--bg-card, #ffffff)",
   outline: 'none',
   boxSizing: 'border-box',
 }
@@ -2422,11 +2422,11 @@ const textareaStyle: CSSProperties = {
   width: '100%',
   minHeight: '100px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
+  border: "1px solid var(--input-border, #d1d5db)",
   padding: '12px',
   fontSize: '14px',
-  color: '#0f172a',
-  background: '#ffffff',
+  color: "var(--text-primary, #0f172a)",
+  background: "var(--bg-card, #ffffff)",
   outline: 'none',
   resize: 'vertical',
   boxSizing: 'border-box',
@@ -2441,7 +2441,7 @@ const checkboxLabelStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 600,
   fontSize: '14px',
 }
@@ -2463,11 +2463,11 @@ const calendarPainelModalStyle: CSSProperties = {
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  background: '#ffffff',
+  background: "var(--bg-card, #ffffff)",
   borderRadius: '18px',
   boxShadow: '0 24px 48px rgba(15, 23, 42, 0.2)',
   padding: '22px 20px 20px',
-  border: '1px solid #e2e8f0',
+  border: "1px solid var(--border-color, #e2e8f0)",
 }
 
 const calendarPainelFecharStyle: CSSProperties = {
@@ -2475,9 +2475,9 @@ const calendarPainelFecharStyle: CSSProperties = {
   width: '40px',
   height: '40px',
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
-  color: '#64748b',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-subtle, #f8fafc)",
+  color: "var(--text-secondary, #64748b)",
   fontSize: '24px',
   lineHeight: 1,
   cursor: 'pointer',
@@ -2499,21 +2499,21 @@ const estadoVazioStyle: CSSProperties = {
   borderRadius: '14px',
   padding: '26px',
   textAlign: 'center',
-  color: '#64748b',
-  background: '#f8fafc',
+  color: "var(--text-secondary, #64748b)",
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const grupoAgendaStyle: CSSProperties = {
-  border: '1px solid #e5e7eb',
+  border: "1px solid var(--border-color, #e5e7eb)",
   borderRadius: '18px',
   overflow: 'hidden',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
 }
 
 const grupoAgendaHeaderStyle: CSSProperties = {
   padding: '14px 16px',
-  borderBottom: '1px solid #e5e7eb',
-  background: '#ffffff',
+  borderBottom: "1px solid var(--border-color, #e5e7eb)",
+  background: "var(--bg-card, #ffffff)",
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -2523,13 +2523,13 @@ const grupoAgendaHeaderStyle: CSSProperties = {
 
 const grupoAgendaDataStyle: CSSProperties = {
   fontSize: '16px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 800,
 }
 
 const grupoAgendaCountStyle: CSSProperties = {
   fontSize: '13px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 700,
 }
 
@@ -2541,8 +2541,8 @@ const grupoAgendaItensWrapStyle: CSSProperties = {
 }
 
 const itemAgendaStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e8ecf1',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e8ecf1)",
   borderRadius: '10px',
   padding: '12px 14px',
   display: 'flex',
@@ -2560,9 +2560,9 @@ const agendaAvatarStyle: CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: 999,
-  background: '#f1f5f9',
-  border: '1px solid #e2e8f0',
-  color: '#475569',
+  background: "var(--bg-inset, #f1f5f9)",
+  border: "1px solid var(--border-color, #e2e8f0)",
+  color: "var(--text-secondary, #475569)",
   fontSize: 13,
   fontWeight: 800,
   display: 'flex',
@@ -2594,7 +2594,7 @@ const statusBadgeCompactStyle: CSSProperties = {
 
 const itemAgendaMetaStripStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   lineHeight: 1.5,
   display: 'flex',
   flexWrap: 'wrap',
@@ -2602,7 +2602,7 @@ const itemAgendaMetaStripStyle: CSSProperties = {
 }
 
 const itemMetaKeyStyle: CSSProperties = {
-  color: '#94a3b8',
+  color: "var(--text-secondary, #94a3b8)",
   fontWeight: 600,
   fontSize: '11px',
   textTransform: 'uppercase',
@@ -2617,24 +2617,24 @@ const itemMetaSepStyle: CSSProperties = {
 
 const itemAgendaObsStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#475569',
+  color: "var(--text-secondary, #475569)",
   lineHeight: 1.45,
   padding: '8px 10px',
-  background: '#f8fafc',
+  background: "var(--bg-subtle, #f8fafc)",
   borderRadius: '8px',
   border: '1px solid #eef2f7',
 }
 
 const itemNumeroStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   fontWeight: 600,
   marginBottom: '2px',
 }
 
 const itemClienteStyle: CSSProperties = {
   fontSize: '16px',
-  color: '#0f172a',
+  color: "var(--text-primary, #0f172a)",
   fontWeight: 700,
   letterSpacing: '-0.02em',
   lineHeight: 1.25,
@@ -2712,19 +2712,19 @@ const bannerContextoBaseStyle: CSSProperties = {
 }
 
 const bannerContextoOkStyle: CSSProperties = {
-  background: '#f0fdf4',
+  background: "var(--status-success-bg, #f0fdf4)",
   border: '1px solid #bbf7d0',
 }
 
 const bannerContextoAlertaStyle: CSSProperties = {
-  background: '#fffbeb',
+  background: "var(--status-warning-bg, #fffbeb)",
   border: '1px solid #fcd34d',
 }
 
 const botaoLimparContextoStyle: CSSProperties = {
-  background: '#ffffff',
-  color: '#64748b',
-  border: '1px solid #cbd5e1',
+  background: "var(--bg-card, #ffffff)",
+  color: "var(--text-secondary, #64748b)",
+  border: "1px solid var(--input-border, #cbd5e1)",
   borderRadius: '10px',
   padding: '8px 14px',
   fontWeight: 700,
@@ -2739,7 +2739,7 @@ const relatorioModalAcoesStyle: CSSProperties = {
   justifyContent: 'flex-end',
   marginTop: '18px',
   paddingTop: '16px',
-  borderTop: '1px solid #e5e7eb',
+  borderTop: "1px solid var(--border-color, #e5e7eb)",
   flexShrink: 0,
 }
 
@@ -2764,9 +2764,9 @@ const relatorioSegmentBtnStyle: CSSProperties = {
   minWidth: '88px',
   height: '40px',
   borderRadius: '12px',
-  border: '1px solid #d1d5db',
-  background: '#f8fafc',
-  color: '#475569',
+  border: "1px solid var(--input-border, #d1d5db)",
+  background: "var(--bg-subtle, #f8fafc)",
+  color: "var(--text-secondary, #475569)",
   fontWeight: 700,
   fontSize: '13px',
   cursor: 'pointer',
@@ -2786,6 +2786,6 @@ const relatorioResumoBarStyle: CSSProperties = {
   justifyContent: 'space-between',
   padding: '12px 14px',
   borderRadius: '14px',
-  background: '#f1f5f9',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-inset, #f1f5f9)",
+  border: "1px solid var(--border-color, #e2e8f0)",
 }

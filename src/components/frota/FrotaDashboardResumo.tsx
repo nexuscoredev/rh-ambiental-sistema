@@ -29,7 +29,7 @@ export function FrotaDashboardResumo() {
   if (erro) {
     return (
       <div className="exec-viz-surface frota-exec-panel">
-        <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
           Frota: {erro} Aplique a migration <code>20260602193000_operacional_frota</code> se ainda não estiver na BD.
         </p>
       </div>
@@ -39,7 +39,7 @@ export function FrotaDashboardResumo() {
   if (!resumo) {
     return (
       <div className="exec-viz-surface frota-exec-panel">
-        <p style={{ margin: 0, color: '#64748b' }}>A carregar visão da frota…</p>
+        <p style={{ margin: 0, color: "var(--text-secondary, #64748b)" }}>A carregar visão da frota…</p>
       </div>
     )
   }

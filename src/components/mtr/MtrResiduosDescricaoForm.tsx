@@ -32,15 +32,15 @@ const card: CSSProperties = {
   marginBottom: '12px',
   padding: '12px 14px',
   borderRadius: '10px',
-  border: '1px solid #e2e8f0',
-  background: '#fafafa',
+  border: "1px solid var(--border-color, #e2e8f0)",
+  background: "var(--bg-inset, #fafafa)",
 }
 
 const label: CSSProperties = {
   display: 'block',
   fontSize: '11px',
   fontWeight: 700,
-  color: '#64748b',
+  color: "var(--text-secondary, #64748b)",
   marginBottom: '4px',
 }
 
@@ -48,7 +48,7 @@ const input: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '13px',
   boxSizing: 'border-box',
 }
@@ -194,7 +194,7 @@ export function MtrResiduosDescricaoForm({
         >
           <div>
             <div style={{ fontWeight: 800 }}>2. Descrição dos resíduos</div>
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
+            <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
               {catalogoValidos.length > 1
                 ? `${catalogoValidos.length} resíduos no cadastro do cliente — cada linha gera um ticket na pesagem.`
                 : catalogoValidos.length === 1
@@ -234,10 +234,10 @@ export function MtrResiduosDescricaoForm({
               marginBottom: '10px',
             }}
           >
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
               Resíduo {index + 1}
               {index === 0 ? (
-                <span style={{ fontWeight: 500, color: '#64748b', marginLeft: '6px' }}>
+                <span style={{ fontWeight: 500, color: "var(--text-secondary, #64748b)", marginLeft: '6px' }}>
                   (principal no manifesto)
                 </span>
               ) : null}

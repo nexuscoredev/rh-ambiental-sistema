@@ -15,13 +15,13 @@ export default function Dashboard() {
           style={{
             padding: 'min(12vh, 120px) 24px',
             textAlign: 'center',
-            color: '#64748b',
+            color: "var(--text-secondary, #64748b)",
             fontSize: 15,
             fontWeight: 500,
             letterSpacing: '0.02em',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>A carregar o painel executivo…</p>
+          <p style={{ margin: 0, fontWeight: 600, color: "var(--text-secondary, #475569)" }}>A carregar o painel executivo…</p>
         </div>
       </MainLayout>
     )

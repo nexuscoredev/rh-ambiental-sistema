@@ -103,8 +103,8 @@ function viewRowToColetaResumo(r: FaturamentoResumoViewRow): ColetaResumo {
 const ACCENT = '#0d9488'
 
 const cardStyle: CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '16px',
   padding: '20px 22px',
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
@@ -479,7 +479,7 @@ export default function FaturamentoOperacional() {
             margin: '0 0 0',
             fontSize: '18px',
             fontWeight: 800,
-            color: '#0f172a',
+            color: "var(--text-primary, #0f172a)",
             letterSpacing: '-0.02em',
           }}
         >
@@ -502,7 +502,7 @@ export default function FaturamentoOperacional() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fffbeb',
+              background: "var(--status-warning-bg, #fffbeb)",
               border: '1px solid #fde68a',
               color: '#92400e',
               fontSize: '13px',
@@ -518,7 +518,7 @@ export default function FaturamentoOperacional() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fef2f2',
+              background: "var(--status-error-bg, #fef2f2)",
               border: '1px solid #fecaca',
               color: '#991b1b',
               fontSize: '14px',
@@ -533,7 +533,7 @@ export default function FaturamentoOperacional() {
                 padding: '6px 12px',
                 borderRadius: '8px',
                 border: '1px solid #991b1b',
-                background: '#fff',
+                background: "var(--bg-card, #ffffff)",
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -549,7 +549,7 @@ export default function FaturamentoOperacional() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#fffbeb',
+              background: "var(--status-warning-bg, #fffbeb)",
               border: '1px solid #fde68a',
               color: '#92400e',
               fontSize: '13px',
@@ -572,8 +572,8 @@ export default function FaturamentoOperacional() {
             style={{
               padding: '8px 16px',
               borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#f8fafc',
+              border: "1px solid var(--input-border, #cbd5e1)",
+              background: "var(--bg-subtle, #f8fafc)",
               fontWeight: 700,
               fontSize: '13px',
               cursor: carregandoVista ? 'wait' : 'pointer',
@@ -581,11 +581,11 @@ export default function FaturamentoOperacional() {
           >
             {carregandoVista ? 'Atualizando…' : 'Atualizar dados'}
           </button>
-          <span style={{ fontSize: '12px', color: '#64748b' }}>
+          <span style={{ fontSize: '12px', color: "var(--text-secondary, #64748b)" }}>
             Janela de dados:{' '}
-            <strong style={{ color: '#0f172a' }}>{formatarRotuloJanelaFaturamentoResumo(diasJanela)}</strong>
+            <strong style={{ color: "var(--text-primary, #0f172a)" }}>{formatarRotuloJanelaFaturamentoResumo(diasJanela)}</strong>
             {' · '}
-            Perfil: <strong style={{ color: '#0f172a' }}>{cargo ?? '—'}</strong>
+            Perfil: <strong style={{ color: "var(--text-primary, #0f172a)" }}>{cargo ?? '—'}</strong>
             {!podeConfirmarEmissao
               ? ' · somente leitura'
               : podeEditarResumos
@@ -652,8 +652,8 @@ export default function FaturamentoOperacional() {
 
         {coletaAtiva ? (
           <div style={cardStyle}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>Contexto (URL)</div>
-            <p style={{ margin: 0, fontSize: '14px', color: '#475569', lineHeight: 1.55 }}>
+            <div style={{ fontWeight: 800, color: "var(--text-primary, #0f172a)", marginBottom: '8px' }}>Contexto (URL)</div>
+            <p style={{ margin: 0, fontSize: '14px', color: "var(--text-secondary, #475569)", lineHeight: 1.55 }}>
               Coleta <strong>{coletaAtiva.numero}</strong> · {coletaAtiva.cliente} · etapa{' '}
               <strong>{formatarEtapaParaUI(coletaAtiva.etapaFluxo)}</strong>
             </p>

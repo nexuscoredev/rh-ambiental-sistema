@@ -61,8 +61,8 @@ export function PesagemResiduosLista({
   return (
     <div style={{ gridColumn: "span 12", display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>Resíduos</div>
-        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>Resíduos</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-secondary, #64748b)", fontWeight: 600 }}>
           {temCatalogo
             ? "Um ticket = um resíduo. Escolha o tipo do contrato do cliente ou adicione linhas para pesar cada resíduo."
             : "Um ticket = um resíduo. Informe o tipo e os pesos (texto livre)."}
@@ -73,7 +73,7 @@ export function PesagemResiduosLista({
         <div
           key={index}
           style={{
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border-color, #e2e8f0)",
             borderRadius: 12,
             padding: 12,
             background: index % 2 === 0 ? "#ffffff" : "#f8fafc",
@@ -88,7 +88,7 @@ export function PesagemResiduosLista({
               gap: 8,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 900, color: "#64748b" }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: "var(--text-secondary, #64748b)" }}>
               Resíduo {index + 1}
             </span>
             {linhas.length > 1 ? (
@@ -117,7 +117,7 @@ export function PesagemResiduosLista({
             }}
           >
             <div style={{ gridColumn: "span 12" }} className="field">
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                 Tipo de resíduo
               </label>
               {temCatalogo ? (
@@ -139,7 +139,7 @@ export function PesagemResiduosLista({
             </div>
 
             <div style={{ gridColumn: "span 4" }} className="field">
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                 Peso bruto (kg)
               </label>
               <input
@@ -152,7 +152,7 @@ export function PesagemResiduosLista({
             </div>
 
             <div style={{ gridColumn: "span 4" }} className="field">
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                 Peso tara (kg)
               </label>
               <input
@@ -165,7 +165,7 @@ export function PesagemResiduosLista({
             </div>
 
             <div style={{ gridColumn: "span 4" }} className="field">
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary, #475569)" }}>
                 Peso líquido (auto)
               </label>
               <input
@@ -177,7 +177,7 @@ export function PesagemResiduosLista({
                   height: "46px",
                   fontSize: "15px",
                   fontWeight: 900,
-                  background: "#f8fafc",
+                  background: "var(--bg-subtle, #f8fafc)",
                   borderColor: "#cbd5e1",
                 }}
               />
@@ -200,7 +200,7 @@ export function PesagemResiduosLista({
           style={{
             padding: "12px 14px",
             borderRadius: 10,
-            background: "#f0fdfa",
+            background: "var(--accent-teal-soft, #f0fdfa)",
             border: "1px solid #99f6e4",
             fontSize: 13,
             fontWeight: 700,

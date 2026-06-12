@@ -49,7 +49,7 @@ const overlayStyle: CSSProperties = {
 }
 
 const modalStyle: CSSProperties = {
-  background: '#fff',
+  background: "var(--bg-card, #ffffff)",
   borderRadius: '14px',
   maxWidth: '520px',
   width: '100%',
@@ -59,13 +59,13 @@ const modalStyle: CSSProperties = {
   boxShadow: '0 20px 50px rgba(15,23,42,0.2)',
 }
 
-const labelStyle: CSSProperties = { display: 'block', fontWeight: 700, fontSize: '13px', marginBottom: '6px', color: '#334155' }
+const labelStyle: CSSProperties = { display: 'block', fontWeight: 700, fontSize: '13px', marginBottom: '6px', color: "var(--text-primary, #334155)" }
 
 const inputStyle: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
   borderRadius: '8px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '14px',
   boxSizing: 'border-box',
 }
@@ -239,7 +239,7 @@ export function MtrCicloVidaAcoes({
 
             {modal === 'cancelar' ? (
               <>
-                <p style={{ fontSize: '13px', color: '#64748b', marginTop: 0 }}>
+                <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", marginTop: 0 }}>
                   Sem custos atrelados (faturamento emitido), o ticket é arquivado e removido da coleta. Com custos,
                   a MTR é cancelada mas o histórico financeiro é preservado.
                 </p>
@@ -279,7 +279,7 @@ export function MtrCicloVidaAcoes({
 
             {modal === 'baixar' ? (
               <>
-                <p style={{ fontSize: '13px', color: '#64748b', marginTop: 0 }}>
+                <p style={{ fontSize: '13px', color: "var(--text-secondary, #64748b)", marginTop: 0 }}>
                   A justificativa é obrigatória. No cenário complexo, defina para quem cobrar (coletado de um cliente,
                   cobrado de outro).
                 </p>

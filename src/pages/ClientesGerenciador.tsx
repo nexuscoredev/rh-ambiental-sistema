@@ -47,8 +47,8 @@ const pageHeaderRow: CSSProperties = {
 const painelStyle: CSSProperties = {
   margin: 0,
   width: '100%',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: "var(--bg-card, #ffffff)",
+  border: "1px solid var(--border-color, #e2e8f0)",
   borderRadius: '14px',
   boxShadow: '0 1px 3px rgba(15, 23, 42, 0.06)',
   overflow: 'hidden',
@@ -70,11 +70,11 @@ const selectAbrirGerenciadorStyle: CSSProperties = {
   maxWidth: 480,
   padding: '10px 12px',
   borderRadius: '10px',
-  border: '1px solid #cbd5e1',
+  border: "1px solid var(--input-border, #cbd5e1)",
   fontSize: '14px',
   fontWeight: 600,
-  color: '#0f172a',
-  background: '#fff',
+  color: "var(--text-primary, #0f172a)",
+  background: "var(--bg-card, #ffffff)",
 }
 
 function linhasFromDb(
@@ -428,7 +428,7 @@ export default function ClientesGerenciador(props: unknown) {
                 margin: 0,
                 fontSize: '26px',
                 fontWeight: 800,
-                color: '#0f172a',
+                color: "var(--text-primary, #0f172a)",
               }}
             >
               {pageTitle}
@@ -476,7 +476,7 @@ export default function ClientesGerenciador(props: unknown) {
             >
               <div style={{ flex: '1 1 280px', minWidth: 0 }}>
                 <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>{tituloFormulario}</h2>
-                <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+                <p style={{ margin: '6px 0 0', fontSize: '12px', color: "var(--text-secondary, #64748b)", lineHeight: 1.45 }}>
                   Campos iguais ao cadastro de Clientes · MTRs baixadas no final do formulário
                 </p>
               </div>
@@ -485,8 +485,8 @@ export default function ClientesGerenciador(props: unknown) {
                   style={{
                     fontSize: '12px',
                     fontWeight: 700,
-                    color: '#64748b',
-                    background: '#f1f5f9',
+                    color: "var(--text-secondary, #64748b)",
+                    background: "var(--bg-inset, #f1f5f9)",
                     padding: '6px 12px',
                     borderRadius: '999px',
                     flexShrink: 0,
@@ -498,14 +498,14 @@ export default function ClientesGerenciador(props: unknown) {
             </div>
 
             {loading ? (
-              <p style={{ ...registrosAbrirWrap, marginTop: '12px', borderTop: 'none', paddingTop: 0, fontSize: '13px', color: '#64748b' }}>
+              <p style={{ ...registrosAbrirWrap, marginTop: '12px', borderTop: 'none', paddingTop: 0, fontSize: '13px', color: "var(--text-secondary, #64748b)" }}>
                 Carregando registros…
               </p>
             ) : lista.length > 0 ? (
               <div style={registrosAbrirWrap}>
                 <label
                   htmlFor="gerenciador-abrir-select"
-                  style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', flexShrink: 0 }}
+                  style={{ fontSize: '12px', fontWeight: 700, color: "var(--text-secondary, #64748b)", flexShrink: 0 }}
                 >
                   Abrir:
                 </label>
@@ -549,7 +549,7 @@ export default function ClientesGerenciador(props: unknown) {
                 style={{
                   margin: '12px 0 0',
                   fontSize: '13px',
-                  color: '#64748b',
+                  color: "var(--text-secondary, #64748b)",
                   lineHeight: 1.45,
                   paddingTop: '12px',
                   borderTop: '1px solid #f1f5f9',
