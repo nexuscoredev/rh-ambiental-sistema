@@ -785,7 +785,6 @@ export default function Programacao() {
   const [formEdicaoModal, setFormEdicaoModal] = useState<FormState | null>(null)
   const [mesSelecionado, setMesSelecionado] = useState(getMonthInputValue())
   const [filtroTipoCaminhao, setFiltroTipoCaminhao] = useState('')
-  const [filtroCaminhaoId, setFiltroCaminhaoId] = useState('')
   const [loading, setLoading] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvandoEdicaoModal, setSalvandoEdicaoModal] = useState(false)
@@ -921,7 +920,6 @@ export default function Programacao() {
     setSelecionadosExclusaoPainel(new Set())
     setBuscaClientePainelDia('')
     setFiltroTipoCaminhao('')
-    setFiltroCaminhaoId('')
   }, [diaPainelCalendario])
 
   useEffect(() => {
@@ -1956,32 +1954,11 @@ export default function Programacao() {
       .sort((a, b) => b.count - a.count || a.tipo.localeCompare(b.tipo, 'pt-BR'))
   }, [itensDiaPainelCalendario])
 
-  const veiculosProgramacaoNoDiaPainel = useMemo(() => {
-    const porId = new Map<string, { id: string; placa: string; tipoCaminhao: string }>()
-    const base = filtroTipoCaminhao
-      ? itensDiaPainelCalendario.filter((item) =>
-          combinaFiltrosProgramacaoCaminhao(item, { filtroTipo: filtroTipoCaminhao })
-        )
-      : itensDiaPainelCalendario
-    for (const item of base) {
-      if (!item.caminhaoId || porId.has(item.caminhaoId)) continue
-      porId.set(item.caminhaoId, {
-        id: item.caminhaoId,
-        placa: item.caminhaoPlaca || item.caminhaoId,
-        tipoCaminhao: item.tipoCaminhao,
-      })
-    }
-    return Array.from(porId.values()).sort((a, b) => a.placa.localeCompare(b.placa, 'pt-BR'))
-  }, [itensDiaPainelCalendario, filtroTipoCaminhao])
-
   const itensDiaPainelComFiltroCaminhao = useMemo(() => {
     return itensDiaPainelCalendario.filter((item) =>
-      combinaFiltrosProgramacaoCaminhao(item, {
-        filtroTipo: filtroTipoCaminhao,
-        filtroCaminhaoId,
-      })
+      combinaFiltrosProgramacaoCaminhao(item, { filtroTipo: filtroTipoCaminhao })
     )
-  }, [itensDiaPainelCalendario, filtroTipoCaminhao, filtroCaminhaoId])
+  }, [itensDiaPainelCalendario, filtroTipoCaminhao])
 
   const itensDiaPainelCalendarioFiltrados = useMemo(() => {
     const q = buscaClientePainelDia
@@ -2999,7 +2976,7 @@ export default function Programacao() {
                 </div>
                 <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
                   {itensDiaPainelCalendarioFiltrados.length}
-                  {(buscaClientePainelDia.trim() || filtroTipoCaminhao || filtroCaminhaoId) &&
+                  {(buscaClientePainelDia.trim() || filtroTipoCaminhao) &&
                   itensDiaPainelCalendarioFiltrados.length !== itensDiaPainelCalendario.length
                     ? ` de ${itensDiaPainelCalendario.length}`
                     : ''}{' '}
@@ -3021,15 +2998,9 @@ export default function Programacao() {
                 <ProgramacaoFiltroCaminhao
                   filtroTipo={filtroTipoCaminhao}
                   onFiltroTipoChange={setFiltroTipoCaminhao}
-                  filtroCaminhaoId={filtroCaminhaoId}
-                  onFiltroCaminhaoIdChange={setFiltroCaminhaoId}
                   contagensTipoNoMes={contagensTipoCaminhaoNoDiaPainel}
-                  veiculosNoMes={veiculosProgramacaoNoDiaPainel}
-                  totalNoMes={itensDiaPainelCalendario.length}
-                  totalFiltradoNoMes={itensDiaPainelComFiltroCaminhao.length}
                   inputStyle={inputStyle}
                   variant="painel"
-                  contagemEscopo="dia"
                 />
                 <label
                   style={{
