@@ -20,4 +20,5 @@ export {
   usuarioEhDiretoriaFinanceiro,
   usuarioEhEquipeComercial,
   usuarioEhOperacao,
+  usuarioTemVisaoCompletaPaginas,
 } from './rbacAcesso'

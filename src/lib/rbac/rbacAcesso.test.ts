@@ -7,6 +7,7 @@ import {
   resolverSetorUsuario,
   usuarioEhDesenvolvedorMaster,
   usuarioEhEquipeComercial,
+  usuarioTemVisaoCompletaPaginas,
 } from './rbacAcesso'
 import type { UsuarioAcessoContext } from './rbacTypes'
 
@@ -15,6 +16,13 @@ function ctx(nome: string, cargo = ''): UsuarioAcessoContext {
 }
 
 describe('rbac — setores do organograma', () => {
+  it('Ezequiel e Ana têm visão completa de páginas; outros nomes não', () => {
+    expect(usuarioTemVisaoCompletaPaginas(ctx('Ezequiel Novaes', 'Diretoria'))).toBe(true)
+    expect(usuarioTemVisaoCompletaPaginas(ctx('Ana Novaes', 'Diretoria'))).toBe(true)
+    expect(usuarioTemVisaoCompletaPaginas(ctx('Matheus', 'Operadores (Time R)'))).toBe(false)
+    expect(usuarioTemVisaoCompletaPaginas(ctx('Outro Diretor', 'Diretoria'))).toBe(false)
+  })
+
   it('resolve os quatro setores pelos nomes', () => {
     expect(resolverSetorUsuario(ctx('Ezequiel', ''))).toBe('diretoria_financeiro')
     expect(resolverSetorUsuario(ctx('Matheus', 'Operadores (Time R)'))).toBe('operacao')

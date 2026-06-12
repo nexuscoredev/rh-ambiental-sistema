@@ -240,4 +240,19 @@ describe('paginasSistema', () => {
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/clinicas')).toBe(true)
     expect(cargoPodeAcessarRotaMenu('Diretoria', '/usuarios')).toBe(false)
   })
+
+  it('Ezequiel e Ana (Diretoria): visibilidade de todas as páginas do sistema', () => {
+    for (const nome of ['Ezequiel Novaes', 'Ana Novaes']) {
+      for (const { path } of ROTAS_SISTEMA) {
+        expect(cargoPodeAcessarRotaMenu('Diretoria', path, nome)).toBe(true)
+        expect(
+          usuarioPodeAcessarRota(
+            { cargo: 'Diretoria', nome, email: `${nome.split(' ')[0].toLowerCase()}@rg.test` },
+            path
+          )
+        ).toBe(true)
+      }
+    }
+    expect(cargoPodeAcessarRotaMenu('Diretoria', '/usuarios', 'Outro Diretor')).toBe(false)
+  })
 })

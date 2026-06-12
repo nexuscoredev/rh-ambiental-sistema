@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { useChatFloat } from '../contexts/ChatFloatContext'
 import { chatEnviarPedidoAjusteSistema } from '../lib/chat'
+import { ChatImagemAnexoEditor } from './chat/ChatImagemAnexoEditor'
 import { deveOcultarSolicitacaoAjuste } from '../lib/solicitacaoAjusteSistema'
 
 export type SolicitarAjusteSistemaFloatProps = {
@@ -49,6 +50,7 @@ export default function SolicitarAjusteSistemaFloat({
 
   const [texto, setTexto] = useState('')
   const [print, setPrint] = useState<File | null>(null)
+  const [imagemEditor, setImagemEditor] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
@@ -140,7 +142,7 @@ export default function SolicitarAjusteSistemaFloat({
     const img = imagemColadaDoClipboard(e)
     if (!img) return false
     e.preventDefault()
-    setPrint(img)
+    setImagemEditor(img)
     setErro('')
     return true
   }, [])
@@ -290,14 +292,24 @@ export default function SolicitarAjusteSistemaFloat({
                               alt="Print colado"
                               className="suporte-float-preview suporte-float-preview--in-paste"
                             />
-                            <button
-                              type="button"
-                              className="suporte-float-paste__remover"
-                              disabled={enviando}
-                              onClick={() => setPrint(null)}
-                            >
-                              Remover print
-                            </button>
+                            <div className="suporte-float-paste__acoes">
+                              <button
+                                type="button"
+                                className="suporte-float-paste__rabiscar"
+                                disabled={enviando || !print}
+                                onClick={() => print && setImagemEditor(print)}
+                              >
+                                Rabiscar no print
+                              </button>
+                              <button
+                                type="button"
+                                className="suporte-float-paste__remover"
+                                disabled={enviando}
+                                onClick={() => setPrint(null)}
+                              >
+                                Remover print
+                              </button>
+                            </div>
                           </>
                         ) : (
                           <p id={`${panelId}-print-hint`} className="suporte-float-paste__hint">
@@ -338,5 +350,19 @@ export default function SolicitarAjusteSistemaFloat({
 
   if (typeof document === 'undefined') return null
 
-  return createPortal(painel, document.body)
+  return createPortal(
+    <>
+      {painel}
+      <ChatImagemAnexoEditor
+        open={!!imagemEditor}
+        file={imagemEditor}
+        onCancel={() => setImagemEditor(null)}
+        onConfirm={(f) => {
+          setPrint(f)
+          setImagemEditor(null)
+        }}
+      />
+    </>,
+    document.body
+  )
 }

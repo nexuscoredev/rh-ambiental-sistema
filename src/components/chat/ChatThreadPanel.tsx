@@ -18,6 +18,7 @@ import { rgAlert } from '../../lib/RgDialogProvider'
 import { ChatPedidoAjusteFeedback } from './ChatPedidoAjusteFeedback'
 import { ChatPedidoAjusteDetalhes } from './ChatPedidoAjusteDetalhes'
 import { ChatPedidoAjusteEditar } from './ChatPedidoAjusteEditar'
+import { ChatImagemAnexoEditor } from './ChatImagemAnexoEditor'
 import type { PedidoAjusteAguardandoDetalhes } from '../../lib/chatPedidoAjuste'
 
 type Props = {
@@ -101,6 +102,8 @@ export function ChatThreadPanel({
   const [texto, setTexto] = useState('')
   const [menuMaisAberto, setMenuMaisAberto] = useState(false)
   const [pickerAberto, setPickerAberto] = useState(false)
+  const [imagemEditor, setImagemEditor] = useState<File | null>(null)
+  const [enviandoImagemEditor, setEnviandoImagemEditor] = useState(false)
   const fRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -122,6 +125,35 @@ export function ChatThreadPanel({
       el.setSelectionRange(len, len)
     }
     requestAnimationFrame(run)
+  }
+
+  async function enviarAnexo(f: File) {
+    try {
+      await onEnviarFicheiro(f, texto.trim())
+      setTexto('')
+    } catch (err) {
+      console.error(err)
+      void rgAlert({
+        title: 'Anexo',
+        message: 'Não foi possível enviar o anexo.',
+        variant: 'danger',
+      })
+      throw err
+    } finally {
+      focarComposer()
+    }
+  }
+
+  async function confirmarImagemEditor(f: File) {
+    setEnviandoImagemEditor(true)
+    try {
+      await enviarAnexo(f)
+      setImagemEditor(null)
+    } catch {
+      /* alerta já mostrado */
+    } finally {
+      setEnviandoImagemEditor(false)
+    }
   }
 
   useEffect(() => {
@@ -324,7 +356,7 @@ export function ChatThreadPanel({
           onChange={async (e) => {
             const f = e.target.files?.[0]
             e.target.value = ''
-            if (!f || enviando) return
+            if (!f || enviando || enviandoImagemEditor) return
             if (f.size > 15 * 1024 * 1024) {
               void rgAlert({
                 title: 'Anexo',
@@ -333,18 +365,14 @@ export function ChatThreadPanel({
               })
               return
             }
+            if ((f.type || '').toLowerCase().startsWith('image/')) {
+              setImagemEditor(f)
+              return
+            }
             try {
-              await onEnviarFicheiro(f, texto.trim())
-              setTexto('')
-            } catch (err) {
-              console.error(err)
-              void rgAlert({
-                title: 'Anexo',
-                message: 'Não foi possível enviar o anexo.',
-                variant: 'danger',
-              })
-            } finally {
-              focarComposer()
+              await enviarAnexo(f)
+            } catch {
+              /* alerta já mostrado */
             }
           }}
         />
@@ -399,6 +427,16 @@ export function ChatThreadPanel({
           Enviar
         </button>
       </form>
+
+      <ChatImagemAnexoEditor
+        open={!!imagemEditor}
+        file={imagemEditor}
+        enviando={enviandoImagemEditor}
+        onCancel={() => {
+          if (!enviandoImagemEditor) setImagemEditor(null)
+        }}
+        onConfirm={(f) => void confirmarImagemEditor(f)}
+      />
     </section>
   )
 }

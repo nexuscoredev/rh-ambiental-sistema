@@ -150,6 +150,14 @@ export function usuarioEhDiretoriaFinanceiro(ctx: UsuarioAcessoContext): boolean
   return resolverSetorUsuario(ctx) === 'diretoria_financeiro'
 }
 
+/** Ezequiel e Ana — visibilidade de todas as páginas do menu e rotas (como Desenvolvedor na UI). */
+export function usuarioTemVisaoCompletaPaginas(ctx: UsuarioAcessoContext): boolean {
+  const nomeNorm = normalizarNomePessoa(ctx.nome)
+  if (!nomeNorm) return false
+  if (nomeContemToken(nomeNorm, 'ezequiel') || nomeContemToken(nomeNorm, 'ezequeil')) return true
+  return nomeContemToken(nomeNorm, 'ana')
+}
+
 export function usuarioEhComercial(ctx: UsuarioAcessoContext): boolean {
   return usuarioEhEquipeComercial(ctx)
 }

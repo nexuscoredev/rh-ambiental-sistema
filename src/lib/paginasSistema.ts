@@ -3,7 +3,7 @@ import { FROTA_ROTAS_SISTEMA } from './frotaModulos'
 import { FINANCEIRO_ROTAS_SISTEMA } from './financeiroModulos'
 import { PRESIDENTE_ROTAS_SISTEMA } from './presidenteModulos'
 import { RH_ROTAS_SISTEMA } from './rhModulos'
-import { nomeEhOperacaoTimeRCadastroEstendido } from './rbac'
+import { nomeEhOperacaoTimeRCadastroEstendido, usuarioTemVisaoCompletaPaginas } from './rbac'
 import {
   cargoEhDesenvolvedor,
   cargoEhOperacionalTimeT,
@@ -190,6 +190,14 @@ export function usuarioTemExcecaoCadastroCliente(
   return usuarioTemExcecaoCadastroOperacaoTimeR(usuario, pathname)
 }
 
+function ctxPaginas(
+  cargo: string | null | undefined,
+  nome?: string | null,
+  email?: string | null
+) {
+  return { cargo: cargo ?? null, nome: nome ?? null, email: email ?? null }
+}
+
 export function cargoPodeAcessarRotaMenu(
   cargo: string | null | undefined,
   pathname: string,
@@ -197,6 +205,7 @@ export function cargoPodeAcessarRotaMenu(
   email?: string | null
 ): boolean {
   if (cargoTemAutoridadeMaximaSistema(cargo, nome, email)) return true
+  if (usuarioTemVisaoCompletaPaginas(ctxPaginas(cargo, nome, email))) return true
   const path = normalizarPath(pathname)
   if (rotaEhCadastroCliente(path) && nomeEhOperacaoTimeRCadastroEstendido({ nome, cargo })) return true
   if (rotaEhCadastroMotoristaVeiculo(path) && nomeEhOperacaoTimeRCadastroEstendido({ nome, cargo })) {
@@ -253,10 +262,16 @@ export function usuarioPodeAcessarRota(usuario: UsuarioComPaginas, pathname: str
   if (path === minhaConta || path.startsWith(`${minhaConta}/`)) return true
 
   if (rotaUsuarios(path)) {
+    if (usuarioTemVisaoCompletaPaginas(ctxPaginas(usuario.cargo, usuario.nome, usuario.email))) {
+      return true
+    }
     return cargoEhDesenvolvedor(usuario.cargo)
   }
 
   if (cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email)) return true
+  if (usuarioTemVisaoCompletaPaginas(ctxPaginas(usuario.cargo, usuario.nome, usuario.email))) {
+    return true
+  }
 
   const em = (usuario.email || '').trim().toLowerCase()
   if (EMAILS_BYPASS_PAGINAS.has(em)) return true

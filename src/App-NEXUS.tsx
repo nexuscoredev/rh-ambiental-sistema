@@ -9,6 +9,7 @@ import {
   EVENTO_FOTO_PERFIL_ATUALIZADA,
   type FotoPerfilAtualizadaDetail,
 } from './lib/fotoPerfilUsuario'
+import { usuarioTemVisaoCompletaPaginas } from './lib/rbac'
 import { cargoTemAutoridadeMaximaSistema } from './lib/workflowPermissions'
 import { ChatFloatProvider } from './contexts/ChatFloatContext'
 import { PerfilUsuarioProvider, type UsuarioPerfilApp } from './contexts/PerfilUsuarioContext'
@@ -219,6 +220,11 @@ function ProtectedRoute({
     !apenasAutenticado &&
     !allowedRoles.includes(usuario.cargo) &&
     !cargoTemAutoridadeMaximaSistema(usuario.cargo, usuario.nome, usuario.email) &&
+    !usuarioTemVisaoCompletaPaginas({
+      cargo: usuario.cargo,
+      nome: usuario.nome,
+      email: usuario.email,
+    }) &&
     !usuarioTemExcecaoCadastroCliente(usuario, location.pathname)
   ) {
     return <Navigate to="/bem-vindo" replace />

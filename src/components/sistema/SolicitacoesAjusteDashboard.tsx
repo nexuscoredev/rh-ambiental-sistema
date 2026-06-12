@@ -72,13 +72,15 @@ export function SolicitacoesAjusteDashboard({ usuarios }: Props) {
   function exportarPdfGestao() {
     if (!dados || gerandoPdf) return
     setGerandoPdf(true)
-    try {
-      gerarRelatorioDashboardSolicitacoesPdf({ dados, periodo })
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.')
-    } finally {
-      setGerandoPdf(false)
-    }
+    void (async () => {
+      try {
+        await gerarRelatorioDashboardSolicitacoesPdf({ dados, periodo })
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.')
+      } finally {
+        setGerandoPdf(false)
+      }
+    })()
   }
 
   return (
