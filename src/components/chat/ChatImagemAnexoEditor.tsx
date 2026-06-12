@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  decodificarImagemParaEditor,
+  fecharImagemEditorDecodificada,
+} from '../../lib/imagemEditorUtils'
 
 type Ponto = { x: number; y: number }
 
@@ -26,7 +30,6 @@ const CORES = [
 ] as const
 
 const LARGURA_TRACO = 4
-const MAX_DIM = 2048
 
 function desenharTraco(ctx: CanvasRenderingContext2D, traco: Traco) {
   const { pontos, cor, largura } = traco
@@ -45,13 +48,31 @@ function desenharTraco(ctx: CanvasRenderingContext2D, traco: Traco) {
   ctx.restore()
 }
 
+function desenharSegmentoTraco(
+  ctx: CanvasRenderingContext2D,
+  de: Ponto,
+  para: Ponto,
+  cor: string,
+  largura: number
+) {
+  ctx.save()
+  ctx.strokeStyle = cor
+  ctx.lineWidth = largura
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  ctx.moveTo(de.x, de.y)
+  ctx.lineTo(para.x, para.y)
+  ctx.stroke()
+  ctx.restore()
+}
+
 function pontoNoCanvas(canvas: HTMLCanvasElement, clientX: number, clientY: number): Ponto {
   const rect = canvas.getBoundingClientRect()
-  const escalaX = canvas.width / rect.width
-  const escalaY = canvas.height / rect.height
+  if (!rect.width || !rect.height) return { x: 0, y: 0 }
   return {
-    x: (clientX - rect.left) * escalaX,
-    y: (clientY - rect.top) * escalaY,
+    x: ((clientX - rect.left) * canvas.width) / rect.width,
+    y: ((clientY - rect.top) * canvas.height) / rect.height,
   }
 }
 
@@ -60,30 +81,10 @@ function nomeArquivoAnotado(nomeOriginal: string): string {
   return `${base}-anotado.png`
 }
 
-function aplicarImagemNoCanvas(
-  canvas: HTMLCanvasElement,
-  img: HTMLImageElement,
-  repintar: (lista: Traco[], tracoExtra?: Traco | null) => void
-) {
-  let largura = img.naturalWidth
-  let altura = img.naturalHeight
-  if (!largura || !altura) return false
-
-  if (largura > MAX_DIM || altura > MAX_DIM) {
-    const escala = MAX_DIM / Math.max(largura, altura)
-    largura = Math.round(largura * escala)
-    altura = Math.round(altura * escala)
-  }
-
-  canvas.width = largura
-  canvas.height = altura
-  repintar([])
-  return true
-}
-
 export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, onConfirm }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imagemBaseRef = useRef<HTMLImageElement | null>(null)
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
+  const imagemBaseRef = useRef<ImageBitmap | null>(null)
   const tracoAtualRef = useRef<Traco | null>(null)
   const aDesenharRef = useRef(false)
   const tracosRef = useRef<Traco[]>([])
@@ -98,16 +99,15 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     tracosRef.current = tracos
   }, [tracos])
 
-  const repintar = useCallback((lista: Traco[], tracoExtra?: Traco | null) => {
+  const repintarCompleto = useCallback((lista: Traco[]) => {
     const canvas = canvasRef.current
-    const img = imagemBaseRef.current
-    if (!canvas || !img) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const bitmap = imagemBaseRef.current
+    const ctx = ctxRef.current ?? canvas?.getContext('2d', { alpha: false }) ?? null
+    if (!canvas || !bitmap || !ctx) return
+    ctxRef.current = ctx
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
     for (const traco of lista) desenharTraco(ctx, traco)
-    if (tracoExtra) desenharTraco(ctx, tracoExtra)
   }, [])
 
   useEffect(() => {
@@ -115,7 +115,9 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
       setTracos([])
       tracosRef.current = []
       setCor(CORES[0].value)
+      fecharImagemEditorDecodificada(imagemBaseRef.current)
       imagemBaseRef.current = null
+      ctxRef.current = null
       tracoAtualRef.current = null
       aDesenharRef.current = false
       setImagemCarregada(false)
@@ -130,48 +132,52 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     setImagemCarregada(false)
     setTracos([])
 
-    const url = URL.createObjectURL(file)
-    const img = new Image()
+    void decodificarImagemParaEditor(file)
+      .then(({ bitmap, width, height }) => {
+        if (cancelado) {
+          fecharImagemEditorDecodificada(bitmap)
+          return
+        }
 
-    img.onload = () => {
-      if (cancelado) return
-      imagemBaseRef.current = img
-      setImagemCarregada(true)
-      setCarregando(false)
-    }
+        fecharImagemEditorDecodificada(imagemBaseRef.current)
+        imagemBaseRef.current = bitmap
 
-    img.onerror = () => {
-      if (!cancelado) {
-        setCarregando(false)
-        setErroCarregamento('Não foi possível carregar a imagem. Tente colar de novo ou anexar o ficheiro.')
-      }
-    }
+        requestAnimationFrame(() => {
+          if (cancelado) return
+          const canvas = canvasRef.current
+          if (!canvas) {
+            setCarregando(false)
+            setErroCarregamento('Não foi possível preparar o editor.')
+            return
+          }
 
-    img.src = url
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })
+          if (!ctx) {
+            setCarregando(false)
+            setErroCarregamento('Não foi possível preparar o editor.')
+            return
+          }
+          ctxRef.current = ctx
+          ctx.drawImage(bitmap, 0, 0, width, height)
+          setImagemCarregada(true)
+          setCarregando(false)
+        })
+      })
+      .catch(() => {
+        if (!cancelado) {
+          setCarregando(false)
+          setErroCarregamento(
+            'Não foi possível carregar a imagem. Tente colar de novo ou anexar o ficheiro.'
+          )
+        }
+      })
 
     return () => {
       cancelado = true
-      URL.revokeObjectURL(url)
     }
   }, [open, file])
-
-  useEffect(() => {
-    if (!imagemCarregada || !open) return
-    const img = imagemBaseRef.current
-    const canvas = canvasRef.current
-    if (!img || !canvas) return
-
-    const ok = aplicarImagemNoCanvas(canvas, img, repintar)
-    if (!ok) {
-      setErroCarregamento('A imagem colada está vazia ou inválida.')
-      setImagemCarregada(false)
-    }
-  }, [imagemCarregada, open, repintar])
-
-  useEffect(() => {
-    if (!imagemCarregada) return
-    repintar(tracos)
-  }, [tracos, repintar, imagemCarregada])
 
   useEffect(() => {
     if (!open) return
@@ -182,6 +188,13 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     return () => window.removeEventListener('keydown', onKey)
   }, [open, enviando, onCancel])
 
+  useEffect(() => {
+    return () => {
+      fecharImagemEditorDecodificada(imagemBaseRef.current)
+      imagemBaseRef.current = null
+    }
+  }, [])
+
   function iniciarTraco(clientX: number, clientY: number) {
     const canvas = canvasRef.current
     if (!canvas || carregando || enviando || !imagemCarregada) return
@@ -189,15 +202,22 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     const traco: Traco = { pontos: [ponto], cor, largura: LARGURA_TRACO }
     tracoAtualRef.current = traco
     aDesenharRef.current = true
-    repintar(tracosRef.current, traco)
   }
 
   function continuarTraco(clientX: number, clientY: number) {
     const canvas = canvasRef.current
+    const ctx = ctxRef.current
     const traco = tracoAtualRef.current
-    if (!canvas || !traco || !aDesenharRef.current) return
-    traco.pontos.push(pontoNoCanvas(canvas, clientX, clientY))
-    repintar(tracosRef.current, traco)
+    if (!canvas || !ctx || !traco || !aDesenharRef.current) return
+
+    const ponto = pontoNoCanvas(canvas, clientX, clientY)
+    const anterior = traco.pontos[traco.pontos.length - 1]
+    if (!anterior) return
+
+    if (anterior.x === ponto.x && anterior.y === ponto.y) return
+
+    traco.pontos.push(ponto)
+    desenharSegmentoTraco(ctx, anterior, ponto, traco.cor, traco.largura)
   }
 
   function terminarTraco() {
@@ -205,15 +225,24 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     aDesenharRef.current = false
     tracoAtualRef.current = null
     if (!traco || traco.pontos.length < 2) return
-    setTracos((prev) => [...prev, traco])
+    setTracos((prev) => {
+      const next = [...prev, traco]
+      tracosRef.current = next
+      return next
+    })
   }
 
   function desfazer() {
-    setTracos((prev) => prev.slice(0, -1))
+    const next = tracosRef.current.slice(0, -1)
+    tracosRef.current = next
+    setTracos(next)
+    repintarCompleto(next)
   }
 
   function limparDesenhos() {
+    tracosRef.current = []
     setTracos([])
+    repintarCompleto([])
   }
 
   function confirmar() {
@@ -225,7 +254,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
         onConfirm(new File([blob], nomeArquivoAnotado(file.name), { type: 'image/png' }))
       },
       'image/png',
-      0.92
+      0.82
     )
   }
 
