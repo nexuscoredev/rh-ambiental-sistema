@@ -153,7 +153,8 @@ function residuosContratoFiltradosPelaMtr(
     if (escolhido) return [escolhido]
   }
 
-  return catalog
+  return []
+
 }
 
 function maoObraContratoFiltradaPelaMtr(
@@ -162,15 +163,101 @@ function maoObraContratoFiltradaPelaMtr(
 ): ReturnType<typeof parseEquipamentosContratoJsonb> {
   const selecionados = maoObraMtrComConteudo(det?.contrato_mao_obra)
   if (selecionados.length === 0) return catalog
-  const out: ReturnType<typeof parseEquipamentosContratoJsonb> = []
+  return enriquecerItensDescricaoComCatalogo(catalog, selecionados)
+}
+
+function enriquecerItensDescricaoComCatalogo<T extends { descricao: string }>(
+  catalog: T[],
+  selecionados: T[]
+): T[] {
+  const out: T[] = []
   for (const sel of selecionados) {
     const alvo = norm(sel.descricao)
     const item =
       catalog.find((c) => norm(c.descricao) === alvo) ??
       catalog.find((c) => norm(c.descricao).includes(alvo) || alvo.includes(norm(c.descricao)))
     if (item) out.push(item)
+    else out.push(sel)
   }
   return out.length > 0 ? out : selecionados
+}
+
+function enriquecerVeiculosMtrComCatalogo(
+  catalog: ReturnType<typeof parseVeiculosContratoJsonb>,
+  selecionados: ReturnType<typeof parseVeiculosContratoJsonb>
+): ReturnType<typeof parseVeiculosContratoJsonb> {
+  if (selecionados.length === 0) return catalog
+  const out: ReturnType<typeof parseVeiculosContratoJsonb> = []
+  for (const sel of selecionados) {
+    const alvo = norm(sel.tipo_veiculo)
+    const item =
+      catalog.find((c) => norm(c.tipo_veiculo) === alvo) ??
+      catalog.find(
+        (c) =>
+          norm(c.tipo_veiculo).includes(alvo) || alvo.includes(norm(c.tipo_veiculo))
+      )
+    if (item) out.push(item)
+    else out.push(sel)
+  }
+  return out.length > 0 ? out : selecionados
+}
+
+function veiculosContratoFiltradosPelaMtr(
+  catalog: ReturnType<typeof parseVeiculosContratoJsonb>,
+  det: ReturnType<typeof parseDetalhesMtr>
+): ReturnType<typeof parseVeiculosContratoJsonb> {
+  const selecionados = veiculosMtrComConteudo(det?.contrato_veiculos)
+  if (selecionados.length === 0) return []
+  return enriquecerVeiculosMtrComCatalogo(catalog, selecionados)
+}
+
+function equipamentosContratoFiltradosPelaMtr(
+  catalog: ReturnType<typeof parseEquipamentosContratoJsonb>,
+  det: ReturnType<typeof parseDetalhesMtr>
+): ReturnType<typeof parseEquipamentosContratoJsonb> {
+  const selecionados = equipamentosMtrComConteudo(det?.contrato_equipamentos)
+  if (selecionados.length === 0) return []
+  return enriquecerItensDescricaoComCatalogo(catalog, selecionados)
+}
+
+export type RotulosContratoMtr = {
+  veiculo: string | null
+  equipamento: string | null
+  maoObra: string | null
+  residuo: string | null
+}
+
+/** Rótulos exibidos no resumo — identidade gravada na MTR (não programação). */
+export function rotulosSelecionadosNaMtr(
+  detalhesRaw: unknown,
+  tipoResiduoTopo?: string | null
+): RotulosContratoMtr | null {
+  if (!detalhesRaw || !mtrTemSelecaoContrato(detalhesRaw)) return null
+  const det = parseDetalhesMtr(detalhesRaw)
+  if (!det) return null
+
+  const veiculos = veiculosMtrComConteudo(det.contrato_veiculos)
+  const equipamentos = equipamentosMtrComConteudo(det.contrato_equipamentos)
+  const maoObra = maoObraMtrComConteudo(det.contrato_mao_obra)
+  const residuo = det.residuo ?? residuoDetalhesVazio()
+  const lista = listaResiduosFromDetalhesMtr({
+    residuo,
+    residuos_lista: det.residuos_lista,
+  })
+  const residuoRot =
+    lista
+      .map((l) => l.caracterizacao.trim())
+      .filter(Boolean)
+      .join(' · ') ||
+    (tipoResiduoTopo ?? '').trim() ||
+    null
+
+  return {
+    veiculo: veiculos[0]?.tipo_veiculo?.trim() || null,
+    equipamento: equipamentos[0]?.descricao?.trim() || null,
+    maoObra: maoObra[0]?.descricao?.trim() || null,
+    residuo: residuoRot || null,
+  }
 }
 
 /**
@@ -194,11 +281,21 @@ export function montarInputPrecoContratoColeta(args: {
   const veiculosMtr = veiculosMtrComConteudo(det?.contrato_veiculos)
   const equipamentosMtr = equipamentosMtrComConteudo(det?.contrato_equipamentos)
 
+  const catalogVeiculos = parseVeiculosContratoJsonb(
+    contratoCliente?.veiculos_contrato,
+    contratoCliente?.descricao_veiculo_legado
+  )
+  const catalogEquipamentos = parseEquipamentosContratoJsonb(
+    contratoCliente?.equipamentos_contrato,
+    contratoCliente?.equipamentos_texto_legado
+  )
+
+  /** MTR grava só identidade (sem valor); preços vêm do cadastro do cliente. */
   const veiculosContratoRaw = temSelecaoMtr
-    ? veiculosMtr
+    ? veiculosContratoFiltradosPelaMtr(catalogVeiculos, det)
     : (contratoCliente?.veiculos_contrato ?? veiculosMtr)
   const equipamentosContratoRaw = temSelecaoMtr
-    ? equipamentosMtr
+    ? equipamentosContratoFiltradosPelaMtr(catalogEquipamentos, det)
     : (contratoCliente?.equipamentos_contrato ?? equipamentosMtr)
   const catalogMaoObra = parseEquipamentosContratoJsonb(contratoCliente?.mao_obra_contrato, null)
   const maoObraContratoRaw = temSelecaoMtr
@@ -245,15 +342,19 @@ export function montarInputPrecoContratoColeta(args: {
   }
 }
 
-/** Veículos para dropdown no resumo MTR: só os selecionados na MTR quando houver. */
+/** Veículos para dropdown no resumo MTR: só os selecionados na MTR (preços do cadastro). */
 export function veiculosContratoRawParaResumo(
   contratoCliente: ContratoClienteFallback | null,
   mtr?: MtrSnapshotContrato | null
 ): unknown {
   const det = parseDetalhesMtr(mtr?.detalhes)
   if (mtr?.detalhes && mtrTemSelecaoContrato(mtr.detalhes)) {
-    const veiculos = veiculosMtrComConteudo(det?.contrato_veiculos)
-    if (veiculos.length > 0) return veiculos
+    const catalog = parseVeiculosContratoJsonb(
+      contratoCliente?.veiculos_contrato,
+      contratoCliente?.descricao_veiculo_legado
+    )
+    const filtrados = veiculosContratoFiltradosPelaMtr(catalog, det)
+    if (filtrados.length > 0) return filtrados
   }
   return contratoCliente?.veiculos_contrato ?? null
 }

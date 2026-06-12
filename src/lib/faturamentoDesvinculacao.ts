@@ -7,6 +7,14 @@ import {
   montarTicketResumoUnicoColeta,
   rotulosResiduoFromTextoColeta,
 } from './faturamentoResumoTicket'
+import { rotulosSelecionadosNaMtr } from './faturamentoContratoDesdeMtr'
+
+export type CtxResumoOperacional = {
+  tipoCaminhao?: string | null
+  acondicionamento?: string | null
+  detalhesMtr?: unknown
+  tipoResiduoMtr?: string | null
+}
 
 export type { LinhaTicketResumoFinanceiro }
 
@@ -134,7 +142,7 @@ export function totalResumoMtr(m: ResumoMtrFinanceiro): number {
 export function criarResumoFinanceiroDoOperacional(
   row: FaturamentoResumoViewRow,
   sugestao: ResultadoPrecoContrato | null,
-  ctx?: { tipoCaminhao?: string | null; acondicionamento?: string | null }
+  ctx?: CtxResumoOperacional
 ): ResumoFinanceiroDesvinculado {
   const ticketBase = montarTicketResumoUnicoColeta(row)
   const ticket: ResumoTicketFinanceiro = {
@@ -142,20 +150,30 @@ export function criarResumoFinanceiroDoOperacional(
     valor_total: '0',
   }
 
+  const rotulosMtr =
+    ctx?.detalhesMtr != null
+      ? rotulosSelecionadosNaMtr(ctx.detalhesMtr, ctx.tipoResiduoMtr)
+      : null
+
   const camRot =
     sugestao?.veiculoContrato?.tipo_veiculo?.trim() ||
+    rotulosMtr?.veiculo ||
     (ctx?.tipoCaminhao ?? '').trim() ||
     'Caminhão'
   const eqRot =
     sugestao?.equipamentosContrato?.[0]?.descricao?.trim() ||
+    rotulosMtr?.equipamento ||
     (ctx?.acondicionamento ?? '').trim() ||
     'Equipamento'
   const moRot =
-    sugestao?.maoObraContrato?.[0]?.descricao?.trim() || 'Mão de obra'
+    sugestao?.maoObraContrato?.[0]?.descricao?.trim() ||
+    rotulosMtr?.maoObra ||
+    'Mão de obra'
   const tipoColeta = tipoResiduoExibicaoColeta(row)
   const rotulosColeta = rotulosResiduoFromTextoColeta(tipoColeta)
   const resRot =
     sugestao?.residuoContrato?.tipo_residuo?.trim() ||
+    rotulosMtr?.residuo ||
     formatarResiduosListaResumo(rotulosColeta) ||
     tipoColeta
   const unidade = sugestao?.unidadeMedida ?? 'kg'

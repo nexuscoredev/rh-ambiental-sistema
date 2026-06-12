@@ -9,6 +9,7 @@ import {
   parseNumeroCampo,
   parseResumoFinanceiroJson,
   resumoFinanceiroParaJsonb,
+  type CtxResumoOperacional,
   type ResumoFinanceiroDesvinculado,
 } from './faturamentoDesvinculacao'
 import {
@@ -370,7 +371,7 @@ export function criarResumoFinanceiroConsolidado(
   lider: FaturamentoResumoViewRow,
   coletas: FaturamentoResumoViewRow[],
   sugestao: ResultadoPrecoContrato | null,
-  ctx?: { tipoCaminhao?: string | null; acondicionamento?: string | null }
+  ctx?: CtxResumoOperacional
 ): ResumoFinanceiroDesvinculado {
   const base = criarResumoFinanceiroDoOperacional(lider, sugestao, ctx)
   const pesoTotal = coletas.reduce((s, c) => s + (Number(c.peso_liquido) || 0), 0)

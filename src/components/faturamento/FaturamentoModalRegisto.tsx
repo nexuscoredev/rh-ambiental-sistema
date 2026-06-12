@@ -195,6 +195,16 @@ export function FaturamentoModalRegisto({
     [row?.mtr_id, contextoMtr]
   )
 
+  const ctxResumoOperacional = useMemo(
+    () => ({
+      tipoCaminhao: contextoMtr?.tipoCaminhao ?? null,
+      acondicionamento: contextoMtr?.acondicionamento ?? null,
+      detalhesMtr: contextoMtr?.detalhes ?? null,
+      tipoResiduoMtr: contextoMtr?.tipoResiduo ?? null,
+    }),
+    [contextoMtr]
+  )
+
   /** Referência do contrato usa peso do resumo MTR (inclui edição em kg). */
   const sugestaoContrato: ResultadoPrecoContrato | null = useMemo(() => {
     if (!row || !contratoCliente) return null
@@ -437,30 +447,21 @@ export function FaturamentoModalRegisto({
   const montarResumoOperacional = useCallback((): ResumoFinanceiroDesvinculado | null => {
     if (!row) return null
     if (grupoConsolidado && grupoConsolidado.length > 1) {
-      return criarResumoFinanceiroConsolidado(row, grupoConsolidado, sugestaoContrato, {
-        tipoCaminhao: contextoMtr?.tipoCaminhao,
-        acondicionamento: contextoMtr?.acondicionamento,
-      })
+      return criarResumoFinanceiroConsolidado(row, grupoConsolidado, sugestaoContrato, ctxResumoOperacional)
     }
-    return criarResumoFinanceiroDoOperacional(row, sugestaoContrato, {
-      tipoCaminhao: contextoMtr?.tipoCaminhao,
-      acondicionamento: contextoMtr?.acondicionamento,
-    })
-  }, [row, sugestaoContrato, contextoMtr, grupoConsolidado])
+    return criarResumoFinanceiroDoOperacional(row, sugestaoContrato, ctxResumoOperacional)
+  }, [row, sugestaoContrato, ctxResumoOperacional, grupoConsolidado])
 
   const garantirResumoMontado = useCallback(() => {
     if (!row) return
     const base =
       montarResumoOperacional() ??
-      criarResumoFinanceiroDoOperacional(row, null, {
-        tipoCaminhao: contextoMtr?.tipoCaminhao ?? null,
-        acondicionamento: contextoMtr?.acondicionamento ?? null,
-      })
+      criarResumoFinanceiroDoOperacional(row, null, ctxResumoOperacional)
     if (base) {
       setResumoFinanceiro(base)
       resumoInicializadoColetaRef.current = row.coleta_id
     }
-  }, [row, montarResumoOperacional, contextoMtr])
+  }, [row, montarResumoOperacional, ctxResumoOperacional])
 
   useEffect(() => {
     if (!open || !coletaIdModal || carregando || carregandoContrato || carregandoContextoMtr) return
@@ -554,14 +555,14 @@ export function FaturamentoModalRegisto({
       grupoRaw && grupoRaw.length > 1
         ? await Promise.all(grupoRaw.map((c) => enriquecerLinhaResiduoDesdeMtr(c)))
         : grupoRaw
-    let next = recalcularResumoDesdeOperacional(rowRef, grupo, sugestaoContrato, {
-      tipoCaminhao: contextoMtr?.tipoCaminhao,
-      acondicionamento: contextoMtr?.acondicionamento,
-    })
-    if (sugestaoContrato && resumoMtrPrecosVazios(next.mtr)) {
-      next = aplicarSugestaoContratoNoResumoMtr(next, sugestaoContrato, {
-        tipoCaminhao: contextoMtr?.tipoCaminhao,
-        acondicionamento: contextoMtr?.acondicionamento,
+    const sugestaoAtual =
+      (resumoFinanceiro && calcularSugestaoContratoParaResumo(resumoFinanceiro)) ||
+      sugestaoContrato
+    let next = recalcularResumoDesdeOperacional(rowRef, grupo, sugestaoAtual, ctxResumoOperacional)
+    if (sugestaoAtual && resumoMtrPrecosVazios(next.mtr)) {
+      next = aplicarSugestaoContratoNoResumoMtr(next, sugestaoAtual, {
+        tipoCaminhao: ctxResumoOperacional.tipoCaminhao,
+        acondicionamento: ctxResumoOperacional.acondicionamento,
       })
     }
     skipSyncOperacionalRef.current = true
