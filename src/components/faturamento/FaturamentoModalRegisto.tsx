@@ -584,14 +584,30 @@ export function FaturamentoModalRegisto({
     let cancel = false
     queueMicrotask(() => setCarregandoContrato(true))
     void (async () => {
-      const selComContrato =
-        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, mao_obra_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
-      let res = await supabase.from('clientes').select(selComContrato).eq('id', row.cliente_id).maybeSingle()
+      const selContratoBase =
+        'id, residuos_contrato, veiculos_contrato, equipamentos_contrato, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
+      const selContratoComMaoObra = `${selContratoBase}, mao_obra_contrato`
+      const selLegadoMinimo =
+        'id, tipo_residuo, classificacao, unidade_medida, frequencia_coleta, descricao_veiculo, equipamentos'
+
+      let res = await supabase
+        .from('clientes')
+        .select(selContratoComMaoObra)
+        .eq('id', row.cliente_id)
+        .maybeSingle()
       if (cancel) return
       if (res.error && isMissingClienteContratoColumnsError(res.error)) {
         res = await supabase
           .from('clientes')
-          .select('id, tipo_residuo, classificacao, unidade_medida, frequencia_coleta')
+          .select(selContratoBase)
+          .eq('id', row.cliente_id)
+          .maybeSingle()
+      }
+      if (cancel) return
+      if (res.error && isMissingClienteContratoColumnsError(res.error)) {
+        res = await supabase
+          .from('clientes')
+          .select(selLegadoMinimo)
           .eq('id', row.cliente_id)
           .maybeSingle()
       }
@@ -1101,7 +1117,11 @@ export function FaturamentoModalRegisto({
                 </p>
               ) : sugestaoContrato && sugestaoContrato.total <= 0 && row.cliente_id ? (
                 <p style={{ fontSize: '12px', color: '#b45309', margin: '0 0 12px' }}>
-                  Sem preços no contrato para esta coleta — preencha os valores manualmente nos resumos.
+                  {contratoCliente?.veiculos_contrato == null &&
+                  contratoCliente?.residuos_contrato == null &&
+                  contratoCliente?.equipamentos_contrato == null
+                    ? 'Contrato do cliente não carregou (verifique migration/colunas no Supabase) — preencha os valores manualmente ou recarregue após corrigir o cadastro.'
+                    : 'Sem preços no contrato para os itens selecionados na MTR — itens marcados sem custo ficam zerados; preencha manualmente se necessário.'}
                 </p>
               ) : null}
 
