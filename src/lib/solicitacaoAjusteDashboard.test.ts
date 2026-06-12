@@ -16,7 +16,7 @@ function evt(partial: Partial<PedidoAjusteHistoricoItem>): PedidoAjusteHistorico
     ciclo: 1,
     createdAt: '2026-06-09T10:00:00Z',
     solicitanteId: 'sol-1',
-    parseado: { descricao: 'Corrigir filtro na listagem', pagina: '/programacao' },
+    parseado: { categoria: 'ajuste', descricao: 'Corrigir filtro na listagem', pagina: '/programacao' },
     ...partial,
   }
 }
@@ -38,7 +38,7 @@ describe('solicitacaoAjusteDashboard', () => {
         evt({
           id: '2',
           createdAt: '2026-06-08T10:00:00Z',
-          parseado: { descricao: 'Implementar dashboard de solicitações' },
+          parseado: { categoria: 'ajuste', descricao: 'Implementar dashboard de solicitações' },
         }),
       ],
       usuarios,

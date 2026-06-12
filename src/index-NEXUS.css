@@ -4890,6 +4890,26 @@ a.rg-btn {
   background: rgba(245, 158, 11, 0.2);
 }
 
+.chat-interno-pedido-ajuste__badge--cadastro {
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.18);
+}
+
+.chat-interno-pedido-ajuste__cadastro-meta {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.chat-interno-pedido-ajuste__cadastro-meta p {
+  margin: 0 0 4px;
+}
+
+.chat-interno-pedido-ajuste__cadastro-meta p:last-child {
+  margin-bottom: 0;
+}
+
 .chat-interno-pedido-ajuste__head {
   display: flex;
   align-items: center;
@@ -5385,6 +5405,19 @@ a.rg-btn {
   text-transform: uppercase;
   color: #9a3412;
   background: #ffedd5;
+}
+
+.chat-interno-pedido-card__badge-cadastro {
+  margin: 0 0 8px;
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0f766e;
+  background: #ccfbf1;
 }
 
 .chat-interno-pedido-card__justificativa {
@@ -6441,6 +6474,75 @@ a.rg-btn {
   font-weight: 700;
   color: var(--text-secondary);
   margin-bottom: 6px;
+}
+
+.suporte-float-tipo {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.suporte-float-tipo__btn {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.suporte-float-tipo__btn:hover:not(:disabled) {
+  border-color: rgba(13, 148, 136, 0.45);
+  color: #0f766e;
+}
+
+.suporte-float-tipo__btn--on {
+  border-color: #14b8a6;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.suporte-float-tipo__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.suporte-float-cadastro-lead {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.suporte-float-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #f8fafc;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.suporte-float-input:focus {
+  outline: none;
+  border-color: var(--green-forest);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+  background: #fff;
+}
+
+.suporte-float-input:disabled {
+  opacity: 0.65;
 }
 
 .suporte-float-textarea {

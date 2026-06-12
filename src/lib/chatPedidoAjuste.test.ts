@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   CHAT_PEDIDO_AJUSTE_PREFIX,
+  CHAT_PEDIDO_CADASTRO_PREFIX,
   etiquetaEventoPedidoAjusteHistorico,
+  montarConteudoPedidoCadastro,
   montarRespostaPedidoAjusteResolvido,
   montarConteudoPedidoAjuste,
   parsePedidoAjusteConteudo,
@@ -20,7 +22,28 @@ Página: /programacao
 
   it('parseia descrição, página e solicitante', () => {
     expect(parsePedidoAjusteConteudo(corpoPedido)).toEqual({
+      categoria: 'ajuste',
       descricao: 'ajusta qualquer coisa',
+      pagina: '/programacao',
+      solicitante: 'Rafaela Thomaz',
+    })
+  })
+
+  it('parseia solicitação de cadastro', () => {
+    const corpo = `${CHAT_PEDIDO_CADASTRO_PREFIX}
+
+Cliente: METALEX LTDA
+Cadastrar: Resíduo
+
+Incluir resíduo "Óleo usado" com unidade litros.
+
+Página: /programacao
+— Rafaela Thomaz`
+    expect(parsePedidoAjusteConteudo(corpo)).toEqual({
+      categoria: 'cadastro',
+      cliente: 'METALEX LTDA',
+      itemCadastro: 'Resíduo',
+      descricao: 'Incluir resíduo "Óleo usado" com unidade litros.',
       pagina: '/programacao',
       solicitante: 'Rafaela Thomaz',
     })
@@ -126,10 +149,23 @@ Página: /programacao
       solicitante: 'Rafaela Thomaz',
     })
     expect(parsePedidoAjusteConteudo(corpo)).toEqual({
+      categoria: 'ajuste',
       descricao: 'Campo de busca no quadro',
       pagina: '/programacao',
       solicitante: 'Rafaela Thomaz',
     })
+  })
+
+  it('monta corpo de cadastro no formato padrão', () => {
+    const corpo = montarConteudoPedidoCadastro({
+      cliente: 'METALEX LTDA',
+      itemCadastro: 'Equipamento',
+      detalhes: 'Caçamba 7m³ para o cliente.',
+      pagina: '/clientes',
+      solicitante: 'Ana Novaes',
+    })
+    expect(parsePedidoAjusteConteudo(corpo)?.categoria).toBe('cadastro')
+    expect(parsePedidoAjusteConteudo(corpo)?.cliente).toBe('METALEX LTDA')
   })
 
   it('define quando solicitante pode editar', () => {

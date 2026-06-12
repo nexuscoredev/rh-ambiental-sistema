@@ -65,10 +65,15 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
   const imagemBaseRef = useRef<HTMLImageElement | null>(null)
   const tracoAtualRef = useRef<Traco | null>(null)
   const aDesenharRef = useRef(false)
+  const tracosRef = useRef<Traco[]>([])
 
   const [carregando, setCarregando] = useState(false)
   const [tracos, setTracos] = useState<Traco[]>([])
   const [cor, setCor] = useState<string>(CORES[0].value)
+
+  useEffect(() => {
+    tracosRef.current = tracos
+  }, [tracos])
 
   const repintar = useCallback((lista: Traco[], tracoExtra?: Traco | null) => {
     const canvas = canvasRef.current
@@ -85,6 +90,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
   useEffect(() => {
     if (!open || !file) {
       setTracos([])
+      tracosRef.current = []
       setCor(CORES[0].value)
       imagemBaseRef.current = null
       tracoAtualRef.current = null
@@ -149,7 +155,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     const traco: Traco = { pontos: [ponto], cor, largura: LARGURA_TRACO }
     tracoAtualRef.current = traco
     aDesenharRef.current = true
-    repintar(tracos, traco)
+    repintar(tracosRef.current, traco)
   }
 
   function continuarTraco(clientX: number, clientY: number) {
@@ -157,7 +163,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
     const traco = tracoAtualRef.current
     if (!canvas || !traco || !aDesenharRef.current) return
     traco.pontos.push(pontoNoCanvas(canvas, clientX, clientY))
-    repintar(tracos, traco)
+    repintar(tracosRef.current, traco)
   }
 
   function terminarTraco() {
@@ -223,6 +229,7 @@ export function ChatImagemAnexoEditor({ open, file, enviando = false, onCancel, 
               ref={canvasRef}
               className="chat-imagem-editor__canvas"
               onPointerDown={(e) => {
+                e.preventDefault()
                 e.currentTarget.setPointerCapture(e.pointerId)
                 iniciarTraco(e.clientX, e.clientY)
               }}

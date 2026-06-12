@@ -10,6 +10,7 @@ import { chatMensagemEhFigurinha, type ChatSticker } from '../../lib/chatSticker
 import {
   chatMensagemEhPedidoAjuste,
   parsePedidoAjusteConteudo,
+  rotuloBadgePedidoAjuste,
   type PedidoAjusteAguardandoFeedback,
 } from '../../lib/chatPedidoAjuste'
 import { type PresencaStatus, etiquetaPresenca } from '../../lib/presencaStatus'
@@ -540,8 +541,15 @@ function MensagemBolha({
       >
         {ehPedidoAjuste ? (
           <div className="chat-interno-pedido-ajuste__head">
-            <div className="chat-interno-pedido-ajuste__badge" aria-hidden>
-              Pedido de ajuste
+            <div
+              className={
+                pedidoParseado?.categoria === 'cadastro'
+                  ? 'chat-interno-pedido-ajuste__badge chat-interno-pedido-ajuste__badge--cadastro'
+                  : 'chat-interno-pedido-ajuste__badge'
+              }
+              aria-hidden
+            >
+              {rotuloBadgePedidoAjuste(pedidoParseado)}
             </div>
             {meu && pedidoEditavel && onIniciarEditarPedido && !editandoPedido ? (
               <button
@@ -558,6 +566,20 @@ function MensagemBolha({
         ) : null}
         {ehPedidoAjuste && pedidoParseado ? (
           <div className="chat-interno-pedido-ajuste__corpo">
+            {pedidoParseado.categoria === 'cadastro' ? (
+              <div className="chat-interno-pedido-ajuste__cadastro-meta">
+                {pedidoParseado.cliente ? (
+                  <p>
+                    <strong>Cliente:</strong> {pedidoParseado.cliente}
+                  </p>
+                ) : null}
+                {pedidoParseado.itemCadastro ? (
+                  <p>
+                    <strong>Cadastrar:</strong> {pedidoParseado.itemCadastro}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <p className="chat-interno-bubble__text">{pedidoParseado.descricao}</p>
             {pedidoParseado.pagina ? (
               <p className="chat-interno-pedido-ajuste__pagina">Página: {pedidoParseado.pagina}</p>

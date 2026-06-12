@@ -4,6 +4,7 @@ import {
   chatListarSolicitacoesAjusteParaRelatorio,
   etiquetaEventoPedidoAjusteHistorico,
   nomeSolicitantePedidoAjuste,
+  rotuloBadgePedidoAjuste,
   type FiltroSituacaoRelatorioSolicitacoes,
   type PedidoAjusteFilaItem,
   type PedidoAjusteHistoricoItem,
@@ -421,7 +422,11 @@ function PedidoCard({
   const nome = meta?.nome || meta?.email || item.parseado?.solicitante || 'Utilizador'
   const descricao =
     item.parseado?.descricao ||
-    item.conteudo.replace(/^\[Solicitação de ajuste no sistema\]\s*/i, '').trim().slice(0, 200)
+    item.conteudo
+      .replace(/^\[(Solicitação de ajuste|Solicitação de cadastro) no sistema\]\s*/i, '')
+      .trim()
+      .slice(0, 200)
+  const ehCadastro = item.parseado?.categoria === 'cadastro'
   const marcando = marcandoId === item.mensagemId
   const enviandoThais = enviandoThaisId === item.mensagemId
   const aprovando = aprovandoId === item.mensagemId
@@ -466,6 +471,11 @@ function PedidoCard({
           {item.ciclo > 1 ? ` · ciclo ${item.ciclo}` : ''}
         </p>
       ) : null}
+      {ehCadastro ? (
+        <p className="chat-interno-pedido-card__badge-cadastro" role="status">
+          {rotuloBadgePedidoAjuste(item.parseado)}
+        </p>
+      ) : null}
       <button
         type="button"
         className="chat-interno-pedido-card__top"
@@ -481,6 +491,12 @@ function PedidoCard({
         </div>
       </button>
       <p className="chat-interno-pedido-card__texto">{descricao}</p>
+      {ehCadastro && item.parseado?.cliente ? (
+        <p className="chat-interno-pedido-card__pagina">
+          Cliente: {item.parseado.cliente}
+          {item.parseado.itemCadastro ? ` · ${item.parseado.itemCadastro}` : ''}
+        </p>
+      ) : null}
       {item.parseado?.pagina ? (
         <p className="chat-interno-pedido-card__pagina">Página: {item.parseado.pagina}</p>
       ) : null}

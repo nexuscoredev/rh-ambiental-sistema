@@ -6,6 +6,10 @@ import {
 } from './suporteTecnico'
 import type { ChatConversaLista, ChatMensagem, ChatUsuarioLista } from '../types/chat'
 import type { PostgrestError } from '@supabase/supabase-js'
+import {
+  montarConteudoPedidoAjuste,
+  montarConteudoPedidoCadastro,
+} from './chatPedidoAjuste'
 
 const BUCKET = 'chat-anexos'
 
@@ -594,6 +598,39 @@ export {
  * O destinatário tem de existir em `usuarios` com status ativo.
  * Preferir `VITE_SUPORTE_USER_ID`; senão resolve-se pelo e-mail (`VITE_SUPORTE_EMAIL`).
  */
+/**
+ * Abre (ou reutiliza) a conversa com o desenvolvedor e envia pedido de ajuste ou cadastro.
+ */
+async function chatEnviarPedidoSistemaBase(
+  corpo: string,
+  print?: File | null,
+  legendaPrint = 'Print anexo à solicitação'
+): Promise<{ conversaId: string; destinoUserId: string }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id) throw new Error('Sessão inválida.')
+
+  const { resolverIdDesenvolvedorAjustes } = await import('./solicitacaoAjusteSistema')
+  const destinoUserId = await resolverIdDesenvolvedorAjustes(user.id)
+  const conversaId = await chatGetOrCreateDirect(destinoUserId)
+
+  await chatEnviarTexto(conversaId, user.id, corpo)
+
+  if (print && print.size > 0) {
+    const tipo = (print.type || '').toLowerCase()
+    if (!tipo.startsWith('image/')) {
+      throw new Error('O print deve ser uma imagem (PNG, JPG, etc.).')
+    }
+    if (print.size > 8 * 1024 * 1024) {
+      throw new Error('Imagem demasiado grande (máx. 8 MB).')
+    }
+    await chatEnviarAnexo(conversaId, user.id, print, legendaPrint)
+  }
+
+  return { conversaId, destinoUserId }
+}
+
 export async function chatEnviarPedidoAjusteSistema(
   texto: string,
   print?: File | null
@@ -606,10 +643,44 @@ export async function chatEnviarPedidoAjusteSistema(
   } = await supabase.auth.getUser()
   if (!user?.id) throw new Error('Sessão inválida.')
 
-  const { resolverIdDesenvolvedorAjustes } = await import('./solicitacaoAjusteSistema')
-  const destinoUserId = await resolverIdDesenvolvedorAjustes(user.id)
+  const { data: perfil } = await supabase
+    .from('usuarios')
+    .select('nome, email')
+    .eq('id', user.id)
+    .maybeSingle()
 
-  const conversaId = await chatGetOrCreateDirect(destinoUserId)
+  const quem = perfil?.nome?.trim() || perfil?.email || user.email || 'Utilizador'
+  const pagina =
+    typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : ''
+  const corpo = montarConteudoPedidoAjuste({
+    descricao: trimmed,
+    pagina: pagina || '—',
+    solicitante: quem,
+  })
+
+  return chatEnviarPedidoSistemaBase(corpo, print, 'Print anexo à solicitação de ajuste')
+}
+
+export async function chatEnviarPedidoCadastroSistema(opts: {
+  cliente: string
+  itemCadastro: string
+  detalhes: string
+  print?: File | null
+}): Promise<{ conversaId: string; destinoUserId: string }> {
+  const cliente = opts.cliente.trim()
+  const itemCadastro = opts.itemCadastro.trim()
+  const detalhes = opts.detalhes.trim()
+
+  if (!cliente) throw new Error('Informe o cliente relacionado ao cadastro.')
+  if (!itemCadastro) throw new Error('Selecione o que precisa ser cadastrado.')
+  if (detalhes.length < 3) {
+    throw new Error('Descreva os dados a incluir no cadastro (mínimo 3 caracteres).')
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id) throw new Error('Sessão inválida.')
 
   const { data: perfil } = await supabase
     .from('usuarios')
@@ -620,22 +691,15 @@ export async function chatEnviarPedidoAjusteSistema(
   const quem = perfil?.nome?.trim() || perfil?.email || user.email || 'Utilizador'
   const pagina =
     typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : ''
-  const corpo = `[Solicitação de ajuste no sistema]\n\n${trimmed}\n\nPágina: ${pagina || '—'}\n— ${quem}`
+  const corpo = montarConteudoPedidoCadastro({
+    cliente,
+    itemCadastro,
+    detalhes,
+    pagina: pagina || '—',
+    solicitante: quem,
+  })
 
-  await chatEnviarTexto(conversaId, user.id, corpo)
-
-  if (print && print.size > 0) {
-    const tipo = (print.type || '').toLowerCase()
-    if (!tipo.startsWith('image/')) {
-      throw new Error('O print deve ser uma imagem (PNG, JPG, etc.).')
-    }
-    if (print.size > 8 * 1024 * 1024) {
-      throw new Error('Imagem demasiado grande (máx. 8 MB).')
-    }
-    await chatEnviarAnexo(conversaId, user.id, print, 'Print anexo à solicitação de ajuste')
-  }
-
-  return { conversaId, destinoUserId }
+  return chatEnviarPedidoSistemaBase(corpo, opts.print ?? null, 'Print anexo à solicitação de cadastro')
 }
 
 export async function chatEnviarPedidoSuporteTecnico(texto: string): Promise<{

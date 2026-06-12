@@ -4,6 +4,22 @@ import type { ChatMensagem } from '../types/chat'
 import type { PostgrestError } from '@supabase/supabase-js'
 
 export const CHAT_PEDIDO_AJUSTE_PREFIX = '[Solicitação de ajuste no sistema]'
+export const CHAT_PEDIDO_CADASTRO_PREFIX = '[Solicitação de cadastro no sistema]'
+
+export type PedidoAjusteCategoria = 'ajuste' | 'cadastro'
+
+export function prefixoSolicitacaoSistema(conteudo: string): string | null {
+  const raw = (conteudo ?? '').trimStart()
+  if (raw.startsWith(CHAT_PEDIDO_AJUSTE_PREFIX)) return CHAT_PEDIDO_AJUSTE_PREFIX
+  if (raw.startsWith(CHAT_PEDIDO_CADASTRO_PREFIX)) return CHAT_PEDIDO_CADASTRO_PREFIX
+  return null
+}
+
+/** Filtro PostgREST `.or()` para listar pedidos de ajuste e de cadastro. */
+export function filtroOrConteudoPedidosSistema(): string {
+  return `conteudo.like.${CHAT_PEDIDO_AJUSTE_PREFIX}%,conteudo.like.${CHAT_PEDIDO_CADASTRO_PREFIX}%`
+}
+
 /** Fallback quando o corpo do pedido não puder ser interpretado. */
 export const CHAT_RESPOSTA_AJUSTE_RESOLVIDO =
   'Ajustamos conforme a sua solicitação, pode testar por gentileza?'
@@ -34,17 +50,20 @@ export type PedidoAjusteEscalacaoThaisRow = {
 }
 
 export type PedidoAjusteParseado = {
+  categoria: PedidoAjusteCategoria
   descricao: string
   pagina?: string
   solicitante?: string
+  /** Preenchido em solicitações de cadastro. */
+  cliente?: string
+  itemCadastro?: string
 }
 
-/** Extrai campos do corpo enviado por `chatEnviarPedidoAjusteSistema`. */
-export function parsePedidoAjusteConteudo(conteudo: string): PedidoAjusteParseado | null {
-  const raw = (conteudo ?? '').trimStart()
-  if (!raw.startsWith(CHAT_PEDIDO_AJUSTE_PREFIX)) return null
-
-  const lines = raw.slice(CHAT_PEDIDO_AJUSTE_PREFIX.length).replace(/^\s*\n/, '').split('\n')
+function parseCorpoPedidoSistema(
+  corpo: string,
+  categoria: PedidoAjusteCategoria
+): Omit<PedidoAjusteParseado, 'categoria'> | null {
+  const lines = corpo.replace(/^\s*\n/, '').split('\n')
 
   let solicitante: string | undefined
   const last = lines[lines.length - 1]?.trim() ?? ''
@@ -61,9 +80,39 @@ export function parsePedidoAjusteConteudo(conteudo: string): PedidoAjusteParsead
     lines.pop()
   }
 
+  let cliente: string | undefined
+  let itemCadastro: string | undefined
+  if (categoria === 'cadastro') {
+    const idxCliente = lines.findIndex((l) => /^Cliente:\s*/i.test(l.trim()))
+    if (idxCliente >= 0) {
+      cliente = lines[idxCliente].replace(/^Cliente:\s*/i, '').trim() || undefined
+      lines.splice(idxCliente, 1)
+    }
+    const idxItem = lines.findIndex((l) => /^Cadastrar:\s*/i.test(l.trim()))
+    if (idxItem >= 0) {
+      itemCadastro = lines[idxItem].replace(/^Cadastrar:\s*/i, '').trim() || undefined
+      lines.splice(idxItem, 1)
+    }
+    while (lines[0]?.trim() === '') lines.shift()
+  }
+
   const descricao = lines.join('\n').trim()
   if (!descricao) return null
-  return { descricao, pagina, solicitante }
+  return { descricao, pagina, solicitante, cliente, itemCadastro }
+}
+
+/** Extrai campos do corpo enviado por `chatEnviarPedidoAjusteSistema` / cadastro. */
+export function parsePedidoAjusteConteudo(conteudo: string): PedidoAjusteParseado | null {
+  const prefixo = prefixoSolicitacaoSistema(conteudo)
+  if (!prefixo) return null
+
+  const categoria: PedidoAjusteCategoria =
+    prefixo === CHAT_PEDIDO_CADASTRO_PREFIX ? 'cadastro' : 'ajuste'
+  const raw = (conteudo ?? '').trimStart()
+  const corpo = raw.slice(prefixo.length)
+  const parsed = parseCorpoPedidoSistema(corpo, categoria)
+  if (!parsed) return null
+  return { categoria, ...parsed }
 }
 
 /** Monta o corpo completo de um pedido de ajuste (mesmo formato do envio). */
@@ -78,6 +127,52 @@ export function montarConteudoPedidoAjuste(opts: {
   const solicitante = opts.solicitante?.trim()
   if (solicitante) linhas.push(`— ${solicitante}`)
   return linhas.join('\n')
+}
+
+/** Monta solicitação de cadastro (dados em falta no sistema). */
+export function montarConteudoPedidoCadastro(opts: {
+  cliente: string
+  itemCadastro: string
+  detalhes: string
+  pagina?: string
+  solicitante?: string
+}): string {
+  const linhas = [
+    CHAT_PEDIDO_CADASTRO_PREFIX,
+    '',
+    `Cliente: ${opts.cliente.trim()}`,
+    `Cadastrar: ${opts.itemCadastro.trim()}`,
+    '',
+    opts.detalhes.trim(),
+  ]
+  const pagina = opts.pagina?.trim()
+  if (pagina && pagina !== '—') linhas.push('', `Página: ${pagina}`)
+  const solicitante = opts.solicitante?.trim()
+  if (solicitante) linhas.push(`— ${solicitante}`)
+  return linhas.join('\n')
+}
+
+/** Reconstrói o corpo após edição pelo solicitante. */
+export function montarConteudoPedidoSistema(parseado: PedidoAjusteParseado): string {
+  if (parseado.categoria === 'cadastro') {
+    return montarConteudoPedidoCadastro({
+      cliente: parseado.cliente ?? '—',
+      itemCadastro: parseado.itemCadastro ?? '—',
+      detalhes: parseado.descricao,
+      pagina: parseado.pagina,
+      solicitante: parseado.solicitante,
+    })
+  }
+  return montarConteudoPedidoAjuste({
+    descricao: parseado.descricao,
+    pagina: parseado.pagina,
+    solicitante: parseado.solicitante,
+  })
+}
+
+export function rotuloBadgePedidoAjuste(parseado: PedidoAjusteParseado | null): string {
+  if (parseado?.categoria === 'cadastro') return 'Pedido de cadastro'
+  return 'Pedido de ajuste'
 }
 
 /** Solicitante pode editar enquanto o dev ainda não respondeu (ou pediu mais detalhes). */
@@ -162,7 +257,7 @@ function mensagemPrimeiraLinhaRpc(data: unknown): ChatMensagem {
 }
 
 export function chatMensagemEhPedidoAjuste(m: Pick<ChatMensagem, 'conteudo'>): boolean {
-  return (m.conteudo ?? '').trimStart().startsWith(CHAT_PEDIDO_AJUSTE_PREFIX)
+  return prefixoSolicitacaoSistema(m.conteudo ?? '') != null
 }
 
 export type PedidoAjusteFilaItem = {
@@ -471,7 +566,7 @@ export async function chatListarPedidosAjustePendentes(meuId: string): Promise<P
   const { data, error } = await supabase
     .from('chat_mensagens')
     .select('id, conversa_id, remetente_id, conteudo, created_at')
-    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .or(filtroOrConteudoPedidosSistema())
     .neq('remetente_id', uid)
     .order('created_at', { ascending: true })
 
@@ -786,7 +881,7 @@ export async function chatListarPedidosAguardandoFeedbackSolicitante(
     .select('id')
     .eq('conversa_id', cid)
     .eq('remetente_id', uid)
-    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .or(filtroOrConteudoPedidosSistema())
 
   if (pedErr) throw new Error(mensagemErroPedidoAjuste(pedErr))
   const ids = (pedidos ?? []).map((p) => String(p.id))
@@ -834,7 +929,7 @@ export async function chatListarPedidosAguardandoDetalhesSolicitante(
     .select('id')
     .eq('conversa_id', cid)
     .eq('remetente_id', uid)
-    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .or(filtroOrConteudoPedidosSistema())
 
   if (pedErr) throw new Error(mensagemErroPedidoAjuste(pedErr))
   const ids = (pedidos ?? []).map((p) => String(p.id))
@@ -943,7 +1038,7 @@ export async function chatListarSolicitacoesAjusteParaRelatorio(
   let query = supabase
     .from('chat_mensagens')
     .select('id, remetente_id, conteudo, created_at')
-    .like('conteudo', `${CHAT_PEDIDO_AJUSTE_PREFIX}%`)
+    .or(filtroOrConteudoPedidosSistema())
     .order('created_at', { ascending: false })
     .limit(limite)
 
@@ -1005,7 +1100,9 @@ export async function chatListarSolicitacoesAjusteParaRelatorio(
       dataPedido,
       horaPedido,
       pagina: parseado?.pagina ?? '',
-      descricao: parseado?.descricao ?? conteudo.replace(/^\[Solicitação de ajuste no sistema\]\s*/i, '').trim(),
+      descricao:
+        parseado?.descricao ??
+        conteudo.replace(/^\[(Solicitação de ajuste|Solicitação de cadastro) no sistema\]\s*/i, '').trim(),
       situacao: rotuloSituacaoPedidoAjuste(status),
       ciclo: Number(reg?.ciclo ?? 1) || 1,
       ultimaAtualizacao,
@@ -1432,10 +1529,9 @@ export async function chatEditarPedidoAjusteSolicitante(
     throw new Error('Este pedido já está em tratamento ou encerrado; não pode ser editado.')
   }
 
-  const novoConteudo = montarConteudoPedidoAjuste({
+  const novoConteudo = montarConteudoPedidoSistema({
+    ...parseado,
     descricao: trimmed,
-    pagina: parseado.pagina,
-    solicitante: parseado.solicitante,
   })
 
   const { data: atualizada, error: upErr } = await supabase
